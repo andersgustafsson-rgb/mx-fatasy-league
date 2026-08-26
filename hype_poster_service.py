@@ -135,6 +135,22 @@ def build_hype_poster_data(competition_id: int) -> dict[str, Any]:
     deadline_utc = sched.get("deadline_utc")
     race_start_utc = sched.get("race_utc")
 
+    # Prefer Stockholm deadline for Swedish Facebook audience
+    deadline_stockholm = None
+    if deadline_utc:
+        try:
+            from zoneinfo import ZoneInfo
+
+            du = deadline_utc
+            if getattr(du, "tzinfo", None) is None:
+                du = du.replace(tzinfo=ZoneInfo("UTC"))
+            se = du.astimezone(ZoneInfo("Europe/Stockholm"))
+            months = ["", "jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]
+            deadline_stockholm = f"{se.day} {months[se.month]} kl {se.strftime('%H:%M')} (Stockholm)"
+            deadline_display = deadline_stockholm
+        except Exception:
+            pass
+
     now = get_current_time()
     if getattr(now, "tzinfo", None):
         now = now.replace(tzinfo=None)
@@ -180,6 +196,13 @@ def build_hype_poster_data(competition_id: int) -> dict[str, Any]:
         hero = resolve_competition_hero_static_url(comp)
     except Exception:
         hero = None
+    if not hero:
+        try:
+            from trackmap_utils import race_background_static_url
+
+            hero = race_background_static_url(comp)
+        except Exception:
+            hero = None
 
     caption = build_facebook_caption(
         race_name=race_name,
@@ -275,6 +298,100 @@ def _series_colors(series: str) -> tuple[tuple[int, int, int], tuple[int, int, i
     return (34, 211, 238), (251, 191, 36)
 
 
+def _resolve_hero_path(hero_static: str | None):
+    """Return local filesystem path for a static hero/trackmap URL."""
+    from pathlib import Path
+
+    if not hero_static:
+        return None
+    s = str(hero_static).strip()
+    if s.startswith("http://") or s.startswith("https://"):
+        return None
+    s = s.lstrip("/")
+    if s.startswith("static/"):
+        s = s[len("static/") :]
+    p = Path("static") / s
+    if p.is_file():
+        return p
+    return None
+
+
+def _cover_crop(img, width: int, height: int):
+    """Scale image to cover target size, center-crop."""
+    from PIL import Image
+
+    src_w, src_h = img.size
+    scale = max(width / max(src_w, 1), height / max(src_h, 1))
+    nw = max(1, int(src_w * scale))
+    nh = max(1, int(src_h * scale))
+    resized = img.resize((nw, nh), Image.Resampling.LANCZOS)
+    left = max(0, (nw - width) // 2)
+    top = max(0, (nh - height) // 2)
+    return resized.crop((left, top, left + width, top + height))
+
+
+def _paint_cinematic_backdrop(width: int, height: int, data: dict[str, Any], accent: tuple[int, int, int]):
+    """Trackmap/hero full-bleed + dark cinematic overlays. Falls back to gradient."""
+    from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
+
+    base = Image.new("RGB", (width, height), (10, 14, 28))
+    hero_path = _resolve_hero_path(data.get("hero_static"))
+    if hero_path:
+        try:
+            photo = Image.open(hero_path).convert("RGB")
+            photo = _cover_crop(photo, width, height)
+            # Slightly punchier contrast for “poster” feel
+            photo = ImageEnhance.Contrast(photo).enhance(1.12)
+            photo = ImageEnhance.Color(photo).enhance(1.08)
+            base = photo
+        except Exception:
+            pass
+
+    # Soft blur on edges only? Keep photo sharp but darken for text.
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+
+    # Left-to-right readability wash (text lives left/center)
+    for x in range(width):
+        t = x / max(width - 1, 1)
+        # Stronger dark on left 55%, photo peeks on right
+        a = int(210 * (1 - min(1.0, t * 1.35)) + 90 * min(1.0, t))
+        a = max(70, min(230, a))
+        od.line([(x, 0), (x, height)], fill=(6, 10, 22, a))
+
+    # Bottom / top vignette bars
+    for y in range(height // 3):
+        a = int(170 * (1 - y / (height / 3)))
+        od.line([(0, y), (width, y)], fill=(0, 0, 0, a // 2))
+    for i, y in enumerate(range(height - height // 3, height)):
+        a = int(200 * (i / max(height // 3, 1)))
+        od.line([(0, y), (width, y)], fill=(0, 0, 0, a))
+
+    # Accent speed streaks (diagonal)
+    streak = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(streak)
+    for i in range(7):
+        y0 = int(height * 0.15) + i * 55
+        sd.line(
+            [(-40, y0), (width + 40, y0 + int(height * 0.18))],
+            fill=(accent[0], accent[1], accent[2], 28 - i * 2),
+            width=3,
+        )
+    streak = streak.filter(ImageFilter.GaussianBlur(1.2))
+
+    out = base.convert("RGBA")
+    out = Image.alpha_composite(out, overlay)
+    out = Image.alpha_composite(out, streak)
+    return out.convert("RGB")
+
+
+def _draw_glass_panel(draw, box, *, fill=(12, 18, 32, 180), outline=(255, 255, 255), outline_a=40, radius=22):
+    """Draw opaque-ish panel (RGB canvas — approximate glass)."""
+    # On RGB we simulate glass with dark translucent-looking solid + soft border
+    f = (fill[0], fill[1], fill[2])
+    draw.rounded_rectangle(box, radius=radius, fill=f, outline=outline[:3], width=2)
+
+
 def _render_landscape(data: dict[str, Any], width: int, height: int, *, compact: bool) -> bytes:
     from PIL import Image, ImageDraw
 
@@ -291,236 +408,245 @@ def _render_landscape(data: dict[str, Any], width: int, height: int, *, compact:
     )
 
     accent, accent2 = _series_colors(data.get("series") or "")
-    bg_top = (8, 12, 28)
-    bg_bot = (15, 23, 42)
-    panel = (17, 24, 39)
-
-    img = Image.new("RGB", (width, height), bg_bot)
-    px = img.load()
-    for y in range(height):
-        t = y / max(height - 1, 1)
-        r = int(bg_top[0] * (1 - t) + bg_bot[0] * t)
-        g = int(bg_top[1] * (1 - t) + bg_bot[1] * t)
-        b = int(bg_top[2] * (1 - t) + bg_bot[2] * t)
-        for x in range(width):
-            # subtle left vignette glow
-            glow = max(0, 1 - abs(x - width * 0.25) / (width * 0.55))
-            rr = min(255, int(r + accent[0] * 0.08 * glow))
-            gg = min(255, int(g + accent[1] * 0.05 * glow))
-            bb = min(255, int(b + accent[2] * 0.08 * glow))
-            px[x, y] = (rr, gg, bb)
-
+    img = _paint_cinematic_backdrop(width, height, data, accent)
     draw = ImageDraw.Draw(img)
-    margin = 48 if compact else 56
+    margin = 44 if compact else 56
 
-    # Top / bottom bars
-    draw.rectangle([0, 0, width, 8], fill=accent)
-    draw.rectangle([0, height - 8, width, height], fill=accent2)
+    # Accent top strip
+    draw.rectangle([0, 0, width, 7], fill=accent)
+    draw.rectangle([0, height - 7, width, height], fill=GOLD)
 
-    # Brand
-    logo = _load_brand_logo(72 if compact else 88)
-    brand_y = margin - 4
+    # Brand row
+    logo = _load_brand_logo(70 if compact else 86)
+    brand_y = margin - 2
     if logo:
+        # dark plate behind logo for contrast on photo
+        draw.rounded_rectangle(
+            [margin - 8, brand_y - 8, margin + logo.size[0] + 18 + 280, brand_y + logo.size[1] + 10],
+            radius=16,
+            fill=(8, 12, 24),
+        )
         img.paste(logo, (margin, brand_y), logo)
-        brand_x = margin + logo.size[0] + 18
+        brand_x = margin + logo.size[0] + 16
     else:
         brand_x = margin
     _draw_styled_text(
         draw,
-        (brand_x, brand_y + 18),
+        (brand_x, brand_y + 16),
         "MX FANTASY LEAGUE",
-        _load_display_font(26 if compact else 30, bold=True),
+        _load_display_font(24 if compact else 28, bold=True),
         accent,
         anchor="lm",
     )
     _draw_styled_text(
         draw,
-        (brand_x, brand_y + 48),
-        "TIPPA GRATIS",
-        _load_font_px(18 if compact else 20),
-        MUTED,
+        (brand_x, brand_y + 46),
+        "TIPPA GRATIS · INFÖR RACE",
+        _load_font_px(16 if compact else 18, bold=True),
+        GOLD,
         anchor="lm",
     )
 
-    # Series pill (right)
+    # Series pill
     series = _plain_draw_text(data.get("series") or "RACE")
     pill = f"{series} HYPE"
-    pf = _load_display_font(22 if compact else 26, bold=True)
-    pw = _text_width(pf, pill) + 40
-    ph = 44
+    pf = _load_display_font(20 if compact else 24, bold=True)
+    pw = _text_width(pf, pill) + 44
+    ph = 46
     px0 = width - margin - pw
     draw.rounded_rectangle(
-        [px0, brand_y + 10, px0 + pw, brand_y + 10 + ph],
-        radius=22,
-        fill=(accent[0] // 5, accent[1] // 5, accent[2] // 5),
+        [px0, brand_y + 8, px0 + pw, brand_y + 8 + ph],
+        radius=23,
+        fill=(accent[0] // 4, accent[1] // 4, accent[2] // 4),
         outline=accent,
-        width=2,
+        width=3,
     )
-    _draw_styled_text(draw, (px0 + pw // 2, brand_y + 10 + ph // 2), pill, pf, accent2, anchor="mm")
+    _draw_styled_text(draw, (px0 + pw // 2, brand_y + 8 + ph // 2), pill, pf, WHITE, anchor="mm")
 
-    # Race name
-    y = brand_y + 100 if compact else brand_y + 115
+    # Hero title — floating over photo (poster style, not a UI card)
+    y = brand_y + (95 if compact else 110)
     race_name = _plain_draw_text(data.get("race_name") or "Nästa race")
-    race_size = 54 if compact else 68
-    for size in (race_size, race_size - 8, race_size - 16, 40):
+    race_size = 62 if compact else 82
+    rf = _load_display_font(race_size, bold=True)
+    for size in (race_size, race_size - 10, race_size - 20, 44):
         rf = _load_display_font(size, bold=True)
-        lines = textwrap.wrap(race_name.upper(), width=22 if compact else 26)
+        lines = textwrap.wrap(race_name.upper(), width=16 if compact else 18)
         if len(lines) <= 2:
             break
+
     for line in lines[:2]:
         _draw_styled_text(
             draw,
-            (margin, y),
+            (margin + 4, y),
             line,
             rf,
             WHITE,
             anchor="lt",
-            stroke=(10, 14, 24),
-            stroke_width=3,
+            stroke=(0, 0, 0),
+            stroke_width=6,
+            glow=(accent[0] // 2, accent[1] // 2, accent[2] // 2),
         )
-        y += size + 8
+        y += size + 6
 
-    loc = data.get("location_line") or data.get("event_date_display") or ""
-    if loc:
+    meta = data.get("event_date_display") or ""
+    if data.get("location_line"):
+        meta = f"{meta} · {data.get('location_line')}" if meta else str(data.get("location_line"))
+    if meta:
         _draw_styled_text(
             draw,
-            (margin, y + 4),
-            _plain_draw_text(str(loc)).upper(),
-            _load_font_px(22 if compact else 24, bold=True),
+            (margin + 4, y + 8),
+            _plain_draw_text(str(meta)).upper(),
+            _load_font_px(22 if compact else 26, bold=True),
             GOLD,
             anchor="lt",
+            stroke=(0, 0, 0),
+            stroke_width=3,
         )
-        y += 36
+        y += 38
 
     when = data.get("deadline_display") or data.get("race_start_display") or ""
     if when:
         _draw_styled_text(
             draw,
-            (margin, y),
-            f"Deadline: {_plain_draw_text(str(when))}",
-            _load_font_px(20 if compact else 22),
-            MUTED,
+            (margin + 4, y + 2),
+            f"Deadline {_plain_draw_text(str(when))}",
+            _load_font_px(18 if compact else 21, bold=True),
+            WHITE,
             anchor="lt",
+            stroke=(0, 0, 0),
+            stroke_width=2,
         )
-        y += 34
+        y += 32
 
-    # Countdown panel
-    y += 10 if compact else 16
-    panel_h = 200 if compact else 230
-    panel_x1, panel_x2 = margin, width - margin
+    # Countdown — dominant, open over the action photo
+    y = max(y + 22, int(height * (0.46 if compact else 0.48)))
+    panel_h = 200 if compact else 236
+    panel_w = int(width * (0.56 if compact else 0.54))
+    # Soft dark plate only behind countdown digits
     draw.rounded_rectangle(
-        [panel_x1, y, panel_x2, y + panel_h],
-        radius=24,
-        fill=panel,
-        outline=(accent[0] // 2, accent[1] // 2, accent[2] // 2),
-        width=2,
+        [margin - 6, y, margin - 6 + panel_w, y + panel_h],
+        radius=28,
+        fill=(5, 8, 18),
+        outline=accent,
+        width=3,
     )
-    cy = y + 22
+    cy = y + 20
     _draw_styled_text(
         draw,
-        (width // 2, cy),
+        (margin - 8 + panel_w // 2, cy),
         _plain_draw_text(data.get("countdown_label") or "COUNTDOWN"),
         _load_font_px(18 if compact else 20, bold=True),
-        MUTED,
+        accent2,
         anchor="mt",
     )
-    cy += 36
+    cy += 38
 
     parts = data.get("countdown_parts") or {}
     units = [
         (int(parts.get("days") or 0), "DAGAR"),
-        (int(parts.get("hours") or 0), "TIMMAR"),
+        (int(parts.get("hours") or 0), "TIM"),
         (int(parts.get("minutes") or 0), "MIN"),
     ]
-    box_w = 160 if compact else 200
-    box_h = 110 if compact else 130
-    gap = 24 if compact else 32
+    box_w = 130 if compact else 155
+    box_h = 118 if compact else 140
+    gap = 16 if compact else 20
     total_w = box_w * 3 + gap * 2
-    bx = (width - total_w) // 2
+    bx = margin - 8 + (panel_w - total_w) // 2
     by = cy
     for val, label in units:
         draw.rounded_rectangle(
             [bx, by, bx + box_w, by + box_h],
             radius=18,
-            fill=(8, 15, 30),
-            outline=accent,
+            fill=(4, 8, 18),
+            outline=accent2,
             width=2,
         )
+        # inner glow bar
+        draw.rectangle([bx + 10, by + 8, bx + box_w - 10, by + 12], fill=accent)
         _draw_styled_text(
             draw,
-            (bx + box_w // 2, by + box_h // 2 - 10),
+            (bx + box_w // 2, by + box_h // 2 - 6),
             f"{val:02d}",
-            _load_display_font(48 if compact else 58, bold=True),
-            accent2,
+            _load_display_font(46 if compact else 56, bold=True),
+            WHITE,
             anchor="mm",
+            glow=accent,
         )
         _draw_styled_text(
             draw,
-            (bx + box_w // 2, by + box_h - 22),
+            (bx + box_w // 2, by + box_h - 24),
             label,
-            _load_font_px(16 if compact else 18, bold=True),
+            _load_font_px(15 if compact else 17, bold=True),
             MUTED,
             anchor="mm",
         )
         bx += box_w + gap
 
-    y = y + panel_h + (18 if compact else 24)
-
-    # Hook + picks stats
-    _draw_styled_text(
-        draw,
-        (margin, y),
-        _plain_draw_text(data.get("hook") or "Har ni satt era picks?"),
-        _load_display_font(32 if compact else 38, bold=True),
-        WHITE,
-        anchor="lt",
+    # Right-side CTA stack (over photo)
+    rx = int(width * 0.62)
+    ry = int(height * 0.42)
+    right_w = width - margin - rx
+    draw.rounded_rectangle(
+        [rx, ry, width - margin, height - margin],
+        radius=24,
+        fill=(10, 14, 26),
+        outline=GOLD,
+        width=2,
     )
-    y += 42 if compact else 50
     _draw_styled_text(
         draw,
-        (margin, y),
+        (rx + right_w // 2, ry + 36),
+        _plain_draw_text(data.get("hook") or "Har ni satt era picks?"),
+        _load_display_font(26 if compact else 30, bold=True),
+        WHITE,
+        anchor="mt",
+    )
+    _draw_styled_text(
+        draw,
+        (rx + right_w // 2, ry + 90),
         _plain_draw_text(data.get("subhook") or "Topp 6 · Holeshot · Wildcard"),
-        _load_font_px(20 if compact else 22),
+        _load_font_px(17 if compact else 19),
         accent,
-        anchor="lt",
+        anchor="mt",
     )
 
     stats = data.get("picks_stats") or {}
     complete = int(stats.get("complete") or 0)
     started = int(stats.get("started") or 0)
-    stats_line = f"{complete} tippare klara"
+    _draw_styled_text(
+        draw,
+        (rx + right_w // 2, ry + 140),
+        f"{complete} tippare klara",
+        _load_font_px(22 if compact else 24, bold=True),
+        GOLD,
+        anchor="mt",
+    )
     if started > complete:
-        stats_line += f" · {started - complete} håller på"
-    # Right-aligned stats chip
-    sf = _load_font_px(20 if compact else 22, bold=True)
-    sw = _text_width(sf, stats_line) + 36
-    sh = 44
-    sx1 = width - margin - sw
-    sy1 = y - 8
-    draw.rounded_rectangle(
-        [sx1, sy1, sx1 + sw, sy1 + sh],
-        radius=14,
-        fill=(6, 78, 59) if complete else (30, 41, 59),
-        outline=(52, 211, 153) if complete else MUTED,
-        width=2,
-    )
-    _draw_styled_text(draw, (sx1 + sw // 2, sy1 + sh // 2), stats_line, sf, WHITE, anchor="mm")
+        _draw_styled_text(
+            draw,
+            (rx + right_w // 2, ry + 176),
+            f"{started - complete} tippar just nu",
+            _load_font_px(18 if compact else 20),
+            MUTED,
+            anchor="mt",
+        )
 
-    # CTA button bottom-rightish / center-bottom
-    cta = "TIPPA NU → mx-fantasy.se"
-    cf = _load_display_font(26 if compact else 30, bold=True)
-    cw = _text_width(cf, cta) + 56
-    ch = 56 if compact else 64
-    cx1 = width - margin - cw
-    cy1 = height - margin - ch - 4
-    draw.rounded_rectangle(
-        [cx1, cy1, cx1 + cw, cy1 + ch],
-        radius=18,
-        fill=accent,
-        outline=accent2,
-        width=2,
-    )
+    cta = "TIPPA NU"
+    cf = _load_display_font(28 if compact else 32, bold=True)
+    cw = right_w - 40
+    ch = 58 if compact else 68
+    cx1 = rx + 20
+    cy1 = height - margin - ch - 56
+    draw.rounded_rectangle([cx1, cy1, cx1 + cw, cy1 + ch], radius=18, fill=accent, outline=accent2, width=2)
     _draw_styled_text(draw, (cx1 + cw // 2, cy1 + ch // 2), cta, cf, (8, 15, 30), anchor="mm")
+    _draw_styled_text(
+        draw,
+        (rx + right_w // 2, cy1 + ch + 22),
+        "mx-fantasy.se",
+        _load_font_px(20 if compact else 22, bold=True),
+        WHITE,
+        anchor="mt",
+    )
 
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
@@ -544,64 +670,76 @@ def _render_story(data: dict[str, Any]) -> bytes:
 
     accent, accent2 = _series_colors(data.get("series") or "")
     width, height = W_STORY, H_STORY
-    bg_top = (10, 8, 26)
-    bg_bot = (8, 16, 34)
-    panel = (18, 22, 44)
-
-    img = Image.new("RGB", (width, height), bg_bot)
-    px = img.load()
-    for y in range(height):
-        t = y / max(height - 1, 1)
-        r = int(bg_top[0] * (1 - t) + bg_bot[0] * t)
-        g = int(bg_top[1] * (1 - t) + bg_bot[1] * t)
-        b = int(bg_top[2] * (1 - t) + bg_bot[2] * t)
-        for x in range(width):
-            px[x, y] = (r, g, b)
-
+    img = _paint_cinematic_backdrop(width, height, data, accent)
     draw = ImageDraw.Draw(img)
     margin = 56
+
     draw.rectangle([0, 0, width, 10], fill=accent)
-    draw.rectangle([0, height - 10, width, height], fill=accent2)
+    draw.rectangle([0, height - 10, width, height], fill=GOLD)
 
     y = 56
     logo = _load_brand_logo(100)
     if logo:
+        draw.rounded_rectangle(
+            [margin - 10, y - 10, margin + 420, y + logo.size[1] + 14],
+            radius=18,
+            fill=(8, 12, 24),
+        )
         img.paste(logo, (margin, y), logo)
     _draw_styled_text(
         draw, (margin + 120, y + 22), "MX FANTASY LEAGUE", _load_display_font(28, bold=True), accent, anchor="lm"
     )
-    _draw_styled_text(draw, (margin + 120, y + 60), "RACE HYPE", _load_font_px(22), MUTED, anchor="lm")
-    y += 140
+    _draw_styled_text(draw, (margin + 120, y + 60), "RACE HYPE", _load_font_px(22, bold=True), GOLD, anchor="lm")
+    y += 150
 
     series = _plain_draw_text(data.get("series") or "RACE")
-    pill = f"{series}"
+    pill = f"{series} HYPE"
     pf = _load_display_font(28, bold=True)
     pw = _text_width(pf, pill) + 48
     px0 = (width - pw) // 2
-    draw.rounded_rectangle([px0, y, px0 + pw, y + 52], radius=26, fill=(20, 20, 40), outline=accent, width=3)
-    _draw_styled_text(draw, (width // 2, y + 26), pill, pf, accent2, anchor="mm")
-    y += 80
+    draw.rounded_rectangle([px0, y, px0 + pw, y + 52], radius=26, fill=(12, 16, 30), outline=accent, width=3)
+    _draw_styled_text(draw, (width // 2, y + 26), pill, pf, WHITE, anchor="mm")
+    y += 84
 
     race_name = _plain_draw_text(data.get("race_name") or "Nästa race")
-    for size in (72, 62, 52, 44):
+    for size in (76, 64, 54, 46):
         rf = _load_display_font(size, bold=True)
-        lines = textwrap.wrap(race_name.upper(), width=14)
+        lines = textwrap.wrap(race_name.upper(), width=13)
         if len(lines) <= 3:
             break
+    # Title plate
+    block_h = (size + 8) * min(3, len(lines)) + 24
+    draw.rounded_rectangle(
+        [margin, y - 12, width - margin, y + block_h],
+        radius=22,
+        fill=(6, 10, 20),
+        outline=accent,
+        width=2,
+    )
     for line in lines[:3]:
-        _draw_styled_text(draw, (width // 2, y), line, rf, WHITE, anchor="mt", stroke=(12, 10, 20), stroke_width=4)
+        _draw_styled_text(
+            draw,
+            (width // 2, y),
+            line,
+            rf,
+            WHITE,
+            anchor="mt",
+            stroke=(0, 0, 0),
+            stroke_width=4,
+            glow=(accent[0] // 3, accent[1] // 3, accent[2] // 3),
+        )
         y += size + 6
-    y += 16
+    y += 28
 
     _draw_styled_text(
         draw,
         (width // 2, y),
         _plain_draw_text(data.get("countdown_label") or "COUNTDOWN"),
         _load_font_px(22, bold=True),
-        MUTED,
+        accent2,
         anchor="mt",
     )
-    y += 40
+    y += 42
 
     parts = data.get("countdown_parts") or {}
     units = [
@@ -609,23 +747,24 @@ def _render_story(data: dict[str, Any]) -> bytes:
         (int(parts.get("hours") or 0), "H"),
         (int(parts.get("minutes") or 0), "M"),
     ]
-    box = 180
-    gap = 24
+    box = 190
+    gap = 20
     total = box * 3 + gap * 2
     bx = (width - total) // 2
     for val, label in units:
-        draw.rounded_rectangle([bx, y, bx + box, y + 160], radius=22, fill=panel, outline=accent, width=2)
+        draw.rounded_rectangle([bx, y, bx + box, y + 170], radius=22, fill=(8, 12, 26), outline=accent, width=3)
+        draw.rectangle([bx + 16, y + 12, bx + box - 16, y + 16], fill=accent)
         _draw_styled_text(
-            draw, (bx + box // 2, y + 70), f"{val:02d}", _load_display_font(64, bold=True), accent2, anchor="mm"
+            draw, (bx + box // 2, y + 78), f"{val:02d}", _load_display_font(68, bold=True), WHITE, anchor="mm", glow=accent
         )
-        _draw_styled_text(draw, (bx + box // 2, y + 130), label, _load_font_px(24, bold=True), MUTED, anchor="mm")
+        _draw_styled_text(draw, (bx + box // 2, y + 140), label, _load_font_px(24, bold=True), MUTED, anchor="mm")
         bx += box + gap
-    y += 200
+    y += 210
 
     when = data.get("deadline_display") or data.get("race_start_display") or ""
     if when:
-        _draw_styled_text(draw, (width // 2, y), _plain_draw_text(str(when)), _load_font_px(26), GOLD, anchor="mt")
-        y += 48
+        _draw_styled_text(draw, (width // 2, y), _plain_draw_text(str(when)), _load_font_px(26, bold=True), GOLD, anchor="mt")
+        y += 52
 
     _draw_styled_text(
         draw,
@@ -635,7 +774,7 @@ def _render_story(data: dict[str, Any]) -> bytes:
         WHITE,
         anchor="mt",
     )
-    y += 56
+    y += 58
     stats = data.get("picks_stats") or {}
     complete = int(stats.get("complete") or 0)
     _draw_styled_text(
@@ -649,13 +788,13 @@ def _render_story(data: dict[str, Any]) -> bytes:
     y += 70
 
     cta = "TIPPA NU"
-    cf = _load_display_font(36, bold=True)
+    cf = _load_display_font(38, bold=True)
     cw = width - margin * 2
-    ch = 84
-    draw.rounded_rectangle([margin, y, margin + cw, y + ch], radius=22, fill=accent, outline=accent2, width=2)
-    _draw_styled_text(draw, (width // 2, y + ch // 2), cta, cf, WHITE, anchor="mm")
-    y += ch + 28
-    _draw_styled_text(draw, (width // 2, y), "mx-fantasy.se", _load_font_px(28, bold=True), MUTED, anchor="mt")
+    ch = 88
+    draw.rounded_rectangle([margin, y, margin + cw, y + ch], radius=24, fill=accent, outline=accent2, width=3)
+    _draw_styled_text(draw, (width // 2, y + ch // 2), cta, cf, (8, 15, 30), anchor="mm")
+    y += ch + 30
+    _draw_styled_text(draw, (width // 2, y), "mx-fantasy.se", _load_font_px(28, bold=True), WHITE, anchor="mt")
 
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
