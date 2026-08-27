@@ -14,6 +14,44 @@ W_OG = 1200
 H_OG = 630
 
 
+def _fit_centered_title(
+    text: str,
+    *,
+    max_width: int,
+    sizes: tuple[int, ...] = (72, 64, 56, 48, 40, 34),
+    max_lines: int = 2,
+) -> tuple[Any, list[str]]:
+    """Pick display font + wrap so each line fits max_width (avoids edge clipping)."""
+    from social_recap_service import _load_display_font, _plain_draw_text, _text_width
+
+    title = _plain_draw_text(text or "").upper() or "MX FANTASY"
+    font = _load_display_font(sizes[-1], bold=True)
+    lines = [title]
+
+    for size in sizes:
+        font = _load_display_font(size, bold=True)
+        # Prefer natural word wrap; fall back to tighter char wrap if needed
+        for wrap_w in (18, 14, 11, 9):
+            candidate = textwrap.wrap(title, width=wrap_w) or [title]
+            if len(candidate) > max_lines:
+                continue
+            if all(_text_width(font, line) <= max_width for line in candidate):
+                return font, candidate[:max_lines]
+        # Single-line shrink path
+        if _text_width(font, title) <= max_width:
+            return font, [title]
+
+    # Last resort: hard-trim longest lines
+    lines = textwrap.wrap(title, width=10) or [title]
+    lines = lines[:max_lines]
+    safe: list[str] = []
+    for line in lines:
+        while len(line) > 3 and _text_width(font, line) > max_width:
+            line = line[:-1]
+        safe.append(line)
+    return font, safe or [title[:12]]
+
+
 def _format_deadline_countdown(delta: timedelta) -> str:
     total = int(delta.total_seconds())
     if total <= 0:
@@ -379,14 +417,14 @@ def _render_wsx_story_card(data: dict[str, Any]) -> bytes:
     y += pill_h + 42
 
     race_name = _plain_draw_text(data.get("race_name") or "World Supercross")
-    race_f = _load_display_font(78, bold=True)
-    for size in (78, 68, 58, 48):
-        race_f = _load_display_font(size, bold=True)
-        lines = textwrap.wrap(race_name.upper(), width=14)
-        if len(lines) <= 2:
-            break
+    race_f, lines = _fit_centered_title(
+        race_name,
+        max_width=W_STORY - margin * 2 - 24,
+        sizes=(78, 68, 58, 48, 40, 34),
+        max_lines=2,
+    )
     line_h = _font_height(race_f, "Ay") + 10
-    for line in lines[:2]:
+    for line in lines:
         _draw_styled_text(
             draw,
             (W_STORY // 2, y),
@@ -546,14 +584,14 @@ def _render_story_card(data: dict[str, Any]) -> bytes:
     y += pill_h + 36
 
     race_name = _plain_draw_text(data.get("race_name") or "MX Fantasy League")
-    race_f = _load_display_font(72, bold=True)
-    for size in (72, 64, 56, 48):
-        race_f = _load_display_font(size, bold=True)
-        lines = textwrap.wrap(race_name.upper(), width=16)
-        if len(lines) <= 2:
-            break
+    race_f, lines = _fit_centered_title(
+        race_name,
+        max_width=W_STORY - margin * 2 - 24,
+        sizes=(72, 64, 56, 48, 40, 34),
+        max_lines=2,
+    )
     line_h = _font_height(race_f, "Ay") + 8
-    for line in lines[:2]:
+    for line in lines:
         _draw_styled_text(
             draw,
             (W_STORY // 2, y),
