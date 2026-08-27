@@ -1372,6 +1372,54 @@ def build_sx_season_wrap_context(competitions: list, today: date) -> dict | None
         return None
 
 
+def ensure_ama_2026_series_dates() -> dict:
+    """Keep Motocross/SMX 2026 end dates aligned with finales (Ironman / Ridgedale).
+
+    Prevents Motocross from showing under Färdiga serier before Ironman is done
+    when series.end_date was wrongly set to Budds Creek (23 aug).
+    """
+    from datetime import date as _date
+
+    changed: list[str] = []
+
+    def _max_event_date(series_row: Series | None, series_code: str):
+        filters = [db.func.upper(db.func.coalesce(Competition.series, "")) == series_code]
+        if series_row is not None:
+            filters.append(Competition.series_id == series_row.id)
+        return (
+            db.session.query(db.func.max(Competition.event_date))
+            .filter(db.or_(*filters))
+            .scalar()
+        )
+
+    mx = Series.query.filter_by(name="Motocross", year=2026).first()
+    if mx:
+        ironman_end = _date(2026, 8, 29)
+        target_end = _max_event_date(mx, "MX") or ironman_end
+        if target_end < ironman_end:
+            target_end = ironman_end
+        if mx.end_date != target_end or not mx.is_active:
+            mx.end_date = target_end
+            mx.is_active = True
+            changed.append(f"Motocross.end_date={target_end.isoformat()}")
+
+    smx = Series.query.filter_by(name="SMX Finals", year=2026).first()
+    if smx:
+        final_end = _date(2026, 9, 26)
+        target_end = _max_event_date(smx, "SMX") or final_end
+        if target_end < final_end:
+            target_end = final_end
+        if smx.end_date != target_end or not smx.is_active:
+            smx.end_date = target_end
+            smx.is_active = True
+            changed.append(f"SMX Finals.end_date={target_end.isoformat()}")
+
+    if changed:
+        db.session.commit()
+        print(f"[SERIES] AMA 2026 dates fixed: {', '.join(changed)}")
+    return {"changed": changed}
+
+
 def ensure_wsx_series_and_competitions():
     """Skapa WSX 2025 och dess 5 tävlingar om de inte redan finns (historik)."""
     from datetime import date as _date
@@ -13042,13 +13090,13 @@ def create_default_series_2025():
         motocross = Series.query.filter_by(name='Motocross', year=2026).first()
         if motocross:
             motocross.start_date = date(2026, 5, 24)
-            motocross.end_date = date(2026, 8, 23)
+            motocross.end_date = date(2026, 8, 29)  # Ironman National
             motocross.is_active = True
         
         smx_finals = Series.query.filter_by(name='SMX Finals', year=2026).first()
         if smx_finals:
-            smx_finals.start_date = date(2026, 9, 6)
-            smx_finals.end_date = date(2026, 9, 20)
+            smx_finals.start_date = date(2026, 9, 12)
+            smx_finals.end_date = date(2026, 9, 26)  # Ridgedale Final
             smx_finals.is_active = True
         
         db.session.commit()
@@ -13058,8 +13106,8 @@ def create_default_series_2025():
             'message': 'Updated existing series with correct dates',
             'series_updated': [
                 {'name': 'Supercross', 'start': '2026-01-04', 'end': '2026-05-10'},
-                {'name': 'Motocross', 'start': '2026-05-24', 'end': '2026-08-23'},
-                {'name': 'SMX Finals', 'start': '2026-09-06', 'end': '2026-09-20'}
+                {'name': 'Motocross', 'start': '2026-05-24', 'end': '2026-08-29'},
+                {'name': 'SMX Finals', 'start': '2026-09-12', 'end': '2026-09-26'}
             ]
         })
     
@@ -25622,6 +25670,10 @@ def init_database():
                     ensure_wsx_series_and_competitions()
                 except Exception as seed_err:
                     print(f"Warning: WSX 2025 seed failed: {seed_err}")
+                try:
+                    ensure_ama_2026_series_dates()
+                except Exception as seed_err:
+                    print(f"Warning: AMA 2026 series date fix failed: {seed_err}")
                 try:
                     ensure_wsx_2026(deactivate_2025=True)
                 except Exception as seed_err:
