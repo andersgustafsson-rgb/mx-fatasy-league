@@ -242,6 +242,7 @@
                 data-series="{{ row.series }}"
                 data-status="{{ status_key }}"
                 data-year="{{ row_year }}"
+                data-date="{{ row.event_date }}"
                 onclick="{% if row.has_results %}showDetails({{ row['competition_id'] }}){% endif %}"
                 class="score-row {% if row.has_results %}cursor-pointer{% else %}cursor-default{% endif %} hover:bg-slate-800/30 transition-colors">
                 <td data-label="Datum" class="px-3 sm:px-4 py-3 text-sm text-slate-400 tabular-nums whitespace-nowrap">{{ row.event_date }}</td>
@@ -354,12 +355,29 @@
     let activeStatus = 'all';
     let olderExpanded = false;
 
-    // All rows sorted newest first — find the current-year cutoff
-    const allRows = Array.from(document.querySelectorAll('#scores-tbody tr.score-row'));
+    // All rows — keep newest first in the DOM whenever filters change
+    let allRows = Array.from(document.querySelectorAll('#scores-tbody tr.score-row'));
     const years = [...new Set(allRows.map(r => r.dataset.year).filter(Boolean))].sort((a, b) => b - a);
     const latestYear = years[0] || '';
 
+    function ensureNewestFirst() {
+      const tbody = document.getElementById('scores-tbody');
+      if (!tbody) return;
+      const rows = Array.from(tbody.querySelectorAll('tr.score-row'));
+      rows.sort((a, b) => {
+        const da = a.dataset.date || '';
+        const db = b.dataset.date || '';
+        if (da !== db) return db.localeCompare(da);
+        return (b.id || '').localeCompare(a.id || '');
+      });
+      const olderToggle = document.getElementById('older-toggle-row');
+      if (olderToggle) olderToggle.remove();
+      rows.forEach(r => tbody.appendChild(r));
+      allRows = rows;
+    }
+
     function applyFilters() {
+      ensureNewestFirst();
       const q = (document.getElementById('score-search')?.value || '').trim().toLowerCase();
       const searching = q.length > 0;
 

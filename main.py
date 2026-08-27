@@ -9327,6 +9327,12 @@ def _my_scores_payload(uid: int, series_filter: str, wsx_year: int | None) -> tu
         .all()
     )
     rows = _filter_my_score_rows(rows, series_filter, wsx_year)
+    # Keep newest-first even if DB/driver quirks drop ORDER BY after filtering
+    rows = sorted(
+        rows,
+        key=lambda r: (r.event_date is not None, r.event_date or "", int(r.competition_id or 0)),
+        reverse=True,
+    )
     total_points = sum((r.total_points or 0) for r in rows)
     scores = []
     for r in rows:
