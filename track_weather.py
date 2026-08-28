@@ -56,6 +56,10 @@ TRACK_GEO: dict[str, dict[str, Any]] = {
     "Australian GP": {"lat": -28.0167, "lon": 153.4000, "city": "Gold Coast", "timezone": "Australia/Brisbane"},
     "Swedish GP": {"lat": 59.3293, "lon": 18.0686, "city": "Stockholm", "timezone": "Europe/Stockholm"},
     "South African GP": {"lat": -33.9249, "lon": 18.4241, "city": "Cape Town", "timezone": "Africa/Johannesburg"},
+    # SMX Playoffs / Final 2026
+    "SMX Playoff 1": {"lat": 39.9689, "lon": -83.0111, "city": "Columbus, OH", "timezone": "America/New_York"},
+    "SMX Playoff 2": {"lat": 33.8644, "lon": -118.2611, "city": "Carson, CA", "timezone": "America/Los_Angeles"},
+    "SMX Final": {"lat": 36.5153, "lon": -93.2188, "city": "Ridgedale, MO", "timezone": "America/Chicago"},
 }
 
 _WEATHER_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}

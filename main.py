@@ -1420,6 +1420,68 @@ def ensure_ama_2026_series_dates() -> dict:
     return {"changed": changed}
 
 
+def ensure_smx_2026_competition_meta() -> dict:
+    """Patch SMX Finals 2026 with official playoff dates, venues, timezones and gate times."""
+    from datetime import time as dt_time
+
+    from trackmap_utils import SMX_RACE_META, SMX_RACES_2026
+
+    changed: list[str] = []
+    smx_series = Series.query.filter_by(name="SMX Finals", year=2026).first()
+    series_id = smx_series.id if smx_series else None
+
+    for race in SMX_RACES_2026:
+        name = race["name"]
+        meta = SMX_RACE_META.get(name) or {}
+        target_date = datetime.strptime(race["date"], "%Y-%m-%d").date()
+        st = meta.get("start_time")
+        start_time_val = dt_time(st[0], st[1]) if st else None
+
+        existing = Competition.query.filter_by(name=name).first()
+        if existing:
+            if existing.event_date != target_date:
+                existing.event_date = target_date
+                changed.append(f"{name}.date")
+            if meta.get("timezone") and existing.timezone != meta["timezone"]:
+                existing.timezone = meta["timezone"]
+                changed.append(f"{name}.timezone")
+            if start_time_val and existing.start_time != start_time_val:
+                existing.start_time = start_time_val
+                changed.append(f"{name}.start_time")
+            if series_id and existing.series_id != series_id:
+                existing.series_id = series_id
+                changed.append(f"{name}.series_id")
+            if existing.series != "SMX":
+                existing.series = "SMX"
+                changed.append(f"{name}.series")
+            if existing.phase != race.get("phase"):
+                existing.phase = race.get("phase")
+            target_mult = race.get("multiplier")
+            if target_mult is not None and existing.point_multiplier != target_mult:
+                existing.point_multiplier = target_mult
+        elif series_id:
+            competition = Competition(
+                name=name,
+                event_date=target_date,
+                series="SMX",
+                point_multiplier=race.get("multiplier", 1.0),
+                is_triple_crown=0,
+                coast_250=None,
+                timezone=meta.get("timezone") or "America/New_York",
+                start_time=start_time_val,
+                series_id=series_id,
+                phase=race.get("phase"),
+                is_qualifying=False,
+            )
+            db.session.add(competition)
+            changed.append(f"{name}.created")
+
+    if changed:
+        db.session.commit()
+        print(f"[SMX] 2026 competition meta fixed: {', '.join(changed)}")
+    return {"changed": changed}
+
+
 def ensure_wsx_series_and_competitions():
     """Skapa WSX 2025 och dess 5 tävlingar om de inte redan finns (historik)."""
     from datetime import date as _date
@@ -2415,6 +2477,11 @@ def get_track_timezone(track_name):
         'Unadilla National': 'America/New_York',         # New Berlin, NY
         'Budds Creek National': 'America/New_York',      # Mechanicsville, MD
         'Ironman National': 'America/Indiana/Indianapolis',  # Crawfordsville, IN
+
+        # SMX Playoffs / Final 2026
+        'SMX Playoff 1': 'America/New_York',       # Columbus, OH
+        'SMX Playoff 2': 'America/Los_Angeles',    # Carson, CA
+        'SMX Final': 'America/Chicago',            # Ridgedale, MO
 
         # WSX GPs (stadium names differ by year; keys are Competition.name)
         'Canadian GP': 'America/Edmonton',       # 2026 Calgary (McMahon)
@@ -9714,8 +9781,14 @@ def series_page(series_id):
         )
         print(f"DEBUG: Found {len(competitions)} competitions for series {series_id}")
 
-        # Venue/bana labels for schedule (WSX official calendar)
-        venue_by_name = {
+        # Venue/bana labels for schedule (WSX official calendar + SMX playoffs)
+        from trackmap_utils import (
+            competition_gate_label,
+            competition_schedule_venue_label,
+            race_background_static_url,
+        )
+
+        wsx_venue_by_name = {
             "Canadian GP": "Calgary — McMahon Stadium",
             "British GP": "Birmingham — Alexander Stadium",
             "Buenos Aires City GP": "Buenos Aires — Óscar & Juan Gálvez",
@@ -9724,9 +9797,15 @@ def series_page(series_id):
             "New Zealand GP": "Christchurch — One New Zealand Stadium",
             "Swedish GP": "Sverige",
         }
-        competition_venues = {
-            c.id: venue_by_name.get(c.name) for c in competitions if venue_by_name.get(c.name)
-        }
+        competition_venues = {}
+        competition_gates = {}
+        for c in competitions:
+            label = competition_schedule_venue_label(c) or wsx_venue_by_name.get(c.name)
+            if label:
+                competition_venues[c.id] = label
+            gate = competition_gate_label(c)
+            if gate:
+                competition_gates[c.id] = gate
         
         # Check if there's an active race set in admin panel
         active_race_id = None
@@ -9884,6 +9963,8 @@ def series_page(series_id):
         picks_open = bool(next_race and not is_picks_locked(next_race))
         if next_race and comp_ids:
             picks_locked_status[next_race.id] = not picks_open
+
+        next_race_bg_url = race_background_static_url(next_race) if next_race else None
         
         # Simple template render with all required variables
         print(f"DEBUG: About to render series_page.html for series {series_id}")
@@ -9892,9 +9973,11 @@ def series_page(series_id):
                              competitions=competitions,
                              competition_results=competition_results,
                              competition_venues=competition_venues,
+                             competition_gates=competition_gates,
                              user_picks_status=user_picks_status,
                              picks_locked_status=picks_locked_status,
                              next_race=next_race,
+                             next_race_bg_url=next_race_bg_url,
                              picks_open=picks_open,
                              current_date=get_today(),
                              active_race_id=active_race_id,
@@ -11401,14 +11484,7 @@ def _rider_recent_race_results(rider_id: int, *, limit: int = 4) -> list[dict[st
     )
     out: list[dict[str, Any]] = []
     for cr, comp in rows:
-        if (comp.series or "") == "WSX":
-            pts = (
-                int(cr.rider_points)
-                if cr.rider_points is not None
-                else int(get_smx_qualification_points(cr.position))
-            )
-        else:
-            pts = int(_result_points_for_standing(cr, comp))
+        pts = int(_standing_points_for_comp_result(cr, comp))
         out.append(
             {
                 "comp_name": comp.name,
@@ -11647,14 +11723,6 @@ def _patch_spotlight_portraits(
 
 
 def _standing_points_for_comp_result(cr: CompetitionResult, comp: Competition) -> float:
-    s = (comp.series or "")
-    if s == "WSX":
-        if cr.rider_points is not None:
-            return float(cr.rider_points)
-        return float(get_smx_qualification_points(cr.position))
-    if s == "SMX":
-        mult = comp.point_multiplier or 1.0
-        return float(get_smx_qualification_points(cr.position)) * float(mult)
     return float(_result_points_for_standing(cr, comp))
 
 
@@ -11691,14 +11759,7 @@ def _spotlight_rider_card(
 
     pts = None
     if result and comp:
-        if (comp.series or "") == "WSX":
-            pts = (
-                int(result.rider_points)
-                if result.rider_points is not None
-                else int(get_smx_qualification_points(result.position))
-            )
-        else:
-            pts = int(_result_points_for_standing(result, comp))
+        pts = int(_standing_points_for_comp_result(result, comp))
 
     return {
         "rider_id": int(rider.id),
@@ -13252,30 +13313,37 @@ def create_motocross_competitions(motocross_series_id):
 
 def create_smx_finals_competitions(smx_series_id):
     """Create all SMX Finals competitions for 2026"""
-    smx_races = [
-        {"name": "SMX Playoff 1", "date": "2026-09-12", "phase": "playoff1", "multiplier": 1.0},
-        {"name": "SMX Playoff 2", "date": "2026-09-19", "phase": "playoff2", "multiplier": 2.0},
-        {"name": "SMX Final", "date": "2026-09-26", "phase": "final", "multiplier": 3.0}
-    ]
-    
-    for race in smx_races:
-        # Check if competition already exists
+    from trackmap_utils import SMX_RACE_META, SMX_RACES_2026
+    from datetime import time as dt_time
+
+    for race in SMX_RACES_2026:
+        meta = SMX_RACE_META.get(race["name"]) or {}
+        st = meta.get("start_time")
+        start_time_val = dt_time(st[0], st[1]) if st else None
+        target_date = datetime.strptime(race["date"], "%Y-%m-%d").date()
+
         existing = Competition.query.filter_by(name=race["name"]).first()
         if existing:
-            # Update existing competition with series_id and new date
             existing.series_id = smx_series_id
             existing.phase = race["phase"]
-            existing.event_date = datetime.strptime(race["date"], "%Y-%m-%d").date()
+            existing.event_date = target_date
+            existing.series = "SMX"
+            existing.point_multiplier = race["multiplier"]
+            if meta.get("timezone"):
+                existing.timezone = meta["timezone"]
+            if start_time_val:
+                existing.start_time = start_time_val
             continue
             
         competition = Competition(
             name=race["name"],
-            event_date=datetime.strptime(race["date"], "%Y-%m-%d").date(),
-            series="SMX",  # SMX Finals series
-            point_multiplier=race["multiplier"],  # 1.0x, 2.0x, 3.0x for SMX Finals
+            event_date=target_date,
+            series="SMX",
+            point_multiplier=race["multiplier"],
             is_triple_crown=0,
             coast_250=None,
-            timezone="America/Los_Angeles",
+            timezone=meta.get("timezone") or "America/New_York",
+            start_time=start_time_val,
             series_id=smx_series_id,
             phase=race["phase"],
             is_qualifying=False
@@ -13363,33 +13431,39 @@ def create_smx_finals_competitions_2025():
         if not smx_series:
             return jsonify({'error': 'SMX Finals series not found. Create series first.'}), 400
         
-        # SMX Finals races 2026
-        smx_races = [
-            {"name": "SMX Playoff 1", "date": "2026-09-06", "phase": "playoff1", "multiplier": 1.0},
-            {"name": "SMX Playoff 2", "date": "2026-09-13", "phase": "playoff2", "multiplier": 2.0},
-            {"name": "SMX Final", "date": "2026-09-20", "phase": "final", "multiplier": 3.0}
-        ]
-        
+        from trackmap_utils import SMX_RACES_2026, SMX_RACE_META
+        from datetime import time as dt_time
+
         created_competitions = []
         
-        for race in smx_races:
-            # Check if competition already exists
+        for race in SMX_RACES_2026:
+            meta = SMX_RACE_META.get(race["name"]) or {}
+            st = meta.get("start_time")
+            start_time_val = dt_time(st[0], st[1]) if st else None
+            target_date = datetime.strptime(race["date"], "%Y-%m-%d").date()
+
             existing = Competition.query.filter_by(name=race["name"]).first()
             if existing:
-                # Update existing competition with series_id and new date
                 existing.series_id = smx_series.id
                 existing.phase = race["phase"]
-                existing.event_date = datetime.strptime(race["date"], "%Y-%m-%d").date()
+                existing.event_date = target_date
+                existing.series = "SMX"
+                existing.point_multiplier = race["multiplier"]
+                if meta.get("timezone"):
+                    existing.timezone = meta["timezone"]
+                if start_time_val:
+                    existing.start_time = start_time_val
                 continue
                 
             competition = Competition(
                 name=race["name"],
-                event_date=datetime.strptime(race["date"], "%Y-%m-%d").date(),
-                series="450cc",  # SMX Finals is 450cc only
-                point_multiplier=race["multiplier"],  # 1.0x, 2.0x, 3.0x for SMX Finals
+                event_date=target_date,
+                series="SMX",
+                point_multiplier=race["multiplier"],
                 is_triple_crown=0,
                 coast_250=None,
-                timezone="America/Los_Angeles",
+                timezone=meta.get("timezone") or "America/New_York",
+                start_time=start_time_val,
                 series_id=smx_series.id,
                 phase=race["phase"],
                 is_qualifying=False
@@ -15106,6 +15180,11 @@ def submit_results():
     try:
         db.session.commit()
         print(f"✅ Results saved successfully for competition {comp_id}")
+        if competition and (competition.series or "").strip().upper() == "SMX":
+            synced = _sync_smx_rider_points_for_competition(competition)
+            if synced:
+                db.session.commit()
+                print(f"✅ Synced SMX rider_points for {synced} results (×{competition.point_multiplier or 1})")
     except Exception as e:
         db.session.rollback()
         print(f"❌ Error saving results: {e}")
@@ -25675,6 +25754,10 @@ def init_database():
                 except Exception as seed_err:
                     print(f"Warning: AMA 2026 series date fix failed: {seed_err}")
                 try:
+                    ensure_smx_2026_competition_meta()
+                except Exception as seed_err:
+                    print(f"Warning: SMX 2026 competition meta fix failed: {seed_err}")
+                try:
                     ensure_wsx_2026(deactivate_2025=True)
                 except Exception as seed_err:
                     print(f"Warning: WSX 2026 series seed failed: {seed_err}")
@@ -29998,6 +30081,17 @@ def _result_points_for_standing(
     competition: Competition | None = None,
 ) -> int:
     series = (getattr(competition, "series", None) or "").strip().upper()
+    if series == "WSX":
+        if getattr(result, "rider_points", None) is not None:
+            return int(result.rider_points)
+        if result.position:
+            return get_smx_qualification_points(result.position)
+        return 0
+    if series == "SMX":
+        if result.position:
+            mult = float(getattr(competition, "point_multiplier", None) or 1.0)
+            return int(get_smx_qualification_points(result.position) * mult)
+        return 0
     if series == "MX":
         m1 = getattr(result, "moto_1_position", None)
         m2 = getattr(result, "moto_2_position", None)
@@ -30006,6 +30100,22 @@ def _result_points_for_standing(
     if result.position and result.position <= 20:
         return get_smx_qualification_points(result.position)
     return 0
+
+
+def _sync_smx_rider_points_for_competition(competition: Competition) -> int:
+    """Persist SMX rider_points = AMA position points × round multiplier (1×/2×/3×)."""
+    if (getattr(competition, "series", None) or "").strip().upper() != "SMX":
+        return 0
+    mult = float(getattr(competition, "point_multiplier", None) or 1.0)
+    updated = 0
+    for result in CompetitionResult.query.filter_by(competition_id=competition.id).all():
+        if not result.position:
+            continue
+        pts = int(get_smx_qualification_points(result.position) * mult)
+        if result.rider_points != pts:
+            result.rider_points = pts
+            updated += 1
+    return updated
 
 
 def _promoted_250_coast_by_name() -> dict[str, str]:

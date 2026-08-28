@@ -118,9 +118,9 @@ def seed_data():
             ("Unadilla","2026-08-08","MX",1.0,0),
             ("Budds Creek","2026-08-15","MX",1.0,0),
             ("Ironman","2026-08-22","MX",1.0,0),
-            ("SMX Playoff 1","2026-09-05","SMX",1.5,0),
-            ("SMX Playoff 2","2026-09-12","SMX",1.5,0),
-            ("SMX Final","2026-09-19","SMX",2.0,0),
+            ("SMX Playoff 1","2026-09-12","SMX",1.0,0),
+            ("SMX Playoff 2","2026-09-19","SMX",2.0,0),
+            ("SMX Final","2026-09-26","SMX",3.0,0),
         ]
         comp_objects = [Competition(name=n, event_date=datetime.strptime(d, "%Y-%m-%d").date(), series=s, point_multiplier=pm, is_triple_crown=tc) for n,d,s,pm,tc in competitions_data]
         db.session.bulk_save_objects(comp_objects)

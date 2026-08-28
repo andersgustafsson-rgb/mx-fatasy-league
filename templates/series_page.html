@@ -335,7 +335,9 @@
 
     <!-- Next race -->
     {% if next_race %}
-      {% if next_race.id == 9999 %}
+      {% if next_race_bg_url %}
+        {% set bg_image = next_race_bg_url %}
+      {% elif next_race.id == 9999 %}
         {% if "race_in_3h" in next_race.name %}
           {% set bg_image = "trackmaps/compressed/seattle.jpg" %}
         {% elif "race_in_1h" in next_race.name %}
@@ -386,6 +388,18 @@
                 {% if next_race.event_date %}{{ next_race.event_date.strftime('%d %b %Y') }}{% else %}TBA{% endif %}
               </p>
             </div>
+            {% if competition_venues.get(next_race.id) %}
+            <div class="sp-info-tile">
+              <p class="sp-stat-label">Bana / Ort</p>
+              <p class="sp-stat-value text-base">{{ competition_venues.get(next_race.id) }}</p>
+            </div>
+            {% endif %}
+            {% if competition_gates.get(next_race.id) %}
+            <div class="sp-info-tile">
+              <p class="sp-stat-label">Gate drop</p>
+              <p class="sp-stat-value">{{ competition_gates.get(next_race.id) }}</p>
+            </div>
+            {% endif %}
             <div class="sp-info-tile">
               <p class="sp-stat-label">Picks</p>
               {% if picks_open %}

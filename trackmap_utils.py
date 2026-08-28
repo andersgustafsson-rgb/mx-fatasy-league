@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from types import SimpleNamespace
-from typing import List, Optional, Sequence
+from typing import Any, List, Optional, Sequence
 
 # Competition.name (DB) -> tokens to match filenames in pro motocross folder
 MX_NAME_MATCH_TOKENS: dict[str, list[str]] = {
@@ -38,11 +38,72 @@ SMX_TRACKMAP_FILES: dict[str, list[str]] = {
     ],
 }
 
-SMX_VENUE_LABELS: dict[str, str] = {
-    "SMX Playoff 1": "Historic Crew Stadium · Columbus, OH · 12 sep",
-    "SMX Playoff 2": "Dignity Health Sports Park · Carson, CA · 19 sep",
-    "SMX Final": "Thunder Ridge Nature Arena · Ridgedale, MO · 26 sep",
+# Official 2026 SMX playoffs — supermotocross.com/playoffs/
+SMX_RACES_2026: list[dict[str, Any]] = [
+    {"name": "SMX Playoff 1", "date": "2026-09-12", "phase": "playoff1", "multiplier": 1.0},
+    {"name": "SMX Playoff 2", "date": "2026-09-19", "phase": "playoff2", "multiplier": 2.0},
+    {"name": "SMX Final", "date": "2026-09-26", "phase": "final", "multiplier": 3.0},
+]
+
+SMX_RACE_META: dict[str, dict[str, Any]] = {
+    "SMX Playoff 1": {
+        "venue": "Historic Crew Stadium",
+        "city": "Columbus, OH",
+        "timezone": "America/New_York",
+        "start_time": (15, 0),
+        "gate_label": "15:00 ET",
+    },
+    "SMX Playoff 2": {
+        "venue": "Dignity Health Sports Park",
+        "city": "Carson, CA",
+        "timezone": "America/Los_Angeles",
+        "start_time": (16, 0),
+        "gate_label": "16:00 PT",
+    },
+    "SMX Final": {
+        "venue": "Thunder Ridge Nature Arena",
+        "city": "Ridgedale, MO",
+        "timezone": "America/Chicago",
+        "start_time": (18, 0),
+        "gate_label": "18:00 CT",
+    },
 }
+
+SMX_VENUE_LABELS: dict[str, str] = {
+    name: f"{meta['venue']} · {meta['city']} · gate {meta['gate_label']}"
+    for name, meta in SMX_RACE_META.items()
+}
+
+
+def get_smx_race_meta(competition_name: str) -> Optional[dict[str, Any]]:
+    return SMX_RACE_META.get((competition_name or "").strip())
+
+
+def competition_venue_label(competition) -> Optional[str]:
+    """Venue + city for schedule/hero (SMX playoffs)."""
+    name = (getattr(competition, "name", None) or "").strip()
+    meta = SMX_RACE_META.get(name)
+    if not meta:
+        return None
+    return f"{meta['venue']} · {meta['city']}"
+
+
+def competition_gate_label(competition) -> Optional[str]:
+    """Local gate-drop time label (SMX playoffs)."""
+    name = (getattr(competition, "name", None) or "").strip()
+    meta = SMX_RACE_META.get(name)
+    if meta:
+        return meta.get("gate_label")
+    return None
+
+
+def competition_schedule_venue_label(competition) -> Optional[str]:
+    """Venue column for series schedule tables."""
+    venue = competition_venue_label(competition)
+    gate = competition_gate_label(competition)
+    if venue and gate:
+        return f"{venue} · gate {gate}"
+    return venue
 
 # URL-safe path first (Render/nginx struggle with spaces in static paths)
 MX_TRACKMAP_DIR_CANDIDATES = (
