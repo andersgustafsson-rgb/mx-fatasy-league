@@ -11511,6 +11511,36 @@ def _current_racing_season_year() -> int:
     return get_today().year
 
 
+def _dedupe_championship_query_rows(
+    rows: list[tuple],
+) -> list[tuple]:
+    """One row per rider per race — handles duplicate Competition rows and result rows."""
+    by_comp_rider: dict[tuple[int, int], tuple] = {}
+    for cr, comp, rider in rows:
+        key = (int(comp.id), int(rider.id))
+        prev = by_comp_rider.get(key)
+        if prev is None or int(cr.result_id) > int(prev[0].result_id):
+            by_comp_rider[key] = (cr, comp, rider)
+
+    by_race_rider: dict[tuple, tuple] = {}
+    for cr, comp, rider in by_comp_rider.values():
+        coast = (comp.coast_250 or "").strip().lower()
+        if comp.event_date:
+            race_day = comp.event_date.isoformat()
+        else:
+            race_day = f"comp_{comp.id}"
+        race_key = (
+            str(comp.series).strip().upper(),
+            race_day,
+            coast,
+            int(rider.id),
+        )
+        prev = by_race_rider.get(race_key)
+        if prev is None or int(cr.result_id) > int(prev[0].result_id):
+            by_race_rider[race_key] = (cr, comp, rider)
+    return list(by_race_rider.values())
+
+
 def _accumulate_championship_totals(*, year: int | None = None) -> dict[tuple, dict[int, float]]:
     """Samma bucket-logik som race results — valfritt filter på kalenderår."""
     if year is not None:
@@ -11530,6 +11560,7 @@ def _accumulate_championship_totals(*, year: int | None = None) -> dict[tuple, d
         .join(Rider, Rider.id == CompetitionResult.rider_id)
         .all()
     )
+    rows = _dedupe_championship_query_rows(rows)
 
     for cr, comp, rider in rows:
         if year is not None and (not comp.event_date or int(comp.event_date.year) != int(year)):
@@ -11605,20 +11636,18 @@ def _rider_championship_standings(rider: Rider, year: int) -> list[dict[str, Any
     if cls in ("450cc", "450"):
         sx_b: tuple = ("sx", "450")
         mx_b = ("mx", "450")
-        smx_b = ("smx", "450")
         add_row("SX", f"SX {year}", totals.get(sx_b) or {})
         add_row("MX", f"MX {year}", totals.get(mx_b) or {})
-        add_row("SMX", f"SMX {year}", _merge_championship_maps(totals, sx_b, mx_b, smx_b))
+        add_row("SMX", f"SMX {year}", _merge_championship_maps(totals, sx_b, mx_b))
         return rows
 
     if cls in ("250cc", "250") and coast in ("east", "west"):
         sx_b = ("sx", "250", coast)
         mx_b = ("mx", "250", coast)
-        smx_b = ("smx", "250", coast)
         tag = "250E" if coast == "east" else "250W"
         add_row("SX", f"SX {tag} {year}", totals.get(sx_b) or {})
         add_row("MX", f"MX {tag} {year}", totals.get(mx_b) or {})
-        add_row("SMX", f"SMX {tag} {year}", _merge_championship_maps(totals, sx_b, mx_b, smx_b))
+        add_row("SMX", f"SMX {tag} {year}", _merge_championship_maps(totals, sx_b, mx_b))
 
     return rows
 
@@ -17070,6 +17099,7 @@ def compute_series_championship_totals():
     totals = defaultdict(lambda: defaultdict(float))
     rider_meta = {}
     promoted_250_coasts = _promoted_250_coast_by_name()
+    season_year = _current_racing_season_year()
 
     # Race results / live standings: only the active WSX season.
     # Older WSX years live under Färdiga serier.
@@ -17085,6 +17115,7 @@ def compute_series_championship_totals():
         .join(Rider, Rider.id == CompetitionResult.rider_id)
         .all()
     )
+    rows = _dedupe_championship_query_rows(rows)
 
     for cr, comp, rider in rows:
         s = str(comp.series).strip() if comp.series is not None else ""
@@ -17092,6 +17123,9 @@ def compute_series_championship_totals():
             continue
         if s == "WSX" and wsx_comp_ids and int(comp.id) not in wsx_comp_ids:
             continue
+        if s in ("SX", "MX", "SMX"):
+            if not comp.event_date or int(comp.event_date.year) != season_year:
+                continue
 
         if s == "WSX":
             if cr.rider_points is not None:
@@ -17118,8 +17152,18 @@ def compute_series_championship_totals():
                 "rider_name": rider.name,
                 "rider_number": rider.rider_number,
                 "bike_brand": rider.bike_brand or "",
+                "coast_250": rider.coast_250 or "",
                 "image_url": merged_img,
             }
+
+    try:
+        from official_smx_2026 import apply_official_smx_2026_to_championship_totals
+
+        apply_official_smx_2026_to_championship_totals(
+            totals, rider_meta, season_year=season_year
+        )
+    except Exception as exc:
+        print(f"WARNING apply_official_smx_2026_to_championship_totals: {exc}")
 
     def top_list(*bucket_parts, limit=12):
         bucket = tuple(bucket_parts)
@@ -17144,6 +17188,35 @@ def compute_series_championship_totals():
             bucket = tuple(bucket_parts)
             for rid, p in (totals.get(bucket) or {}).items():
                 merged[rid] += float(p)
+        items = sorted(merged.items(), key=lambda x: (-x[1], x[0]))
+        out = []
+        for rank, (rid, p) in enumerate(items, start=1):
+            if rank < min_rank:
+                continue
+            if max_rank is not None and rank > max_rank:
+                break
+            row = dict(rider_meta.get(rid, {}))
+            row["points"] = int(p) if abs(p - round(p)) < 0.001 else round(p, 1)
+            row["smx_rank"] = rank
+            row["zone"] = _smx_qualification_zone(rank)
+            out.append(row)
+            if max_rank is None and len(out) >= limit:
+                break
+        return out
+
+    def combined_250_unified_list(
+        *,
+        limit: int = 12,
+        min_rank: int = 1,
+        max_rank: int | None = None,
+    ):
+        """Official SMX 250 Combined: one list (East + West SX + MX)."""
+        merged = defaultdict(float)
+        for coast in ("east", "west"):
+            for bucket_parts in (("sx", "250", coast), ("mx", "250", coast)):
+                bucket = tuple(bucket_parts)
+                for rid, p in (totals.get(bucket) or {}).items():
+                    merged[int(rid)] += float(p)
         items = sorted(merged.items(), key=lambda x: (-x[1], x[0]))
         out = []
         for rank, (rid, p) in enumerate(items, start=1):
@@ -17186,6 +17259,35 @@ def compute_series_championship_totals():
             out.append(row)
         return out
 
+    def smx_playoff_top_list_unified_250(limit=12):
+        """SMX World Championship 250 — unified combined seed + playoff rounds."""
+        combined = defaultdict(float)
+        for coast in ("east", "west"):
+            for bucket_parts in (("sx", "250", coast), ("mx", "250", coast)):
+                bucket = tuple(bucket_parts)
+                for rid, p in (totals.get(bucket) or {}).items():
+                    combined[int(rid)] += float(p)
+
+        playoff_pts = defaultdict(float)
+        ranked = sorted(combined.items(), key=lambda x: (-x[1], x[0]))
+        for rank, (rid, _) in enumerate(ranked[:20], start=1):
+            playoff_pts[rid] += float(get_smx_qualification_points(rank))
+
+        for coast in ("east", "west"):
+            smx_bucket = ("smx", "250", coast)
+            for rid, p in (totals.get(smx_bucket) or {}).items():
+                playoff_pts[int(rid)] += float(p)
+
+        items = sorted(playoff_pts.items(), key=lambda x: (-x[1], x[0]))
+        out = []
+        for rid, p in items[:limit]:
+            if p <= 0:
+                continue
+            row = dict(rider_meta.get(rid, {}))
+            row["points"] = int(p) if abs(p - round(p)) < 0.001 else round(p, 1)
+            out.append(row)
+        return out
+
     sx = {
         "label": "AMA Supercross (SX)",
         "450": top_list("sx", "450"),
@@ -17202,28 +17304,13 @@ def compute_series_championship_totals():
         "label": "SMX Combined (SX + MX)",
         "450": combined_top_list(("sx", "450"), ("mx", "450"), limit=12, max_rank=20),
         "450_lcq": combined_top_list(("sx", "450"), ("mx", "450"), min_rank=21, max_rank=30),
-        "250_east": combined_top_list(
-            ("sx", "250", "east"), ("mx", "250", "east"), limit=12, max_rank=20
-        ),
-        "250_east_lcq": combined_top_list(
-            ("sx", "250", "east"), ("mx", "250", "east"), min_rank=21, max_rank=30
-        ),
-        "250_west": combined_top_list(
-            ("sx", "250", "west"), ("mx", "250", "west"), limit=12, max_rank=20
-        ),
-        "250_west_lcq": combined_top_list(
-            ("sx", "250", "west"), ("mx", "250", "west"), min_rank=21, max_rank=30
-        ),
+        "250": combined_250_unified_list(limit=12, max_rank=20),
+        "250_lcq": combined_250_unified_list(min_rank=21, max_rank=30),
     }
     smx_playoffs = {
         "label": "SMX World Championship (Playoffs)",
         "450": smx_playoff_top_list(("sx", "450"), ("mx", "450"), ("smx", "450")),
-        "250_east": smx_playoff_top_list(
-            ("sx", "250", "east"), ("mx", "250", "east"), ("smx", "250", "east")
-        ),
-        "250_west": smx_playoff_top_list(
-            ("sx", "250", "west"), ("mx", "250", "west"), ("smx", "250", "west")
-        ),
+        "250": smx_playoff_top_list_unified_250(),
     }
     wsx = {
         "label": f"WSX {wsx_year}",
@@ -25821,6 +25908,17 @@ def init_database():
                 except Exception as seed_err:
                     print(f"Warning: SMX 2026 competition meta fix failed: {seed_err}")
                 try:
+                    from official_smx_2026 import reconcile_championship_results_2026
+
+                    recon = reconcile_championship_results_2026(db, CompetitionResult, Competition)
+                    if recon.get("deleted"):
+                        print(
+                            f"[SMX] Reconciled duplicate AMA results: "
+                            f"deleted={recon['deleted']} season={recon.get('season_year')}"
+                        )
+                except Exception as seed_err:
+                    print(f"Warning: AMA standings reconcile failed: {seed_err}")
+                try:
                     ensure_wsx_2026(deactivate_2025=True)
                 except Exception as seed_err:
                     print(f"Warning: WSX 2026 series seed failed: {seed_err}")
@@ -30208,6 +30306,7 @@ def calculate_smx_qualification_points(*, limit: int = 30) -> dict[str, list[tup
     """SMX Combined (SX+MX) rankings per class — top `limit` for seed/LCQ bubble (official: 20+10)."""
     standings: dict[str, dict] = {}
     promoted_250_coasts = _promoted_250_coast_by_name()
+    season_year = _current_racing_season_year()
     rows = (
         db.session.query(CompetitionResult, Competition, Rider)
         .join(Competition, Competition.id == CompetitionResult.competition_id)
@@ -30215,8 +30314,12 @@ def calculate_smx_qualification_points(*, limit: int = 30) -> dict[str, list[tup
         .filter(Competition.series.in_(["SX", "MX"]))
         .all()
     )
+    rows = _dedupe_championship_query_rows(rows)
 
     for result, competition, rider in rows:
+        if not competition.event_date or int(competition.event_date.year) != season_year:
+            continue
+
         class_name, coast_250 = _standing_class_and_coast(
             result, competition, rider, promoted_250_coasts
         )
@@ -30254,10 +30357,21 @@ def calculate_smx_qualification_points(*, limit: int = 30) -> dict[str, list[tup
     riders_250_sorted = sorted(riders_250, key=lambda x: (-x[1]["total_points"], x[0]))
 
     cap = max(1, int(limit))
-    return {
+    result = {
         "450": riders_450_sorted[:cap],
         "250": riders_250_sorted[:cap],
     }
+    try:
+        from official_smx_2026 import apply_official_smx_2026_to_qualification
+
+        result = apply_official_smx_2026_to_qualification(
+            result, season_year=season_year
+        )
+        for class_key in ("450", "250"):
+            result[class_key] = result.get(class_key, [])[:cap]
+    except Exception as exc:
+        print(f"WARNING apply_official_smx_2026_to_qualification: {exc}")
+    return result
 
 
 def _smx_qualification_zone(position: int) -> str:

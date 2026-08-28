@@ -309,10 +309,12 @@
   {% endmacro %}
 
   {# En klass i taget — samma id-mönster som JS initStandingsTabs() #}
-  {% macro standings_class_picker(group_id, ring, label, d450, d_east, d_west) %}
+  {% macro standings_class_picker(group_id, ring, label, d450, d_east, d_west, d250=None) %}
     {% set ns = namespace(which='') %}
     {% if d450 and d450|length %}
       {% set ns.which = '450' %}
+    {% elif d250 and d250|length %}
+      {% set ns.which = '250combined' %}
     {% elif d_east and d_east|length %}
       {% set ns.which = '250east' %}
     {% elif d_west and d_west|length %}
@@ -325,6 +327,10 @@
         <button type="button" class="standings-tab px-3 py-2 rounded-full text-xs font-bold border border-slate-600 bg-slate-800/80 text-slate-100 hover:bg-slate-700 transition-colors {% if ns.which == '450' %}ring-active-{{ ring }}{% endif %}"
                 data-standings-target="standings-panel-{{ group_id }}-450" data-ring="{{ ring }}">450cc</button>
         {% endif %}
+        {% if d250 and d250|length %}
+        <button type="button" class="standings-tab px-3 py-2 rounded-full text-xs font-bold border border-slate-600 bg-slate-800/80 text-slate-100 hover:bg-slate-700 transition-colors {% if ns.which == '250combined' %}ring-active-{{ ring }}{% endif %}"
+                data-standings-target="standings-panel-{{ group_id }}-250combined" data-ring="{{ ring }}">250 Combined</button>
+        {% endif %}
         {% if d_east and d_east|length %}
         <button type="button" class="standings-tab px-3 py-2 rounded-full text-xs font-bold border border-slate-600 bg-slate-800/80 text-slate-100 hover:bg-slate-700 transition-colors {% if ns.which == '250east' %}ring-active-{{ ring }}{% endif %}"
                 data-standings-target="standings-panel-{{ group_id }}-250east" data-ring="{{ ring }}">250 East</button>
@@ -336,6 +342,9 @@
       </div>
       {% if d450 and d450|length %}
       <div id="standings-panel-{{ group_id }}-450" class="standings-subpanel {% if ns.which != '450' %}hidden{% endif %}" role="tabpanel">{{ standings_table_wide(d450) }}</div>
+      {% endif %}
+      {% if d250 and d250|length %}
+      <div id="standings-panel-{{ group_id }}-250combined" class="standings-subpanel {% if ns.which != '250combined' %}hidden{% endif %}" role="tabpanel">{{ standings_table_wide(d250) }}</div>
       {% endif %}
       {% if d_east and d_east|length %}
       <div id="standings-panel-{{ group_id }}-250east" class="standings-subpanel {% if ns.which != '250east' %}hidden{% endif %}" role="tabpanel">{{ standings_table_wide(d_east) }}</div>
@@ -462,13 +471,14 @@
         {% if championship_totals.get('show_smx_section') %}
         <div class="rounded-xl border border-violet-700/35 bg-slate-900/25 p-4 min-w-0">
           <h3 class="text-base font-bold text-violet-300 mb-2 border-b border-violet-800/40 pb-2">{{ smx.get('label', 'SMX Combined (SX + MX)') }}</h3>
-          {% if smx.get('450') or smx.get('250_east') or smx.get('250_west') %}
-            {{ standings_class_picker('smx', 'smx', smx.get('label'), smx.get('450'), smx.get('250_east'), smx.get('250_west')) }}
-            {% if smx.get('450_lcq') or smx.get('250_east_lcq') or smx.get('250_west_lcq') %}
+          {% if smx.get('450') or smx.get('250') or smx.get('250_east') or smx.get('250_west') %}
+            {{ standings_class_picker('smx', 'smx', smx.get('label'), smx.get('450'), smx.get('250_east'), smx.get('250_west'), smx.get('250')) }}
+            {% if smx.get('450_lcq') or smx.get('250_lcq') or smx.get('250_east_lcq') or smx.get('250_west_lcq') %}
             <div class="mt-5 pt-4 border-t border-violet-800/35">
               <p class="text-sm font-semibold text-amber-200 mb-1">LCQ-zon · plats 21–30</p>
               <p class="text-xs text-slate-500 mb-3 leading-relaxed">Tävlar i Last Chance Qualifier om de två sista startplatserna i varje playoff-runda. Skadade förare som halkat ner hit kan fortfarande ta sig in.</p>
               {{ smx_lcq_block(smx.get('450_lcq'), '450cc') }}
+              {{ smx_lcq_block(smx.get('250_lcq'), '250 Combined') }}
               {{ smx_lcq_block(smx.get('250_east_lcq'), '250 East') }}
               {{ smx_lcq_block(smx.get('250_west_lcq'), '250 West') }}
             </div>
@@ -484,8 +494,8 @@
         {% if championship_totals.get('show_smx_playoffs_section') %}
         <div class="rounded-xl border border-indigo-700/35 bg-slate-900/25 p-4 min-w-0">
           <h3 class="text-base font-bold text-indigo-300 mb-2 border-b border-indigo-800/40 pb-2">{{ smx_po.get('label', 'SMX World Championship (Playoffs)') }}</h3>
-          {% if smx_po.get('450') or smx_po.get('250_east') or smx_po.get('250_west') %}
-            {{ standings_class_picker('smxpo', 'smxpo', smx_po.get('label'), smx_po.get('450'), smx_po.get('250_east'), smx_po.get('250_west')) }}
+          {% if smx_po.get('450') or smx_po.get('250') or smx_po.get('250_east') or smx_po.get('250_west') %}
+            {{ standings_class_picker('smxpo', 'smxpo', smx_po.get('label'), smx_po.get('450'), smx_po.get('250_east'), smx_po.get('250_west'), smx_po.get('250')) }}
           {% else %}
             <p class="text-slate-500 text-sm py-8 text-center leading-relaxed">
               Playoff-ställning visas när SMX-rundor börjar — topp 20 från SX+MX får seed-poäng (25–2) plus resultat från Playoff 1/2 och Final.
