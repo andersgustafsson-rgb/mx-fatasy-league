@@ -17055,10 +17055,12 @@ def user_stats_page(username: str):
 def compute_series_championship_totals():
     """
     Summarizes season points using the same rules as the per-race results view:
-    WSX (rider_points or position), SMX Finals (position × point_multiplier), SX/MX (AMA scale).
+    WSX (rider_points or position), SMX playoffs (position × round multiplier), SX/MX (AMA scale).
 
-    The SMX *combined* block matches official SMX championship tables (e.g. supermotocross.com):
-    regular season = SX points + MX points, plus SMX Playoff / Final rounds on top — not playoff-only.
+    Official SMX (supermotocross.com rulebook):
+    - SMX Combined = SX championship points + MX championship points (regular season seeding).
+    - SMX World Championship = seed adjustment (top 20 from combined) + playoff round points
+      (Playoff 1 ×1, Playoff 2 ×2, Final ×3; AMA scale 25–1 for positions 1–21).
     Buckets internally: SX/MX/SMX × (450cc, 250 East, 250 West); WSX × (SX1, SX2).
     """
     from collections import defaultdict
@@ -17130,8 +17132,13 @@ def compute_series_championship_totals():
             out.append(row)
         return out
 
-    def combined_top_list(*bucket_tuples, limit=12):
-        """Official SMX combined: sum SX + MX + SMX Finals for the same class bucket."""
+    def combined_top_list(
+        *bucket_tuples,
+        limit: int = 12,
+        min_rank: int = 1,
+        max_rank: int | None = None,
+    ):
+        """SX + MX combined; optional rank window (e.g. 21–30 for LCQ bubble)."""
         merged = defaultdict(float)
         for bucket_parts in bucket_tuples:
             bucket = tuple(bucket_parts)
@@ -17139,7 +17146,41 @@ def compute_series_championship_totals():
                 merged[rid] += float(p)
         items = sorted(merged.items(), key=lambda x: (-x[1], x[0]))
         out = []
+        for rank, (rid, p) in enumerate(items, start=1):
+            if rank < min_rank:
+                continue
+            if max_rank is not None and rank > max_rank:
+                break
+            row = dict(rider_meta.get(rid, {}))
+            row["points"] = int(p) if abs(p - round(p)) < 0.001 else round(p, 1)
+            row["smx_rank"] = rank
+            row["zone"] = _smx_qualification_zone(rank)
+            out.append(row)
+            if max_rank is None and len(out) >= limit:
+                break
+        return out
+
+    def smx_playoff_top_list(sx_bucket, mx_bucket, smx_bucket, limit=12):
+        """Official SMX World Championship: seed adjustment (top 20 combined) + playoff rounds."""
+        combined = defaultdict(float)
+        for rid, p in (totals.get(sx_bucket) or {}).items():
+            combined[int(rid)] += float(p)
+        for rid, p in (totals.get(mx_bucket) or {}).items():
+            combined[int(rid)] += float(p)
+
+        playoff_pts = defaultdict(float)
+        ranked = sorted(combined.items(), key=lambda x: (-x[1], x[0]))
+        for rank, (rid, _) in enumerate(ranked[:20], start=1):
+            playoff_pts[rid] += float(get_smx_qualification_points(rank))
+
+        for rid, p in (totals.get(smx_bucket) or {}).items():
+            playoff_pts[int(rid)] += float(p)
+
+        items = sorted(playoff_pts.items(), key=lambda x: (-x[1], x[0]))
+        out = []
         for rid, p in items[:limit]:
+            if p <= 0:
+                continue
             row = dict(rider_meta.get(rid, {}))
             row["points"] = int(p) if abs(p - round(p)) < 0.001 else round(p, 1)
             out.append(row)
@@ -17158,12 +17199,29 @@ def compute_series_championship_totals():
         "250_west": top_list("mx", "250", "west"),
     }
     smx = {
-        "label": "SMX Combined (SX + MX + SMX Finals)",
-        "450": combined_top_list(("sx", "450"), ("mx", "450"), ("smx", "450")),
+        "label": "SMX Combined (SX + MX)",
+        "450": combined_top_list(("sx", "450"), ("mx", "450"), limit=12, max_rank=20),
+        "450_lcq": combined_top_list(("sx", "450"), ("mx", "450"), min_rank=21, max_rank=30),
         "250_east": combined_top_list(
-            ("sx", "250", "east"), ("mx", "250", "east"), ("smx", "250", "east")
+            ("sx", "250", "east"), ("mx", "250", "east"), limit=12, max_rank=20
+        ),
+        "250_east_lcq": combined_top_list(
+            ("sx", "250", "east"), ("mx", "250", "east"), min_rank=21, max_rank=30
         ),
         "250_west": combined_top_list(
+            ("sx", "250", "west"), ("mx", "250", "west"), limit=12, max_rank=20
+        ),
+        "250_west_lcq": combined_top_list(
+            ("sx", "250", "west"), ("mx", "250", "west"), min_rank=21, max_rank=30
+        ),
+    }
+    smx_playoffs = {
+        "label": "SMX World Championship (Playoffs)",
+        "450": smx_playoff_top_list(("sx", "450"), ("mx", "450"), ("smx", "450")),
+        "250_east": smx_playoff_top_list(
+            ("sx", "250", "east"), ("mx", "250", "east"), ("smx", "250", "east")
+        ),
+        "250_west": smx_playoff_top_list(
             ("sx", "250", "west"), ("mx", "250", "west"), ("smx", "250", "west")
         ),
     }
@@ -17192,6 +17250,7 @@ def compute_series_championship_totals():
         _block_nonempty(sx)
         or _block_nonempty(mx)
         or _block_nonempty(smx)
+        or _block_nonempty(smx_playoffs)
         or _block_nonempty(wsx)
         or smx_comp_exists
     )
@@ -17200,9 +17259,11 @@ def compute_series_championship_totals():
         "SX": sx,
         "MX": mx,
         "SMX": smx,
+        "SMX_PLAYOFFS": smx_playoffs,
         "WSX": wsx,
         "has_any": has_any,
         "show_smx_section": _block_nonempty(smx) or smx_comp_exists,
+        "show_smx_playoffs_section": _block_nonempty(smx_playoffs) or smx_comp_exists,
     }
 
 
@@ -17219,8 +17280,10 @@ def race_results_page():
                 "SX": {},
                 "MX": {},
                 "SMX": {},
+                "SMX_PLAYOFFS": {},
                 "WSX": {},
                 "show_smx_section": False,
+                "show_smx_playoffs_section": False,
             }
 
         series_filter = (request.args.get("series") or "").strip().upper()
@@ -28865,79 +28928,46 @@ def excitebike_clone():
 
 @app.route("/api/smx_qualification")
 def get_smx_qualification():
-    """Get 450cc SMX qualification standings (Top 20)"""
+    """450cc SMX Combined standings — top 20 seeded + 21–30 LCQ bubble."""
     try:
-        all_riders = calculate_smx_qualification_points()
-        
-        # Filter only 450cc riders (they should be at the beginning of the list)
-        qualification_data = []
-        position = 1
-        for rider_id, data in all_riders:
-            rider = data['rider']
-            if data.get('class_name') == '450cc':
-                qualification_data.append({
-                    'position': position,
-                    'rider_id': rider.id,
-                    'rider_name': rider.name,
-                    'rider_number': rider.rider_number,
-                    'bike_brand': rider.bike_brand,
-                    'rider_class': data.get('class_name'),
-                    'total_points': data['total_points'],
-                    'sx_points': data['sx_points'],
-                    'mx_points': data['mx_points'],
-                    'qualified': position <= 20
-                })
-                position += 1
-        
-        print(f"DEBUG: 450cc SMX qualification - Found {len(qualification_data)} 450cc riders")
-        
+        rankings = calculate_smx_qualification_points(limit=30)
+        qualification_data = _format_smx_qualification_rows(rankings.get("450") or [], class_name="450cc")
+        seeded = sum(1 for r in qualification_data if r["zone"] == "seeded")
+        lcq = sum(1 for r in qualification_data if r["zone"] == "lcq")
+
         return jsonify({
-            'success': True,
-            'qualification': qualification_data,
-            'total_qualified': len(qualification_data)
+            "success": True,
+            "class_name": "450cc",
+            "qualification": qualification_data,
+            "seeded_count": seeded,
+            "lcq_count": lcq,
+            "total_qualified": seeded,
         })
-        
     except Exception as e:
         print(f"ERROR in get_smx_qualification: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/api/smx_qualification_250cc")
 def get_smx_qualification_250cc():
-    """Get 250cc SMX qualification standings (Top 20)"""
+    """250cc SMX Combined standings — top 20 seeded + 21–30 LCQ bubble."""
     try:
-        all_riders = calculate_smx_qualification_points()
-        
-        # Filter only 250cc riders (they should now be at the end of the list)
-        qualification_data = []
-        position = 1
-        for rider_id, data in all_riders:
-            rider = data['rider']
-            if data.get('class_name') == '250cc':
-                qualification_data.append({
-                    'position': position,
-                    'rider_id': rider.id,
-                    'rider_name': rider.name,
-                    'rider_number': rider.rider_number,
-                    'bike_brand': rider.bike_brand,
-                    'coast_250': data.get('coast_250') or rider.coast_250,
-                    'total_points': data['total_points'],
-                    'sx_points': data['sx_points'],
-                    'mx_points': data['mx_points'],
-                    'qualified': position <= 20
-                })
-                position += 1
-        
-        print(f"DEBUG: 250cc SMX qualification - Found {len(qualification_data)} 250cc riders")
-        
+        rankings = calculate_smx_qualification_points(limit=30)
+        qualification_data = _format_smx_qualification_rows(rankings.get("250") or [], class_name="250cc")
+        seeded = sum(1 for r in qualification_data if r["zone"] == "seeded")
+        lcq = sum(1 for r in qualification_data if r["zone"] == "lcq")
+
         return jsonify({
-            'success': True,
-            'qualification': qualification_data,
-            'total_qualified': len(qualification_data)
+            "success": True,
+            "class_name": "250cc",
+            "qualification": qualification_data,
+            "seeded_count": seeded,
+            "lcq_count": lcq,
+            "total_qualified": seeded,
         })
-        
     except Exception as e:
         print(f"ERROR in get_smx_qualification_250cc: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/debug_250cc")
 def debug_250cc():
@@ -28984,7 +29014,7 @@ def get_series_leaders():
         _ensure_competition_result_moto_columns()
         leaders = get_series_leaders()
         mx_leaders = get_mx_series_leaders()
-        smx_qualification = calculate_smx_qualification_points()
+        smx_qualification = calculate_smx_qualification_points(limit=30)
 
         def format_leaders_block(block):
             formatted = {}
@@ -29012,24 +29042,26 @@ def get_series_leaders():
                     formatted[series] = None
             return formatted
 
-        # Format leaders data
         leaders_data = format_leaders_block(leaders)
         mx_leaders_data = format_leaders_block(mx_leaders)
 
-        # Format SMX qualification overview - separate 450cc, 250 East and 250 West
-        smx_450cc = [(rider_id, data) for rider_id, data in smx_qualification if data.get('class_name') == '450cc']
-        smx_250cc = [(rider_id, data) for rider_id, data in smx_qualification if data.get('class_name') == '250cc']
+        smx_450cc = smx_qualification.get("450") or []
+        smx_250cc = smx_qualification.get("250") or []
         smx_250cc_east = [
             item for item in smx_250cc
-            if (item[1].get('coast_250') or item[1]['rider'].coast_250 or '').strip().lower() == 'east'
+            if (item[1].get("coast_250") or item[1]["rider"].coast_250 or "").strip().lower() == "east"
         ]
         smx_250cc_west = [
             item for item in smx_250cc
-            if (item[1].get('coast_250') or item[1]['rider'].coast_250 or '').strip().lower() == 'west'
+            if (item[1].get("coast_250") or item[1]["rider"].coast_250 or "").strip().lower() == "west"
         ]
         
         smx_overview = {
-            'total_qualified': len(smx_qualification),
+            'total_qualified': min(20, len(smx_450cc)) + min(20, len(smx_250cc)),
+            'seeded_450': min(20, len(smx_450cc)),
+            'lcq_450': max(0, min(10, len(smx_450cc) - 20)),
+            'seeded_250': min(20, len(smx_250cc)),
+            'lcq_250': max(0, min(10, len(smx_250cc) - 20)),
             '450cc_top_5': [],
             '250cc_top_5': [],
             '250cc_east_top_5': [],
@@ -30172,10 +30204,9 @@ def _standing_class_and_coast(
     return class_name, None
 
 
-def calculate_smx_qualification_points():
-    """Calculate SMX qualification points from result-time class, not current rider class."""
-    # A rider can move 250 -> 450 later. Historical SX 250 points must remain in 250 standings.
-    standings = {}
+def calculate_smx_qualification_points(*, limit: int = 30) -> dict[str, list[tuple[str, dict]]]:
+    """SMX Combined (SX+MX) rankings per class — top `limit` for seed/LCQ bubble (official: 20+10)."""
+    standings: dict[str, dict] = {}
     promoted_250_coasts = _promoted_250_coast_by_name()
     rows = (
         db.session.query(CompetitionResult, Competition, Rider)
@@ -30219,10 +30250,57 @@ def calculate_smx_qualification_points():
     riders_450 = [(key, data) for key, data in standings.items() if data["class_name"] == "450cc"]
     riders_250 = [(key, data) for key, data in standings.items() if data["class_name"] == "250cc"]
 
-    riders_450_sorted = sorted(riders_450, key=lambda x: x[1]["total_points"], reverse=True)
-    riders_250_sorted = sorted(riders_250, key=lambda x: x[1]["total_points"], reverse=True)
+    riders_450_sorted = sorted(riders_450, key=lambda x: (-x[1]["total_points"], x[0]))
+    riders_250_sorted = sorted(riders_250, key=lambda x: (-x[1]["total_points"], x[0]))
 
-    return riders_450_sorted[:20] + riders_250_sorted[:20]
+    cap = max(1, int(limit))
+    return {
+        "450": riders_450_sorted[:cap],
+        "250": riders_250_sorted[:cap],
+    }
+
+
+def _smx_qualification_zone(position: int) -> str:
+    if position <= 20:
+        return "seeded"
+    if position <= 30:
+        return "lcq"
+    return "out"
+
+
+def _format_smx_qualification_rows(
+    entries: list[tuple[str, dict]],
+    *,
+    class_name: str,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for position, (_key, data) in enumerate(entries, start=1):
+        rider = data["rider"]
+        zone = _smx_qualification_zone(position)
+        rows.append(
+            {
+                "position": position,
+                "rider_id": rider.id,
+                "rider_name": rider.name,
+                "rider_number": rider.rider_number,
+                "bike_brand": rider.bike_brand or "",
+                "rider_class": class_name,
+                "coast_250": data.get("coast_250") or rider.coast_250,
+                "total_points": int(data["total_points"])
+                if abs(data["total_points"] - round(data["total_points"])) < 0.001
+                else round(data["total_points"], 1),
+                "sx_points": int(data["sx_points"])
+                if abs(data["sx_points"] - round(data["sx_points"])) < 0.001
+                else round(data["sx_points"], 1),
+                "mx_points": int(data["mx_points"])
+                if abs(data["mx_points"] - round(data["mx_points"])) < 0.001
+                else round(data["mx_points"], 1),
+                "qualified": position <= 20,
+                "zone": zone,
+                "zone_label": "Direktkval" if zone == "seeded" else ("LCQ" if zone == "lcq" else "Utanför"),
+            }
+        )
+    return rows
 
 def get_series_leaders():
     """Get current leaders for each series (450cc, 250cc East, 250cc West)"""

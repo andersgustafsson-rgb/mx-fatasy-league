@@ -135,6 +135,7 @@
     .standings-tab.ring-active-sx { box-shadow: 0 0 0 2px rgb(34 211 238 / 0.6); }
     .standings-tab.ring-active-mx { box-shadow: 0 0 0 2px rgb(52 211 153 / 0.55); }
     .standings-tab.ring-active-smx { box-shadow: 0 0 0 2px rgb(167 139 250 / 0.55); }
+    .standings-tab.ring-active-smxpo { box-shadow: 0 0 0 2px rgb(129 140 248 / 0.55); }
     .standings-tab.ring-active-wsx { box-shadow: 0 0 0 2px rgb(251 191 36 / 0.55); }
     /* WSX/standing cards are often full-body — bias crop toward the head */
     .standings-avatar-img {
@@ -278,7 +279,7 @@
         </colgroup>
         <tbody>
           {% for r in rows %}
-            {{ standings_row_wide(r, loop.index, loop.index > 5) }}
+            {{ standings_row_wide(r, r.smx_rank|default(loop.index), loop.index > 5) }}
           {% endfor %}
         </tbody>
         {% if rows|length > 5 %}
@@ -294,6 +295,15 @@
         </tfoot>
         {% endif %}
       </table>
+    </div>
+    {% endif %}
+  {% endmacro %}
+
+  {% macro smx_lcq_block(lcq_rows, title) %}
+    {% if lcq_rows and lcq_rows|length > 0 %}
+    <div class="mt-4">
+      <p class="text-xs font-bold uppercase tracking-wide text-amber-200/90 mb-2">{{ title }}</p>
+      {{ standings_table_wide(lcq_rows) }}
     </div>
     {% endif %}
   {% endmacro %}
@@ -428,7 +438,8 @@
         <p class="text-slate-400 text-sm mt-1 max-w-3xl">
           Under varje serie väljer du <strong class="text-slate-300">450cc</strong>, <strong class="text-slate-300">250 East</strong> eller <strong class="text-slate-300">250 West</strong> — en tabell i full bredd i taget (samma poängskala som per race).
           <strong class="text-slate-300">250 East/West</strong>: för SX/MX krävs att tävling och förare har samma region; för <strong class="text-slate-300">SMX Finals</strong>-rader räknas per förares region om tävlingen saknar coast.
-          <strong class="text-slate-300">SMX Combined</strong> (violett) är samma princip som på supermotocross.com / Racer X: <strong class="text-slate-300">SX-poäng + MX-poäng + SMX Playoff/Final</strong> (multiplikator per tävling).
+          <strong class="text-slate-300">SMX Combined</strong> (violett) = officiell säsongspoäng <strong class="text-slate-300">SX + MX</strong> (topp 20 direktkval, plats 21–30 LCQ).
+          <strong class="text-slate-300">SMX World Championship</strong> (indigo) = seed-poäng (25–2 för topp 20) + playoff-rundor med <strong class="text-slate-300">1× / 2× / 3×</strong>.
           <strong class="text-slate-300">WSX</strong>: välj SX1 eller SX2.
         </p>
       </div>
@@ -450,12 +461,34 @@
         {% set smx = championship_totals.get('SMX') or {} %}
         {% if championship_totals.get('show_smx_section') %}
         <div class="rounded-xl border border-violet-700/35 bg-slate-900/25 p-4 min-w-0">
-          <h3 class="text-base font-bold text-violet-300 mb-2 border-b border-violet-800/40 pb-2">{{ smx.get('label', 'SMX Combined (SX + MX + SMX Finals)') }}</h3>
+          <h3 class="text-base font-bold text-violet-300 mb-2 border-b border-violet-800/40 pb-2">{{ smx.get('label', 'SMX Combined (SX + MX)') }}</h3>
           {% if smx.get('450') or smx.get('250_east') or smx.get('250_west') %}
             {{ standings_class_picker('smx', 'smx', smx.get('label'), smx.get('450'), smx.get('250_east'), smx.get('250_west')) }}
+            {% if smx.get('450_lcq') or smx.get('250_east_lcq') or smx.get('250_west_lcq') %}
+            <div class="mt-5 pt-4 border-t border-violet-800/35">
+              <p class="text-sm font-semibold text-amber-200 mb-1">LCQ-zon · plats 21–30</p>
+              <p class="text-xs text-slate-500 mb-3 leading-relaxed">Tävlar i Last Chance Qualifier om de två sista startplatserna i varje playoff-runda. Skadade förare som halkat ner hit kan fortfarande ta sig in.</p>
+              {{ smx_lcq_block(smx.get('450_lcq'), '450cc') }}
+              {{ smx_lcq_block(smx.get('250_east_lcq'), '250 East') }}
+              {{ smx_lcq_block(smx.get('250_west_lcq'), '250 West') }}
+            </div>
+            {% endif %}
           {% else %}
             <p class="text-slate-500 text-sm py-8 text-center leading-relaxed">
-              Inga poäng att visa ännu — kombinerad SMX-total bygger på SX- och MX-resultat plus SMX Playoff/Final (samma grund som officiella SMX-ställningar).
+              Inga poäng ännu — kombinerad SMX-total bygger på SX- och MX-resultat (samma som officiell seed-lista).
+            </p>
+          {% endif %}
+        </div>
+        {% endif %}
+        {% set smx_po = championship_totals.get('SMX_PLAYOFFS') or {} %}
+        {% if championship_totals.get('show_smx_playoffs_section') %}
+        <div class="rounded-xl border border-indigo-700/35 bg-slate-900/25 p-4 min-w-0">
+          <h3 class="text-base font-bold text-indigo-300 mb-2 border-b border-indigo-800/40 pb-2">{{ smx_po.get('label', 'SMX World Championship (Playoffs)') }}</h3>
+          {% if smx_po.get('450') or smx_po.get('250_east') or smx_po.get('250_west') %}
+            {{ standings_class_picker('smxpo', 'smxpo', smx_po.get('label'), smx_po.get('450'), smx_po.get('250_east'), smx_po.get('250_west')) }}
+          {% else %}
+            <p class="text-slate-500 text-sm py-8 text-center leading-relaxed">
+              Playoff-ställning visas när SMX-rundor börjar — topp 20 från SX+MX får seed-poäng (25–2) plus resultat från Playoff 1/2 och Final.
             </p>
           {% endif %}
         </div>
@@ -910,7 +943,7 @@
           var panel = document.getElementById(targetId);
           if (panel) panel.classList.remove('hidden');
           wrap.querySelectorAll('.standings-tab').forEach(function (b) {
-            b.classList.remove('ring-active-sx', 'ring-active-mx', 'ring-active-smx', 'ring-active-wsx');
+            b.classList.remove('ring-active-sx', 'ring-active-mx', 'ring-active-smx', 'ring-active-smxpo', 'ring-active-wsx');
           });
           this.classList.add('ring-active-' + ring);
         });

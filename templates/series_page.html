@@ -546,12 +546,20 @@
     {% if series.name and 'SMX' in series.name %}
     <section class="sp-panel">
       <div class="sp-panel__head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>SMX Finals kvalificering</span></span></h2>
+        <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>SMX Combined · kval & LCQ</span></span></h2>
       </div>
       <div class="sp-panel__body">
-        <button type="button" onclick="loadSMXQualification()" class="sp-link-btn mb-3">Uppdatera kvalificering</button>
-        <div id="smx-qualification-container" class="space-y-2">
-          <p class="text-slate-500 text-sm">Klicka för att ladda aktuell status</p>
+        <p class="text-slate-400 text-sm mb-4 leading-relaxed">
+          Officiell <strong class="text-slate-200">SX + MX</strong>-total. Topp <strong class="text-emerald-300">20</strong> är direktkvalade till playoffs.
+          Plats <strong class="text-amber-300">21–30</strong> hamnar i LCQ och tävlar om de två sista startplatserna per runda.
+        </p>
+        <div class="flex flex-wrap gap-2 mb-4">
+          <button type="button" id="smx-qual-class-450" class="sp-link-btn sp-link-btn--go" onclick="setSMXQualClass('450')">450cc</button>
+          <button type="button" id="smx-qual-class-250" class="sp-link-btn" onclick="setSMXQualClass('250')">250cc</button>
+          <button type="button" onclick="loadSMXQualification()" class="sp-link-btn">Uppdatera</button>
+        </div>
+        <div id="smx-qualification-container" class="space-y-4">
+          <p class="text-slate-500 text-sm">Laddar kvalificering…</p>
         </div>
       </div>
     </section>
@@ -567,53 +575,106 @@
   </main>
 
   <script>
+    let smxQualClass = '450';
+
+    function setSMXQualClass(cls) {
+      smxQualClass = cls;
+      const b450 = document.getElementById('smx-qual-class-450');
+      const b250 = document.getElementById('smx-qual-class-250');
+      if (b450) b450.classList.toggle('sp-link-btn--go', cls === '450');
+      if (b250) b250.classList.toggle('sp-link-btn--go', cls === '250');
+      loadSMXQualification();
+    }
+
     async function loadSMXQualification() {
+      const container = document.getElementById('smx-qualification-container');
+      if (!container) return;
+      const endpoint = smxQualClass === '250'
+        ? '/api/smx_qualification_250cc'
+        : '/api/smx_qualification';
       try {
-        const response = await fetch('/api/smx_qualification');
+        container.innerHTML = '<p class="text-slate-500 text-sm">Laddar…</p>';
+        const response = await fetch(endpoint);
         const result = await response.json();
         if (result.success) {
-          displaySMXQualification(result.qualification);
+          displaySMXQualification(result.qualification, result.class_name || smxQualClass);
         } else {
-          alert('Fel vid laddning av SMX kvalificering: ' + (result.error || 'Okänt fel'));
+          container.innerHTML = '<p class="text-rose-300 text-sm">Fel: ' + (result.error || 'Okänt fel') + '</p>';
         }
       } catch (error) {
         console.error('Error loading SMX qualification:', error);
-        alert('Fel vid laddning av SMX kvalificering: ' + error.message);
+        container.innerHTML = '<p class="text-rose-300 text-sm">Fel vid laddning.</p>';
       }
     }
 
-    function displaySMXQualification(qualification) {
+    function smxQualRowHtml(rider) {
+      const zone = rider.zone || (rider.qualified ? 'seeded' : 'lcq');
+      let rowClass = 'border-slate-700 bg-slate-900/40';
+      let badge = '';
+      if (zone === 'seeded') {
+        rowClass = 'border-emerald-500/30 bg-emerald-950/25';
+        badge = '<span class="text-[10px] font-bold uppercase tracking-wide text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded">Direkt</span>';
+      } else if (zone === 'lcq') {
+        rowClass = 'border-amber-500/35 bg-amber-950/20';
+        badge = '<span class="text-[10px] font-bold uppercase tracking-wide text-amber-300 bg-amber-950/50 border border-amber-500/35 px-1.5 py-0.5 rounded">LCQ</span>';
+      }
+      const coast = rider.coast_250
+        ? '<span class="text-slate-500 text-xs ml-1">' + rider.coast_250.toUpperCase() + '</span>'
+        : '';
+      const ptsClass = zone === 'seeded' ? 'text-emerald-300' : (zone === 'lcq' ? 'text-amber-200' : 'text-slate-400');
+      return `
+        <div class="border rounded-lg p-3 flex justify-between items-center gap-3 ${rowClass}">
+          <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
+            <span class="text-slate-400 font-bold tabular-nums w-6">${rider.position}.</span>
+            ${badge}
+            <span class="text-slate-100 font-semibold truncate">#${rider.rider_number} ${rider.rider_name}${coast}</span>
+            <span class="text-slate-500 text-sm hidden md:inline">${rider.bike_brand || ''}</span>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="${ptsClass} font-bold tabular-nums">${rider.total_points} p</div>
+            <div class="text-xs text-slate-500">SX ${rider.sx_points} · MX ${rider.mx_points}</div>
+          </div>
+        </div>`;
+    }
+
+    function displaySMXQualification(qualification, className) {
       const container = document.getElementById('smx-qualification-container');
       if (!container) return;
 
-      let html = '';
       if (!qualification.length) {
-        html = '<p class="text-slate-500 text-sm">Inga resultat ännu.</p>';
-      } else {
-        html = '<div class="space-y-2">';
-        qualification.forEach((rider) => {
-          const isQualified = rider.qualified;
-          const rowClass = isQualified
-            ? 'border-emerald-500/30 bg-emerald-950/30'
-            : 'border-slate-700 bg-slate-900/40';
-          const ptsClass = isQualified ? 'text-emerald-300' : 'text-slate-400';
-          html += `
-            <div class="border rounded-lg p-3 flex justify-between items-center ${rowClass}">
-              <div class="flex items-center gap-3 min-w-0">
-                <span class="text-slate-400 font-bold tabular-nums">${rider.position}.</span>
-                <span class="text-slate-100 font-semibold truncate">#${rider.rider_number} ${rider.rider_name}</span>
-                <span class="text-slate-500 text-sm hidden sm:inline">${rider.bike_brand || ''}</span>
-              </div>
-              <div class="text-right shrink-0">
-                <div class="${ptsClass} font-bold">${rider.total_points} p</div>
-                <div class="text-xs text-slate-500">SX ${rider.sx_points} · MX ${rider.mx_points}</div>
-              </div>
-            </div>`;
-        });
-        html += '</div>';
+        container.innerHTML = '<p class="text-slate-500 text-sm">Inga resultat ännu för ' + className + '.</p>';
+        return;
       }
+
+      const seeded = qualification.filter((r) => (r.zone || '') === 'seeded' || r.qualified);
+      const lcq = qualification.filter((r) => (r.zone || '') === 'lcq');
+
+      let html = '<div class="space-y-4">';
+      html += '<div><h3 class="text-sm font-bold text-emerald-300 mb-2">Direktkval · topp 20</h3><div class="space-y-2">';
+      if (seeded.length) {
+        seeded.forEach((r) => { html += smxQualRowHtml(r); });
+      } else {
+        html += '<p class="text-slate-500 text-sm">Ingen data ännu.</p>';
+      }
+      html += '</div></div>';
+
+      html += '<div><h3 class="text-sm font-bold text-amber-300 mb-1">LCQ-bubbla · plats 21–30</h3>';
+      html += '<p class="text-xs text-slate-500 mb-2">Tävlar om de två sista startplatserna i varje playoff-runda.</p><div class="space-y-2">';
+      if (lcq.length) {
+        lcq.forEach((r) => { html += smxQualRowHtml(r); });
+      } else {
+        html += '<p class="text-slate-500 text-sm">Ingen i LCQ-zonen ännu (behöver minst 21 förare med poäng).</p>';
+      }
+      html += '</div></div></div>';
+
       container.innerHTML = html;
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (document.getElementById('smx-qualification-container')) {
+        loadSMXQualification();
+      }
+    });
   </script>
 </body>
 </html>
