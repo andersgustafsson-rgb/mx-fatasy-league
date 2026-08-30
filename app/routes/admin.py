@@ -494,6 +494,23 @@ def hype_poster_page():
 	return render_template("admin_hype_poster.html")
 
 
+@bp.get("/admin/api/smx-seed-poster.png")
+@login_required
+def smx_seed_poster_png():
+	"""PNG: SMX Combined seeding (seed 1–20 + LCQ 21–30). layout=facebook|story|story250"""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	layout = (request.args.get("layout") or "facebook").strip().lower()
+	try:
+		from smx_seed_poster_service import render_smx_seed_poster_png
+
+		png = render_smx_seed_poster_png(layout=layout)
+		return Response(png, mimetype="image/png")
+	except Exception as e:
+		current_app.logger.exception("smx_seed_poster_png failed: %s", e)
+		return jsonify({"error": str(e) or type(e).__name__}), 500
+
+
 @bp.get("/admin/api/hype-poster")
 @login_required
 def hype_poster_api():
