@@ -890,6 +890,14 @@
     {% endif %}
 
     <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2"{% if competition.series == 'WSX' %} data-i18n="picks.guess_title_wsx"{% else %} data-i18n="picks.guess_title"{% endif %}>{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
+    {% if competition.series == 'SMX' %}
+    <p class="mb-4 text-sm text-slate-300 bg-slate-900/70 border border-slate-600/50 rounded-lg px-3 py-2">
+      Startlista = SMX Combined <strong class="text-white">topp 30</strong>:
+      <span class="text-emerald-300 font-semibold">1–20 seedade</span>,
+      <span class="text-amber-300 font-semibold">21–30 LCQ</span>
+      (måste kvala in — annars 0 p på den picken).
+    </p>
+    {% endif %}
 
     {% if _show_prep %}<div class="race-picks-bonus-layout"><aside class="race-picks-bonus-layout__prep"><details class="race-prep-mobile-fold" id="race-prep-mobile-fold"><summary><span class="race-prep-mobile-fold__text"><span class="race-prep-mobile-fold__title" data-i18n="prep.title">Inför racet</span><span class="race-prep-mobile-fold__sub">{{ competition.name }}{% if race_prep_venue %} · {{ race_prep_venue }}{% endif %}</span></span></summary>{% include 'includes/race_prep_panel.html' %}</details></aside><div class="race-picks-bonus-layout__forms">{% endif %}
 
@@ -1160,6 +1168,7 @@
   const competitionName = {{ competition.name|tojson }};
   const competitionSeries = {{ competition.series|tojson }};
   const isWSXSeries = competitionSeries === 'WSX';
+  const isSMXSeries = competitionSeries === 'SMX';
   const actualResults = {{ actual_results|tojson }};
   const holeshotResults = {{ holeshot_results|tojson }};
   const allRiders = {{ (riders_450_json + riders_250_json) | tojson }};
@@ -1257,20 +1266,39 @@
 
   function riderOptionLabel(r) {
     const brand = r.bike_brand || '';
-    return `#${r.rider_number} ${r.name} (${brand})`;
+    let label = `#${r.rider_number} ${r.name} (${brand})`;
+    if (isSMXSeries && r.smx_zone === 'lcq') {
+      label += ' · LCQ';
+    } else if (isSMXSeries && r.smx_rank) {
+      label += ` · #${r.smx_rank}`;
+    }
+    return label;
   }
   window.riderOptionLabel = riderOptionLabel;
 
+  function sortTippaRiders(list) {
+    return [...list].sort((a, b) => {
+      if (isSMXSeries) {
+        const ra = Number(a.smx_rank);
+        const rb = Number(b.smx_rank);
+        if (Number.isFinite(ra) && Number.isFinite(rb) && ra !== rb) return ra - rb;
+        if (Number.isFinite(ra) && !Number.isFinite(rb)) return -1;
+        if (!Number.isFinite(ra) && Number.isFinite(rb)) return 1;
+      }
+      return (Number(a.rider_number) || 999) - (Number(b.rider_number) || 999);
+    });
+  }
+
   function pickColumn450List() {
-    return allRiders
-      .filter((r) => r.class === '450cc' || r.class === 'wsx_sx1')
-      .sort((a, b) => (Number(a.rider_number) || 999) - (Number(b.rider_number) || 999));
+    return sortTippaRiders(
+      allRiders.filter((r) => r.class === '450cc' || r.class === 'wsx_sx1')
+    );
   }
 
   function pickColumn250List() {
-    return allRiders
-      .filter((r) => r.class === '250cc' || r.class === 'wsx_sx2')
-      .sort((a, b) => (Number(a.rider_number) || 999) - (Number(b.rider_number) || 999));
+    return sortTippaRiders(
+      allRiders.filter((r) => r.class === '250cc' || r.class === 'wsx_sx2')
+    );
   }
 
   function ridersForDropdownDataClass(dc) {
@@ -1407,8 +1435,8 @@
 
   function ensureSelectValue(sel, value, label) {
     if (!sel || value == null || value === '') return;
-    // WSX tippa: injicera aldrig förare utanför aktuell roster (t.ex. Roczen från localStorage)
-    if (isWSXSeries && !isValidTippaRiderId(value)) return;
+    // WSX/SMX tippa: injicera aldrig förare utanför aktuell roster
+    if ((isWSXSeries || isSMXSeries) && !isValidTippaRiderId(value)) return;
     const v = String(value);
     if (![...sel.options].some((o) => o.value === v)) {
       const o = document.createElement('option');
@@ -1654,7 +1682,7 @@
       let pruned = false;
       const dropIfInvalid = (pick) => {
         if (!pick || pick.riderId == null) return null;
-        if (isWSXSeries && !isValidTippaRiderId(pick.riderId)) {
+        if ((isWSXSeries || isSMXSeries) && !isValidTippaRiderId(pick.riderId)) {
           pruned = true;
           return null;
         }

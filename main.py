@@ -10307,6 +10307,11 @@ def race_picks_page(competition_id):
         # Vid "showdown" / "both" / annat: visa alla 250cc (ingen coast-filter)
         riders_250 = riders_250_query.order_by(Rider.rider_number).all()
         if (getattr(comp, "series", None) or "").strip().upper() == "SMX":
+            try:
+                prune_off_roster_smx_picks(int(comp.id))
+            except Exception as prune_err:
+                print(f"SMX pick prune skipped: {prune_err}")
+                db.session.rollback()
             riders_450 = _restrict_riders_to_smx_field(riders_450, "450")
             riders_250 = _restrict_riders_to_smx_field(riders_250, "250")
 
@@ -10332,6 +10337,16 @@ def race_picks_page(competition_id):
 
     # 3) Serialisering för JS (inkl is_out + image_url)
     wildcard_names = _wsx_wildcard_names_for_competition(comp)
+    is_smx = (getattr(comp, "series", None) or "").strip().upper() == "SMX"
+    smx_meta_450: dict[int, dict] = {}
+    smx_meta_250: dict[int, dict] = {}
+    if is_smx:
+        try:
+            _smx_meta = smx_playoff_field_meta()
+            smx_meta_450 = _smx_meta.get("450") or {}
+            smx_meta_250 = _smx_meta.get("250") or {}
+        except Exception:
+            smx_meta_450, smx_meta_250 = {}, {}
 
     def serialize_rider(r: Rider):
         # Samma porträttslogik som spotlight/bio (inkl. dublett-förare som Jett 450/250).
@@ -10347,7 +10362,7 @@ def race_picks_page(competition_id):
         ):
             portrait_url = racerx_url or img_url or portrait_url
         has_portrait = r.id in ids_with_db_portrait
-        return {
+        row = {
             "id": r.id,
             "name": r.name,
             "class": r.class_name,
@@ -10362,6 +10377,12 @@ def race_picks_page(competition_id):
             "coast_250": r.coast_250,
             "has_db_portrait": has_portrait,
         }
+        if is_smx:
+            info = smx_meta_450.get(r.id) or smx_meta_250.get(r.id) or {}
+            if info:
+                row["smx_rank"] = info.get("rank")
+                row["smx_zone"] = info.get("zone")
+        return row
 
     riders_450_json = [serialize_rider(r) for r in riders_450]
     riders_250_json = [serialize_rider(r) for r in riders_250]
@@ -30409,36 +30430,109 @@ def calculate_smx_qualification_points(*, limit: int = 30) -> dict[str, list[tup
     return result
 
 
-def smx_playoff_field_ids(*, limit: int = 30) -> dict[str, set[int]]:
-    """SMX tipp-fält: topp 20 seed + LCQ-bubbla 21–30. 450-promoted (t.ex. Deegan) ur 250."""
+def smx_playoff_field_meta(*, limit: int = 30) -> dict[str, dict[int, dict]]:
+    """
+    SMX tipp-fält per klass: rider_id → {rank, zone}.
+    Topp 20 = seeded, 21–30 = lcq. 450-promoted (t.ex. Deegan) tas bort från 250.
+    """
+    empty: dict[str, dict[int, dict]] = {"450": {}, "250": {}}
     try:
         rankings = calculate_smx_qualification_points(limit=limit)
     except Exception as exc:
-        print(f"WARNING smx_playoff_field_ids: {exc}")
-        return {"450": set(), "250": set()}
+        print(f"WARNING smx_playoff_field_meta: {exc}")
+        return empty
 
-    ids_450: set[int] = set()
-    ids_250: set[int] = set()
-    for _, data in rankings.get("450") or []:
+    meta_450: dict[int, dict] = {}
+    meta_250: dict[int, dict] = {}
+    for rank, (_key, data) in enumerate(rankings.get("450") or [], start=1):
         rider = data.get("rider")
         rid = getattr(rider, "id", None)
-        if rid:
-            ids_450.add(int(rid))
-    for _, data in rankings.get("250") or []:
+        if not rid:
+            continue
+        meta_450[int(rid)] = {
+            "rank": rank,
+            "zone": _smx_qualification_zone(rank),
+        }
+    for rank, (_key, data) in enumerate(rankings.get("250") or [], start=1):
         rider = data.get("rider")
         rid = getattr(rider, "id", None)
-        if rid:
-            ids_250.add(int(rid))
-    ids_250 -= ids_450
-    return {"450": ids_450, "250": ids_250}
+        if not rid:
+            continue
+        rid_i = int(rid)
+        if rid_i in meta_450:
+            continue  # races 450 SMX
+        meta_250[rid_i] = {
+            "rank": rank,
+            "zone": _smx_qualification_zone(rank),
+        }
+    return {"450": meta_450, "250": meta_250}
+
+
+def smx_playoff_field_ids(*, limit: int = 30) -> dict[str, set[int]]:
+    """SMX tipp-fält: topp 20 seed + LCQ-bubbla 21–30."""
+    meta = smx_playoff_field_meta(limit=limit)
+    return {
+        "450": set(meta.get("450") or {}),
+        "250": set(meta.get("250") or {}),
+    }
 
 
 def _restrict_riders_to_smx_field(riders: list, class_key: str) -> list:
-    """Keep only SMX playoff-field riders. Empty field → unchanged (fail open)."""
-    wanted = smx_playoff_field_ids().get("450" if class_key == "450" else "250") or set()
-    if not wanted:
+    """Keep only SMX playoff-field riders, sorted by Combined seed rank. Empty → unchanged."""
+    key = "450" if class_key == "450" else "250"
+    meta = smx_playoff_field_meta().get(key) or {}
+    if not meta:
         return riders
-    return [r for r in riders if getattr(r, "id", None) in wanted]
+    filtered = [r for r in riders if getattr(r, "id", None) in meta]
+    filtered.sort(
+        key=lambda r: (
+            int((meta.get(r.id) or {}).get("rank") or 999),
+            int(getattr(r, "rider_number", None) or 999),
+        )
+    )
+    return filtered
+
+
+def prune_off_roster_smx_picks(competition_id: int) -> dict[str, int]:
+    """Ta bort tippa/holeshot/wildcard utanför SMX topp-30-fältet."""
+    comp = Competition.query.get(int(competition_id))
+    if not comp or (getattr(comp, "series", None) or "").upper() != "SMX":
+        return {"deleted_race": 0, "deleted_hs": 0, "deleted_wc": 0, "skipped": 1}
+
+    field = smx_playoff_field_ids()
+    allowed = set(field.get("450") or ()) | set(field.get("250") or ())
+    if not allowed:
+        return {"deleted_race": 0, "deleted_hs": 0, "deleted_wc": 0, "skipped": 1}
+
+    deleted_race = (
+        RacePick.query.filter(
+            RacePick.competition_id == int(competition_id),
+            ~RacePick.rider_id.in_(allowed),
+        ).delete(synchronize_session=False)
+        or 0
+    )
+    deleted_hs = (
+        HoleshotPick.query.filter(
+            HoleshotPick.competition_id == int(competition_id),
+            ~HoleshotPick.rider_id.in_(allowed),
+        ).delete(synchronize_session=False)
+        or 0
+    )
+    deleted_wc = (
+        WildcardPick.query.filter(
+            WildcardPick.competition_id == int(competition_id),
+            ~WildcardPick.rider_id.in_(allowed),
+        ).delete(synchronize_session=False)
+        or 0
+    )
+    if deleted_race or deleted_hs or deleted_wc:
+        db.session.commit()
+    return {
+        "deleted_race": int(deleted_race),
+        "deleted_hs": int(deleted_hs),
+        "deleted_wc": int(deleted_wc),
+        "skipped": 0,
+    }
 
 
 def _smx_qualification_zone(position: int) -> str:
