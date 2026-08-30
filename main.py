@@ -6,7 +6,7 @@ import secrets
 import string
 import math
 import time
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from datetime import date, datetime, timedelta
 from flask import (
     Flask,
@@ -3239,6 +3239,20 @@ def build_series_status_list() -> list[dict]:
             }
         )
 
+    # Sort: soonest next race first (active season on top of homepage cards)
+    def _series_sort_key(item: dict):
+        d = item.get("days_until_next_race")
+        if isinstance(d, int) and d >= 0:
+            return (0, d, series_order.get(item.get("name") or "", 999))
+        if item.get("is_active"):
+            return (1, 0, series_order.get(item.get("name") or "", 999))
+        until_start = item.get("days_until_start")
+        if isinstance(until_start, int) and until_start > 0:
+            return (2, until_start, series_order.get(item.get("name") or "", 999))
+        return (3, 9999, series_order.get(item.get("name") or "", 999))
+
+    series_data.sort(key=_series_sort_key)
+
     _SERIES_STATUS_CACHE = (now + _SERIES_STATUS_CACHE_TTL, series_data)
     return series_data
 
@@ -5501,6 +5515,8 @@ def _riders_450_scope(out_ids: set[int], *, series: str | None = None) -> list[R
         return [r for r in wsx_roster_query("wsx_sx1").all() if r.id not in out_ids]
     q = rider_query_for_list_ui().filter(Rider.class_name == "450cc")
     riders = [r for r in q.all() if r.id not in out_ids]
+    if (series or "").strip().upper() == "SMX":
+        riders = _restrict_riders_to_smx_field(riders, "450")
     return riders
 
 
@@ -5521,6 +5537,8 @@ def _riders_250_scope(
         for r in rider_query_for_list_ui().filter(Rider.class_name == "250cc").all()
         if r.id not in out_ids
     ]
+    if (series or "").strip().upper() == "SMX":
+        base = _restrict_riders_to_smx_field(base, "250")
     c = (coast or "").lower()
     if c == "both":
         east = [r for r in base if (r.coast_250 or "") in ("east", "both")]
@@ -6584,6 +6602,9 @@ def _challenge_riders_for_competition(comp: Competition) -> dict[str, list[dict]
                 (Rider.coast_250 == coast) | (Rider.coast_250 == "both")
             )
         riders_250 = riders_250_query.order_by(Rider.rider_number).all()
+        if (getattr(comp, "series", None) or "").strip().upper() == "SMX":
+            riders_450 = _restrict_riders_to_smx_field(riders_450, "450")
+            riders_250 = _restrict_riders_to_smx_field(riders_250, "250")
         keys = ("450cc", "250cc")
 
     def _row(r: Rider) -> dict:
@@ -9611,9 +9632,16 @@ def finished_series_page():
                 ),
             }
         
+        # Group by year for season tabs (2026 / 2025 …), then series-by-series tabs
+        series_by_year = OrderedDict()
+        for data in series_data:
+            year = data["series"].year
+            series_by_year.setdefault(year, []).append(data)
+
         return render_template(
             "finished_series.html",
             series_data=series_data,
+            series_by_year=series_by_year,
             sx_season_wrap=sx_season_wrap,
         )
         
@@ -10278,6 +10306,9 @@ def race_picks_page(competition_id):
             )
         # Vid "showdown" / "both" / annat: visa alla 250cc (ingen coast-filter)
         riders_250 = riders_250_query.order_by(Rider.rider_number).all()
+        if (getattr(comp, "series", None) or "").strip().upper() == "SMX":
+            riders_450 = _restrict_riders_to_smx_field(riders_450, "450")
+            riders_250 = _restrict_riders_to_smx_field(riders_250, "250")
 
     pick_rider_ids = [r.id for r in riders_450] + [r.id for r in riders_250]
     ids_with_db_portrait: frozenset[int] = frozenset()
@@ -17156,6 +17187,8 @@ def compute_series_championship_totals():
                 "image_url": merged_img,
             }
 
+    # SMX Combined: prefer official supermotocross.com snapshot for 2026 seeding/LCQ
+    # (live import can drift on docked points). Next season: live sum only.
     try:
         from official_smx_2026 import apply_official_smx_2026_to_championship_totals
 
@@ -30361,6 +30394,8 @@ def calculate_smx_qualification_points(*, limit: int = 30) -> dict[str, list[tup
         "450": riders_450_sorted[:cap],
         "250": riders_250_sorted[:cap],
     }
+    # 2026 only: overlay official SMX Combined (seed 1–20, LCQ 21–30).
+    # Next season: drop this and trust live SX+MX sums.
     try:
         from official_smx_2026 import apply_official_smx_2026_to_qualification
 
@@ -30372,6 +30407,38 @@ def calculate_smx_qualification_points(*, limit: int = 30) -> dict[str, list[tup
     except Exception as exc:
         print(f"WARNING apply_official_smx_2026_to_qualification: {exc}")
     return result
+
+
+def smx_playoff_field_ids(*, limit: int = 30) -> dict[str, set[int]]:
+    """SMX tipp-fält: topp 20 seed + LCQ-bubbla 21–30. 450-promoted (t.ex. Deegan) ur 250."""
+    try:
+        rankings = calculate_smx_qualification_points(limit=limit)
+    except Exception as exc:
+        print(f"WARNING smx_playoff_field_ids: {exc}")
+        return {"450": set(), "250": set()}
+
+    ids_450: set[int] = set()
+    ids_250: set[int] = set()
+    for _, data in rankings.get("450") or []:
+        rider = data.get("rider")
+        rid = getattr(rider, "id", None)
+        if rid:
+            ids_450.add(int(rid))
+    for _, data in rankings.get("250") or []:
+        rider = data.get("rider")
+        rid = getattr(rider, "id", None)
+        if rid:
+            ids_250.add(int(rid))
+    ids_250 -= ids_450
+    return {"450": ids_450, "250": ids_250}
+
+
+def _restrict_riders_to_smx_field(riders: list, class_key: str) -> list:
+    """Keep only SMX playoff-field riders. Empty field → unchanged (fail open)."""
+    wanted = smx_playoff_field_ids().get("450" if class_key == "450" else "250") or set()
+    if not wanted:
+        return riders
+    return [r for r in riders if getattr(r, "id", None) in wanted]
 
 
 def _smx_qualification_zone(position: int) -> str:

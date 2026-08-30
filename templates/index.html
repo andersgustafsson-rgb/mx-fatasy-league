@@ -3978,13 +3978,58 @@
       return null;
     }
 
+    function seriesNextRaceSortKey(serie) {
+      const d = serie && serie.days_until_next_race;
+      if (Number.isFinite(d) && d >= 0) return d;
+      if (serie && serie.is_active) return 500;
+      const untilStart = serie && serie.days_until_start;
+      if (Number.isFinite(untilStart) && untilStart > 0) return 1000 + untilStart;
+      return 9999;
+    }
+
+    function sortSeriesByNextRace(seriesList) {
+      const order = { SX: 1, MX: 2, SMX: 3, WSX: 4 };
+      return [...(Array.isArray(seriesList) ? seriesList : [])].sort((a, b) => {
+        const ka = seriesNextRaceSortKey(a);
+        const kb = seriesNextRaceSortKey(b);
+        if (ka !== kb) return ka - kb;
+        const ca = a.series_code || seriesNameToCode(a.name) || '';
+        const cb = b.series_code || seriesNameToCode(b.name) || '';
+        return (order[ca] || 99) - (order[cb] || 99);
+      });
+    }
+
+    /** Serie med närmaste kommande race (för sort + auto-val när inloggad). */
     function resolveDefaultHomeSeries(seriesList) {
-      const list = Array.isArray(seriesList) ? seriesList : [];
+      const sorted = sortSeriesByNextRace(seriesList);
+      for (const hit of sorted) {
+        if (!hit || !hit.next_race) continue;
+        const code = hit.series_code || seriesNameToCode(hit.name);
+        if (code) return code;
+      }
       for (const code of ['SX', 'MX', 'SMX']) {
-        const hit = list.find((s) => (s.series_code || seriesNameToCode(s.name)) === code);
-        if (hit && hit.next_race) return code;
+        const hit = sorted.find((s) => (s.series_code || seriesNameToCode(s.name)) === code);
+        if (hit) return code;
       }
       return 'SX';
+    }
+
+    function resolveHomeSeriesSelection(seriesList) {
+      const validCodes = new Set(
+        (Array.isArray(seriesList) ? seriesList : [])
+          .map((s) => s.series_code || seriesNameToCode(s.name))
+          .filter(Boolean)
+      );
+      const nextActive = resolveDefaultHomeSeries(seriesList);
+      // Inloggad: alltid serien med nästa aktiva race överst + vald
+      if (window.__MX_LOGGED_IN__) {
+        return validCodes.has(nextActive) ? nextActive : 'SX';
+      }
+      let preferred = null;
+      try { preferred = localStorage.getItem('home_selected_series'); } catch (_) {}
+      if (preferred === 'WSX' && validCodes.has('WSX')) return 'WSX';
+      if (preferred && preferred !== 'WSX' && validCodes.has(preferred)) return preferred;
+      return validCodes.has(nextActive) ? nextActive : 'SX';
     }
 
     function updateRaceHeroBackground(nextRace) {
@@ -5576,19 +5621,8 @@
           return;
         }
         
-        // Sort series - WSX first (especially important on mobile)
-        const isMobile = window.innerWidth <= 640;
-        const sortedSeries = [...series].sort((a, b) => {
-          // On mobile, prioritize WSX to be first
-          if (isMobile) {
-            const aIsWSX = a.name.toLowerCase().includes('wsx');
-            const bIsWSX = b.name.toLowerCase().includes('wsx');
-            if (aIsWSX && !bIsWSX) return -1;
-            if (!aIsWSX && bIsWSX) return 1;
-          }
-          // Keep original order (already sorted by backend)
-          return 0;
-        });
+        // Närmaste kommande race överst (aktiv säsong först)
+        const sortedSeries = sortSeriesByNextRace(series);
         
         function formatIsoDateSv(iso) {
           if (!iso) return '';
@@ -5770,22 +5804,10 @@
         const series = await response.json();
         if (series.error) throw new Error(series.error);
         _seriesStatusCache = series;
-
-        // Restore selection if valid; otherwise default to AMA chain (never WSX auto).
-        let preferred = null;
+        homeSelectedSeries = resolveHomeSeriesSelection(series);
         try {
-          preferred = localStorage.getItem('home_selected_series');
+          if (homeSelectedSeries) localStorage.setItem('home_selected_series', homeSelectedSeries);
         } catch (_) {}
-        const validCodes = new Set(
-          series.map((s) => s.series_code || seriesNameToCode(s.name)).filter(Boolean)
-        );
-        if (preferred === 'WSX' && validCodes.has('WSX')) {
-          homeSelectedSeries = 'WSX';
-        } else if (preferred && preferred !== 'WSX' && validCodes.has(preferred)) {
-          homeSelectedSeries = preferred;
-        } else {
-          homeSelectedSeries = resolveDefaultHomeSeries(series);
-        }
 
         renderSeriesSelection(series);
         updateAmaOnlyHomeUi();
@@ -6084,18 +6106,10 @@
 
       if (window.__MX_SERIES_STATUS__ && window.__MX_SERIES_STATUS__.length) {
         _seriesStatusCache = window.__MX_SERIES_STATUS__;
-        let preferred = null;
-        try { preferred = localStorage.getItem('home_selected_series'); } catch (_) {}
-        const validCodes = new Set(
-          _seriesStatusCache.map((s) => s.series_code || seriesNameToCode(s.name)).filter(Boolean)
-        );
-        if (preferred === 'WSX' && validCodes.has('WSX')) {
-          homeSelectedSeries = 'WSX';
-        } else if (preferred && preferred !== 'WSX' && validCodes.has(preferred)) {
-          homeSelectedSeries = preferred;
-        } else {
-          homeSelectedSeries = resolveDefaultHomeSeries(_seriesStatusCache);
-        }
+        homeSelectedSeries = resolveHomeSeriesSelection(_seriesStatusCache);
+        try {
+          if (homeSelectedSeries) localStorage.setItem('home_selected_series', homeSelectedSeries);
+        } catch (_) {}
         renderSeriesSelection(_seriesStatusCache);
         updateAmaOnlyHomeUi();
         fetchRealCountdownData().then(() => {

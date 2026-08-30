@@ -13,7 +13,7 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 | 3 | **PWA-banner bara på mobil** | Inte beslutat | Syns på desktop via Chrome “Installera”. Frågat om begränsa till mobil — ej svarat. |
 | 4 | **SEO / “citerbara” tippa-sidor** | Gjort (v3) | `/om`, `/manual`, `/tippa-supercross`, `/tippa-motocross`, **`/tippa-smx`**, **`/tippa-wsx`** + sitemap/llms.txt. |
 | 5 | **WSX trackmaps** | ⏳ Före race | Kartorna har **inte kommit ut än**. När de släpps: ladda ner, lägg i `static/trackmaps/`. **WSX story-hype-kort** för Stories finns (Dela WSX-hype). |
-| 6 | **SMX inför finalerna (efter Ironman)** | 📋 Att göra | **Tippoäng:** samma highscore rullar vidare (ingen nollställning). SMX-rundor multipliceras **1× / 2× / 3×** (Playoff 1/2/Final) på race+HS+WC — lika för alla. **Förar-ställning (senare):** seed + reset för SMX-titel separat från tipp-highscore. Valfritt: arkivera MX fantasy-historik, fixa serie-`end_date`. |
+| 6 | **SMX 1×/2×/3× på *spelar*-poäng** | ⏸️ Efter SMX-final (~26 sep) | **Beslut 30 aug:** tippa vidare på **1×** hela 2026 — byter inte regler mitt i säsongen. Förarna har redan 1×/2×/3× i SMX World Championship. Efter finalen: överväg samma multiplikator på tipp (race+HS+WC) till nästa år. |
 | 7 | **SMX trackmaps / venues** | Delvis gjort | Kartor + posters från playoffs-sidan i `static/trackmaps/smx/` (Columbus, Carson, Ridgedale). Kopplade via `trackmap_utils`. |
 | 8 | **Städa / strukturera kodbasen** | ⏸️ Efter SMX-final (~26 sep) | **Beslut 13 aug:** ingen stor uppdelning under säsongen — för hög risk när spelet är live. Efter SMX: börja strukturera så AI/arbete blir enklare & billigare. Se plan nedan. |
 | 9 | **Social login (Google först)** | ⏸️ Efter SMX-final (~26 sep) | Mål: snabbare registrering (folk orkar inte fler lösenord). **Google först**, ev. Microsoft/Outlook senare; Facebook sist/skip. Fungerar med befintliga konton via e-postlänkning. Behåll vanligt lösenord. Vid första OAuth: koppla om e-post finns, annars skapa konto + välj användarnamn. |
@@ -50,6 +50,7 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 - [x] **Keep-alive** — GitHub Action `keepalive.yml` + `scripts/cron_keepalive.py` (Render Cron i `render.yaml`).
 - [ ] **Tidrapport: spara på server** — idag mest webbläsare/PNG; tidigare bollades serverlagring + historik (större grej, bara om du behöver det).
 - [x] **Admin raceday-flöde (AMA/WSX)** — import + holeshot i centrum, manuell/OUT under Avancerat. 18 aug 2026.
+- [x] **SMX Combined efter Ironman** — officiell overlay synkad till supermotocross.com (820/638 …); topp 20 seed + 21–30 LCQ. Nästa säsong: live sum utan manuell lista. 30 aug 2026.
 
 ---
 
@@ -72,7 +73,8 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 - Gemini “blockerad för AI-botar”: **nej** — `robots.txt` tillåter crawl. Skillnad mot fantasy.mxsm.se ≈ känt **MXSM**-varumärke + mer indexerat innehåll.
 - Cursor Agents-chatten har delvis eget tema (följer inte alltid editor-temat).
 - Jobbets DNS kan cacha NXDOMAIN länge — testa med mobildata vid domänbyten.
-- **SMX 2026 playoffs** ([playoffs](https://www.supermotocross.com/playoffs/)): Playoff 1 Columbus Historic Crew Stadium 12 sep · Playoff 2 Carson Dignity Health Sports Park 19 sep · Final Ridgedale Thunder Ridge 26 sep. Track maps + venue posters publicerade.
+- **SMX Combined 2026:** overlay mot [supermotocross.com 450](https://www.supermotocross.com/results/standings/smx/450/) / [250](https://www.supermotocross.com/results/standings/smx/250/) i `official_smx_2026.py` (topp 20 seed, 21–30 LCQ). Synkad efter Ironman 30 aug. **Nästa säsong:** ingen manuell lista — fixa import/dockade poäng så live SX+MX räcker.
+- **SMX 2026 playoffs** ([playoffs](https://www.supermotocross.com/playoffs/)): Playoff 1 Columbus 12 sep · Playoff 2 Carson 19 sep · Final Ridgedale 26 sep.
 
 ---
 
