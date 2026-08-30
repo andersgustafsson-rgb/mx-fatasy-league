@@ -258,6 +258,33 @@
     background: #374151;
   }
 
+  /* SMX LCQ / Wild Card — amber tint so they read as "not auto-qualified" */
+  .rider-option[data-smx-zone="lcq"] {
+    background: rgba(120, 53, 15, 0.38);
+    border-left: 3px solid #fbbf24;
+    border-bottom-color: rgba(251, 191, 36, 0.25);
+  }
+
+  .rider-option[data-smx-zone="lcq"]:hover {
+    background: rgba(146, 64, 14, 0.55);
+  }
+
+  .lcq-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba(251, 191, 36, 0.2);
+    border: 1px solid rgba(251, 191, 36, 0.55);
+    color: #fbbf24;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+    vertical-align: middle;
+  }
+
   .rider-option[data-out="true"] {
     opacity: 0.5;
     cursor: not-allowed;
@@ -381,6 +408,14 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+  }
+
+  .rider-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
   }
 
   .rider-number {
@@ -1327,7 +1362,15 @@
     if (isOutRiderId(rider.id)) {
       div.dataset.out = 'true';
     }
+    const isLcq = isSMXSeries && rider.smx_zone === 'lcq';
+    if (isLcq) {
+      div.dataset.smxZone = 'lcq';
+      div.title = 'LCQ / Wild Card — ej direktkvalad (0 p om de inte går vidare)';
+    }
     const outHtml = div.dataset.out === 'true' ? '<span class="out-badge">OUT</span>' : '';
+    const lcqBadge = isLcq
+      ? '<span class="lcq-badge" title="LCQ / Wild Card — ej direktkvalad">LCQ</span>'
+      : '';
     const photo = effectivePhotoUrl(rider);
     const wcFlag = isWildcardRider(rider)
       ? '<span class="wc-flag" title="Wildcard / fill-in">WC</span>'
@@ -1344,7 +1387,9 @@
       '<span class="rider-number">#' +
       rider.rider_number +
       '</span>' +
-      '<span class="rider-name"></span>' +
+      '<span class="rider-name-row"><span class="rider-name"></span>' +
+      lcqBadge +
+      '</span>' +
       '<span class="rider-brand"></span>' +
       '</span>' +
       '<a href="/rider/' + rider.id + '" class="rider-bio-link" title="Förarprofil" target="_blank" rel="noopener" onclick="event.stopPropagation();">Bio</a>' +
