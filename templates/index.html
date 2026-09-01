@@ -16,13 +16,13 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
-  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=4"></script>
+  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=5"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=save-ready-1">
   {% if is_logged_in %}
   <script src="{{ url_for('static', filename='home_picks_portraits.js') }}?v=3" defer></script>
   {% endif %}
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/mx_fantasy_app_icon_512.png') }}" />
-  <link rel="preload" as="image" href="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" />
+  <link rel="preload" as="image" href="{{ url_for('static', filename='images/mx_fantasy_logo_sm.png') }}?v=5" />
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
   <meta name="theme-color" content="#141c2c" />
   <meta name="color-scheme" content="dark" />
@@ -944,34 +944,69 @@
       }
     }
 
-    /* Startsida: egen wordmark — en gemensam skew så linjer linjerar */
+    /* Wordmark image (replaces CSS text logo) */
     .mx-brand {
-      font-family: 'Rajdhani', system-ui, sans-serif;
-      font-style: italic;
-      font-weight: 800;
-      text-transform: uppercase;
-      line-height: 0.92;
+      display: block;
       margin: 0 auto;
       user-select: none;
+      line-height: 0;
     }
     a.mx-brand {
-      display: block;
       text-decoration: none;
-      color: inherit;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
     }
-    a.mx-brand:hover,
+    a.mx-brand:hover .mx-brand__img,
+    a.mx-brand:focus-visible .mx-brand__img {
+      filter: brightness(1.06);
+    }
     a.mx-brand:focus-visible {
-      color: inherit;
       outline: none;
     }
-    a.mx-brand:focus-visible .mx-brand__frame {
+    a.mx-brand:focus-visible .mx-brand__img {
       box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.45);
+      border-radius: 0.35rem;
     }
     @media (min-width: 640px) {
       .mx-brand { margin: 0; }
     }
+    .mx-brand__img {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+      object-position: left center;
+    }
+    .home-brand-row .mx-brand {
+      margin: 0;
+      flex: 1 1 auto;
+      min-width: 0;
+      width: 100%;
+    }
+    .home-sidebar .mx-brand {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      margin: 0 0 0.15rem;
+    }
+    .home-sidebar .mx-brand__img {
+      width: 100%;
+      max-width: none;
+      min-height: 44px;
+    }
+    @media (min-width: 640px) {
+      .home-sidebar .mx-brand__img {
+        min-height: 48px;
+      }
+    }
+    @media (min-width: 1024px) {
+      .home-sidebar .mx-brand__img {
+        min-height: 52px;
+      }
+    }
+
+    /* Legacy text wordmark (unused) */
     .mx-brand__skew {
       display: inline-flex;
       align-items: flex-end;
@@ -1624,63 +1659,6 @@
       padding-right: 0.75rem;
     }
 
-    .home-sidebar .mx-brand {
-      display: block;
-      width: 100%;
-      max-width: 100%;
-      margin: 0;
-    }
-    .home-sidebar .mx-brand__skew {
-      display: flex;
-      width: 100%;
-      align-items: flex-end;
-      gap: 0.15rem;
-    }
-    .home-sidebar .mx-brand__aside {
-      flex: 1 1 auto;
-      min-width: 0;
-      margin-left: 0.2rem;
-    }
-    .home-sidebar .mx-brand__frame {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 0.32rem 0.55rem 0.45rem 0.5rem;
-    }
-    .home-sidebar .mx-brand__mx {
-      font-size: clamp(2.85rem, 8.5vw, 4.5rem);
-      flex: 0 0 auto;
-    }
-    .home-sidebar .mx-brand__fantasy {
-      font-size: clamp(1.2rem, 3.4vw, 1.75rem);
-      letter-spacing: 0.1em;
-    }
-    .home-sidebar .mx-brand__league {
-      font-size: clamp(0.88rem, 2.5vw, 1.2rem);
-      letter-spacing: 0.16em;
-    }
-    @media (min-width: 640px) {
-      .home-sidebar .mx-brand__mx {
-        font-size: 3.85rem;
-      }
-      .home-sidebar .mx-brand__fantasy {
-        font-size: 1.55rem;
-      }
-      .home-sidebar .mx-brand__league {
-        font-size: 1.05rem;
-      }
-    }
-    @media (min-width: 1024px) {
-      .home-sidebar .mx-brand__mx {
-        font-size: 4.35rem;
-      }
-      .home-sidebar .mx-brand__fantasy {
-        font-size: 1.75rem;
-      }
-      .home-sidebar .mx-brand__league {
-        font-size: 1.15rem;
-      }
-    }
-
     /* Race hero — kompakt, solid kant */
     .home-race-hero {
       position: relative;
@@ -2289,18 +2267,16 @@
           <aside class="home-sidebar">
             <div class="home-brand-row">
               <a href="{{ url_for('index') }}" id="home-brand-link" class="mx-brand" aria-label="MX Fantasy League — till startsidan">
-                <span class="mx-brand__skew">
-                  <span class="mx-brand__mx">MX</span>
-                  <span class="mx-brand__aside">
-                    <span class="mx-brand__frame">
-                      <span class="mx-brand__frame-border-bottom" aria-hidden="true"></span>
-                      <span class="mx-brand__tick mx-brand__tick--top" aria-hidden="true"></span>
-                      <span class="mx-brand__tick mx-brand__tick--bot" aria-hidden="true"></span>
-                      <span class="mx-brand__fantasy">Fantasy</span>
-                      <span class="mx-brand__league">League</span>
-                    </span>
-                  </span>
-                </span>
+                <img
+                  class="mx-brand__img"
+                  src="{{ url_for('static', filename='images/mx_fantasy_logo_sm.png') }}?v=5"
+                  srcset="{{ url_for('static', filename='images/mx_fantasy_logo_sm.png') }}?v=5 720w, {{ url_for('static', filename='images/mx_fantasy_logo.png') }}?v=5 960w"
+                  sizes="(min-width: 1024px) 340px, (min-width: 640px) 300px, 100vw"
+                  alt="MX Fantasy League"
+                  width="680"
+                  height="200"
+                  decoding="async"
+                />
               </a>
               <button
                 type="button"

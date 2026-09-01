@@ -1481,13 +1481,18 @@ def _load_brand_logo(size: int = 96):
     from PIL import Image
 
     for rel in (
+        "static/images/mx_fantasy_logo_md.png",
+        "static/images/mx_fantasy_logo_sm.png",
+        "static/images/mx_fantasy_logo.png",
         "static/icons/mx_fantasy_app_icon_512.png",
         "static/images/mx_fantasy_favicon.png",
     ):
         p = _ROOT / rel
         if p.exists():
             img = Image.open(p).convert("RGBA")
-            img.thumbnail((size, size), Image.Resampling.LANCZOS)
+            max_h = max(24, int(size))
+            max_w = max(max_h, int(max_h * 3.4))
+            img.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
             return img
     return None
 
