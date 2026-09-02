@@ -1,7 +1,19 @@
 (function () {
   "use strict";
 
-  const MM = { numberHeight: 200, stroke: 30, gap: 15, outline: 15, nameHeight: 55 };
+  const MM = {
+    numberHeight: 200,
+    stroke: 30,
+    gap: 15,
+    outline: 15,
+    nameHeight: 60,
+    nameMaxWidth: 220,
+    nameStretchMax: 2.5,
+    nameNumberGap: 18,
+    logoHeight: 64,
+    logoGap: 14,
+    printArea: { width: 260, height: 340 },
+  };
   const SIZES = ["S", "M", "L", "XL", "XXL"];
 
   const configEl = document.getElementById("trojtryck-config");
@@ -20,7 +32,7 @@
     number: "47",
     fill: "#111111",
     outline: "#FFFFFF",
-    font: "Black Ops One",
+    font: "Anton",
     brandLogoVariant: "black",
     customLogoDataUrl: "",
     customLogoName: "",
@@ -28,6 +40,120 @@
 
   let lastJerseyBackUrl = "";
   let lastBrandLogoUrl = "";
+  let lastLayout = { nameMm: 0, nameWidthMm: 0, numberMm: 200 };
+
+  const measureCanvas = document.createElement("canvas");
+  const measureCtx = measureCanvas.getContext("2d");
+
+  function measureTextMm(text, fontFamily, fontSizePx, dpi = 96) {
+    if (!measureCtx || !text) return { widthMm: 0, heightMm: 0 };
+    measureCtx.font = `700 ${fontSizePx}px "${fontFamily}"`;
+    const m = measureCtx.measureText(text);
+    const wPx = m.width;
+    const hPx = (m.actualBoundingBoxAscent || fontSizePx * 0.78)
+      + (m.actualBoundingBoxDescent || fontSizePx * 0.12);
+    const toMm = (px) => (px * 25.4) / dpi;
+    return { widthMm: toMm(wPx), heightMm: toMm(hPx) };
+  }
+
+  /** Bredd först — sedan vertikal utdragsstreckning upp till targetHmm. */
+  function fitNameLayout(name, fontFamily, targetHmm, maxWmm) {
+    let bestPx = 16;
+    const maxPx = Math.round((targetHmm * MM.nameStretchMax * 1.1 * 96) / 25.4);
+    const step = Math.max(1, Math.floor(maxPx / 120));
+    for (let px = 16; px <= maxPx; px += step) {
+      const { widthMm } = measureTextMm(name, fontFamily, px);
+      if (widthMm <= maxWmm) bestPx = px;
+      else break;
+    }
+    const metrics = measureTextMm(name, fontFamily, bestPx);
+    let stretchY = 1;
+    if (metrics.heightMm > 0.01 && metrics.heightMm < targetHmm) {
+      stretchY = Math.min(MM.nameStretchMax, targetHmm / metrics.heightMm);
+    }
+    return {
+      px: bestPx,
+      widthMm: metrics.widthMm,
+      heightMm: metrics.heightMm,
+      stretchY,
+      displayHeightMm: metrics.heightMm * stretchY,
+    };
+  }
+
+  function fitNumberFontPx(digits, fontFamily, targetHmm) {
+    let bestPx = 24;
+    const maxPx = Math.round((targetHmm * 1.2 * 96) / 25.4);
+    const step = Math.max(1, Math.floor(maxPx / 100));
+    for (let px = 24; px <= maxPx; px += step) {
+      const { heightMm } = measureTextMm(digits, fontFamily, px);
+      if (heightMm <= targetHmm) bestPx = px;
+      else break;
+    }
+    return bestPx;
+  }
+
+  function printAreaMm(jersey) {
+    return jersey?.print_area_mm || MM.printArea;
+  }
+
+  function computePreviewLayout(jersey) {
+    const area = printAreaMm(jersey);
+    const zoneEl = els.previewPrint;
+    const zoneH = zoneEl?.clientHeight || 400;
+    const zoneW = zoneEl?.clientWidth || 260;
+    const pxPerMm = zoneH / area.height;
+    const font = state.font;
+    const name = cleanName();
+    const digits = cleanNumber() || "0";
+    const digitCount = digits.length;
+
+    const nameLayout = name
+      ? fitNameLayout(name, font, MM.nameHeight, MM.nameMaxWidth)
+      : null;
+    const refNumberPx = fitNumberFontPx(digits, font, MM.numberHeight);
+    const numberMetrics = measureTextMm(digits, font, refNumberPx);
+
+    const nameFontPx = nameLayout ? (nameLayout.px * pxPerMm * 25.4) / 96 : 0;
+    let numberFontPx = (refNumberPx * pxPerMm * 25.4) / 96;
+    if (digitCount >= 3) numberFontPx *= 0.9;
+
+    lastLayout = {
+      nameMm: nameLayout ? Math.round(nameLayout.displayHeightMm) : 0,
+      nameWidthMm: nameLayout ? Math.round(nameLayout.widthMm) : 0,
+      nameStretchY: nameLayout ? nameLayout.stretchY : 1,
+      numberMm: Math.round(numberMetrics.heightMm),
+      pxPerMm,
+      areaH: area.height,
+      areaW: area.width,
+    };
+
+    return {
+      nameFontPx: nameLayout ? Math.max(10, nameFontPx) : 0,
+      nameStretchY: nameLayout?.stretchY || 1,
+      numberFontPx: Math.max(14, numberFontPx),
+    };
+  }
+
+  function renderScaleOverlay(jersey) {
+    if (!els.previewScale || !els.previewSizeBadge) return;
+    const area = printAreaMm(jersey);
+    const { nameMm, nameWidthMm, nameStretchY, numberMm } = lastLayout;
+    const ticks = [];
+    for (let mm = 0; mm <= area.height; mm += 50) {
+      const pct = (mm / area.height) * 100;
+      ticks.push(`<div class="preview-stage__scale-tick" style="top:${pct}%"><span>${mm}</span></div>`);
+    }
+    els.previewScale.innerHTML = ticks.join("");
+
+    const parts = [`Nummer ${numberMm} mm (Svemo ~${MM.numberHeight})`];
+    if (nameMm) {
+      const stretchNote =
+        nameStretchY > 1.05 ? ` · utdragen ${nameStretchY.toFixed(1)}× höjd` : "";
+      parts.push(`Namn ${nameMm} mm · ${nameWidthMm} mm bred${stretchNote}`);
+    }
+    parts.push(`Tryckyta ~${area.width}×${area.height} mm`);
+    els.previewSizeBadge.textContent = parts.join(" · ");
+  }
 
   const els = {};
 
@@ -92,10 +218,21 @@
     return (state.number || "").replace(/\D/g, "").slice(0, 3);
   }
 
+  const FONT_CLASS = {
+    Anton: "font-anton",
+    "Bebas Neue": "font-bebas",
+    "Russo One": "font-russo",
+    Bungee: "font-bungee",
+    Graduate: "font-graduate",
+    "Archivo Black": "font-archivo",
+    Oswald: "font-oswald",
+    "Racing Sans One": "font-racing",
+    Orbitron: "font-orbitron",
+    "Black Ops One": "font-blackops",
+  };
+
   function fontClass() {
-    if (state.font === "Racing Sans One") return "font-racing";
-    if (state.font === "Orbitron") return "font-orbitron";
-    return "";
+    return FONT_CLASS[state.font] || "font-anton";
   }
 
   function validate() {
@@ -123,11 +260,19 @@
     if (contrast(fillRgb, fabricRgb) < 3) {
       issues.push("Låg kontrast mot tröjan — Svemo kräver tydligt synliga siffror.");
     } else ok.push("Kontrast mot tröja: OK");
+    if (name && lastLayout.nameMm && lastLayout.nameMm < 45 && lastLayout.nameStretchY >= MM.nameStretchMax - 0.05) {
+      warnings.push(
+        `Namnet når inte ${MM.nameHeight} mm trots vertikal utdragsstreckning — prova kortare/kompaktare font.`
+      );
+    }
     if (contrast(outlineRgb, fillRgb) < 2.5) {
       warnings.push("Outline kontrasterar svagt mot siffran.");
     } else ok.push("Outline: OK");
 
-    ok.push(`Sifferhöjd ${MM.numberHeight} mm · layout: namn i axelhöjd → nummer → logga under`);
+    ok.push(`Sifferhöjd ${MM.numberHeight} mm · namn upp till ${MM.nameHeight} mm`);
+    if (lastLayout.nameMm) {
+      ok.push(`Beräknad storlek: nummer ${lastLayout.numberMm} mm · namn ${lastLayout.nameMm} mm`);
+    }
     ok.push("Blocktyp (Svemo §3.6)");
 
     return { issues, warnings, ok, valid: issues.length === 0, name, number };
@@ -138,18 +283,35 @@
     const box = `${zone.top}% ${zone.right}% ${zone.bottom}% ${zone.left}%`;
     els.previewPrint.style.inset = box;
     els.previewHint.style.inset = box;
+    if (els.previewScale) els.previewScale.style.inset = box;
 
     const crop = jersey.preview_crop || { width_pct: 165, offset_x_pct: -32.5, offset_y_pct: -7 };
     els.previewViewport.style.setProperty("--preview-width", `${crop.width_pct}%`);
     els.previewViewport.style.setProperty("--preview-offset-x", `${crop.offset_x_pct}%`);
     els.previewViewport.style.setProperty("--preview-offset-y", `${crop.offset_y_pct}%`);
+  }
 
-    const nameScale = jersey.name_scale || 0.16;
-    let numberScale = jersey.number_scale || 0.5;
-    const digitCount = cleanNumber().length || 1;
-    if (digitCount >= 3) numberScale *= 0.88;
-    els.previewPrint.style.setProperty("--name-scale", `${nameScale * 100}cqmin`);
-    els.previewPrint.style.setProperty("--number-scale", `${numberScale * 100}cqmin`);
+  function applyPreviewSizes(jersey) {
+    requestAnimationFrame(() => {
+      const sizes = computePreviewLayout(jersey);
+      if (sizes.nameFontPx) {
+        els.previewName.style.fontSize = `${sizes.nameFontPx}px`;
+        els.previewName.style.lineHeight = "1";
+        els.previewName.style.letterSpacing = "0.04em";
+        const sy = sizes.nameStretchY || 1;
+        if (sy > 1.001) {
+          els.previewName.style.transform = `scaleY(${sy})`;
+          els.previewName.style.transformOrigin = "center top";
+        } else {
+          els.previewName.style.transform = "";
+        }
+      }
+      els.previewNumber.style.fontSize = `${sizes.numberFontPx}px`;
+      els.previewNumber.style.lineHeight = "0.9";
+      els.previewNumber.style.letterSpacing = "0.02em";
+      renderScaleOverlay(jersey);
+      renderRules();
+    });
   }
 
   function applyTextStyles(el, fill, outline) {
@@ -241,6 +403,8 @@
 
     els.previewNumber.textContent = number;
     applyTextStyles(els.previewNumber, state.fill, state.outline);
+
+    applyPreviewSizes(jersey);
 
     const tier = currentTier();
     updateBottomLogos(tier);
@@ -515,6 +679,11 @@
         reader.readAsDataURL(file);
       });
     }
+    window.addEventListener("resize", () => {
+      const jersey = currentJersey();
+      if (jersey) applyPreviewSizes(jersey);
+    });
+
     els.exportBtn.addEventListener("click", exportClientPng);
     els.exportServerBtn.addEventListener("click", exportServerPng);
     els.mockCartBtn.addEventListener("click", () => {
@@ -530,9 +699,11 @@
 
   async function waitFonts() {
     if (!document.fonts) return;
-    await document.fonts.load('700 48px "Black Ops One"');
-    await document.fonts.load('700 48px "Racing Sans One"');
-    await document.fonts.load('700 48px "Orbitron"');
+    const loads = [
+      "Anton", "Bebas Neue", "Russo One", "Bungee", "Graduate",
+      "Archivo Black", "Oswald", "Racing Sans One", "Orbitron", "Black Ops One",
+    ].map((f) => document.fonts.load(`700 48px "${f}"`));
+    await Promise.all(loads);
   }
 
   async function init() {
@@ -546,6 +717,8 @@
     els.previewProductMeta = $("previewProductMeta");
     els.previewName = $("previewName");
     els.previewNumber = $("previewNumber");
+    els.previewScale = $("previewScale");
+    els.previewSizeBadge = $("previewSizeBadge");
     els.previewBrandLogo = $("previewBrandLogo");
     els.previewCustomLogo = $("previewCustomLogo");
     els.jerseyGrid = $("jerseyGrid");

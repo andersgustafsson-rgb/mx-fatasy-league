@@ -92,11 +92,24 @@ def trojtryck_export():
 	logo_variant = (data.get("logo_variant") or "").strip().lower()
 	if logo_variant not in ("black", "white"):
 		logo_variant = None
-	font = (data.get("font") or "Black Ops One").strip()[:40] or "Black Ops One"
-	allowed_fonts = {"Black Ops One", "Racing Sans One", "Orbitron"}
+	font = (data.get("font") or "Anton").strip()[:40] or "Anton"
+	allowed_fonts = {
+		"Anton",
+		"Bebas Neue",
+		"Russo One",
+		"Bungee",
+		"Graduate",
+		"Archivo Black",
+		"Oswald",
+		"Racing Sans One",
+		"Orbitron",
+		"Black Ops One",
+	}
 	if font not in allowed_fonts:
-		font = "Black Ops One"
+		font = "Anton"
 	order_label = (data.get("order_label") or "").strip()
+	dpi = int(data.get("dpi") or 300)
+	dpi = min(300, max(72, dpi))
 
 	try:
 		from trojtryck_service import render_print_png, render_production_png
@@ -106,6 +119,7 @@ def trojtryck_export():
 			"number": number,
 			"fill": fill,
 			"outline": outline,
+			"dpi": dpi,
 			"include_brand_logo": include_brand,
 			"custom_logo_bytes": custom_bytes if tier_id == "custom_back_logo" else None,
 			"jersey_fabric": jersey_fabric,

@@ -69,7 +69,7 @@ def _load_block_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
 
 
 def _normalize_font_key(font: str) -> str:
-    return (font or "Black Ops One").strip().lower()
+    return (font or "Anton").strip().lower()
 
 
 def _load_jersey_font(font: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -212,8 +212,7 @@ def mock_jerseys() -> list[dict[str, Any]]:
             },
             "print_zone": {"left": 16, "top": 20, "right": 16, "bottom": 36},
             "preview_crop": {"width_pct": 172, "offset_x_pct": -36, "offset_y_pct": -9},
-            "name_scale": 0.16,
-            "number_scale": 0.50,
+            "print_area_mm": {"width": 260, "height": 340},
         },
         {
             "id": "alpinestars-racer-graphite",
@@ -231,8 +230,7 @@ def mock_jerseys() -> list[dict[str, Any]]:
             },
             "print_zone": {"left": 18, "top": 18, "right": 18, "bottom": 38},
             "preview_crop": {"width_pct": 158, "offset_x_pct": -29, "offset_y_pct": -6},
-            "name_scale": 0.14,
-            "number_scale": 0.44,
+            "print_area_mm": {"width": 255, "height": 335},
         },
     ]
 
@@ -296,6 +294,9 @@ def validate_design(
 
 LOGO_HEIGHT_MM = 64
 LOGO_WIDTH_MM = 190
+NAME_HEIGHT_MM = 60
+NAME_MAX_WIDTH_MM = 220
+NAME_STRETCH_Y_MAX = 2.5
 NAME_NUMBER_GAP_MM = 18
 NUMBER_LOGO_GAP_MM = 14
 CUT_INSET_MM = 1
@@ -310,9 +311,16 @@ def _jersey_font_files() -> dict[str, Path]:
         return JERSEY_FONT_FILES
     fonts_dir = Path(__file__).resolve().parent / "static" / "fonts" / "trojtryck"
     JERSEY_FONT_FILES = {
-        "black ops one": fonts_dir / "BlackOpsOne-Regular.ttf",
+        "anton": fonts_dir / "Anton-Regular.ttf",
+        "bebas neue": fonts_dir / "BebasNeue-Regular.ttf",
+        "russo one": fonts_dir / "RussoOne-Regular.ttf",
+        "bungee": fonts_dir / "Bungee-Regular.ttf",
+        "graduate": fonts_dir / "Graduate-Regular.ttf",
+        "archivo black": fonts_dir / "ArchivoBlack-Regular.ttf",
+        "oswald": fonts_dir / "Oswald-Bold.ttf",
         "racing sans one": fonts_dir / "RacingSansOne-Regular.ttf",
         "orbitron": fonts_dir / "Orbitron-Bold.ttf",
+        "black ops one": fonts_dir / "BlackOpsOne-Regular.ttf",
     }
     return JERSEY_FONT_FILES
 
@@ -473,6 +481,18 @@ def _load_image_rgba(source: str | bytes | None, max_w: int, max_h: int) -> Imag
         return None
 
 
+def _stretch_layer_vertical(layer: Image.Image, stretch_y: float) -> Image.Image:
+    """Vertikal utdragsstreckning med 2× supersampling för jämna kanter."""
+    if stretch_y <= 1.001:
+        return layer
+    w, h = layer.size
+    target_h = max(1, int(round(h * stretch_y)))
+    ss = 2
+    big = layer.resize((w * ss, h * ss), Image.Resampling.LANCZOS)
+    big = big.resize((w * ss, max(ss, int(round(h * ss * stretch_y)))), Image.Resampling.LANCZOS)
+    return big.resize((w, target_h), Image.Resampling.LANCZOS)
+
+
 def _render_glyph_layer(
     text: str,
     font: ImageFont.ImageFont,
@@ -506,21 +526,20 @@ def _stack_artwork(
     fill: tuple[int, int, int],
     outline: tuple[int, int, int],
     dpi: int,
-    font: str = "Black Ops One",
+    font: str = "Anton",
     bottom_logo: Image.Image | None = None,
     bottom_logo_kind: str | None = None,
     with_layers: bool = False,
 ) -> Image.Image | tuple[Image.Image, list[ArtLayer]]:
     """MX layout: namn överst, nummer i mitten, logga längst ner."""
-    work_dpi = 96
     work, layers = _stack_artwork_work(
         name=name,
         number=number,
         fill=fill,
         outline=outline,
-        dpi=work_dpi,
+        dpi=dpi,
         font=font,
-        bottom_logo=_scale_logo_for_dpi(bottom_logo, work_dpi, dpi) if bottom_logo else None,
+        bottom_logo=bottom_logo,
         bottom_logo_kind=bottom_logo_kind,
     )
 
@@ -532,10 +551,12 @@ def _stack_artwork(
         }.get(len("".join(ch for ch in (number or "") if ch.isdigit())[:3]), SVEMO_TWO_DIGIT_WIDTH_MM),
         dpi,
     )
-    logo_extra = mm_to_px(LOGO_HEIGHT_MM + NUMBER_LOGO_GAP_MM, dpi) if bottom_logo else 0
-    name_extra = mm_to_px(55 + NAME_NUMBER_GAP_MM, dpi) if (name or "").strip() else 0
-    target_h = mm_to_px(SVEMO_NUMBER_HEIGHT_MM, dpi) + name_extra + logo_extra + mm_to_px(16, dpi)
-    scale = max(target_w / max(work.size[0], 1), target_h / max(work.size[1], 1))
+    name_extra = mm_to_px(NAME_HEIGHT_MM + NAME_NUMBER_GAP_MM, dpi) if (name or "").strip() else 0
+    core_target_h = mm_to_px(SVEMO_NUMBER_HEIGHT_MM, dpi) + name_extra + mm_to_px(16, dpi)
+    core_work_h = work.size[1]
+    if bottom_logo:
+        core_work_h -= mm_to_px(NUMBER_LOGO_GAP_MM, dpi) + bottom_logo.size[1]
+    scale = max(target_w / max(work.size[0], 1), core_target_h / max(core_work_h, 1))
     out_w = max(1, int(work.size[0] * scale))
     out_h = max(1, int(work.size[1] * scale))
     scaled = work.resize((out_w, out_h), Image.Resampling.LANCZOS)
@@ -567,6 +588,75 @@ def _scale_logo_for_dpi(logo: Image.Image, target_dpi: int, source_dpi: int) -> 
     )
 
 
+def _text_bbox_mm(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    font: ImageFont.ImageFont,
+    dpi: int,
+) -> tuple[float, float]:
+    if hasattr(draw, "textbbox"):
+        box = draw.textbbox((0, 0), text, font=font)
+        w_px, h_px = box[2] - box[0], box[3] - box[1]
+    else:
+        w_px, h_px = draw.textsize(text, font=font)  # type: ignore[attr-defined]
+    return w_px * 25.4 / dpi, h_px * 25.4 / dpi
+
+
+def _fit_name_font(
+    name: str,
+    font: str,
+    dpi: int,
+    *,
+    target_h_mm: float = NAME_HEIGHT_MM,
+    max_w_mm: float = NAME_MAX_WIDTH_MM,
+) -> tuple[ImageFont.FreeTypeFont | ImageFont.ImageFont, int, float, float, float, float]:
+    """Bredd begränsas först; därefter vertikal utdragsstreckning upp till target_h_mm."""
+    probe = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+    pdraw = ImageDraw.Draw(probe)
+    max_px = mm_to_px(target_h_mm * NAME_STRETCH_Y_MAX * 1.1, dpi)
+    step = max(1, max_px // 100)
+    best_px = max(16, mm_to_px(24, dpi))
+    best_w = best_h = 0.0
+    for px in range(best_px, max_px + 1, step):
+        trial = _load_jersey_font(font, px)
+        w_mm, h_mm = _text_bbox_mm(pdraw, name, trial, dpi)
+        if w_mm <= max_w_mm:
+            best_px, best_w, best_h = px, w_mm, h_mm
+        else:
+            break
+
+    stretch_y = 1.0
+    if best_h > 0.01 and best_h < target_h_mm:
+        stretch_y = min(NAME_STRETCH_Y_MAX, target_h_mm / best_h)
+    final_h_mm = best_h * stretch_y
+    return _load_jersey_font(font, best_px), best_px, best_w, best_h, stretch_y, final_h_mm
+
+
+def _fit_number_font(
+    digits: str,
+    font: str,
+    dpi: int,
+    *,
+    target_h_mm: float = SVEMO_NUMBER_HEIGHT_MM,
+) -> tuple[ImageFont.FreeTypeFont | ImageFont.ImageFont, int, float]:
+    """Skala nummer till Svemo sifferhöjd (~200 mm)."""
+    probe = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+    pdraw = ImageDraw.Draw(probe)
+    max_px = mm_to_px(target_h_mm * 1.2, dpi)
+    step = max(1, max_px // 80)
+    best_px = max(24, mm_to_px(80, dpi))
+    best_h = 0.0
+    for px in range(best_px, max_px + 1, step):
+        trial = _load_jersey_font(font, px)
+        heights = [_text_bbox_mm(pdraw, d, trial, dpi)[1] for d in digits]
+        h_mm = max(heights) if heights else 0.0
+        if h_mm <= target_h_mm:
+            best_px, best_h = px, h_mm
+        else:
+            break
+    return _load_jersey_font(font, best_px), best_px, best_h
+
+
 def _stack_artwork_work(
     *,
     name: str,
@@ -574,7 +664,7 @@ def _stack_artwork_work(
     fill: tuple[int, int, int],
     outline: tuple[int, int, int],
     dpi: int,
-    font: str = "Black Ops One",
+    font: str = "Anton",
     bottom_logo: Image.Image | None = None,
     bottom_logo_kind: str | None = None,
 ) -> tuple[Image.Image, list[ArtLayer]]:
@@ -589,12 +679,19 @@ def _stack_artwork_work(
     pad = mm_to_px(8, dpi)
 
     num_h = mm_to_px(SVEMO_NUMBER_HEIGHT_MM, dpi)
-    name_h = mm_to_px(55, dpi) if name_clean else 0
+    name_h = mm_to_px(NAME_HEIGHT_MM, dpi) if name_clean else 0
     logo_h = bottom_logo.size[1] if bottom_logo else 0
     logo_w = bottom_logo.size[0] if bottom_logo else 0
 
-    num_font = _load_jersey_font(font, max(24, int(num_h * 0.92)))
-    name_font = _load_jersey_font(font, max(16, int(name_h * 0.85))) if name_clean else None
+    num_font, _, _num_cap_mm = _fit_number_font(digits, font, dpi)
+    if name_clean:
+        name_font, _, name_w_mm, _name_nat_h, name_stretch_y, name_cap_mm = _fit_name_font(
+            name_clean, font, dpi
+        )
+    else:
+        name_font = None
+        name_w_mm = name_cap_mm = 0.0
+        name_stretch_y = 1.0
 
     probe = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
     pdraw = ImageDraw.Draw(probe)
@@ -627,6 +724,8 @@ def _stack_artwork_work(
             outline,
             max(2, outline_px // 2),
         )
+        if name_stretch_y > 1.001:
+            name_layer = _stretch_layer_vertical(name_layer, name_stretch_y)
         nx = cx - name_layer.size[0] // 2
         ny = y
         layers.append((name_layer, nx, ny, "text"))
@@ -860,7 +959,7 @@ def render_print_png(
     custom_logo_bytes: bytes | None = None,
     jersey_fabric: str = "#f8fafc",
     logo_variant: str | None = None,
-    font: str = "Black Ops One",
+    font: str = "Anton",
 ) -> bytes:
     """Transparent PNG — ren tryckyta (DTF), namn + nummer + ev. logga under."""
     fill_rgb = _parse_hex(fill, (255, 255, 255))
@@ -898,7 +997,7 @@ def render_production_png(
     custom_logo_bytes: bytes | None = None,
     jersey_fabric: str = "#f8fafc",
     logo_variant: str | None = None,
-    font: str = "Black Ops One",
+    font: str = "Anton",
     order_label: str = "",
 ) -> bytes:
     """Produktionsunderlag: tryck + magenta skärlinje + registreringsmarkeringar."""

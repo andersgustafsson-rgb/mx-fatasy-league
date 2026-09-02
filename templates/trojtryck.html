@@ -12,7 +12,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Orbitron:wght@700&family=Racing+Sans+One&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Bebas+Neue&family=Bungee&family=Graduate&family=Oswald:wght@700&family=Russo+One&family=Black+Ops+One&family=Orbitron:wght@700&family=Racing+Sans+One&display=swap" rel="stylesheet">
   <style>
     body { background: #0b1220; }
     .panel { background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(51, 65, 85, 0.8); }
@@ -52,6 +52,7 @@
       text-align: center;
       container-type: size;
       padding: 0 4% 2%;
+      overflow: visible;
     }
     .preview-stage__name {
       flex: 0 0 auto;
@@ -59,11 +60,10 @@
       align-items: flex-start;
       justify-content: center;
       width: 100%;
-      font-family: "Black Ops One", "Arial Black", Impact, sans-serif;
+      font-family: "Anton", "Arial Black", Impact, sans-serif;
       font-weight: 700;
       line-height: 1;
-      letter-spacing: 0.08em;
-      font-size: var(--name-scale, 16cqmin);
+      letter-spacing: 0.04em;
     }
     .preview-stage__number {
       flex: 0 0 auto;
@@ -71,12 +71,11 @@
       align-items: flex-start;
       justify-content: center;
       width: 100%;
-      margin-top: 0.2cqmin;
-      font-family: "Black Ops One", "Arial Black", Impact, sans-serif;
+      margin-top: 0.15em;
+      font-family: "Anton", "Arial Black", Impact, sans-serif;
       font-weight: 700;
-      line-height: 0.82;
+      line-height: 0.9;
       letter-spacing: 0.02em;
-      font-size: var(--number-scale, 50cqmin);
     }
     .preview-stage__logos {
       flex: 0 0 auto;
@@ -97,13 +96,52 @@
       opacity: 0.95;
       filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25));
     }
+    .font-anton { font-family: "Anton", "Arial Black", sans-serif; }
+    .font-bebas { font-family: "Bebas Neue", "Arial Black", sans-serif; letter-spacing: 0.04em; }
+    .font-russo { font-family: "Russo One", "Arial Black", sans-serif; }
+    .font-bungee { font-family: "Bungee", "Arial Black", sans-serif; }
+    .font-graduate { font-family: "Graduate", "Arial Black", sans-serif; }
+    .font-archivo { font-family: "Archivo Black", "Arial Black", sans-serif; }
+    .font-oswald { font-family: "Oswald", "Arial Black", sans-serif; font-weight: 700; }
     .font-racing { font-family: "Racing Sans One", "Arial Black", sans-serif; }
-    .font-orbitron { font-family: "Orbitron", "Arial Black", sans-serif; }
+    .font-orbitron { font-family: "Orbitron", "Arial Black", sans-serif; font-weight: 700; }
+    .font-blackops { font-family: "Black Ops One", "Arial Black", sans-serif; }
     .preview-stage__hint {
       position: absolute;
       border: 1px dashed rgba(34, 211, 238, 0.18);
       border-radius: 0.35rem;
       pointer-events: none;
+    }
+    .preview-stage__scale {
+      position: absolute;
+      pointer-events: none;
+      border-left: 1px solid rgba(34, 211, 238, 0.35);
+      z-index: 2;
+    }
+    .preview-stage__scale-tick {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      border-top: 1px solid rgba(34, 211, 238, 0.25);
+      transform: translateY(-50%);
+    }
+    .preview-stage__scale-tick span {
+      position: absolute;
+      left: 4px;
+      top: -7px;
+      font-size: 9px;
+      line-height: 1;
+      color: rgba(34, 211, 238, 0.75);
+      font-family: ui-monospace, monospace;
+    }
+    .preview-stage__size-badge {
+      display: block;
+      margin-top: 0.5rem;
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.4;
+      color: rgba(148, 163, 184, 0.95);
+      font-family: ui-monospace, monospace;
     }
   </style>
 </head>
@@ -170,9 +208,16 @@
         <label class="block text-sm">
           <span class="text-slate-400">Font (blocktyp)</span>
           <select id="fontSelect" class="mt-1 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
-            <option value="Black Ops One">Black Ops One</option>
-            <option value="Racing Sans One">Racing Sans One</option>
-            <option value="Orbitron">Orbitron</option>
+            <option value="Anton" selected>Anton — tjock SX-block</option>
+            <option value="Bebas Neue">Bebas Neue — klassisk racing</option>
+            <option value="Russo One">Russo One — bred MX-industri</option>
+            <option value="Bungee">Bungee — tung block</option>
+            <option value="Graduate">Graduate — varsity/college</option>
+            <option value="Archivo Black">Archivo Black — solid grotesk</option>
+            <option value="Oswald">Oswald — kondenserad athletic</option>
+            <option value="Racing Sans One">Racing Sans One — lutad racing</option>
+            <option value="Orbitron">Orbitron — futuristisk</option>
+            <option value="Black Ops One">Black Ops One — stencil (svår att skära)</option>
           </select>
         </label>
         <div class="grid grid-cols-2 gap-3">
@@ -202,6 +247,7 @@
           <div class="preview-stage__viewport" id="previewViewport">
             <img id="jerseyPreviewImg" src="" alt="Vald crosströja — rygg" class="preview-stage__jersey">
             <div id="previewHint" class="preview-stage__hint" aria-hidden="true"></div>
+            <div id="previewScale" class="preview-stage__scale" style="left:0;width:28px" aria-hidden="true"></div>
             <div id="previewPrint" class="preview-stage__print">
               <div id="previewName" class="preview-stage__name"></div>
               <div id="previewNumber" class="preview-stage__number"></div>
@@ -212,6 +258,7 @@
             </div>
           </div>
         </div>
+        <p id="previewSizeBadge" class="preview-stage__size-badge">—</p>
         <p id="previewProductMeta" class="text-center text-xs text-slate-500 mt-2"></p>
 
         <p class="text-center text-xs text-slate-500 mt-3">Layout enligt branschstandard: <strong class="text-slate-400">namn i axelhöjd · nummer under · logga längst ner</strong> (som BikeGraphix, RENEN m.fl.).</p>
@@ -291,6 +338,6 @@
     </aside>
   </main>
 
-  <script src="{{ url_for('static', filename='trojtryck.js') }}?v=12"></script>
+  <script src="{{ url_for('static', filename='trojtryck.js') }}?v=22"></script>
 </body>
 </html>
