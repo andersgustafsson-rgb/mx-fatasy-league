@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import base64
 import os
 
-from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, jsonify, redirect, render_template, request, session, url_for
 
 bp = Blueprint('public', __name__)
 
@@ -23,6 +24,113 @@ def tidrapport_page():
 
 	# Vi har ingen gemensam base-template, så sidan är fristående.
 	return render_template("tidrapport.html", username=session.get("username") or "")
+
+
+@bp.get("/tröjtryck")
+@bp.get("/trojtryck")
+def trojtryck_page():
+	"""Prototype: jersey name/number designer with Svemo validation + print export."""
+	from trojtryck_service import mock_jerseys, print_tiers
+
+	jerseys = []
+	for j in mock_jerseys():
+		images = j.get("images") or {}
+		jerseys.append({
+			**j,
+			"thumb_url": url_for("static", filename=f"images/trojtryck/{images.get('thumb', '')}"),
+			"back_url": url_for("static", filename=f"images/trojtryck/{images.get('back', '')}"),
+		})
+	return render_template(
+		"trojtryck.html",
+		jerseys=jerseys,
+		print_tiers=print_tiers(),
+	)
+
+
+@bp.get("/api/trojtryck/logo/<variant>.png")
+def trojtryck_logo(variant: str):
+	"""Skala EPS-loggan on-demand för preview (vektor master, raster vid visning)."""
+	from trojtryck_service import MOTOACTION_LOGO_ASPECT, render_motoaction_logo_png
+
+	if variant not in MOTOACTION_LOGO_ASPECT:
+		return jsonify({"error": "Ogiltig logotypvariant"}), 400
+	w = min(1600, max(64, int(request.args.get("w", 480))))
+	h_arg = int(request.args.get("h", 0))
+	if h_arg > 0:
+		h = min(1200, max(32, h_arg))
+	else:
+		h = max(32, int(w / MOTOACTION_LOGO_ASPECT[variant]))
+	try:
+		png = render_motoaction_logo_png(variant=variant, max_w=w, max_h=h)
+	except Exception as e:
+		print(f"trojtryck logo error: {e}")
+		return jsonify({"error": "Kunde inte rendera logotyp"}), 500
+	return Response(png, mimetype="image/png", headers={"Cache-Control": "public, max-age=86400"})
+
+
+@bp.post("/api/trojtryck/export")
+def trojtryck_export():
+	data = request.get_json(silent=True) or {}
+	production = bool(data.get("production"))
+	tier_id = (data.get("tier_id") or "standard").strip()
+	include_brand = tier_id == "motoaction_brand"
+	custom_b64 = (data.get("custom_logo_base64") or "").strip()
+	custom_bytes = None
+	if custom_b64:
+		try:
+			if "," in custom_b64:
+				custom_b64 = custom_b64.split(",", 1)[1]
+			custom_bytes = base64.b64decode(custom_b64)
+		except Exception:
+			return jsonify({"error": "Ogiltig logotypfil"}), 400
+
+	name = (data.get("name") or "").strip()
+	number = (data.get("number") or "").strip()
+	fill = (data.get("fill") or "#FFFFFF").strip()
+	outline = (data.get("outline") or "#111111").strip()
+	jersey_fabric = (data.get("jersey_fabric") or "#f8fafc").strip()
+	logo_variant = (data.get("logo_variant") or "").strip().lower()
+	if logo_variant not in ("black", "white"):
+		logo_variant = None
+	font = (data.get("font") or "Black Ops One").strip()[:40] or "Black Ops One"
+	allowed_fonts = {"Black Ops One", "Racing Sans One", "Orbitron"}
+	if font not in allowed_fonts:
+		font = "Black Ops One"
+	order_label = (data.get("order_label") or "").strip()
+
+	try:
+		from trojtryck_service import render_print_png, render_production_png
+
+		kwargs = {
+			"name": name,
+			"number": number,
+			"fill": fill,
+			"outline": outline,
+			"include_brand_logo": include_brand,
+			"custom_logo_bytes": custom_bytes if tier_id == "custom_back_logo" else None,
+			"jersey_fabric": jersey_fabric,
+			"logo_variant": logo_variant,
+			"font": font,
+		}
+		if production:
+			png = render_production_png(**kwargs, order_label=order_label)
+		else:
+			png = render_print_png(**kwargs)
+	except ValueError as e:
+		return jsonify({"error": str(e)}), 400
+	except Exception as e:
+		print(f"trojtryck export error: {e}")
+		return jsonify({"error": "Kunde inte generera printfil"}), 500
+
+	name_slug = (name or "nummer").strip().upper()[:18] or "nummer"
+	number_slug = "".join(ch for ch in (number or "") if ch.isdigit())[:3]
+	suffix = "produktion" if production else "tryck"
+	filename = f"trojtryck-{name_slug}-{number_slug}-{suffix}.png"
+	return Response(
+		png,
+		mimetype="image/png",
+		headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+	)
 
 
 @bp.get("/kundmail")

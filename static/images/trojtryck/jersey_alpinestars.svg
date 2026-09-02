@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 480" fill="none">
+  <defs>
+    <linearGradient id="fabric" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2a1014"/>
+      <stop offset="100%" stop-color="#120608"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#991b1b"/>
+    </linearGradient>
+  </defs>
+  <path d="M90 48 C120 20 240 20 270 48 L300 88 L330 120 L318 180 L300 220 L290 300 L285 420 L75 420 L70 300 L60 220 L42 180 L30 120 L60 88 Z" fill="url(#fabric)" stroke="#3f1418" stroke-width="2"/>
+  <path d="M120 70 L180 58 L240 70 L250 130 L230 200 L210 250 L150 250 L130 200 L110 130 Z" fill="url(#accent)" opacity="0.85"/>
+  <path d="M90 48 C120 20 240 20 270 48 L255 72 C230 58 130 58 105 72 Z" fill="#450a0a" opacity="0.5"/>
+  <ellipse cx="180" cy="300" rx="72" ry="88" fill="#0a0406" opacity="0.35"/>
+  <text x="180" y="430" text-anchor="middle" fill="#64748b" font-family="system-ui,sans-serif" font-size="11">Alpinestars Fluid Race · rygg</text>
+</svg>

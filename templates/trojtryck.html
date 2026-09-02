@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% set seo_title = 'Tröjtryck — designa MX-tröja med namn & nummer | Motoaction demo' %}
+  {% set seo_description = 'Prototyp: välj crosströja, designa namn och startnummer enligt Svemo, förhandsgranska och köp tröja + tryck.' %}
+  {% set seo_path = '/trojtryck' %}
+  {% include 'includes/seo_head.html' %}
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/favicon.ico" sizes="any" type="image/png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Orbitron:wght@700&family=Racing+Sans+One&display=swap" rel="stylesheet">
+  <style>
+    body { background: #0b1220; }
+    .panel { background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(51, 65, 85, 0.8); }
+    .preview-stage {
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      background: radial-gradient(circle at 50% 20%, rgba(30,41,59,0.35), rgba(2,6,23,0.2));
+      border-radius: 1rem;
+      padding: 0.5rem;
+    }
+    .preview-stage__viewport {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      aspect-ratio: 4 / 5;
+      border-radius: 0.75rem;
+      background: rgba(2, 6, 23, 0.35);
+    }
+    .preview-stage__jersey {
+      display: block;
+      width: var(--preview-width, 165%);
+      max-width: none;
+      height: auto;
+      margin-left: var(--preview-offset-x, -32.5%);
+      margin-top: var(--preview-offset-y, -7%);
+      filter: drop-shadow(0 20px 36px rgba(0,0,0,0.35));
+    }
+    .preview-stage__print {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      pointer-events: none;
+      text-align: center;
+      container-type: size;
+      padding: 0 4% 2%;
+    }
+    .preview-stage__name {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      width: 100%;
+      font-family: "Black Ops One", "Arial Black", Impact, sans-serif;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: 0.08em;
+      font-size: var(--name-scale, 16cqmin);
+    }
+    .preview-stage__number {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      width: 100%;
+      margin-top: 0.2cqmin;
+      font-family: "Black Ops One", "Arial Black", Impact, sans-serif;
+      font-weight: 700;
+      line-height: 0.82;
+      letter-spacing: 0.02em;
+      font-size: var(--number-scale, 50cqmin);
+    }
+    .preview-stage__logos {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      width: 100%;
+      margin-top: auto;
+      max-height: 20cqh;
+      padding-bottom: 1%;
+    }
+    .preview-stage__brand-logo,
+    .preview-stage__custom-logo {
+      width: auto;
+      max-width: 78%;
+      max-height: 100%;
+      object-fit: contain;
+      opacity: 0.95;
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25));
+    }
+    .font-racing { font-family: "Racing Sans One", "Arial Black", sans-serif; }
+    .font-orbitron { font-family: "Orbitron", "Arial Black", sans-serif; }
+    .preview-stage__hint {
+      position: absolute;
+      border: 1px dashed rgba(34, 211, 238, 0.18);
+      border-radius: 0.35rem;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen">
+  <script id="trojtryck-config" type="application/json">
+    {{ {"jerseys": jerseys, "print_tiers": print_tiers}|tojson }}
+  </script>
+
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-20">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <div class="text-xs uppercase tracking-widest text-cyan-400/80">Motoaction · prototyp</div>
+        <h1 class="text-2xl font-bold">Tröjtryck — köp tröja + namn &amp; nummer</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="statusBadge" class="rounded-full bg-slate-700 px-3 py-1 text-xs font-semibold">…</span>
+        <a href="/" class="text-sm text-slate-400 hover:text-white">← MX Fantasy</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 grid xl:grid-cols-[360px_minmax(0,1fr)_300px] lg:grid-cols-[340px_1fr] gap-6">
+    <section class="space-y-4">
+      <div class="panel rounded-2xl p-4">
+        <h2 class="font-semibold mb-1">1. Välj produkt</h2>
+        <p class="text-xs text-slate-400 mb-3">Riktiga Motoaction-artiklar — du köper tröjan + trycket som ett paket.</p>
+        <div id="jerseyGrid" class="grid grid-cols-1 gap-3"></div>
+      </div>
+
+      <div class="panel rounded-2xl p-4 space-y-3">
+        <h2 class="font-semibold">2. Storlek</h2>
+        <div id="sizeGrid" class="grid grid-cols-5 gap-2"></div>
+      </div>
+
+      <div class="panel rounded-2xl p-4 space-y-3">
+        <h2 class="font-semibold mb-1">3. Tryckpaket</h2>
+        <p class="text-xs text-slate-400">Välj om kunden bara ska ha nummer, eller logga också — priset ändras.</p>
+        <div id="tierGrid" class="space-y-2"></div>
+        <div id="brandLogoBlock" class="hidden rounded-xl border border-slate-700 bg-slate-900/60 p-3 space-y-2">
+          <div class="text-sm font-medium text-slate-300">Motoaction-logga</div>
+          <p class="text-xs text-slate-500">Välj svart (ljus tröja) eller vit (mörk tröja).</p>
+          <div id="brandLogoGrid" class="grid grid-cols-2 gap-2"></div>
+        </div>
+        <div id="customLogoBlock" class="hidden rounded-xl border border-slate-700 bg-slate-900/60 p-3 space-y-2">
+          <label class="block text-sm">
+            <span class="text-slate-300 font-medium">Ladda upp rygglogga</span>
+            <span class="text-slate-500 text-xs block mt-0.5">PNG/SVG med transparent bakgrund · max 5 MB · granskas manuellt i prod</span>
+            <input id="customLogoInput" type="file" accept="image/png,image/svg+xml,image/webp" class="mt-2 block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-500/20 file:px-3 file:py-2 file:text-cyan-200">
+          </label>
+          <p id="customLogoHint" class="text-xs text-slate-500"></p>
+        </div>
+      </div>
+
+      <div class="panel rounded-2xl p-4 space-y-3">
+        <h2 class="font-semibold">4. Design — namn &amp; nummer</h2>
+        <label class="block text-sm">
+          <span class="text-slate-400">Efternamn (rygg)</span>
+          <input id="nameInput" type="text" maxlength="18" class="mt-1 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 uppercase" placeholder="ANDERSSON">
+        </label>
+        <label class="block text-sm">
+          <span class="text-slate-400">Startnummer</span>
+          <input id="numberInput" type="text" inputmode="numeric" maxlength="3" class="mt-1 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-2xl font-bold tracking-widest" placeholder="47">
+        </label>
+        <label class="block text-sm">
+          <span class="text-slate-400">Font (blocktyp)</span>
+          <select id="fontSelect" class="mt-1 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2">
+            <option value="Black Ops One">Black Ops One</option>
+            <option value="Racing Sans One">Racing Sans One</option>
+            <option value="Orbitron">Orbitron</option>
+          </select>
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="text-sm">
+            <span class="text-slate-400">Siffra</span>
+            <input id="fillColor" type="color" class="mt-1 w-full h-10 rounded cursor-pointer bg-transparent">
+          </label>
+          <label class="text-sm">
+            <span class="text-slate-400">Outline / kant</span>
+            <input id="outlineColor" type="color" class="mt-1 w-full h-10 rounded cursor-pointer bg-transparent">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="space-y-4">
+      <div class="panel rounded-2xl p-4 lg:sticky lg:top-24">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <h2 class="font-semibold">Din tröja</h2>
+            <p id="previewProductTitle" class="text-sm text-slate-400">—</p>
+          </div>
+          <span class="text-xs rounded-full bg-slate-800 px-2 py-1 text-slate-300">Rygg · live preview</span>
+        </div>
+
+        <div class="preview-stage" id="previewStage">
+          <div class="preview-stage__viewport" id="previewViewport">
+            <img id="jerseyPreviewImg" src="" alt="Vald crosströja — rygg" class="preview-stage__jersey">
+            <div id="previewHint" class="preview-stage__hint" aria-hidden="true"></div>
+            <div id="previewPrint" class="preview-stage__print">
+              <div id="previewName" class="preview-stage__name"></div>
+              <div id="previewNumber" class="preview-stage__number"></div>
+              <div id="previewLogos" class="preview-stage__logos">
+                <img id="previewBrandLogo" src="" alt="" class="preview-stage__brand-logo hidden">
+                <img id="previewCustomLogo" src="" alt="" class="preview-stage__custom-logo hidden">
+              </div>
+            </div>
+          </div>
+        </div>
+        <p id="previewProductMeta" class="text-center text-xs text-slate-500 mt-2"></p>
+
+        <p class="text-center text-xs text-slate-500 mt-3">Layout enligt branschstandard: <strong class="text-slate-400">namn i axelhöjd · nummer under · logga längst ner</strong> (som BikeGraphix, RENEN m.fl.).</p>
+      </div>
+
+      <div class="panel rounded-2xl p-4">
+        <h2 class="font-semibold mb-2">Svemo-regler — tröjtryck (MX)</h2>
+        <p class="text-xs text-slate-400 mb-3">Sammanfattat från Svemos reglemente Motocross §3.6. Dubbelkolla mot <a class="text-cyan-400 underline" href="https://regler.svemo.se/regelbocker/motocross" target="_blank" rel="noopener">regler.svemo.se</a>.</p>
+        <div class="grid md:grid-cols-2 gap-4 text-sm">
+          <div class="rounded-xl bg-slate-900/60 p-3 border border-slate-800">
+            <h3 class="font-semibold text-cyan-300 mb-2 text-sm">Obligatoriskt / 2026</h3>
+            <ul class="space-y-1 text-slate-300 text-xs list-disc pl-4">
+              <li>Ryggnummer i MXSM, USM, JSM, Sverige Cup, Race Magazine Cup, RM Women.</li>
+              <li>Samma nummer på tröja som på MC.</li>
+              <li>Blocktyp — reflekterande nummer förbjudet.</li>
+            </ul>
+          </div>
+          <div class="rounded-xl bg-slate-900/60 p-3 border border-slate-800">
+            <h3 class="font-semibold text-cyan-300 mb-2 text-sm">Mått (rygg §3.6.1)</h3>
+            <ul class="space-y-1 text-slate-300 text-xs list-disc pl-4">
+              <li>Sifferhöjd ca 200 mm · tjocklek ca 30 mm</li>
+              <li>Avstånd mellan siffror ca 15 mm</li>
+              <li>Tydlig kontrast mot tröjfärg</li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-4 rounded-xl bg-slate-900/60 p-3 border border-slate-800">
+          <h3 class="font-semibold text-cyan-300 mb-2 text-sm">Validering</h3>
+          <ul id="rulesList" class="space-y-1 text-xs"></ul>
+        </div>
+      </div>
+    </section>
+
+    <aside class="space-y-4 xl:block lg:col-span-2 xl:col-span-1">
+      <div class="panel rounded-2xl p-4 lg:sticky lg:top-24">
+        <h2 class="font-semibold mb-3">Order (demo)</h2>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between gap-3">
+            <span id="cartJerseyLabel" class="text-slate-300">Tröja</span>
+            <span id="cartJerseyPrice" class="font-medium">—</span>
+          </div>
+          <div class="flex justify-between gap-3">
+            <span id="cartPrintLabel" class="text-slate-300">Tryckpaket</span>
+            <span id="cartPrintPrice" class="font-medium">—</span>
+          </div>
+          <div class="flex justify-between gap-3 text-xs text-slate-500">
+            <span>Storlek</span>
+            <span id="cartSizeLabel">M</span>
+          </div>
+          <div class="flex justify-between gap-3 text-xs text-slate-500">
+            <span>Design</span>
+            <span id="cartDesignLabel">—</span>
+          </div>
+        </div>
+        <div class="border-t border-slate-700 my-3"></div>
+        <div class="flex justify-between items-baseline mb-4">
+          <span class="font-semibold">Totalt</span>
+          <span id="cartTotal" class="text-2xl font-bold text-cyan-300">—</span>
+        </div>
+
+        <button id="mockCartBtn" type="button" disabled
+          class="w-full rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold py-3 px-4 disabled:opacity-40 mb-2">
+          Lägg i varukorg
+        </button>
+        <button id="exportBtn" type="button" disabled
+          class="w-full rounded-xl border border-slate-600 hover:border-cyan-500/50 py-2 px-4 text-sm disabled:opacity-40 mb-2">
+          Ladda tryckfil (ren DTF)
+        </button>
+        <button id="exportServerBtn" type="button" disabled
+          class="w-full rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold py-3 px-4 disabled:opacity-40 mb-2">
+          Ladda produktionsfil (skärlinje)
+        </button>
+        <p class="text-[11px] text-slate-500">Produktionsfilen har magenta skärlinje + registreringsmarkeringar — som hos tryckerier/leverantörer online.</p>
+        <p id="exportStatus" class="text-xs text-slate-500 mt-3"></p>
+        <p class="text-[11px] text-slate-600 mt-2">Ingen riktig betalning — bara prototyp för att testa flödet tröja + tryck.</p>
+      </div>
+    </aside>
+  </main>
+
+  <script src="{{ url_for('static', filename='trojtryck.js') }}?v=12"></script>
+</body>
+</html>

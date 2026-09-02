@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 480" fill="none">
+  <defs>
+    <linearGradient id="fabricFox" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accentFox" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7dd3fc"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+  <path d="M90 48 C120 20 240 20 270 48 L300 88 L330 120 L318 180 L300 220 L290 300 L285 420 L75 420 L70 300 L60 220 L42 180 L30 120 L60 88 Z" fill="url(#fabricFox)" stroke="#334155" stroke-width="2"/>
+  <path d="M130 85 L180 72 L230 85 L235 150 L220 210 L200 255 L160 255 L140 210 L125 150 Z" fill="url(#accentFox)" opacity="0.9"/>
+  <path d="M150 120 H210 V175 H150 Z" fill="#f8fafc" opacity="0.12"/>
+  <ellipse cx="180" cy="300" rx="72" ry="88" fill="#020617" opacity="0.3"/>
+  <text x="180" y="430" text-anchor="middle" fill="#64748b" font-family="system-ui,sans-serif" font-size="11">Fox Flexair Pryme · rygg</text>
+</svg>
