@@ -16,7 +16,8 @@ const TEMPLATE_DEFS = [
   {
     id: "inkommer",
     fields: [
-      { id: "expectedDate", type: "date", required: true },
+      { id: "expectedDate", type: "date" },
+      { id: "delayReason", type: "text" },
       { id: "waitOption", type: "checkbox", default: true },
       { id: "shipRestOfOrder", type: "checkbox", default: false },
     ],
@@ -31,8 +32,9 @@ const TEMPLATE_DEFS = [
   {
     id: "forsening",
     fields: [
-      { id: "newDeliveryDate", type: "date", required: true },
+      { id: "newDeliveryDate", type: "date" },
       { id: "delayReason", type: "text" },
+      { id: "waitOption", type: "checkbox", default: true },
     ],
   },
   {
@@ -139,9 +141,13 @@ const UI = {
     },
     inkommer: {
       label: "Kommer in i lager senare",
-      description: "Förväntad åter i lager med datum.",
+      description: "Slut just nu — med datum om ni har ett, annars okänt. Orsak + fråga om vänta.",
       fields: {
-        expectedDate: { label: "Välj förväntat datum" },
+        expectedDate: { label: "Förväntat datum (valfritt)" },
+        delayReason: {
+          label: "Orsak (valfritt)",
+          placeholder: "t.ex. beställd hos leverantör",
+        },
         waitOption: { label: "Fråga om kunden vill vänta" },
         shipRestOfOrder: { label: "Fråga om vänta på hela ordern eller stryka artikel" },
       },
@@ -156,10 +162,14 @@ const UI = {
     },
     forsening: {
       label: "Leveransförsening",
-      description: "Ordern blir sen — nytt leveransdatum.",
+      description: "Ordern blir sen — datum om ni har, annars okänt. Orsak + fråga om vänta.",
       fields: {
-        newDeliveryDate: { label: "Välj nytt leveransdatum" },
-        delayReason: { label: "Orsak (valfritt)", placeholder: "t.ex. försening från leverantör" },
+        newDeliveryDate: { label: "Nytt leveransdatum (valfritt)" },
+        delayReason: {
+          label: "Orsak (valfritt)",
+          placeholder: "t.ex. beställd hos leverantör",
+        },
+        waitOption: { label: "Fråga om kunden vill vänta ändå" },
       },
     },
     usa_forsening: {
@@ -928,8 +938,14 @@ Hör av dig om du vill att vi avbryter ordern eller om du har frågor.`;
       break;
     case "inkommer": {
       const when = formatLocaleDate(extras.expectedDate);
+      const reason = cleanStr(extras.delayReason);
       body = `${intro}Vi måste tyvärr meddela att ${prod} är slut i lager just nu.`;
-      body += ` Vi förväntar oss att den finns tillgänglig igen${when ? ` omkring ${when}` : ` ${whenSoon}`}.`;
+      if (when) {
+        body += ` Vi förväntar oss att den finns tillgänglig igen omkring ${when}.`;
+      } else {
+        body += ` Leveransdatumet är i nuläget okänt — vi återkommer så snart vi har mer information.`;
+      }
+      if (reason) body += ` Orsaken är ${reason}.`;
       if (extras.shipRestOfOrder) {
         body += `
 
@@ -941,7 +957,7 @@ Om du har fler artiklar i samma order kan vi tyvärr inte dela upp leveransen. V
       } else if (extras.waitOption) {
         body += `
 
-Vill du vänta på leverans när produkten kommit in, eller föredrar du att vi avbryter ordern? Återkom gärna med vad som passar dig bäst.`;
+Vill du vänta tills produkten finns i lager igen, eller föredrar du att vi avbryter ordern? Återkom gärna med vad som passar dig bäst.`;
       }
       body += `\n\n${outro}`;
       break;
@@ -971,14 +987,19 @@ Hör av dig om du vill avbryta ordern eller om vi kan hjälpa dig hitta ett alte
       const when = formatLocaleDate(extras.newDeliveryDate);
       const reason = cleanStr(extras.delayReason);
       body = `${intro}Vi måste tyvärr meddela att leveransen av ${prod} blir försenad`;
-      body += when ? ` och beräknas ske omkring ${when}` : "";
+      body += when ? ` och beräknas ske omkring ${when}` : ". Leveransdatumet är i nuläget okänt";
       body += ".";
       if (reason) body += ` Orsaken är ${reason}.`;
-      body += `
+      if (extras.waitOption) {
+        body += `
 
-Vi gör vårt bästa för att leverera så snart som möjligt.
+Vill du vänta tills vi kan leverera, eller vill du att vi avbryter ordern? Svara gärna på detta mail så ordnar vi det som passar dig bäst.`;
+      } else {
+        body += `
 
-${outro}`;
+Vi gör vårt bästa för att leverera så snart som möjligt och återkommer när vi har mer information.`;
+      }
+      body += `\n\n${outro}`;
       break;
     }
     case "usa_forsening": {
@@ -1175,8 +1196,14 @@ Kontakt os, hvis du ønsker at annullere ordren, eller hvis du har spørgsmål.`
       break;
     case "inkommer": {
       const when = formatLocaleDate(extras.expectedDate);
+      const reason = cleanStr(extras.delayReason);
       body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udsolgt lige nu.`;
-      body += ` Vi forventer, at den er tilgængelig igen${when ? ` omkring ${when}` : ` ${whenSoon}`}.`;
+      if (when) {
+        body += ` Vi forventer, at den er tilgængelig igen omkring ${when}.`;
+      } else {
+        body += ` Leveringsdatoen er i øjeblikket ukendt — vi vender tilbage, så snart vi har mere information.`;
+      }
+      if (reason) body += ` Årsagen er ${reason}.`;
       if (extras.shipRestOfOrder) {
         body += `
 
@@ -1188,7 +1215,7 @@ Hvis du har flere varer i samme ordre, kan vi desværre ikke dele leveringen. Vi
       } else if (extras.waitOption) {
         body += `
 
-Vil du vente på levering, når produktet er kommet ind, eller foretrækker du, at vi annullerer ordren? Vend gerne tilbage med, hvad der passer dig bedst.`;
+Vil du vente, til produktet er på lager igen, eller foretrækker du, at vi annullerer ordren? Vend gerne tilbage med, hvad der passer dig bedst.`;
       }
       body += `\n\n${outro}`;
       break;
@@ -1218,14 +1245,19 @@ Kontakt os, hvis du ønsker at annullere ordren, eller hvis vi kan hjælpe med a
       const when = formatLocaleDate(extras.newDeliveryDate);
       const reason = cleanStr(extras.delayReason);
       body = `${intro}Vi er desværre nødt til at meddele, at leveringen af ${prod} bliver forsinket`;
-      body += when ? ` og forventes omkring ${when}` : "";
+      body += when ? ` og forventes omkring ${when}` : ". Leveringsdatoen er i øjeblikket ukendt";
       body += ".";
       if (reason) body += ` Årsagen er ${reason}.`;
-      body += `
+      if (extras.waitOption) {
+        body += `
 
-Vi gør vores bedste for at levere så hurtigt som muligt.
+Vil du vente, til vi kan levere, eller ønsker du, at vi annullerer ordren? Svar gerne på denne mail, så finder vi den løsning, der passer dig bedst.`;
+      } else {
+        body += `
 
-${outro}`;
+Vi gør vores bedste for at levere så hurtigt som muligt og vender tilbage, når vi har mere information.`;
+      }
+      body += `\n\n${outro}`;
       break;
     }
     case "usa_forsening": {
@@ -1422,8 +1454,14 @@ Please let us know if you would like us to cancel the order, or if you have any 
       break;
     case "inkommer": {
       const when = formatLocaleDate(extras.expectedDate);
+      const reason = cleanStr(extras.delayReason);
       body = `${intro}We regret to inform you that ${prod} is currently out of stock.`;
-      body += ` We expect it to be available again${when ? ` around ${when}` : ` ${whenSoon}`}.`;
+      if (when) {
+        body += ` We expect it to be available again around ${when}.`;
+      } else {
+        body += ` The delivery date is currently unknown — we will update you as soon as we have more information.`;
+      }
+      if (reason) body += ` The reason is ${reason}.`;
       if (extras.shipRestOfOrder) {
         body += `
 
@@ -1435,7 +1473,7 @@ If you have other items in the same order, we unfortunately cannot split the shi
       } else if (extras.waitOption) {
         body += `
 
-Would you like to wait for delivery once the product is back, or would you prefer that we cancel the order? Please let us know what works best for you.`;
+Would you like to wait until the product is back in stock, or would you prefer that we cancel the order? Please let us know what works best for you.`;
       }
       body += `\n\n${outro}`;
       break;
@@ -1465,14 +1503,19 @@ Please get in touch if you would like to cancel the order or if we can help you 
       const when = formatLocaleDate(extras.newDeliveryDate);
       const reason = cleanStr(extras.delayReason);
       body = `${intro}We regret to inform you that the delivery of ${prod} has been delayed`;
-      body += when ? ` and is expected around ${when}` : "";
+      body += when ? ` and is expected around ${when}` : ". The delivery date is currently unknown";
       body += ".";
       if (reason) body += ` The reason is ${reason}.`;
-      body += `
+      if (extras.waitOption) {
+        body += `
 
-We are doing our best to deliver as soon as possible.
+Would you like to wait until we can deliver, or would you prefer that we cancel the order? Please reply to this email and we will arrange what suits you best.`;
+      } else {
+        body += `
 
-${outro}`;
+We are doing our best to deliver as soon as possible and will update you when we have more information.`;
+      }
+      body += `\n\n${outro}`;
       break;
     }
     case "usa_forsening": {
@@ -1743,7 +1786,9 @@ function renderExtraFields() {
         input = document.createElement("input");
         input.type = "text";
         input.readOnly = true;
-        input.placeholder = "Välj datum i kalendern";
+        input.placeholder = field.required
+          ? "Välj datum i kalendern"
+          : "Valfritt — lämna tomt om datum okänt";
         input.className = "rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm";
         const dateBtn = document.createElement("button");
         dateBtn.type = "button";
@@ -1751,13 +1796,29 @@ function renderExtraFields() {
         dateBtn.textContent = "Välj datum";
         dateWrap.appendChild(input);
         dateWrap.appendChild(dateBtn);
+        let clearBtn = null;
+        if (!field.required) {
+          clearBtn = document.createElement("button");
+          clearBtn.type = "button";
+          clearBtn.className = "kundmail-date-btn";
+          clearBtn.textContent = "Rensa";
+          dateWrap.appendChild(clearBtn);
+        }
         row.appendChild(dateWrap);
         const hint = document.createElement("p");
         hint.className = "text-[11px] text-slate-500";
-        hint.textContent = "Klicka i fältet eller på knappen — kalendern öppnas.";
+        hint.textContent = field.required
+          ? "Klicka i fältet eller på knappen — kalendern öppnas."
+          : "Lämna tomt om leveransdatumet är okänt. Rensa tar bort valt datum.";
         row.appendChild(hint);
         input.id = `extra_${field.id}`;
-        initDatePicker(input, dateBtn);
+        const fp = initDatePicker(input, dateBtn);
+        if (clearBtn && fp) {
+          clearBtn.addEventListener("click", () => {
+            fp.clear();
+            forceGenerate();
+          });
+        }
       } else {
         input = document.createElement("input");
         input.type = field.type === "url" ? "url" : field.type || "text";
