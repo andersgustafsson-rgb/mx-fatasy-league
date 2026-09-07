@@ -1031,7 +1031,15 @@
   }
 
   function resolveStartStep() {
-    if (isPicksFullyComplete()) return 3;
+    if (cfg.picksComplete || isPicksFullyComplete()) return 3;
+
+    // Server says incomplete → always enter at step 1 (forward flow).
+    // Stale localStorage drafts used to fill top6 and jump straight to holeshot/wildcard;
+    // that is why normal tabs differed from incognito.
+    const serverStep = Number(cfg.startStep);
+    if (!Number.isFinite(serverStep) || serverStep <= 1) {
+      return 1;
+    }
 
     const inferred = inferStepFromPicks();
     if (inferred >= 3) return 3;
@@ -1085,8 +1093,15 @@
 
     isEditWalkback = false;
     if (cfg.picksComplete || isPicksFullyComplete()) {
-      step3ShowingSummary = true;
-      showStep(3, { skipSave: true });
+      // Only treat as "complete overview" when the server agrees — local-only full drafts
+      // must not skip the user to holeshot on a fresh "Gör dina picks" visit.
+      if (cfg.picksComplete) {
+        step3ShowingSummary = true;
+        showStep(3, { skipSave: true });
+      } else {
+        step3ShowingSummary = false;
+        showStep(resolveStartStep(), { skipSave: true });
+      }
     } else {
       step3ShowingSummary = false;
       showStep(resolveStartStep(), { skipSave: true });
