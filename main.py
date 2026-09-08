@@ -30407,13 +30407,82 @@ def calculate_smx_qualification_points(*, limit: int = 30) -> dict[str, list[tup
     riders_450 = [(key, data) for key, data in standings.items() if data["class_name"] == "450cc"]
     riders_250 = [(key, data) for key, data in standings.items() if data["class_name"] == "250cc"]
 
+    # Ensure official 2026 Combined names exist in the pool even with sparse/local results.
+    # Otherwise pre-truncation / missing imports drop LCQ riders (e.g. Fredrik Noren #30).
+    if season_year == 2026:
+        try:
+            from official_smx_2026 import (
+                OFFICIAL_SMX_450_2026,
+                OFFICIAL_SMX_250_2026,
+                _norm_name,
+            )
+
+            by_norm_450 = {
+                _norm_name(d["rider"].name): (k, d)
+                for k, d in riders_450
+            }
+            by_norm_250 = {
+                _norm_name(d["rider"].name): (k, d)
+                for k, d in riders_250
+            }
+            db_450 = {
+                _norm_name(r.name): r
+                for r in Rider.query.filter_by(class_name="450cc").all()
+            }
+            db_250 = {
+                _norm_name(r.name): r
+                for r in Rider.query.filter_by(class_name="250cc").all()
+            }
+            for name, _sx, _mx in OFFICIAL_SMX_450_2026:
+                norm = _norm_name(name)
+                if norm in by_norm_450:
+                    continue
+                rider = db_450.get(norm)
+                if not rider:
+                    continue
+                key = f"{rider.id}:450cc"
+                standings[key] = {
+                    "rider": rider,
+                    "class_name": "450cc",
+                    "coast_250": None,
+                    "total_points": 0,
+                    "sx_points": 0,
+                    "mx_points": 0,
+                }
+            for name, _sx, _mx in OFFICIAL_SMX_250_2026:
+                norm = _norm_name(name)
+                if norm in by_norm_250:
+                    continue
+                rider = db_250.get(norm)
+                if not rider:
+                    continue
+                key = f"{rider.id}:250cc"
+                standings[key] = {
+                    "rider": rider,
+                    "class_name": "250cc",
+                    "coast_250": rider.coast_250,
+                    "total_points": 0,
+                    "sx_points": 0,
+                    "mx_points": 0,
+                }
+            riders_450 = [
+                (key, data) for key, data in standings.items() if data["class_name"] == "450cc"
+            ]
+            riders_250 = [
+                (key, data) for key, data in standings.items() if data["class_name"] == "250cc"
+            ]
+        except Exception as exc:
+            print(f"WARNING inject official SMX riders into standings: {exc}")
+
     riders_450_sorted = sorted(riders_450, key=lambda x: (-x[1]["total_points"], x[0]))
     riders_250_sorted = sorted(riders_250, key=lambda x: (-x[1]["total_points"], x[0]))
 
     cap = max(1, int(limit))
+    # Do NOT truncate before official overlay — live top-30 can omit LCQ names
+    # (Noren/Bloss) whose imported SX+MX sum ranks outside the bubble.
     result = {
-        "450": riders_450_sorted[:cap],
-        "250": riders_250_sorted[:cap],
+        "450": riders_450_sorted,
+        "250": riders_250_sorted,
     }
     # 2026 only: overlay official SMX Combined (seed 1–20, LCQ 21–30).
     # Next season: drop this and trust live SX+MX sums.
@@ -30427,6 +30496,8 @@ def calculate_smx_qualification_points(*, limit: int = 30) -> dict[str, list[tup
             result[class_key] = result.get(class_key, [])[:cap]
     except Exception as exc:
         print(f"WARNING apply_official_smx_2026_to_qualification: {exc}")
+        for class_key in ("450", "250"):
+            result[class_key] = result.get(class_key, [])[:cap]
     return result
 
 
