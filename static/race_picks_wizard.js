@@ -441,7 +441,9 @@
     root.querySelector('[data-wizard-overview-edit]')?.addEventListener('click', () => {
       enterFullEditMode();
     });
-    root.querySelector('[data-wizard-overview-save]')?.addEventListener('click', () => {
+    root.querySelector('[data-wizard-overview-save]')?.addEventListener('click', (ev) => {
+      const btn = ev.currentTarget;
+      if (btn && (btn.disabled || btn.getAttribute('aria-disabled') === 'true')) return;
       if (typeof window.savePicks === 'function') window.savePicks();
     });
   }
@@ -860,6 +862,41 @@
     return true;
   }
 
+  function isSubmittedOnServer() {
+    return !!cfg.picksComplete || !!window._picksSubmittedOnServer;
+  }
+
+  function isDirtyClient() {
+    if (typeof window.hasPicksChanged === 'function') {
+      try {
+        return !!window.hasPicksChanged();
+      } catch (e) {
+        /* fall through */
+      }
+    }
+    return !!window._picksDirtySinceLoad;
+  }
+
+  function updateDraftNote() {
+    const note = document.querySelector('.wizard-draft-note');
+    if (!note) return;
+    if (isSubmittedOnServer() && !isDirtyClient()) {
+      note.textContent = tPick(
+        'picks.draft_note_submitted',
+        'Dina val är registrerade hos tävlingen. Redigera och uppdatera om du vill ändra innan deadline.'
+      );
+    } else if (isSubmittedOnServer() && isDirtyClient()) {
+      note.textContent = isEn()
+        ? 'You have unsaved changes. Tap Update to register them with the competition.'
+        : 'Du har osparade ändringar. Tryck Uppdatera för att registrera dem hos tävlingen.';
+    } else {
+      note.textContent = tPick(
+        'picks.draft_note',
+        'Utkast sparas automatiskt på den här enheten. Lämna in för att registrera hos tävlingen.'
+      );
+    }
+  }
+
   function updateStep3Hero() {
     const step3 = $('wizard-step-3');
     if (!step3) return;
@@ -884,10 +921,21 @@
 
     if (heroP) {
       if (onOverview) {
-        heroP.textContent = tPick(
-          'picks.draft_ready',
-          'Klart! Redigera ovan om du vill ändra — lämna in när du är nöjd.'
-        );
+        if (isSubmittedOnServer() && !isDirtyClient()) {
+          heroP.textContent = tPick(
+            'picks.submitted_ready',
+            'Inlämnat! Dina val är registrerade. Redigera om du vill ändra innan deadline.'
+          );
+        } else if (isSubmittedOnServer() && isDirtyClient()) {
+          heroP.textContent = isEn()
+            ? 'Changes not updated yet — tap Update below when ready.'
+            : 'Ändringar inte uppdaterade ännu — tryck Uppdatera nedan när du är klar.';
+        } else {
+          heroP.textContent = tPick(
+            'picks.draft_ready',
+            'Klart! Utkast sparat — lämna in med knappen nedan när du vill.'
+          );
+        }
       } else if (isEditWalkback) {
         if (currentStep === 1) {
           heroP.textContent = isEn()
@@ -910,6 +958,7 @@
               : 'Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.');
       }
     }
+    updateDraftNote();
   }
 
   function renderPicksSummary() {
@@ -950,11 +999,26 @@
       (showFullSummary ? ' is-overview' : isEditWalkback ? ' is-edit-hint' : ' is-bonus-focus');
     if (showFullSummary) {
       const editLabel = isEn() ? 'Edit my picks' : 'Redigera mina val';
-      const saveLabel = isEn() ? 'Submit my picks' : 'Lämna in mina val';
+      const submitted = isSubmittedOnServer();
+      const dirty = isDirtyClient();
+      let saveLabel;
+      let saveAttrs = 'data-wizard-overview-save';
+      if (submitted && !dirty) {
+        saveLabel = tPick('picks.submitted_btn', 'Inlämnat ✓');
+        saveAttrs += ' disabled aria-disabled="true"';
+      } else if (submitted && dirty) {
+        saveLabel = tPick('picks.update', 'Uppdatera mina val');
+      } else {
+        saveLabel = tPick('picks.submit', 'Lämna in mina val');
+      }
+      const saveBtnClass =
+        submitted && !dirty
+          ? 'rp-btn rp-btn--secondary wizard-btn-submitted'
+          : 'rp-btn rp-btn--primary';
       el.innerHTML = `
       <div class="wizard-overview-toolbar">
         <button type="button" class="rp-btn wizard-btn-edit-picks" data-wizard-overview-edit>${mxIcon('edit')} ${editLabel}</button>
-        <button type="button" class="rp-btn rp-btn--primary" data-wizard-overview-save>${saveLabel}</button>
+        <button type="button" class="${saveBtnClass}" ${saveAttrs}>${saveLabel}</button>
       </div>
       <div class="${bannerCls}">${bannerText}</div>
       <div class="wizard-summary-body">
@@ -1110,6 +1174,30 @@
     refreshUI();
   }
 
+  function markSubmitted() {
+    cfg.picksComplete = true;
+    window._picksSubmittedOnServer = true;
+    window._picksDirtySinceLoad = false;
+    if (typeof window.markPicksAsSaved === 'function') {
+      window.markPicksAsSaved();
+    }
+    step3ShowingSummary = true;
+    isEditWalkback = false;
+    window._wizardInEditMode = false;
+    showStep(3, { skipSave: true });
+    renderPicksSummary();
+    updateDraftNote();
+  }
+
+  function markUnsubmitted() {
+    cfg.picksComplete = false;
+    window._picksSubmittedOnServer = false;
+    step3ShowingSummary = false;
+    isEditWalkback = false;
+    window._wizardInEditMode = false;
+    updateDraftNote();
+  }
+
   function getStep() {
     return currentStep;
   }
@@ -1133,6 +1221,8 @@
     persistStep,
     refresh: refreshUI,
     renderSummary: renderPicksSummary,
+    markSubmitted,
+    markUnsubmitted,
     syncWildcardRollLockedState,
   };
   window.syncWildcardRollLockedState = syncWildcardRollLockedState;

@@ -773,9 +773,9 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
-  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=4"></script>
+  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=5"></script>
   <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=edit-flow-5">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=edit-flow-6">
 </head>
 <body class="text-gray-200 font-sans min-h-screen">
   <div class="race-picks-shell mx-auto p-3 sm:p-4 md:p-6 max-w-7xl">
@@ -894,9 +894,9 @@
           <div class="min-w-0">
             {% if initial_picks_status and initial_picks_status.icon == '✅' %}
             <h3 id="status-title" class="text-base sm:text-lg font-semibold text-cyan-400 break-words"
-                data-i18n-sv="Alla val gjorda!" data-i18n-en="All picks done!">{{ initial_picks_status.title }}</h3>
+                data-i18n-sv="Inlämnat!" data-i18n-en="Submitted!">Inlämnat!</h3>
             <p id="status-message" class="text-sm text-gray-300 break-words"
-               data-i18n-sv="Du har gjort alla dina val för detta race. Lycka till!" data-i18n-en="You have made all your picks for this race. Good luck!">{{ initial_picks_status.message }}</p>
+               data-i18n-sv="Dina val är registrerade för detta race. Lycka till!" data-i18n-en="Your picks are registered for this race. Good luck!">Dina val är registrerade för detta race. Lycka till!</p>
             {% elif initial_picks_status %}
             <h3 id="status-title" class="text-base sm:text-lg font-semibold text-cyan-400 break-words">{{ initial_picks_status.title }}</h3>
             <p id="status-message" class="text-sm text-gray-300 break-words">{{ initial_picks_status.message }}</p>
@@ -1043,7 +1043,7 @@
       <div>
         {% if initial_picks_status and initial_picks_status.icon == '✅' %}
         <h2 data-i18n-sv="Översikt — dina val" data-i18n-en="Overview — your picks">Översikt — dina val</h2>
-        <p data-i18n-sv="Klart! Redigera ovan om du vill ändra — lämna in när du är nöjd." data-i18n-en="Done! Edit above if you want changes — submit when ready.">Klart! Redigera ovan om du vill ändra — lämna in när du är nöjd.</p>
+        <p data-i18n-sv="Inlämnat! Dina val är registrerade. Redigera om du vill ändra innan deadline." data-i18n-en="Submitted! Your picks are registered. Edit if you want to change them before the deadline.">Inlämnat! Dina val är registrerade. Redigera om du vill ändra innan deadline.</p>
         {% else %}
         <h2><span data-i18n="picks.step3">Steg 3</span> — Holeshot{% if competition.series != 'WSX' %} & Wildcard{% endif %}</h2>
         <p>{% if competition.series == 'WSX' %}Vem tar första kurvan i SX1 och SX2?{% else %}Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.{% endif %}</p>
@@ -1147,7 +1147,7 @@
     <span id="wizard-step-label" class="wizard-nav__label" data-i18n-sv="Steg 1 av 3" data-i18n-en="Step 1 of 3">Steg 1 av 3</span>
     <button type="button" id="wizard-btn-next" class="rp-btn rp-btn--accent wizard-nav__btn wizard-nav__btn--next" data-i18n-sv="Nästa: {{ class_250_label }} →" data-i18n-en="Next: {{ class_250_label }} →">Nästa: {{ class_250_label }} →</button>
   </footer>
-  <p class="wizard-draft-note" data-i18n-sv="Utkast sparas automatiskt på den här enheten. Lämna in för att registrera hos tävlingen." data-i18n-en="Draft saved automatically on this device. Submit to register with the competition.">Utkast sparas automatiskt på den här enheten. Lämna in för att registrera hos tävlingen.</p>
+  <p class="wizard-draft-note">{% if initial_picks_status and initial_picks_status.icon == '✅' %}Dina val är registrerade hos tävlingen. Redigera och uppdatera om du vill ändra innan deadline.{% else %}Utkast sparas automatiskt på den här enheten. Lämna in för att registrera hos tävlingen.{% endif %}</p>
 </div>
 </div><!-- /picks-wizard-shell -->
 
@@ -2823,8 +2823,25 @@ function updatePicksStatus(myPicks) {
     statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-orange-400 bg-orange-900/30';
   } else {
     statusIcon.innerHTML = mxIcon('check-circle', { className: 'mx-icon--xl mx-icon--ok' });
-    statusTitle.textContent = _en ? 'All picks done!' : 'Alla val gjorda!';
-    statusMessage.textContent = _en ? 'You have made all your picks for this race. Good luck!' : 'Du har gjort alla dina val för detta race. Lycka till!';
+    const submitted =
+      Boolean(window._picksSubmittedOnServer) &&
+      !(typeof window.hasPicksChanged === 'function' && window.hasPicksChanged());
+    if (submitted) {
+      statusTitle.textContent = _en ? 'Submitted!' : 'Inlämnat!';
+      statusMessage.textContent = _en
+        ? 'Your picks are registered for this race. Good luck!'
+        : 'Dina val är registrerade för detta race. Lycka till!';
+    } else if (Boolean(window._picksSubmittedOnServer)) {
+      statusTitle.textContent = _en ? 'Unsaved changes' : 'Osparade ändringar';
+      statusMessage.textContent = _en
+        ? 'Update your picks to register the changes with the competition.'
+        : 'Uppdatera dina val för att registrera ändringarna hos tävlingen.';
+    } else {
+      statusTitle.textContent = _en ? 'All picks done!' : 'Alla val gjorda!';
+      statusMessage.textContent = _en
+        ? 'Draft complete — submit below to register with the competition.'
+        : 'Utkast klart — lämna in nedan för att registrera hos tävlingen.';
+    }
     statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-green-400 bg-green-900/30';
   }
 }
@@ -3618,7 +3635,9 @@ function onPickChange(cls, pos, riderId = null) {
         if (resp.ok && !data.error) {
           window._picksDirtySinceLoad = false;
           markPicksAsSaved();
-          if (window.PicksWizard && typeof window.PicksWizard.showOverview === 'function') {
+          if (window.PicksWizard && typeof window.PicksWizard.markSubmitted === 'function') {
+            window.PicksWizard.markSubmitted();
+          } else if (window.PicksWizard && typeof window.PicksWizard.showOverview === 'function') {
             window.PicksWizard.showOverview();
           } else if (window.PicksWizard && window.PicksWizard.renderSummary) {
             window.PicksWizard.renderSummary();
@@ -3634,6 +3653,7 @@ function onPickChange(cls, pos, riderId = null) {
         
         // Clear localStorage since picks are now saved to server
         localStorage.removeItem(`race_picks_${competitionId}`);
+        localStorage.removeItem(`race_picks_wizard_step_${competitionId}`);
         
         // Picks are already displayed correctly in UI, no need to reload from server
       }, { busyText: 'Sparar…' });
@@ -3722,6 +3742,11 @@ function onPickChange(cls, pos, riderId = null) {
 
       // 7) Markera att inga picks är sparade ännu (visa spara-knapp)
       savedPicksState = null;
+      window._picksSubmittedOnServer = false;
+      window._picksDirtySinceLoad = true;
+      if (window.PicksWizard && typeof window.PicksWizard.markUnsubmitted === 'function') {
+        window.PicksWizard.markUnsubmitted();
+      }
       updateSaveButtonVisibility();
 
       if (window.PicksWizard) {
@@ -3804,6 +3829,7 @@ function onPickChange(cls, pos, riderId = null) {
       if (!savedPicksState) return true; // If no saved state, show button
       return getCurrentPicksState() !== savedPicksState;
     }
+    window.hasPicksChanged = hasPicksChanged;
 
     function myPicksFromFormState() {
       try {
@@ -3845,18 +3871,42 @@ function onPickChange(cls, pos, riderId = null) {
       } catch (e) {
         // If anything fails, don't block UI saving; status will update on next interaction.
       }
-      
-      if (hasPicksChanged()) {
+
+      const submitted = Boolean(window._picksSubmittedOnServer);
+      const dirty = hasPicksChanged();
+      let formComplete = false;
+      try {
+        const fromForm = myPicksFromFormState();
+        formComplete = fromForm ? isMyPicksComplete(fromForm) : false;
+      } catch (_) {}
+
+      if (submitted && !dirty) {
+        saveBtn.style.display = "flex";
+        saveBtn.disabled = true;
+        saveBtn.classList.add("opacity-50", "cursor-not-allowed", "wizard-btn-submitted");
+        saveBtn.classList.remove("rp-btn--save-ready");
+        saveBtn.textContent =
+          (typeof MxI18n !== "undefined" && MxI18n.t && MxI18n.t("picks.submitted_btn")) || "Inlämnat ✓";
+        const saveWrap = document.getElementById('wizard-step-save');
+        if (saveWrap) saveWrap.style.display = '';
+      } else if (dirty || (formComplete && !submitted)) {
         saveBtn.style.display = "flex";
         saveBtn.disabled = false;
-        saveBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        saveBtn.classList.remove("opacity-50", "cursor-not-allowed", "wizard-btn-submitted");
         saveBtn.classList.add("rp-btn--save-ready");
-        // Visa spar-ytan om man är på steg 3 (t.ex. efter Ändra holeshot)
+        saveBtn.textContent = submitted
+          ? ((typeof MxI18n !== "undefined" && MxI18n.t && MxI18n.t("picks.update")) || "Uppdatera mina val")
+          : ((typeof MxI18n !== "undefined" && MxI18n.t && MxI18n.t("picks.submit")) || "Lämna in mina val");
         const saveWrap = document.getElementById('wizard-step-save');
         if (saveWrap) saveWrap.style.display = '';
       } else {
         saveBtn.style.display = "none";
-        saveBtn.classList.remove("rp-btn--save-ready");
+        saveBtn.disabled = false;
+        saveBtn.classList.remove("rp-btn--save-ready", "opacity-50", "cursor-not-allowed", "wizard-btn-submitted");
+      }
+      // Keep overview CTA + draft note in sync with submit/dirty state
+      if (!window._wizardInEditMode && window.PicksWizard && typeof window.PicksWizard.renderSummary === "function") {
+        try { window.PicksWizard.renderSummary(); } catch (_) {}
       }
     }
     window.updateSaveButtonVisibility = updateSaveButtonVisibility;
@@ -3918,6 +3968,9 @@ function onPickChange(cls, pos, riderId = null) {
 
       if (wizardRoot && window.PicksWizard) {
         const ps = pickSuggestions || {};
+        if (serverPicksComplete) {
+          window._picksSubmittedOnServer = true;
+        }
         window.PicksWizard.init({
           competitionId,
           isWSX: isWSXSeries,
@@ -3999,7 +4052,7 @@ function setMainTrackmap(src, thumbEl) {
 }
 
 </script>
-<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=edit-flow-5"></script>
+<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=edit-flow-6"></script>
 
 {% if not is_logged_in %}
 {% set pit_pass_race_name = competition.name %}
