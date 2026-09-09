@@ -1463,8 +1463,8 @@
                                     <option value="missing_only">Endast utan picks alls</option>
                                 </select>
                                 <p class="text-xs text-gray-500 mt-1">
-                                    Ofullständiga = har börjat tippa men saknar slots (t.ex. efter OUT-rensning).
-                                    Ämne/text anpassas automatiskt per mottagare.
+                                    Listan ovan = vilka som får granskas. Filtret avgör vem som faktiskt får mail
+                                    (t.ex. 1 av 39 om bara en har ofullständiga picks). Ämne/text anpassas automatiskt.
                                 </p>
                             </div>
                             
@@ -3184,21 +3184,63 @@
                 partial_only: 'endast ofullständiga picks',
                 missing_only: 'endast utan picks alls',
             }[audience] || audience;
-            
-            const userText = selectedUsers.length === 1 
-                ? `1 vald användare` 
-                : `${selectedUsers.length} valda användare`;
-            
-            if (!confirm(`Skicka picks-påminnelser till ${userText}?\n\nFilter: ${audienceLabel}\n\nOfullständiga får OBS-text. Bara användare med e-post får mail.`)) {
-                return;
-            }
-            
+
+            const emailList = selectedUsers.map(u => u.email);
             const statusDiv = document.getElementById('email-status');
             statusDiv.classList.remove('hidden');
             statusDiv.className = 'mt-4 p-3 bg-yellow-900/40 border border-yellow-500 rounded text-yellow-300';
+            statusDiv.textContent = '🔎 Räknar hur många som matchar filtret...';
+
+            let preview;
+            try {
+                const previewRes = await fetch('/admin/send_pick_reminders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_emails: emailList,
+                        audience: audience,
+                        dry_run: true,
+                    }),
+                });
+                preview = await previewRes.json();
+                if (!previewRes.ok || !preview.success) {
+                    statusDiv.className = 'mt-4 p-3 bg-red-900/40 border border-red-500 rounded text-red-300';
+                    statusDiv.textContent = '❌ Fel: ' + (preview.error || 'Kunde inte räkna mottagare');
+                    return;
+                }
+            } catch (error) {
+                statusDiv.className = 'mt-4 p-3 bg-red-900/40 border border-red-500 rounded text-red-300';
+                statusDiv.textContent = '❌ Fel vid räkning: ' + error.message;
+                return;
+            }
+
+            const matchCount = preview.would_send || 0;
+            const names = (preview.would_send_users || []).slice(0, 8).join(', ');
+            const namesExtra = (preview.would_send_users || []).length > 8 ? '…' : '';
+            const nameHint = names ? `\nMatchar: ${names}${namesExtra}` : '';
+
+            if (matchCount === 0) {
+                statusDiv.className = 'mt-4 p-3 bg-yellow-900/40 border border-yellow-500 rounded text-yellow-300';
+                statusDiv.innerHTML = `ℹ️ Av ${selectedUsers.length} valda matchar <strong>0</strong> filtret “${audienceLabel}”.<br>Ingen e-post skickas.`;
+                alert(`Ingen matchar filtret “${audienceLabel}”.\n\nValda: ${selectedUsers.length}\nRedan kompletta: ${preview.already_complete || 0}\nHoppade över: ${preview.skipped_audience || 0}`);
+                return;
+            }
+
+            if (!confirm(
+                `Skicka picks-påminnelser?\n\n` +
+                `${matchCount} av ${selectedUsers.length} valda matchar filtret och får mail.\n` +
+                `Filter: ${audienceLabel}\n` +
+                `Tävling: ${preview.competition || 'nästa'}` +
+                nameHint +
+                `\n\nÖvriga hoppas över (kompletta / fel filter).`
+            )) {
+                statusDiv.classList.add('hidden');
+                return;
+            }
+
+            statusDiv.className = 'mt-4 p-3 bg-yellow-900/40 border border-yellow-500 rounded text-yellow-300';
             statusDiv.textContent = '⏰ Skickar picks-påminnelser...';
             
-            const emailList = selectedUsers.map(u => u.email);
             console.log('DEBUG: Sending pick reminders to:', emailList, 'audience:', audience);
             
             try {

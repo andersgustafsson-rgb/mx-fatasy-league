@@ -14900,9 +14900,10 @@ def send_pick_reminders():
         audience = (data.get("audience") or "missing_or_partial").strip().lower()
         if audience not in ("missing_or_partial", "partial_only", "missing_only"):
             audience = "missing_or_partial"
+        dry_run = bool(data.get("dry_run"))
         
         print(f"DEBUG: send_pick_reminders - Received user_emails: {selected_emails}")
-        print(f"DEBUG: send_pick_reminders - audience={audience}")
+        print(f"DEBUG: send_pick_reminders - audience={audience} dry_run={dry_run}")
         
         # Nästa race inkl. WSX (snartaste start / öppna picks)
         next_comp = _next_competition_for_pick_reminders()
@@ -14932,6 +14933,8 @@ def send_pick_reminders():
         already_complete = 0
         skipped_audience = 0
         opted_out = 0
+        would_send = 0
+        would_send_users: list[str] = []
         sendgrid_limit_detected = False  # Initialize flag for SendGrid limit detection
         
         print(f"DEBUG: send_pick_reminders - Processing {len(users)} users")
@@ -15043,6 +15046,11 @@ def send_pick_reminders():
                 race_copy_incomplete if status == "partial_picks" else race_copy_missing
             )
 
+            if dry_run:
+                would_send += 1
+                would_send_users.append(user.username or user.email or "?")
+                continue
+
             if _user_email_opted_out(user):
                 opted_out += 1
                 print(f"DEBUG: User {user.username} opted out of email reminders - skipping email")
@@ -15140,8 +15148,22 @@ def send_pick_reminders():
         print(
             f"DEBUG: send_pick_reminders - Final counts: sent={sent}, push_sent={push_sent}, "
             f"failed={failed}, already_complete={already_complete}, skipped_audience={skipped_audience}, "
-            f"no_email={no_email}, opted_out={opted_out}"
+            f"no_email={no_email}, opted_out={opted_out}, would_send={would_send}, dry_run={dry_run}"
         )
+
+        if dry_run:
+            return jsonify({
+                "success": True,
+                "dry_run": True,
+                "selected": len(users),
+                "would_send": would_send,
+                "would_send_users": would_send_users[:50],
+                "already_complete": already_complete,
+                "skipped_audience": skipped_audience,
+                "audience": audience,
+                "competition": next_comp.name,
+                "competition_id": next_comp.id,
+            })
 
         message_parts = []
         if sent > 0:
