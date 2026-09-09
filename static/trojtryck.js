@@ -21,7 +21,12 @@
   const JERSEYS = CONFIG.jerseys || [];
   const PRINT_TIERS = CONFIG.print_tiers || [];
   function motoactionLogoUrl() {
-    return `/api/trojtryck/logo/${state.brandLogoVariant}.png?w=520`;
+    // Preview uses committed PNGs (works without Ghostscript on Render).
+    const file =
+      state.brandLogoVariant === "white"
+        ? "motoaction_logo_white.png"
+        : "motoaction_logo_black.png";
+    return `/static/images/trojtryck/${file}?v=2`;
   }
 
   const state = {
@@ -331,9 +336,13 @@
 
     els.previewBrandLogo.classList.toggle("hidden", !showBrand);
     els.previewCustomLogo.classList.toggle("hidden", !showCustom);
-    if (showBrand && logoUrl !== lastBrandLogoUrl) {
-      lastBrandLogoUrl = logoUrl;
-      els.previewBrandLogo.src = logoUrl;
+    if (showBrand) {
+      if (logoUrl !== lastBrandLogoUrl || !els.previewBrandLogo.getAttribute("src")) {
+        lastBrandLogoUrl = logoUrl;
+        els.previewBrandLogo.src = logoUrl;
+        els.previewBrandLogo.alt = "Motoaction-logga";
+      }
+      els.previewBrandLogo.classList.remove("hidden");
     }
     if (showCustom) els.previewCustomLogo.src = state.customLogoDataUrl;
 

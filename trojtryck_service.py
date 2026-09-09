@@ -373,6 +373,28 @@ def _motoaction_eps_path(variant: str) -> Path:
     return MOTOACTION_LOGO_BLACK_EPS if variant == "black" else MOTOACTION_LOGO_WHITE_EPS
 
 
+def _motoaction_png_path(variant: str) -> Path:
+    name = "motoaction_logo_black.png" if variant == "black" else "motoaction_logo_white.png"
+    return _ROOT / "static" / "images" / "trojtryck" / name
+
+
+def _render_motoaction_logo_from_png(
+    *, variant: str, max_w: int, max_h: int
+) -> Image.Image | None:
+    """Raster fallback when Ghostscript/EPS is unavailable (e.g. Render)."""
+    path = _motoaction_png_path(variant)
+    if not path.is_file():
+        return None
+    try:
+        with Image.open(path) as im:
+            rgba = im.convert("RGBA")
+            rgba.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
+            return rgba
+    except Exception as exc:
+        print(f"motoaction PNG fallback error ({variant}): {exc}")
+        return None
+
+
 def _prepare_logo_rgba(img: Image.Image, variant: str) -> Image.Image:
     """Drop EPS page background; keep only logo ink."""
     rgba = img.convert("RGBA")
@@ -414,32 +436,35 @@ def render_motoaction_logo_rgba(*, variant: str, max_w: int, max_h: int) -> Imag
 
 
 def _render_motoaction_logo_rgba_uncached(*, variant: str, max_w: int, max_h: int) -> Image.Image | None:
-    """Rasterize vector EPS on demand at the requested pixel size (scalable source)."""
+    """Rasterize vector EPS on demand; fall back to static PNG if GS/EPS fails."""
     if variant not in MOTOACTION_LOGO_ASPECT:
         return None
     path = _motoaction_eps_path(variant)
+    if path.is_file() and _ghostscript_binary():
+        _configure_eps_ghostscript()
+        try:
+            with Image.open(path) as im:
+                bw, bh = im.size
+                if bw > 0 and bh > 0:
+                    scale = min(max_w / bw, max_h / bh)
+                    im.load(scale=max(scale, 0.05))
+                    rgba = _prepare_logo_rgba(im, variant)
+                    rgba.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
+                    return rgba
+        except Exception as exc:
+            print(f"motoaction EPS render error ({variant}): {exc}")
+
+    png = _render_motoaction_logo_from_png(variant=variant, max_w=max_w, max_h=max_h)
+    if png is not None:
+        return png
     if not path.is_file():
         return None
     if not _ghostscript_binary():
         raise RuntimeError(
-            "Ghostscript saknas — behövs för att skala EPS-loggan. "
-            "Installera gs eller kör med tools/gs/bin/gswin64c.exe."
+            "Ghostscript saknas och PNG-fallback hittades inte. "
+            "Lägg motoaction_logo_black/white.png under static/images/trojtryck/."
         )
-    _configure_eps_ghostscript()
-    try:
-        with Image.open(path) as im:
-            bw, bh = im.size
-            if bw <= 0 or bh <= 0:
-                return None
-            scale = min(max_w / bw, max_h / bh)
-            im.load(scale=max(scale, 0.05))
-            rgba = _prepare_logo_rgba(im, variant)
-            rgba.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
-            return rgba
-    except Exception as exc:
-        print(f"motoaction EPS render error ({variant}): {exc}")
-        return None
-
+    return None
 
 def render_motoaction_logo_png(*, variant: str, max_w: int, max_h: int) -> bytes:
     return _render_motoaction_logo_png_cached(variant, max_w, max_h)
