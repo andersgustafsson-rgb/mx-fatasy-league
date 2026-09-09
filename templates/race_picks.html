@@ -3593,9 +3593,19 @@ function onPickChange(cls, pos, riderId = null) {
     }
 
     // Extra säkerhet: client-side filter bort OUT
+    const outName = (rid) => {
+      const r = (window.allRiders || []).find((x) => Number(x.id) === Number(rid));
+      return r ? `#${r.rider_number} ${r.name}` : `förare #${rid}`;
+    };
     for (const p of picks) {
       if (OUT_IDS.includes(Number(p.rider_id))) {
-        alert("En vald förare är OUT. Välj en annan.");
+        alert(`${outName(p.rider_id)} är OUT. Välj en annan.`);
+        return;
+      }
+    }
+    for (const hsId of [document.getElementById("holeshot-450")?.value, document.getElementById("holeshot-250")?.value]) {
+      if (hsId && OUT_IDS.includes(Number(hsId))) {
+        alert(`${outName(hsId)} (holeshot) är OUT. Välj en annan.`);
         return;
       }
     }
@@ -3603,7 +3613,7 @@ function onPickChange(cls, pos, riderId = null) {
     if (!isWSXSeries) {
       const wildcardPick = document.getElementById("wildcard-pick")?.value;
       if (wildcardPick && isOutRiderId(wildcardPick)) {
-        alert("Wildcard-föraren är OUT. Välj en annan.");
+        alert(`${outName(wildcardPick)} (wildcard) är OUT. Välj en annan.`);
         return;
       }
       if (wildcardPick && getWildcardBlockedIds().has(String(wildcardPick))) {
@@ -3642,6 +3652,9 @@ function onPickChange(cls, pos, riderId = null) {
           } else if (window.PicksWizard && window.PicksWizard.renderSummary) {
             window.PicksWizard.renderSummary();
           }
+          // Clear local draft only after successful server save
+          localStorage.removeItem(`race_picks_${competitionId}`);
+          localStorage.removeItem(`race_picks_wizard_step_${competitionId}`);
           if (typeof openInviteShare === 'function') {
             openInviteShare({ afterPicks: true });
           } else {
@@ -3650,10 +3663,6 @@ function onPickChange(cls, pos, riderId = null) {
         } else {
           alert(data.error || "Ett fel uppstod vid sparning.");
         }
-        
-        // Clear localStorage since picks are now saved to server
-        localStorage.removeItem(`race_picks_${competitionId}`);
-        localStorage.removeItem(`race_picks_wizard_step_${competitionId}`);
         
         // Picks are already displayed correctly in UI, no need to reload from server
       }, { busyText: 'Sparar…' });

@@ -18975,6 +18975,25 @@ def save_picks():
             db.session.rollback()
     
     wsx_allowed_ids = _wsx_official_roster_ids() if comp.series == "WSX" else set()
+    smx_allowed_ids: set[int] = set()
+    if (getattr(comp, "series", None) or "").strip().upper() == "SMX":
+        try:
+            sync_smx_playoff_entry_list(comp)
+            # refresh OUT after sync
+            out_ids = set(
+                rid
+                for (rid,) in db.session.query(CompetitionRiderStatus.rider_id)
+                .filter(
+                    CompetitionRiderStatus.competition_id == comp.id,
+                    CompetitionRiderStatus.status == "OUT",
+                )
+                .all()
+            )
+            field = smx_playoff_field_ids(competition=comp)
+            smx_allowed_ids = set(field.get("450") or ()) | set(field.get("250") or ())
+        except Exception as sync_err:
+            print(f"SMX save sync skipped: {sync_err}")
+            db.session.rollback()
 
     riders_450_ids = []
     for p in picks:
@@ -18987,7 +19006,11 @@ def save_picks():
         if not rider:
             return jsonify({"error": f"Förare med id {rid} hittades inte"}), 400
         if rider.id in out_ids:
-            return jsonify({"error": "Förare är OUT för detta race"}), 400
+            return jsonify({"error": f"{rider.name} är OUT för detta race — välj om"}), 400
+        if smx_allowed_ids and int(rider.id) not in smx_allowed_ids:
+            return jsonify({
+                "error": f"{rider.name} är inte med på entry list för detta race — välj om"
+            }), 400
         if comp.series == "WSX" and int(rider.id) not in wsx_allowed_ids:
             return jsonify({
                 "error": f"{rider.name} är inte med i WSX 2026-rostern — välj om dina picks"
@@ -19007,7 +19030,9 @@ def save_picks():
             wc_pick_i = int(wc_pick)
             wc_pos_i = int(wc_pos)
             if wc_pick_i in out_ids:
-                return jsonify({"error": "Förare är OUT för detta race"}), 400
+                wc_rider = Rider.query.get(wc_pick_i)
+                wc_name = wc_rider.name if wc_rider else "Wildcard-föraren"
+                return jsonify({"error": f"{wc_name} är OUT för detta race — välj om"}), 400
             if wc_pick_i in riders_450_ids:
                 return jsonify({"error": "Du kan inte välja samma förare för wildcard som i top 6"}), 400
         except Exception:
@@ -19019,7 +19044,9 @@ def save_picks():
     try:
         rid = int(hs450)
         if rid in out_ids:
-            return jsonify({"error": "Förare är OUT för detta race"}), 400
+            hs_rider = Rider.query.get(rid)
+            hs_name = hs_rider.name if hs_rider else "Holeshot-föraren"
+            return jsonify({"error": f"{hs_name} är OUT för detta race — välj om"}), 400
         if comp.series == "WSX" and rid not in wsx_allowed_ids:
             return jsonify({"error": "Holeshot SX1 måste vara en 2026-rosterförare"}), 400
     except Exception:
@@ -19032,7 +19059,7 @@ def save_picks():
         rid = int(hs250)
         rider = Rider.query.get(rid)
         if rider and rider.id in out_ids:
-            return jsonify({"error": "Förare är OUT för detta race"}), 400
+            return jsonify({"error": f"{rider.name} är OUT för detta race — välj om"}), 400
         if comp.series == "WSX" and rid not in wsx_allowed_ids:
             return jsonify({"error": "Holeshot SX2 måste vara en 2026-rosterförare"}), 400
         if rider and comp.coast_250 in ("east", "west"):
@@ -30763,18 +30790,29 @@ def smx_playoff_field_meta(
             "zone": _smx_qualification_zone(rank),
         }
 
-    # Provisional entry fill-ins (e.g. Dean Wilson) must be tippable
+    # When provisional entry exists: tippa = entry list only (fill-ins in, absentees out)
     try:
         entry_ids = _smx_resolve_entry_rider_ids(competition)
-        for class_key, meta in (("450", meta_450), ("250", meta_250)):
-            for rid in entry_ids.get(class_key) or ():
-                if rid in meta:
+        has_entry = bool(entry_ids.get("450") or entry_ids.get("250"))
+        if has_entry:
+            e450 = set(entry_ids.get("450") or ())
+            e250 = set(entry_ids.get("250") or ())
+            meta_450 = {
+                rid: info for rid, info in meta_450.items() if rid in e450
+            }
+            meta_250 = {
+                rid: info for rid, info in meta_250.items() if rid in e250
+            }
+            for rid in e450:
+                if rid not in meta_450:
+                    meta_450[int(rid)] = {"rank": 100, "zone": "entry"}
+            for rid in e250:
+                if rid in meta_450:
                     continue
-                if class_key == "250" and rid in meta_450:
-                    continue
-                meta[int(rid)] = {"rank": 100, "zone": "entry"}
+                if rid not in meta_250:
+                    meta_250[int(rid)] = {"rank": 100, "zone": "entry"}
     except Exception as exc:
-        print(f"WARNING smx entry union: {exc}")
+        print(f"WARNING smx entry field filter: {exc}")
 
     return {"450": meta_450, "250": meta_250}
 
@@ -30809,7 +30847,7 @@ def _restrict_riders_to_smx_field(
 
 
 def prune_off_roster_smx_picks(competition_id: int) -> dict[str, int]:
-    """Ta bort tippa/holeshot/wildcard utanför SMX-fältet (Combined∪entry)."""
+    """Ta bort tippa/holeshot/wildcard utanför SMX-fältet eller markerade OUT."""
     comp = Competition.query.get(int(competition_id))
     if not comp or (getattr(comp, "series", None) or "").upper() != "SMX":
         return {"deleted_race": 0, "deleted_hs": 0, "deleted_wc": 0, "skipped": 1}
@@ -30819,27 +30857,38 @@ def prune_off_roster_smx_picks(competition_id: int) -> dict[str, int]:
     if not allowed:
         return {"deleted_race": 0, "deleted_hs": 0, "deleted_wc": 0, "skipped": 1}
 
-    deleted_race = (
-        RacePick.query.filter(
-            RacePick.competition_id == int(competition_id),
-            ~RacePick.rider_id.in_(allowed),
-        ).delete(synchronize_session=False)
-        or 0
-    )
-    deleted_hs = (
-        HoleshotPick.query.filter(
-            HoleshotPick.competition_id == int(competition_id),
-            ~HoleshotPick.rider_id.in_(allowed),
-        ).delete(synchronize_session=False)
-        or 0
-    )
-    deleted_wc = (
-        WildcardPick.query.filter(
-            WildcardPick.competition_id == int(competition_id),
-            ~WildcardPick.rider_id.in_(allowed),
-        ).delete(synchronize_session=False)
-        or 0
-    )
+    out_ids = {
+        int(rid)
+        for (rid,) in db.session.query(CompetitionRiderStatus.rider_id)
+        .filter(
+            CompetitionRiderStatus.competition_id == int(competition_id),
+            CompetitionRiderStatus.status == "OUT",
+        )
+        .all()
+    }
+
+    def _purge(model):
+        q_out = 0
+        q_field = (
+            model.query.filter(
+                model.competition_id == int(competition_id),
+                ~model.rider_id.in_(allowed),
+            ).delete(synchronize_session=False)
+            or 0
+        )
+        if out_ids:
+            q_out = (
+                model.query.filter(
+                    model.competition_id == int(competition_id),
+                    model.rider_id.in_(out_ids),
+                ).delete(synchronize_session=False)
+                or 0
+            )
+        return int(q_field) + int(q_out)
+
+    deleted_race = _purge(RacePick)
+    deleted_hs = _purge(HoleshotPick)
+    deleted_wc = _purge(WildcardPick)
     if deleted_race or deleted_hs or deleted_wc:
         db.session.commit()
     return {
