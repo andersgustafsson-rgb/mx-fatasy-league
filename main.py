@@ -10610,18 +10610,30 @@ def race_picks_page(competition_id):
     riders_450_json = [serialize_rider(r) for r in riders_450]
     riders_250_json = [serialize_rider(r) for r in riders_250]
 
-    tippa_ids = {r.id for r in riders_450} | {r.id for r in riders_250}
-    # Banner/listor: bara tippa-roster (orphan OUT redan mappad via namn ovan)
-    out_ids = {i for i in out_ids if i in tippa_ids}
-
     _by_json_id = {r["id"]: r for r in riders_450_json + riders_250_json}
-    out_riders_mini = [_by_json_id[i] for i in sorted(out_ids) if i in _by_json_id]
-    
-    # Debug: Show which riders are marked as OUT
-    out_450 = [r for r in riders_450_json if r['is_out']]
-    out_250 = [r for r in riders_250_json if r['is_out']]
-    # Filtered out riders
 
+    # Visa alla OUT (även Combined-förare som inte är på entry / tippa-listan)
+    out_riders_mini = []
+    for rid in sorted(out_ids):
+        if rid in _by_json_id:
+            out_riders_mini.append(_by_json_id[rid])
+            continue
+        missing = Rider.query.get(rid)
+        if not missing:
+            continue
+        out_riders_mini.append(
+            {
+                "id": missing.id,
+                "name": missing.name,
+                "class": missing.class_name,
+                "rider_number": missing.rider_number,
+                "bike_brand": missing.bike_brand,
+                "is_out": True,
+            }
+        )
+
+    # JS OUT_IDS: behåll alla — blockerar ev. kvarvarande val utanför entry
+    out_ids = list(out_ids)
     # 4) Placeholder för resultat/holeshot (om ej klart)
     actual_results = []
     holeshot_results = []
