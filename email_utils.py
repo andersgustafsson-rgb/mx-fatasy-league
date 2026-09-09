@@ -134,8 +134,13 @@ def send_email(
         return False, error_msg
 
 
-def pick_reminder_race_copy(competition) -> dict:
-    """Display copy for picks-reminder (WSX gets extra hype)."""
+def pick_reminder_race_copy(competition, *, kind: str = "missing") -> dict:
+    """Display copy for picks-reminder (WSX gets extra hype).
+
+    kind:
+      - missing: no picks yet
+      - incomplete: started but not finished (e.g. OUT-förare rensade en slot)
+    """
     series = (getattr(competition, "series", None) or "").strip().upper()
     name = (getattr(competition, "name", None) or "").strip() or "nästa race"
     location = None
@@ -144,6 +149,9 @@ def pick_reminder_race_copy(competition) -> dict:
     display_name = name
     subject = f"🏁 {name} — dags att sätta picks"
     accent = "cyan"
+    kind_norm = (kind or "missing").strip().lower()
+    if kind_norm not in ("missing", "incomplete"):
+        kind_norm = "missing"
 
     if series == "WSX":
         accent = "ember"
@@ -177,6 +185,15 @@ def pick_reminder_race_copy(competition) -> dict:
     else:
         body_lead = f"Det är dags att sätta dina picks för {name}!"
 
+    if kind_norm == "incomplete":
+        kicker = kicker or "OBS — OFULLSTÄNDIGA VAL"
+        subject = f"⚠️ {display_name} — dina picks är ofullständiga"
+        body_lead = (
+            f"OBS: Dina val för {display_name} är ofullständiga. "
+            "Startlistan kan ha uppdaterats (t.ex. OUT-förare), så någon av dina picks "
+            "kan ha försvunnit. Gå in och komplettera innan deadline!"
+        )
+
     return {
         "series": series or None,
         "name": name,
@@ -186,6 +203,7 @@ def pick_reminder_race_copy(competition) -> dict:
         "body_lead": body_lead,
         "subject": subject,
         "accent": accent,
+        "kind": kind_norm,
     }
 
 

@@ -1283,6 +1283,21 @@
                     
                     <div class="space-y-4">
                         <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Snabbmall:</label>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" onclick="applyAnnouncementPreset('incomplete')"
+                                    class="px-3 py-1.5 text-sm rounded-lg bg-amber-900/50 border border-amber-500/50 text-amber-200 hover:bg-amber-800/60">
+                                    ⚠️ Ofullständiga picks
+                                </button>
+                                <button type="button" onclick="applyAnnouncementPreset('picks_reminder')"
+                                    class="px-3 py-1.5 text-sm rounded-lg bg-cyan-900/40 border border-cyan-500/40 text-cyan-200 hover:bg-cyan-800/50">
+                                    ⏰ Picks-påminnelse
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">Fyller i text + sätter prioritet. Du kan redigera innan du sparar.</p>
+                        </div>
+
+                        <div>
                             <label class="block text-sm font-medium text-gray-300 mb-2">Meddelande:</label>
                             <textarea 
                                 id="announcement-message" 
@@ -1421,17 +1436,36 @@
                             </div>
                             
                             <!-- Preview Button -->
-                            <div class="flex gap-3">
+                            <div class="flex flex-wrap gap-3">
                                 <button 
                                     onclick="showEmailPreview()" 
                                     class="btn-warning px-6 py-2 rounded-lg">
                                     👁️ Förhandsgranska e-post
                                 </button>
                                 <button 
-                                    onclick="showPickReminderPreview()" 
+                                    onclick="showPickReminderPreview('missing')" 
                                     class="btn-warning px-6 py-2 rounded-lg">
-                                    👁️ Förhandsgranska picks-påminnelse
+                                    👁️ Påminnelse (inga picks)
                                 </button>
+                                <button 
+                                    onclick="showPickReminderPreview('incomplete')" 
+                                    class="btn-warning px-6 py-2 rounded-lg">
+                                    👁️ Påminnelse (ofullständiga)
+                                </button>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Picks-påminnelse — mottagare:</label>
+                                <select id="pick-reminder-audience"
+                                    class="w-full max-w-xl px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
+                                    <option value="missing_or_partial" selected>Saknar picks ELLER ofullständiga (standard)</option>
+                                    <option value="partial_only">Endast ofullständiga picks</option>
+                                    <option value="missing_only">Endast utan picks alls</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Ofullständiga = har börjat tippa men saknar slots (t.ex. efter OUT-rensning).
+                                    Ämne/text anpassas automatiskt per mottagare.
+                                </p>
                             </div>
                             
                             <!-- Action Buttons -->
@@ -1454,8 +1488,8 @@
                     <!-- Pick Reminders Info -->
                     <div class="mb-6 p-3 bg-blue-900/30 border border-blue-500 rounded-lg">
                         <p class="text-blue-300 text-sm">
-                            💡 <strong>Picks-påminnelser:</strong> Skickar automatiskt påminnelser till alla användare som inte har gjort sina picks för nästa tävling (inkl. WSX). 
-                            E-posten skickas bara till användare med registrerad e-postadress.
+                            💡 <strong>Picks-påminnelser:</strong> Skickar till valda mottagare enligt filtret ovan (nästa tävling inkl. WSX).
+                            Ofullständiga får varningstext (“OBS dina val är ofullständiga”). Bara användare med e-post får mail.
                         </p>
                     </div>
                 </div>
@@ -3011,16 +3045,20 @@
             showPreviewModal('E-post Förhandsvisning', previewHTML, subject || 'Inget ämne');
         }
         
-        async function showPickReminderPreview() {
+        async function showPickReminderPreview(kind = 'missing') {
             try {
-                const response = await fetch('/admin/preview_pick_reminder');
+                const kindNorm = kind === 'incomplete' ? 'incomplete' : 'missing';
+                const response = await fetch('/admin/preview_pick_reminder?kind=' + encodeURIComponent(kindNorm));
                 const data = await response.json();
                 if (!data.success || !data.html) {
                     alert('❌ Kunde inte ladda förhandsvisning: ' + (data.error || 'okänt fel'));
                     return;
                 }
+                const title = kindNorm === 'incomplete'
+                    ? 'Picks-påminnelse — ofullständiga'
+                    : 'Picks-påminnelse — inga picks';
                 showPreviewModal(
-                    'Picks-påminnelse Förhandsvisning',
+                    title,
                     data.html,
                     data.subject || 'Picks-påminnelse'
                 );
@@ -3138,12 +3176,20 @@
                 alert('❌ Välj minst en mottagare!');
                 return;
             }
+
+            const audienceEl = document.getElementById('pick-reminder-audience');
+            const audience = (audienceEl && audienceEl.value) || 'missing_or_partial';
+            const audienceLabel = {
+                missing_or_partial: 'saknar picks ELLER ofullständiga',
+                partial_only: 'endast ofullständiga picks',
+                missing_only: 'endast utan picks alls',
+            }[audience] || audience;
             
             const userText = selectedUsers.length === 1 
                 ? `1 vald användare` 
                 : `${selectedUsers.length} valda användare`;
             
-            if (!confirm(`Skicka picks-påminnelser till ${userText} som inte har gjort sina picks för nästa tävling?\n\nDetta skickar bara till användare med registrerad e-postadress.`)) {
+            if (!confirm(`Skicka picks-påminnelser till ${userText}?\n\nFilter: ${audienceLabel}\n\nOfullständiga får OBS-text. Bara användare med e-post får mail.`)) {
                 return;
             }
             
@@ -3153,7 +3199,7 @@
             statusDiv.textContent = '⏰ Skickar picks-påminnelser...';
             
             const emailList = selectedUsers.map(u => u.email);
-            console.log('DEBUG: Sending pick reminders to:', emailList);
+            console.log('DEBUG: Sending pick reminders to:', emailList, 'audience:', audience);
             
             try {
                 const response = await fetch('/admin/send_pick_reminders', {
@@ -3162,7 +3208,8 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        user_emails: emailList
+                        user_emails: emailList,
+                        audience: audience
                     })
                 });
                 
@@ -3182,20 +3229,24 @@
                         console.log('DEBUG: Not showing SendGrid limit warning, showing normal status');
                         statusDiv.className = 'mt-4 p-3 bg-green-900/40 border border-green-500 rounded text-green-300';
                         let statusHtml = `✅ Påminnelser bearbetade!<br>`;
-                        if (result.sent > 0) {
-                            statusHtml += `Skickat till: ${result.sent} användare<br>`;
-                        }
-                        if (result.failed > 0) {
-                            statusHtml += `Misslyckades: ${result.failed} användare<br>`;
-                        }
-                        if (result.no_email > 0) {
-                            statusHtml += `Ingen e-post: ${result.no_email} användare<br>`;
-                        }
-                        if (result.no_picks > 0) {
-                            statusHtml += `Redan gjort picks: ${result.no_picks} användare<br>`;
-                        }
-                        if (result.sent === 0 && result.failed === 0 && result.no_email === 0 && result.no_picks === 0) {
-                            statusHtml += `Inga användare bearbetades`;
+                        if (result.message) {
+                            statusHtml += `${result.message}<br>`;
+                        } else {
+                            if (result.sent > 0) {
+                                statusHtml += `Skickat till: ${result.sent} användare<br>`;
+                            }
+                            if (result.failed > 0) {
+                                statusHtml += `Misslyckades: ${result.failed} användare<br>`;
+                            }
+                            if (result.no_email > 0) {
+                                statusHtml += `Ingen e-post: ${result.no_email} användare<br>`;
+                            }
+                            if ((result.already_complete || result.no_picks) > 0) {
+                                statusHtml += `Redan kompletta: ${result.already_complete || result.no_picks} användare<br>`;
+                            }
+                            if (result.skipped_audience > 0) {
+                                statusHtml += `Hoppades över (filter): ${result.skipped_audience} användare<br>`;
+                            }
                         }
                         statusDiv.innerHTML = statusHtml;
                     }
@@ -3207,6 +3258,34 @@
                 statusDiv.className = 'mt-4 p-3 bg-red-900/40 border border-red-500 rounded text-red-300';
                 statusDiv.textContent = '❌ Fel vid skickande: ' + error.message;
             }
+        }
+
+        function applyAnnouncementPreset(kind) {
+            const msg = document.getElementById('announcement-message');
+            const pri = document.getElementById('announcement-priority');
+            const active = document.getElementById('announcement-active');
+            if (!msg || !pri) return;
+
+            if (kind === 'incomplete') {
+                msg.value = [
+                    '⚠️ OBS: Dina val är ofullständiga',
+                    '',
+                    'Startlistan har uppdaterats (t.ex. OUT-förare). Om du tippat någon som inte startar kan dina picks ha blivit ofullständiga.',
+                    '',
+                    'Gå in under Tippa och komplettera dina val innan deadline.',
+                ].join('\n');
+                pri.value = 'important';
+            } else if (kind === 'picks_reminder') {
+                msg.value = [
+                    '⏰ Dags att tippa!',
+                    '',
+                    'Nästa race närmar sig — sätt dina picks innan deadline så du inte missar poängen.',
+                    '',
+                    'Gå till Tippa och lämna in dina val.',
+                ].join('\n');
+                pri.value = 'info';
+            }
+            if (active) active.checked = true;
         }
         
         async function clearAnnouncement() {

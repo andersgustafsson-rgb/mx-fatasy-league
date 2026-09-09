@@ -14814,7 +14814,10 @@ def preview_pick_reminder():
         if not next_comp:
             return jsonify({"success": False, "error": "No upcoming competition found"}), 404
 
-        copy = pick_reminder_race_copy(next_comp)
+        kind = (request.args.get("kind") or "missing").strip().lower()
+        if kind not in ("missing", "incomplete"):
+            kind = "missing"
+        copy = pick_reminder_race_copy(next_comp, kind=kind)
         base_url = get_public_base_url()
         hero_rel = resolve_competition_hero_static_url(next_comp)
         trackmap_url = None
@@ -14893,8 +14896,13 @@ def send_pick_reminders():
         
         data = request.get_json() or {}
         selected_emails = data.get('user_emails', [])
+        # audience: missing_or_partial (default) | partial_only | missing_only
+        audience = (data.get("audience") or "missing_or_partial").strip().lower()
+        if audience not in ("missing_or_partial", "partial_only", "missing_only"):
+            audience = "missing_or_partial"
         
         print(f"DEBUG: send_pick_reminders - Received user_emails: {selected_emails}")
+        print(f"DEBUG: send_pick_reminders - audience={audience}")
         
         # Nästa race inkl. WSX (snartaste start / öppna picks)
         next_comp = _next_competition_for_pick_reminders()
@@ -14902,7 +14910,8 @@ def send_pick_reminders():
         if not next_comp:
             return jsonify({"error": "No upcoming competition found"}), 404
 
-        race_copy = pick_reminder_race_copy(next_comp)
+        race_copy_missing = pick_reminder_race_copy(next_comp, kind="missing")
+        race_copy_incomplete = pick_reminder_race_copy(next_comp, kind="incomplete")
         
         # Get users - either selected ones or all users with email addresses
         if selected_emails and len(selected_emails) > 0:
@@ -14920,7 +14929,8 @@ def send_pick_reminders():
         failed = 0
         push_sent = 0
         no_email = 0
-        no_picks = 0
+        already_complete = 0
+        skipped_audience = 0
         opted_out = 0
         sendgrid_limit_detected = False  # Initialize flag for SendGrid limit detection
         
@@ -15016,83 +15026,27 @@ def send_pick_reminders():
 
         for user in users:
             print(f"DEBUG: Processing user: {user.username} ({user.email})")
-            # Check if user has made picks for this competition
-            picks = RacePick.query.filter_by(
-                user_id=user.id,
-                competition_id=next_comp.id
-            ).all()
-            
-            print(f"DEBUG: User {user.username} has {len(picks)} picks for competition {next_comp.id}")
-            
-            # Check if picks are complete (12 race picks, 2 holeshot, 1 wildcard for non-WSX)
-            has_complete_picks = False
-            if picks:
-                # Deduplicate picks - need to get rider class_name from Rider model
-                unique_picks = {}
-                for pick in picks:
-                    rider = Rider.query.get(pick.rider_id)
-                    if rider:
-                        rider_class = rider.class_name
-                        key = (pick.rider_id, rider_class, pick.predicted_position)
-                        if key not in unique_picks:
-                            unique_picks[key] = pick
-                
-                # Filter by class using rider's class_name
-                race_picks_450 = []
-                race_picks_250 = []
-                for pick in unique_picks.values():
-                    rider = Rider.query.get(pick.rider_id)
-                    if rider:
-                        if rider.class_name in ['450cc', 'wsx_sx1']:
-                            race_picks_450.append(pick)
-                        elif rider.class_name in ['250cc', 'wsx_sx2']:
-                            race_picks_250.append(pick)
-                
-                is_wsx = next_comp.series == 'WSX'
-                required_race_picks = 6 if is_wsx else 6  # 6 per class
-                
-                if len(race_picks_450) >= required_race_picks and len(race_picks_250) >= required_race_picks:
-                    # Check holeshot picks
-                    holeshot_picks = HoleshotPick.query.filter_by(
-                        user_id=user.id,
-                        competition_id=next_comp.id
-                    ).count()
-                    
-                    if holeshot_picks >= 2:
-                        # Check wildcard for non-WSX
-                        if is_wsx:
-                            has_complete_picks = True
-                        else:
-                            wildcard_pick = WildcardPick.query.filter_by(
-                                user_id=user.id,
-                                competition_id=next_comp.id
-                            ).first()
-                            if wildcard_pick:
-                                has_complete_picks = True
-            
-            if not has_complete_picks:
-                if _user_email_opted_out(user):
-                    opted_out += 1
-                    print(f"DEBUG: User {user.username} opted out of email reminders - skipping email")
-                    # Still allow push if they have it (separate consent)
-                    try:
-                        import push_service as ps
+            status = _user_picks_status_code(user.id, next_comp)
+            print(f"DEBUG: User {user.username} picks_status={status}")
 
-                        push_result = ps.notify_pick_reminder_push(
-                            user.id,
-                            next_comp.name,
-                            deadline_time,
-                            next_comp.id,
-                        )
-                        if push_result.get("ok"):
-                            push_sent += 1
-                    except Exception as push_ex:
-                        print(f"DEBUG: Pick reminder push failed for {user.username}: {push_ex}")
-                    continue
+            if status == "has_picks":
+                already_complete += 1
+                continue
+            if audience == "partial_only" and status != "partial_picks":
+                skipped_audience += 1
+                continue
+            if audience == "missing_only" and status != "no_picks":
+                skipped_audience += 1
+                continue
 
-                print(f"DEBUG: User {user.username} needs reminder - sending email")
-                user_name = user.display_name or user.username
+            race_copy = (
+                race_copy_incomplete if status == "partial_picks" else race_copy_missing
+            )
 
+            if _user_email_opted_out(user):
+                opted_out += 1
+                print(f"DEBUG: User {user.username} opted out of email reminders - skipping email")
+                # Still allow push if they have it (separate consent)
                 try:
                     import push_service as ps
 
@@ -15104,94 +15058,91 @@ def send_pick_reminders():
                     )
                     if push_result.get("ok"):
                         push_sent += 1
-                        print(f"DEBUG: ✅ Pick reminder push to {user.username}")
                 except Exception as push_ex:
                     print(f"DEBUG: Pick reminder push failed for {user.username}: {push_ex}")
+                continue
 
-                try:
-                    from email_utils import build_unsubscribe_url
+            print(f"DEBUG: User {user.username} needs reminder ({status}) - sending email")
+            user_name = user.display_name or user.username
 
-                    invite_url = _absolute_url("start_invite", ref=(user.username or "").strip())
-                    unsub_url = build_unsubscribe_url(base_url, user.id)
-                    success, error_msg = send_pick_reminder(
-                        user.email,
-                        user_name,
-                        race_copy["display_name"],
-                        deadline_time,
-                        competition_url,
-                        base_url=base_url,
-                        trackmap_url=trackmap_url,
-                        invite_url=invite_url,
-                        unsubscribe_url=unsub_url,
-                        series=race_copy.get("series"),
-                        location=race_copy.get("location"),
-                        kicker=race_copy.get("kicker"),
-                        body_lead=race_copy.get("body_lead"),
-                        subject=race_copy.get("subject"),
-                        accent=race_copy.get("accent"),
-                    )
-                    if success:
-                        sent += 1
-                        print(f"DEBUG: ✅ Reminder sent to {user.username}")
-                    else:
-                        failed += 1
-                        # Check if it's a SendGrid limit error
-                        print(f"DEBUG: Checking error_msg for SendGrid limit: {error_msg}")
-                        print(f"DEBUG: error_msg type: {type(error_msg)}")
-                        print(f"DEBUG: error_msg value: {repr(error_msg)}")
-                        
-                        # Check error_msg if it exists
-                        if error_msg:
-                            error_lower = str(error_msg).lower()
-                            print(f"DEBUG: error_msg.lower(): {error_lower}")
-                            # Check for various forms of the SendGrid limit error message
-                            if ("exceeded your messaging limits" in error_lower or 
-                                "messaging limits" in error_lower or
-                                "you have exceeded" in error_lower or
-                                "maximum credits exceeded" in error_lower or
-                                "credits exceeded" in error_lower or
-                                ("exceeded" in error_lower and "limit" in error_lower) or
-                                ("credits" in error_lower and "exceeded" in error_lower)):
-                                sendgrid_limit_detected = True
-                                print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}: {error_msg}")
-                            else:
-                                print(f"DEBUG: ❌ Failed to send reminder to {user.username}: {error_msg}")
-                        else:
-                            print(f"DEBUG: ❌ Failed to send reminder to {user.username}: No error message")
-                except Exception as e:
+            try:
+                import push_service as ps
+
+                push_result = ps.notify_pick_reminder_push(
+                    user.id,
+                    next_comp.name,
+                    deadline_time,
+                    next_comp.id,
+                )
+                if push_result.get("ok"):
+                    push_sent += 1
+                    print(f"DEBUG: ✅ Pick reminder push to {user.username}")
+            except Exception as push_ex:
+                print(f"DEBUG: Pick reminder push failed for {user.username}: {push_ex}")
+
+            try:
+                from email_utils import build_unsubscribe_url
+
+                invite_url = _absolute_url("start_invite", ref=(user.username or "").strip())
+                unsub_url = build_unsubscribe_url(base_url, user.id)
+                success, error_msg = send_pick_reminder(
+                    user.email,
+                    user_name,
+                    race_copy["display_name"],
+                    deadline_time,
+                    competition_url,
+                    base_url=base_url,
+                    trackmap_url=trackmap_url,
+                    invite_url=invite_url,
+                    unsubscribe_url=unsub_url,
+                    series=race_copy.get("series"),
+                    location=race_copy.get("location"),
+                    kicker=race_copy.get("kicker"),
+                    body_lead=race_copy.get("body_lead"),
+                    subject=race_copy.get("subject"),
+                    accent=race_copy.get("accent"),
+                )
+                if success:
+                    sent += 1
+                    print(f"DEBUG: ✅ Reminder sent to {user.username}")
+                else:
                     failed += 1
-                    error_msg = str(e)
-                    print(f"DEBUG: Exception type: {type(e)}")
-                    print(f"DEBUG: Exception error_msg: {error_msg}")
-                    print(f"DEBUG: Exception repr: {repr(e)}")
-                    
-                    # Check if it's a SendGrid limit error - check multiple variations
-                    error_lower = error_msg.lower()
-                    exception_str = repr(e).lower()
-                    
-                    # Check both error_msg and exception string
-                    if ("exceeded your messaging limits" in error_lower or 
-                        "messaging limits" in error_lower or
-                        "you have exceeded" in error_lower or
-                        "maximum credits exceeded" in error_lower or
-                        "credits exceeded" in error_lower or
-                        ("exceeded" in error_lower and "limit" in error_lower) or
-                        ("credits" in error_lower and "exceeded" in error_lower) or
-                        "exceeded your messaging limits" in exception_str or
-                        "messaging limits" in exception_str or
-                        "maximum credits exceeded" in exception_str or
-                        "credits exceeded" in exception_str):
-                        sendgrid_limit_detected = True
-                        print(f"DEBUG: ⚠️ SendGrid limit reached (exception) for {user.username}: {error_msg}")
+                    print(f"DEBUG: Checking error_msg for SendGrid limit: {error_msg}")
+                    if error_msg:
+                        error_lower = str(error_msg).lower()
+                        if (
+                            "exceeded your messaging limits" in error_lower
+                            or "messaging limits" in error_lower
+                            or "maximum credits exceeded" in error_lower
+                            or "credits exceeded" in error_lower
+                        ):
+                            sendgrid_limit_detected = True
+                            print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}: {error_msg}")
+                        else:
+                            print(f"DEBUG: ❌ Failed to send reminder to {user.username}: {error_msg}")
                     else:
-                        print(f"DEBUG: ❌ Exception sending reminder to {user.username}: {error_msg}")
-            else:
-                no_picks += 1
-                print(f"DEBUG: User {user.username} already has complete picks - skipping")
-        
-        print(f"DEBUG: send_pick_reminders - Final counts: sent={sent}, push_sent={push_sent}, failed={failed}, no_picks={no_picks}, no_email={no_email}, opted_out={opted_out}")
-        
-        # Build a more informative message
+                        print(f"DEBUG: ❌ Failed to send reminder to {user.username}: (no error message)")
+            except Exception as e:
+                failed += 1
+                error_msg = str(e)
+                exception_str = error_msg.lower()
+                if (
+                    "exceeded your messaging limits" in exception_str
+                    or "messaging limits" in exception_str
+                    or "maximum credits exceeded" in exception_str
+                    or "credits exceeded" in exception_str
+                ):
+                    sendgrid_limit_detected = True
+                    print(f"DEBUG: ⚠️ SendGrid limit reached (exception) for {user.username}: {error_msg}")
+                else:
+                    print(f"DEBUG: ❌ Exception sending reminder to {user.username}: {error_msg}")
+
+        print(
+            f"DEBUG: send_pick_reminders - Final counts: sent={sent}, push_sent={push_sent}, "
+            f"failed={failed}, already_complete={already_complete}, skipped_audience={skipped_audience}, "
+            f"no_email={no_email}, opted_out={opted_out}"
+        )
+
         message_parts = []
         if sent > 0:
             message_parts.append(f"E-post skickat till: {sent} användare")
@@ -15203,19 +15154,31 @@ def send_pick_reminders():
             message_parts.append(f"Ingen e-post: {no_email} användare")
         if opted_out > 0:
             message_parts.append(f"Avregistrerade (hoppade över mail): {opted_out} användare")
-        if no_picks > 0:
-            message_parts.append(f"Redan gjort picks: {no_picks} användare")
-        
-        if sent == 0 and failed == 0 and no_email == 0 and no_picks == 0 and opted_out == 0:
+        if already_complete > 0:
+            message_parts.append(f"Redan kompletta picks: {already_complete} användare")
+        if skipped_audience > 0:
+            message_parts.append(f"Hoppades över (audience-filter): {skipped_audience} användare")
+
+        if (
+            sent == 0
+            and failed == 0
+            and no_email == 0
+            and already_complete == 0
+            and opted_out == 0
+            and skipped_audience == 0
+        ):
             message_parts.append("Inga användare bearbetades")
-        
+
         return jsonify({
             "success": True,
             "sent": sent,
             "push_sent": push_sent,
             "failed": failed,
             "no_email": no_email,
-            "no_picks": no_picks,
+            "no_picks": already_complete,
+            "already_complete": already_complete,
+            "skipped_audience": skipped_audience,
+            "audience": audience,
             "opted_out": opted_out,
             "competition": next_comp.name,
             "message": ", ".join(message_parts) if message_parts else "Ingen aktivitet",
@@ -15223,6 +15186,7 @@ def send_pick_reminders():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.post("/admin/submit_results")
 def submit_results():
