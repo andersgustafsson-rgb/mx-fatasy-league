@@ -2017,7 +2017,7 @@ function helperPid() {
   return cleanStr($("maHelperArticle")?.value);
 }
 
-function helperVehicle() {
+function helperVehicleRaw() {
   return cleanStr($("maHelperModel")?.value);
 }
 
@@ -2025,80 +2025,171 @@ function helperProductName() {
   return cleanStr(els.productName?.value);
 }
 
-/** Huvudflöde: sök ERSÄTTNINGAR (inte slut-PID), kopiera fordon, öppna slut-sida med liknande. */
-async function openFindReplacements() {
-  const pid = helperPid();
-  const vehicle = helperVehicle();
-  const product = helperProductName();
-  saveMotoactionHelperState(pid, vehicle);
+/** Fordons-sida: /mcdelar/... eller /motocrossdelar/honda/1/cr-250-r-2004/133/781 */
+function isMotoactionVehicleUrl(raw) {
+  const s = cleanStr(raw);
+  if (!s) return false;
+  try {
+    const u = new URL(s.includes("://") ? s : `https://${s}`);
+    if (!/motoaction\.se/i.test(u.hostname)) return false;
+    return /\/(mcdelar|motocrossdelar|atvdelar|snoskoterdelar|mopeddelar)(\/|$)/i.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
 
-  if (!product && !pid) {
-    setHelperStatus("Fyll i Produkt (ovan) och gärna PID + fordon från ordern.", true);
+function normalizeMotoactionVehicleUrl(raw) {
+  if (!isMotoactionVehicleUrl(raw)) return "";
+  try {
+    const u = new URL(raw.includes("://") ? raw : `https://${raw}`);
+    u.hash = "";
+    return u.toString();
+  } catch {
+    return "";
+  }
+}
+
+function helperVehicleUrl() {
+  return normalizeMotoactionVehicleUrl(helperVehicleRaw());
+}
+
+function helperVehicleName() {
+  const raw = helperVehicleRaw();
+  if (isMotoactionVehicleUrl(raw)) return "";
+  return raw;
+}
+
+/** Öppna fordons-sida: inklistrad URL, annars site-sök efter fordons-URL. */
+async function openVehiclePage() {
+  const pid = helperPid();
+  const raw = helperVehicleRaw();
+  saveMotoactionHelperState(pid, raw);
+
+  const direct = helperVehicleUrl();
+  if (direct) {
+    openUrlInNewTab(direct);
+    setHelperStatus("Öppnade fordons-URL:en — du är inne på rätt hoj/filter.");
     return;
   }
 
+  const vehicle = helperVehicleName();
+  if (!vehicle) {
+    setHelperStatus(
+      "Klistra in fordons-URL (t.ex. …/motocrossdelar/honda/…/781) eller fordonstext från ordern.",
+      true
+    );
+    return;
+  }
+
+  const vq = shortVehicleQuery(vehicle) || vehicle;
+  const q = `site:motoaction.se (inurl:mcdelar OR inurl:motocrossdelar OR inurl:atvdelar) ${vq}`;
+  openUrlInNewTab(`https://www.google.com/search?q=${encodeURIComponent(q)}`);
+  await copyToClipboardQuiet(vehicle);
+  setHelperStatus(
+    "Söker fordons-sida på Motoaction. Öppna rätt träff — nästa gång kan du klistra in den URL:en här så går det direkt."
+  );
+}
+
+/** Huvudflöde: fordons-sida + ersättningssök (inte slut-PID). */
+async function openFindReplacements() {
+  const pid = helperPid();
+  const rawVehicle = helperVehicleRaw();
+  const product = helperProductName();
+  const vehicleUrl = helperVehicleUrl();
+  const vehicleName = helperVehicleName();
+  saveMotoactionHelperState(pid, rawVehicle);
+
+  if (!product && !pid && !vehicleUrl && !vehicleName) {
+    setHelperStatus("Fyll i Produkt + PID, och fordonstext eller fordons-URL.", true);
+    return;
+  }
+
+  // 1) Rätt hoj först om vi har URL
+  if (vehicleUrl) {
+    openUrlInNewTab(vehicleUrl);
+  } else if (vehicleName) {
+    const vq = shortVehicleQuery(vehicleName) || vehicleName;
+    openUrlInNewTab(
+      `https://www.google.com/search?q=${encodeURIComponent(
+        `site:motoaction.se (inurl:mcdelar OR inurl:motocrossdelar OR inurl:atvdelar) ${vq}`
+      )}`
+    );
+  }
+
+  // 2) Ersättningssök (exkludera slut-PID i URL)
   const terms = productSearchTerms(product) || product;
-  const vehicleQ = shortVehicleQuery(vehicle);
+  const vehicleQ = shortVehicleQuery(vehicleName) || (vehicleUrl ? "" : "");
   const parts = [];
   if (terms) parts.push(terms);
   if (vehicleQ) parts.push(vehicleQ);
-  // Exkludera slut-produktens URL-PID så Google inte bara visar den som är slut.
   if (pid) parts.push(`-p${pid.replace(/\D/g, "")}`);
-
-  const q = `site:motoaction.se ${parts.join(" ")}`.trim();
-  openUrlInNewTab(`https://www.google.com/search?q=${encodeURIComponent(q)}`);
-
-  const oosUrl = buildOosProductUrl(pid, product);
-  if (oosUrl) {
-    openUrlInNewTab(oosUrl);
+  if (parts.length) {
+    openUrlInNewTab(
+      `https://www.google.com/search?q=${encodeURIComponent(`site:motoaction.se ${parts.join(" ")}`)}`
+    );
   }
 
-  if (vehicle) {
-    await copyToClipboardQuiet(vehicle);
+  // 3) Slut-sida med “liknande produkter” om möjligt
+  const oosUrl = buildOosProductUrl(pid, product);
+  if (oosUrl) openUrlInNewTab(oosUrl);
+
+  if (vehicleUrl) {
     setHelperStatus(
-      "Öppnade ersättningssök" +
-        (oosUrl ? " + slut-sidan (liknande produkter)" : "") +
-        ". Fordon kopierat — klistra in i fordonssök/garage på Motoaction (Ctrl+V)."
+      "Öppnade fordons-sidan" +
+        (parts.length ? " + ersättningssök" : "") +
+        (oosUrl ? " + slut-sidan (liknande)" : "") +
+        "."
+    );
+  } else if (vehicleName) {
+    await copyToClipboardQuiet(vehicleName);
+    setHelperStatus(
+      "Öppnade sök efter fordons-sida + ersättningar. Klistra gärna in fordons-URL:en här efteråt så blir det 1-klick nästa gång."
     );
   } else {
-    setHelperStatus(
-      "Öppnade ersättningssök" +
-        (oosUrl ? " + slut-sidan (liknande produkter)" : "") +
-        ". Tips: fyll i fordon från ordern så kan du filtrera fitment."
-    );
+    setHelperStatus("Öppnade ersättningssök" + (oosUrl ? " + slut-sida" : "") + ".");
   }
 }
 
 async function openOosSimilarPage() {
   const pid = helperPid();
   const product = helperProductName();
-  const vehicle = helperVehicle();
-  saveMotoactionHelperState(pid, vehicle);
+  const raw = helperVehicleRaw();
+  saveMotoactionHelperState(pid, raw);
   const oosUrl = buildOosProductUrl(pid, product);
   if (!oosUrl) {
     setHelperStatus("Behöver både PID och produktnamn (fältet Produkt ovan) för att öppna slut-sidan.", true);
     return;
   }
   openUrlInNewTab(oosUrl);
-  if (vehicle) await copyToClipboardQuiet(vehicle);
+  const vUrl = helperVehicleUrl();
+  if (vUrl) openUrlInNewTab(vUrl);
   setHelperStatus(
     "Öppnade slut-produktens sida — titta under “liknande produkter” / kategorier." +
-      (vehicle ? " Fordon kopierat till urklipp." : "")
+      (vUrl ? " Öppnade även fordons-URL:en." : "")
   );
 }
 
 async function copyVehicleForGarage() {
-  const vehicle = helperVehicle();
+  const raw = helperVehicleRaw();
   const pid = helperPid();
-  saveMotoactionHelperState(pid, vehicle);
+  saveMotoactionHelperState(pid, raw);
+
+  const vUrl = helperVehicleUrl();
+  if (vUrl) {
+    openUrlInNewTab(vUrl);
+    setHelperStatus("Öppnade fordons-URL:en direkt (bättre än garage-klistra).");
+    return;
+  }
+
+  const vehicle = helperVehicleName();
   if (!vehicle) {
-    setHelperStatus("Fyll i fordon från ordern först.", true);
+    setHelperStatus("Klistra in fordons-URL eller fordonstext från ordern.", true);
     return;
   }
   await copyToClipboardQuiet(vehicle);
   openUrlInNewTab("https://www.motoaction.se/");
   setHelperStatus(
-    "Fordon kopierat. På Motoaction: öppna fordonssök / “Lägg till modell” → Ctrl+V → välj rätt hoj."
+    "Ingen fordons-URL ännu — fordonstext kopierad. Bättre: öppna rätt hoj en gång och klistra in URL:en i fältet."
   );
 }
 
@@ -2138,10 +2229,10 @@ function renderMotoactionHelper(wrap, tplId) {
     <div>
       <p class="text-sm font-semibold text-amber-200">Motoaction-hjälpare — hitta ersättning</p>
       <p class="text-xs mt-1 text-slate-400 leading-relaxed">
-        Från ordern: <strong class="text-slate-300">PID</strong> + <strong class="text-slate-300">fordon</strong>.
-        Fyll också i <strong class="text-slate-300">Produkt</strong> ovan (namnet i ordern).
-        Vi söker <em>andra</em> produkter (inte den som är slut) och öppnar slut-sidan där “liknande produkter” syns.
-        Fordon kan vi inte sätta automatiskt i garaget — det kopieras så du klistrar in det.
+        <strong class="text-slate-300">Bäst:</strong> klistra in
+        <strong class="text-slate-300">fordons-URL</strong>
+        (t.ex. <span class="text-slate-500">/motocrossdelar/honda/…/781</span> eller <span class="text-slate-500">/mcdelar/harley-davidson/…</span>)
+        — då öppnar vi rätt hoj direkt. Annars fordonstext från ordern + PID + produktnamn ovan.
       </p>
     </div>
     <div class="grid sm:grid-cols-2 gap-3">
@@ -2151,9 +2242,9 @@ function renderMotoactionHelper(wrap, tplId) {
           placeholder="t.ex. 2330721" autocomplete="off" />
       </div>
       <div class="space-y-1">
-        <label for="maHelperModel" class="block text-xs font-medium text-slate-400">Fordon (från order)</label>
+        <label for="maHelperModel" class="block text-xs font-medium text-slate-400">Fordonstext ELLER fordons-URL</label>
         <input id="maHelperModel" type="text" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
-          placeholder="t.ex. Harley Davidson XL 883 N ABS Sportster Iron 2019" autocomplete="off" />
+          placeholder="https://www.motoaction.se/motocrossdelar/honda/1/cr-250-r-2004/133/781" autocomplete="off" />
       </div>
     </div>
     <div class="space-y-1">
@@ -2166,8 +2257,8 @@ function renderMotoactionHelper(wrap, tplId) {
     </div>
     <div class="flex flex-wrap gap-2">
       <button type="button" id="maHelperFindReplacements" class="km-btn km-btn-primary">Hitta ersättningar</button>
+      <button type="button" id="maHelperOpenVehicle" class="km-btn">Öppna fordons-sida</button>
       <button type="button" id="maHelperOpenOos" class="km-btn">Öppna slut-sida (liknande)</button>
-      <button type="button" id="maHelperCopyVehicle" class="km-btn">Kopiera fordon → garage</button>
     </div>
     <p id="maHelperStatus" class="text-xs text-slate-500 min-h-[1rem]"></p>
   `;
@@ -2187,11 +2278,11 @@ function renderMotoactionHelper(wrap, tplId) {
   $("maHelperFindReplacements")?.addEventListener("click", () => {
     openFindReplacements().catch(() => {});
   });
+  $("maHelperOpenVehicle")?.addEventListener("click", () => {
+    openVehiclePage().catch(() => {});
+  });
   $("maHelperOpenOos")?.addEventListener("click", () => {
     openOosSimilarPage().catch(() => {});
-  });
-  $("maHelperCopyVehicle")?.addEventListener("click", () => {
-    copyVehicleForGarage().catch(() => {});
   });
   $("maHelperFillFromLink")?.addEventListener("click", () => {
     applyNameFromProductLink($("maHelperPasteLink")?.value);
