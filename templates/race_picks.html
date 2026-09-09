@@ -1258,15 +1258,7 @@
 
   function getSelectedTop6Ids(dataClass) {
     return Array.from(document.querySelectorAll(`.rider-selector[data-class="${dataClass}"]`))
-      .map((sel) => {
-        const fromDs = sel.dataset.selectedRiderId;
-        if (fromDs) return String(fromDs);
-        const span = sel.querySelector('.selected-rider');
-        const txt = (span?.textContent || '').trim();
-        if (!txt || txt.startsWith('-- välj')) return null;
-        const opt = sel.querySelector(`.rider-option[data-rider-name="${txt}"]`);
-        return opt?.dataset?.riderId ? String(opt.dataset.riderId) : null;
-      })
+      .map((sel) => getSelectorChosenRiderId(sel))
       .filter(Boolean);
   }
 
@@ -1310,6 +1302,61 @@
     return label;
   }
   window.riderOptionLabel = riderOptionLabel;
+
+  /** Strip SMX rank/LCQ suffix so "#47 Levi (Kawasaki) · #2" matches "#47 Levi (Kawasaki)". */
+  function stripTippaLabelSuffix(text) {
+    return String(text || '')
+      .replace(/\s·\sLCQ\s*$/i, '')
+      .replace(/\s·\s#\d+\s*$/i, '')
+      .trim()
+      .replace(/\s+/g, ' ');
+  }
+
+  function riderIdentityKeyFromId(riderId) {
+    const r = (window.allRiders || []).find((x) => Number(x.id) === Number(riderId));
+    if (!r) return '';
+    return `${r.class || ''}|${Number(r.rider_number) || 0}|${String(r.name || '').trim().toLowerCase()}`;
+  }
+
+  function getSelectorChosenRiderId(sel) {
+    if (!sel) return null;
+    if (sel.dataset.selectedRiderId) return String(sel.dataset.selectedRiderId);
+    const span = sel.querySelector('.selected-rider');
+    const txt = (span?.textContent || '').trim();
+    if (isEmptyRiderText(txt)) return null;
+    const exact = sel.querySelector(`.rider-option[data-rider-name="${txt}"]`);
+    if (exact?.dataset?.riderId) return String(exact.dataset.riderId);
+    const want = stripTippaLabelSuffix(txt).toLowerCase();
+    const opts = sel.querySelectorAll('.rider-option[data-rider-id]');
+    for (const opt of opts) {
+      const name = stripTippaLabelSuffix(opt.dataset.riderName || '').toLowerCase();
+      if (name && name === want) return String(opt.dataset.riderId);
+    }
+    return null;
+  }
+
+  function removeDuplicateTop6Selections(riderClass) {
+    const seenIds = new Set();
+    const seenKeys = new Set();
+    const selectors = document.querySelectorAll(
+      `.rider-selector[data-class="${riderClass}"]`
+    );
+    selectors.forEach((sel) => {
+      const rid = getSelectorChosenRiderId(sel);
+      if (!rid) return;
+      const key = riderIdentityKeyFromId(rid) || rid;
+      if (seenIds.has(String(rid)) || (key && seenKeys.has(key))) {
+        const pos = Number(sel.dataset.position || 0);
+        if (typeof clearRiderSelection === 'function' && pos) {
+          clearRiderSelection(riderClass, pos);
+        }
+        return;
+      }
+      seenIds.add(String(rid));
+      if (key) seenKeys.add(key);
+    });
+  }
+  window.removeDuplicateTop6Selections = removeDuplicateTop6Selections;
 
   function sortTippaRiders(list) {
     return [...list].sort((a, b) => {
@@ -1557,6 +1604,10 @@
     restoreBonus('holeshot-450', 'holeshot-450');
     restoreBonus('holeshot-250', 'holeshot-250');
     if (!isWSXSeries) restoreBonus('wildcard-pick', 'wildcard-pick');
+    topClasses.forEach((cls) => {
+      removeDuplicateTop6Selections(cls);
+      updateRiderSelectors(cls);
+    });
   }
   window.syncUiFromHiddenSelects = syncUiFromHiddenSelects;
 
@@ -1844,7 +1895,10 @@
 
       // Update rider selectors to hide selected riders
       const riderClassesForUpdate = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
-      riderClassesForUpdate.forEach(cls => updateRiderSelectors(cls));
+      riderClassesForUpdate.forEach(cls => {
+        removeDuplicateTop6Selections(cls);
+        updateRiderSelectors(cls);
+      });
       
       // Remove wrong coast selections after loading picks
       removeWrongCoastSelections();
@@ -2014,18 +2068,28 @@
   }
 
   function selectRider(riderClass, position, riderId, riderName) {
-    // Extra duplicate guard:
-    // - Prevent selecting the same rider multiple times even if DB contains duplicate Rider rows
-    //   (same display text/number but different id).
-    const normName = (riderName || '').trim().replace(/\s+/g, ' ');
+    // Block same rider id OR same plate+name (even if SMX label suffix differs: " · #2")
+    const wantId = String(riderId);
+    const wantKey = riderIdentityKeyFromId(riderId);
+    const wantLabel = stripTippaLabelSuffix(riderName || '');
     const otherSelectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
     for (const sel of otherSelectors) {
       const selPos = Number(sel.dataset.position || 0);
       if (selPos === Number(position)) continue;
-      const txt = (sel.querySelector('.selected-rider')?.textContent || '').trim().replace(/\s+/g, ' ');
-      if (isEmptyRiderText(txt)) continue;
-      if (txt === normName) {
-        alert(`Du kan inte välja samma förare flera gånger (${normName}).`);
+      const otherId = getSelectorChosenRiderId(sel);
+      if (!otherId) continue;
+      if (String(otherId) === wantId) {
+        alert(`Du kan inte välja samma förare flera gånger (${wantLabel || riderName}).`);
+        return;
+      }
+      const otherKey = riderIdentityKeyFromId(otherId);
+      if (wantKey && otherKey && wantKey === otherKey) {
+        alert(`Du kan inte välja samma förare flera gånger (${wantLabel || riderName}).`);
+        return;
+      }
+      const txt = stripTippaLabelSuffix(sel.querySelector('.selected-rider')?.textContent || '');
+      if (wantLabel && txt && wantLabel.toLowerCase() === txt.toLowerCase()) {
+        alert(`Du kan inte välja samma förare flera gånger (${wantLabel}).`);
         return;
       }
     }
@@ -2118,17 +2182,7 @@
       const selectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
       chosenRiderIds = Array.from(selectors).map(sel => {
         if (sel === selector) return null; // Skip current selector
-        const selectedRiderSpan = sel.querySelector('.selected-rider');
-        const currentText = selectedRiderSpan.textContent;
-        
-        // Skip if no selection made yet
-        if (isEmptyRiderText(currentText)) {
-          return null;
-        }
-        
-        // Find the rider option that matches the selected text
-        const riderOption = sel.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
-        return riderOption ? riderOption.dataset.riderId : null;
+        return getSelectorChosenRiderId(sel);
       }).filter(Boolean);
     } else if (riderClass === 'wildcard-pick') {
       chosenRiderIds = Array.from(getWildcardBlockedIds());
@@ -2292,31 +2346,20 @@
   function updateRiderSelectors(riderClass) {
     const selectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
     
-    // Get currently selected riders in this class
-    const chosenRiderIds = Array.from(selectors).map(selector => {
-      const selectedRiderSpan = selector.querySelector('.selected-rider');
-      const currentText = selectedRiderSpan.textContent;
-      
-      // Skip if no selection made yet
-      if (isEmptyRiderText(currentText)) {
-        return null;
-      }
-      
-      // Find the rider option that matches the selected text
-      const riderOption = selector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
-      return riderOption ? riderOption.dataset.riderId : null;
-    }).filter(Boolean);
-    
+    // Get currently selected riders in this class (by id — not fragile label text)
+    const chosenRiderIds = Array.from(selectors)
+      .map((selector) => getSelectorChosenRiderId(selector))
+      .filter(Boolean);
     
     // Update each selector
     selectors.forEach(selector => {
       const riderOptions = selector.querySelectorAll('.rider-option');
-      const currentSelected = selector.querySelector('.selected-rider').textContent;
+      const currentId = getSelectorChosenRiderId(selector);
       
       riderOptions.forEach(option => {
         const riderId = option.dataset.riderId;
-        const isChosenElsewhere = chosenRiderIds.includes(riderId) && 
-                                 option.dataset.riderName !== currentSelected;
+        const isChosenElsewhere =
+          chosenRiderIds.includes(String(riderId)) && String(riderId) !== String(currentId || '');
         const isOut = option.dataset.out === 'true';
         
         // Check coast för 250 / WSX SX2
@@ -2771,12 +2814,15 @@ function ensureWizardDropdownsReady() {
   if (window._wizardDropdownsReady) return;
   populateAllRiderDropdowns();
   populateHiddenSelectsFromJson();
-  const riderClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
-  riderClasses.forEach((cls) => updateRiderSelectors(cls));
   updateHoleshotDropdowns();
   initializePreviewImages();
   if (typeof syncUiFromHiddenSelects === 'function') syncUiFromHiddenSelects();
   if (typeof syncHiddenSelectsFromUi === 'function') syncHiddenSelectsFromUi();
+  const riderClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+  riderClasses.forEach((cls) => {
+    if (typeof removeDuplicateTop6Selections === 'function') removeDuplicateTop6Selections(cls);
+    updateRiderSelectors(cls);
+  });
   window._wizardDropdownsReady = true;
 }
 window.ensureWizardDropdownsReady = ensureWizardDropdownsReady;
@@ -3499,6 +3545,9 @@ function onPickChange(cls, pos, riderId = null) {
   async function savePicks() {
     // Se till att dolda fält matchar det som syns (t.ex. efter snabböversikt / Ändra holeshot)
     if (typeof syncHiddenSelectsFromUi === 'function') syncHiddenSelectsFromUi();
+
+    const riderClassesCheck = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+    riderClassesCheck.forEach((cls) => removeDuplicateTop6Selections(cls));
 
     // Get race picks from rider-selector elements
     const picks = [];
