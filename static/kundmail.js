@@ -165,10 +165,14 @@ const UI = {
     },
     utgatt: {
       label: "Utgått / discontinuerad",
-      description: "Produkten tas bort ur sortimentet. Standard: vi avbryter ordern.",
+      description:
+        "Produkten tas bort ur sortimentet. Standard: vi avbryter ordern. Hjälparen kan öppna Motoaction för ersättning.",
       fields: {
         cancelOrder: { label: "Vi avbryter ordern (frågar inte kunden)" },
-        alternativeProduct: { label: "Föreslagen ersättning (valfritt)" },
+        alternativeProduct: {
+          label: "Föreslagen ersättning (valfritt)",
+          placeholder: "t.ex. Sidopaneler UFO",
+        },
         shipRestOfOrder: { label: "Stryk bara artikeln och skicka övriga i ordern" },
         refundNote: {
           label: "Återbetalning (vid avbrott)",
@@ -194,19 +198,33 @@ const UI = {
     },
     usa_forsening: {
       label: "USA-leverans — störningar",
-      description: "Produkt från USA försenad. Valfritt skickdatum + alternativ. Erbjud vänta, byt eller avboka.",
+      description:
+        "Produkt från USA försenad. Valfritt skickdatum + alternativ. Använd Motoaction-hjälparen för att hitta ersättning.",
       fields: {
         newDeliveryDate: { label: "Beräknat skickdatum (valfritt)" },
-        alternativeProduct: { label: "Alternativ produkt (valfritt)" },
-        productLink: { label: "Länk till alternativ (valfritt)" },
+        alternativeProduct: {
+          label: "Alternativ produkt (valfritt)",
+          placeholder: "t.ex. ersättningsartikel",
+        },
+        productLink: {
+          label: "Länk till alternativ (valfritt)",
+          placeholder: "https://www.motoaction.se/...",
+        },
       },
     },
     alternativ: {
       label: "Föreslår alternativ produkt",
-      description: "Original saknas — erbjud liknande artikel.",
+      description:
+        "Original saknas — erbjud liknande artikel. Använd Motoaction-hjälparen nedan för att hitta ersättning snabbare.",
       fields: {
-        alternativeProduct: { label: "Alternativ produkt" },
-        productLink: { label: "Länk till alternativ (valfritt)" },
+        alternativeProduct: {
+          label: "Alternativ produkt",
+          placeholder: "t.ex. Sidopaneler UFO",
+        },
+        productLink: {
+          label: "Länk till alternativ (valfritt)",
+          placeholder: "https://www.motoaction.se/...",
+        },
       },
     },
     avbokad: {
@@ -1835,6 +1853,273 @@ function renderTemplateOptions() {
   }
 }
 
+const MOTOACTION_HELPER_TEMPLATES = new Set(["alternativ", "utgatt", "usa_forsening"]);
+const MOTOACTION_HELPER_KEY = "kundmail_motoaction_helper_v1";
+
+function loadMotoactionHelperState() {
+  try {
+    return JSON.parse(localStorage.getItem(MOTOACTION_HELPER_KEY) || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveMotoactionHelperState(article, model) {
+  try {
+    localStorage.setItem(
+      MOTOACTION_HELPER_KEY,
+      JSON.stringify({
+        article: cleanStr(article),
+        model: cleanStr(model),
+      })
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+function titleCaseFromSlug(slug) {
+  return String(slug || "")
+    .replace(/[-_]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Extrahera produktnamn från motoaction.se-URL (slug före -p123). */
+function productNameFromMotoactionUrl(rawUrl) {
+  const raw = cleanStr(rawUrl);
+  if (!raw) return "";
+  try {
+    const u = new URL(raw.includes("://") ? raw : `https://${raw}`);
+    if (!/motoaction\.se/i.test(u.hostname)) return "";
+    const part = (u.pathname.split("/").filter(Boolean).pop() || "").split("?")[0];
+    const m = part.match(/^(.+)-p\d+$/i);
+    return titleCaseFromSlug(m ? m[1] : part);
+  } catch {
+    return "";
+  }
+}
+
+function openUrlInNewTab(url) {
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+async function copyToClipboardQuiet(text) {
+  const t = cleanStr(text);
+  if (!t) return false;
+  try {
+    await navigator.clipboard.writeText(t);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = t;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+function setHelperStatus(msg, isError = false) {
+  const el = $("maHelperStatus");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.classList.toggle("text-rose-400", !!isError);
+  el.classList.toggle("text-emerald-400", !isError && !!msg);
+  el.classList.toggle("text-slate-500", !msg);
+}
+
+function applyNameFromProductLink(rawUrl) {
+  const linkEl = $("extra_productLink");
+  const nameEl = $("extra_alternativeProduct");
+  const url = cleanStr(rawUrl) || cleanStr(linkEl?.value) || cleanStr($("maHelperPasteLink")?.value);
+  if (!url) {
+    setHelperStatus("Klistra in en Motoaction-länk först.", true);
+    return;
+  }
+  const guessed = productNameFromMotoactionUrl(url);
+  if (!guessed) {
+    setHelperStatus("Kunde inte läsa produktnamn från länken (måste vara motoaction.se).", true);
+    return;
+  }
+  if (linkEl) {
+    linkEl.value = url.startsWith("http") ? url : `https://${url}`;
+  }
+  if (nameEl) {
+    const cur = cleanStr(nameEl.value);
+    if (cur && cur !== guessed) {
+      if (!confirm(`Byt alternativ produkt till “${guessed}”?`)) return;
+    }
+    nameEl.value = guessed;
+  }
+  forceGenerate();
+  setHelperStatus(`Fyllde i: ${guessed}`);
+}
+
+async function openMotoactionArticleSearch() {
+  const article = cleanStr($("maHelperArticle")?.value) || cleanStr(els.productName?.value);
+  const model = cleanStr($("maHelperModel")?.value);
+  saveMotoactionHelperState(article, model);
+  if (!article) {
+    setHelperStatus("Fyll i PID / artikelnummer först.", true);
+    return;
+  }
+  await copyToClipboardQuiet(article);
+  // Site-sök via Google träffar produktsidor — Motoaction saknar enkel ?q=-URL.
+  openUrlInNewTab(`https://www.google.com/search?q=${encodeURIComponent(`site:motoaction.se ${article}`)}`);
+  openUrlInNewTab("https://www.motoaction.se/");
+  setHelperStatus("PID kopierat. Google-sök + Motoaction öppnade — klistra in i sök (Ctrl+V) om behövs.");
+}
+
+async function openMotoactionVehicleSearch() {
+  const article = cleanStr($("maHelperArticle")?.value);
+  const model = cleanStr($("maHelperModel")?.value);
+  saveMotoactionHelperState(article, model);
+  if (!model) {
+    setHelperStatus("Fyll i modell från ordern först.", true);
+    return;
+  }
+  await copyToClipboardQuiet(model);
+  openUrlInNewTab("https://www.motoaction.se/");
+  setHelperStatus("Modell kopierad. Klistra in i fordonssök / “Börja skriva för att söka” på Motoaction.");
+}
+
+async function openMotoactionBoth() {
+  const article = cleanStr($("maHelperArticle")?.value) || cleanStr(els.productName?.value);
+  const model = cleanStr($("maHelperModel")?.value);
+  saveMotoactionHelperState(article, model);
+  if (!article && !model) {
+    setHelperStatus("Fyll i artikelnummer och/eller modell.", true);
+    return;
+  }
+  if (article) {
+    await copyToClipboardQuiet(article);
+    openUrlInNewTab(`https://www.google.com/search?q=${encodeURIComponent(`site:motoaction.se ${article}`)}`);
+  }
+  openUrlInNewTab("https://www.motoaction.se/");
+  if (model && article) {
+    setHelperStatus(
+      "Artikel kopierad + sök öppnad. När du hittat produkten: använd kopierad modell i fordonssök (Ctrl+C igen om du kopierar om)."
+    );
+    // Leave model in helper field; second copy after user finds product — also copy model to a note
+  } else if (model) {
+    await copyToClipboardQuiet(model);
+    setHelperStatus("Modell kopierad — klistra in i fordonssök på Motoaction.");
+  } else {
+    setHelperStatus("Artikelnummer kopierat. Google-sök + Motoaction öppnade.");
+  }
+}
+
+function wireProductLinkHelpers() {
+  const linkEl = $("extra_productLink");
+  if (!linkEl || linkEl.dataset.maHelperWired === "1") return;
+  linkEl.dataset.maHelperWired = "1";
+  linkEl.addEventListener("paste", () => {
+    window.setTimeout(() => {
+      const guessed = productNameFromMotoactionUrl(linkEl.value);
+      const nameEl = $("extra_alternativeProduct");
+      if (!guessed || !nameEl) return;
+      if (!cleanStr(nameEl.value)) {
+        nameEl.value = guessed;
+        forceGenerate();
+        setHelperStatus(`Namn från länk: ${guessed}`);
+      }
+    }, 0);
+  });
+  linkEl.addEventListener("change", () => {
+    const guessed = productNameFromMotoactionUrl(linkEl.value);
+    const nameEl = $("extra_alternativeProduct");
+    if (guessed && nameEl && !cleanStr(nameEl.value)) {
+      nameEl.value = guessed;
+      forceGenerate();
+    }
+  });
+}
+
+function renderMotoactionHelper(wrap, tplId) {
+  if (!wrap || !MOTOACTION_HELPER_TEMPLATES.has(tplId)) return;
+
+  const saved = loadMotoactionHelperState();
+  const box = document.createElement("div");
+  box.className = "rounded-xl border border-amber-700/40 bg-amber-950/25 p-4 space-y-3";
+  box.innerHTML = `
+    <div>
+      <p class="text-sm font-semibold text-amber-200">Motoaction-hjälpare</p>
+      <p class="text-xs mt-1 text-slate-400 leading-relaxed">
+        Kopiera från ordern i admin: <strong class="text-slate-300">PID</strong> (sökbart på hemsidan)
+        + <strong class="text-slate-300">fordon</strong> (t.ex. Harley … Sportster Iron 2019).
+        Öppna sök, hitta ersättning, klistra in länken nedan — namn (och länkfält) fylls i automatiskt.
+      </p>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-3">
+      <div class="space-y-1">
+        <label for="maHelperArticle" class="block text-xs font-medium text-slate-400">PID / artikelnummer (hemsida)</label>
+        <input id="maHelperArticle" type="text" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+          placeholder="t.ex. 2330721" autocomplete="off" />
+      </div>
+      <div class="space-y-1">
+        <label for="maHelperModel" class="block text-xs font-medium text-slate-400">Fordon (från order)</label>
+        <input id="maHelperModel" type="text" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+          placeholder="t.ex. Harley Davidson XL 883 N ABS Sportster Iron 2019" autocomplete="off" />
+      </div>
+    </div>
+    <div class="space-y-1">
+      <label for="maHelperPasteLink" class="block text-xs font-medium text-slate-400">Klistra in ersättningslänk</label>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <input id="maHelperPasteLink" type="url" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+          placeholder="https://www.motoaction.se/..." />
+        <button type="button" id="maHelperFillFromLink" class="km-btn whitespace-nowrap">Använd länk</button>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button type="button" id="maHelperOpenArticle" class="km-btn">Sök PID på hemsidan</button>
+      <button type="button" id="maHelperOpenVehicle" class="km-btn">Sök fordon</button>
+      <button type="button" id="maHelperOpenBoth" class="km-btn km-btn-primary">Öppna båda</button>
+    </div>
+    <p id="maHelperStatus" class="text-xs text-slate-500 min-h-[1rem]"></p>
+  `;
+  wrap.appendChild(box);
+
+  const art = $("maHelperArticle");
+  const model = $("maHelperModel");
+  if (art) art.value = saved.article || "";
+  if (model) model.value = saved.model || "";
+
+  const persist = () => saveMotoactionHelperState(art?.value, model?.value);
+  art?.addEventListener("change", persist);
+  model?.addEventListener("change", persist);
+  art?.addEventListener("blur", persist);
+  model?.addEventListener("blur", persist);
+
+  $("maHelperOpenArticle")?.addEventListener("click", () => {
+    openMotoactionArticleSearch().catch(() => {});
+  });
+  $("maHelperOpenVehicle")?.addEventListener("click", () => {
+    openMotoactionVehicleSearch().catch(() => {});
+  });
+  $("maHelperOpenBoth")?.addEventListener("click", () => {
+    openMotoactionBoth().catch(() => {});
+  });
+  $("maHelperFillFromLink")?.addEventListener("click", () => {
+    applyNameFromProductLink($("maHelperPasteLink")?.value);
+  });
+  $("maHelperPasteLink")?.addEventListener("paste", () => {
+    window.setTimeout(() => {
+      applyNameFromProductLink($("maHelperPasteLink")?.value);
+    }, 0);
+  });
+
+  wireProductLinkHelpers();
+}
+
 function renderExtraFields() {
   const wrap = els.extraFields;
   if (!wrap) return;
@@ -1943,6 +2228,8 @@ function renderExtraFields() {
 
     wrap.appendChild(row);
   }
+
+  renderMotoactionHelper(wrap, tpl.id);
 }
 
 function refreshUi() {
