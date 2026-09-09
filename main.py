@@ -1736,6 +1736,204 @@ def _wsx_wildcard_names_for_competition(comp: Competition | None) -> set[str]:
     return set(_WSX_ROUND_WILDCARDS.get((comp.name or "").strip(), set()))
 
 
+# SMX Playoff provisional entry lists (RacerX). Tippa = Combined∪entry; off-entry Combined → OUT.
+_SMX_PLAYOFF_1_450_ENTRY = {
+    "Cooper Webb",
+    "Eli Tomac",
+    "Aaron Plessinger",
+    "Shane McElrath",
+    "Dylan Ferrandis",
+    "Dean Wilson",
+    "Jordon Smith",
+    "Jason Anderson",
+    "R.J. Hampshire",
+    "Jorge Prado",
+    "Malcolm Stewart",
+    "Christian Craig",
+    "Justin Cooper",
+    "Garrett Marchbanks",
+    "Haiden Deegan",
+    "Valentin Guillod",
+    "Mitchell Harrison",
+    "Colt Nichols",
+    "Justin Hill",
+    "Justin Barcia",
+    "Benny Bloss",
+    "Grant Harlan",
+    "Fredrik Noren",
+    "Ken Roczen",
+    "Hunter Lawrence",
+    "Cornelius Tøndel",
+    "Vince Friese",
+}
+_SMX_PLAYOFF_1_250_ENTRY = {
+    "Julien Beaumer",
+    "Max Vohland",
+    "Michael Mosiman",
+    "Nate Thrasher",
+    "Chance Hymas",
+    "Jo Shimoda",
+    "Ryder DiFrancesco",
+    "Drew Adams",
+    "Cole Davies",
+    "Parker Ross",
+    "Dilan Schwartz",
+    "Levi Kitchen",
+    "Henry Miller",
+    "Avery Long",
+    "Daxton Bennick",
+    "Hunter Yoder",
+    "Max Anstie",
+    "Devin Simonson",
+    "Kayden Minear",
+    "Nick Romano",
+    "Cameron McAdoo",
+    "Pierce Brown",
+    "Landen Gordon",
+}
+_SMX_ENTRY_BY_COMP_NAME = {
+    "SMX Playoff 1": {
+        "450": _SMX_PLAYOFF_1_450_ENTRY,
+        "250": _SMX_PLAYOFF_1_250_ENTRY,
+    },
+}
+_SMX_ENTRY_NAME_ALIASES = {
+    "rj hampshire": "r.j. hampshire",
+    "vince freise": "vince friese",
+    "cornelius tondel": "cornelius tøndel",
+    "ryder difrancesco": "ryder difrancesco",
+}
+
+
+def _smx_entry_name_key(name: str | None) -> str:
+    s = (name or "").strip().lower()
+    s = (
+        s.replace("ø", "o")
+        .replace("ö", "o")
+        .replace("ü", "u")
+        .replace("ä", "a")
+        .replace(".", "")
+        .replace("'", "")
+    )
+    s = re.sub(r"\s+", " ", s).strip()
+    return _SMX_ENTRY_NAME_ALIASES.get(s, s)
+
+
+def _smx_entry_names_for_competition(comp: Competition | None) -> dict[str, set[str]]:
+    if not comp or (getattr(comp, "series", None) or "").strip().upper() != "SMX":
+        return {}
+    return dict(_SMX_ENTRY_BY_COMP_NAME.get((comp.name or "").strip(), {}) or {})
+
+
+def _smx_resolve_entry_rider_ids(comp: Competition | None) -> dict[str, set[int]]:
+    """Map entry-list names → rider ids for 450/250."""
+    names_by_class = _smx_entry_names_for_competition(comp)
+    if not names_by_class:
+        return {"450": set(), "250": set()}
+
+    out: dict[str, set[int]] = {"450": set(), "250": set()}
+    for class_key, class_name in (("450", "450cc"), ("250", "250cc")):
+        wanted = {_smx_entry_name_key(n) for n in (names_by_class.get(class_key) or set())}
+        if not wanted:
+            continue
+        riders = (
+            rider_query_for_list_ui()
+            .filter(Rider.class_name == class_name)
+            .all()
+        )
+        by_key: dict[str, Rider] = {}
+        for r in riders:
+            by_key[_smx_entry_name_key(r.name)] = r
+        for key in wanted:
+            rider = by_key.get(key)
+            if rider:
+                out[class_key].add(int(rider.id))
+    return out
+
+
+def sync_smx_playoff_entry_list(comp: Competition | None) -> dict:
+    """
+    Align SMX tippa with provisional entry list for this round.
+    Combined riders not on entry → OUT. Entry riders clear OUT.
+    Also fixes known plate numbers (e.g. Dean Wilson #15).
+    """
+    if not comp or (getattr(comp, "series", None) or "").strip().upper() != "SMX":
+        return {"skipped": True, "reason": "not_smx"}
+    names_by_class = _smx_entry_names_for_competition(comp)
+    if not names_by_class:
+        return {"skipped": True, "reason": "no_entry_map"}
+
+    entry_ids = _smx_resolve_entry_rider_ids(comp)
+    entry_all = set(entry_ids.get("450") or ()) | set(entry_ids.get("250") or ())
+    combined = smx_playoff_field_meta(limit=30, competition=None)
+    combined_all = set((combined.get("450") or {})) | set((combined.get("250") or {}))
+
+    # Plate fix: Dean Wilson races #15 in 2026 SMX
+    wilson = (
+        rider_query_for_list_ui()
+        .filter(Rider.class_name == "450cc", Rider.name == "Dean Wilson")
+        .first()
+    )
+    number_fixes = 0
+    if wilson and int(wilson.rider_number or 0) != 15:
+        wilson.rider_number = 15
+        number_fixes += 1
+
+    marked_out = 0
+    cleared = 0
+    for rid in combined_all:
+        on_entry = rid in entry_all
+        row = CompetitionRiderStatus.query.filter_by(
+            competition_id=comp.id, rider_id=rid
+        ).first()
+        if on_entry:
+            if row:
+                db.session.delete(row)
+                cleared += 1
+            continue
+        if not row:
+            db.session.add(
+                CompetitionRiderStatus(
+                    competition_id=comp.id, rider_id=rid, status="OUT"
+                )
+            )
+            marked_out += 1
+        elif row.status != "OUT":
+            row.status = "OUT"
+            marked_out += 1
+
+    # Entry-only fill-ins must not stay OUT
+    for rid in entry_all:
+        row = CompetitionRiderStatus.query.filter_by(
+            competition_id=comp.id, rider_id=rid
+        ).first()
+        if row:
+            db.session.delete(row)
+            cleared += 1
+
+    if marked_out or cleared or number_fixes:
+        db.session.commit()
+
+    try:
+        prune_off_roster_smx_picks(int(comp.id))
+    except Exception as prune_err:
+        print(f"[SMX-ENTRY] pick prune skipped: {prune_err}")
+
+    info = {
+        "competition_id": int(comp.id),
+        "entry_450": len(entry_ids.get("450") or ()),
+        "entry_250": len(entry_ids.get("250") or ()),
+        "marked_out": marked_out,
+        "cleared": cleared,
+        "number_fixes": number_fixes,
+    }
+    print(
+        f"[SMX-ENTRY] {comp.name}: out={marked_out} cleared={cleared} "
+        f"entry={info['entry_450']}+{info['entry_250']} number_fixes={number_fixes}"
+    )
+    return info
+
+
 _WSX_VENUE_BY_NAME = {
     "Canadian GP": "Calgary — McMahon Stadium",
     "British GP": "Birmingham — Alexander Stadium",
@@ -5510,18 +5708,20 @@ def _out_rider_ids(competition_id: int) -> set[int]:
         return set()
 
 
-def _riders_450_scope(out_ids: set[int], *, series: str | None = None) -> list[Rider]:
+def _riders_450_scope(
+    out_ids: set[int], *, series: str | None = None, competition: Competition | None = None
+) -> list[Rider]:
     if series == "WSX":
         return [r for r in wsx_roster_query("wsx_sx1").all() if r.id not in out_ids]
     q = rider_query_for_list_ui().filter(Rider.class_name == "450cc")
     riders = [r for r in q.all() if r.id not in out_ids]
     if (series or "").strip().upper() == "SMX":
-        riders = _restrict_riders_to_smx_field(riders, "450")
+        riders = _restrict_riders_to_smx_field(riders, "450", competition=competition)
     return riders
 
 
 def _riders_250_scope(
-    out_ids: set[int], coast: str | None, *, series: str | None = None
+    out_ids: set[int], coast: str | None, *, series: str | None = None, competition: Competition | None = None
 ) -> tuple[list[Rider], list[Rider] | None]:
     """
     Returns (single_list, split_pair).
@@ -5538,7 +5738,7 @@ def _riders_250_scope(
         if r.id not in out_ids
     ]
     if (series or "").strip().upper() == "SMX":
-        base = _restrict_riders_to_smx_field(base, "250")
+        base = _restrict_riders_to_smx_field(base, "250", competition=competition)
     c = (coast or "").lower()
     if c == "both":
         east = [r for r in base if (r.coast_250 or "") in ("east", "both")]
@@ -6354,13 +6554,18 @@ def build_power_ranking_payload(target: Competition) -> dict:
     else:
         fw, cw = 0.55, 0.45
 
-    riders_450 = _riders_450_scope(out_ids, series=series_code)
+    riders_450 = _riders_450_scope(out_ids, series=series_code, competition=target)
     # För SX: visa alltid både East/West power rankings (även om veckans coast är bara en av dem).
     if series_code == "SX":
-        single_250, split_250 = _riders_250_scope(out_ids, "both", series=series_code)
+        single_250, split_250 = _riders_250_scope(
+            out_ids, "both", series=series_code, competition=target
+        )
     else:
         single_250, split_250 = _riders_250_scope(
-            out_ids, getattr(target, "coast_250", None), series=series_code
+            out_ids,
+            getattr(target, "coast_250", None),
+            series=series_code,
+            competition=target,
         )
 
     label_450 = "SX1" if series_code == "WSX" else "450cc"
@@ -6603,8 +6808,17 @@ def _challenge_riders_for_competition(comp: Competition) -> dict[str, list[dict]
             )
         riders_250 = riders_250_query.order_by(Rider.rider_number).all()
         if (getattr(comp, "series", None) or "").strip().upper() == "SMX":
-            riders_450 = _restrict_riders_to_smx_field(riders_450, "450")
-            riders_250 = _restrict_riders_to_smx_field(riders_250, "250")
+            try:
+                sync_smx_playoff_entry_list(comp)
+            except Exception as sync_err:
+                print(f"SMX entry sync skipped: {sync_err}")
+                db.session.rollback()
+            riders_450 = _restrict_riders_to_smx_field(
+                riders_450, "450", competition=comp
+            )
+            riders_250 = _restrict_riders_to_smx_field(
+                riders_250, "250", competition=comp
+            )
         keys = ("450cc", "250cc")
 
     def _row(r: Rider) -> dict:
@@ -10308,12 +10522,21 @@ def race_picks_page(competition_id):
         riders_250 = riders_250_query.order_by(Rider.rider_number).all()
         if (getattr(comp, "series", None) or "").strip().upper() == "SMX":
             try:
+                sync_smx_playoff_entry_list(comp)
+            except Exception as sync_err:
+                print(f"SMX entry sync skipped: {sync_err}")
+                db.session.rollback()
+            try:
                 prune_off_roster_smx_picks(int(comp.id))
             except Exception as prune_err:
                 print(f"SMX pick prune skipped: {prune_err}")
                 db.session.rollback()
-            riders_450 = _restrict_riders_to_smx_field(riders_450, "450")
-            riders_250 = _restrict_riders_to_smx_field(riders_250, "250")
+            riders_450 = _restrict_riders_to_smx_field(
+                riders_450, "450", competition=comp
+            )
+            riders_250 = _restrict_riders_to_smx_field(
+                riders_250, "250", competition=comp
+            )
 
     pick_rider_ids = [r.id for r in riders_450] + [r.id for r in riders_250]
     ids_with_db_portrait: frozenset[int] = frozenset()
@@ -10342,7 +10565,7 @@ def race_picks_page(competition_id):
     smx_meta_250: dict[int, dict] = {}
     if is_smx:
         try:
-            _smx_meta = smx_playoff_field_meta()
+            _smx_meta = smx_playoff_field_meta(competition=comp)
             smx_meta_450 = _smx_meta.get("450") or {}
             smx_meta_250 = _smx_meta.get("250") or {}
         except Exception:
@@ -30501,10 +30724,13 @@ def calculate_smx_qualification_points(*, limit: int = 30) -> dict[str, list[tup
     return result
 
 
-def smx_playoff_field_meta(*, limit: int = 30) -> dict[str, dict[int, dict]]:
+def smx_playoff_field_meta(
+    *, limit: int = 30, competition: Competition | None = None
+) -> dict[str, dict[int, dict]]:
     """
     SMX tipp-fält per klass: rider_id → {rank, zone}.
     Topp 20 = seeded, 21–30 = lcq. 450-promoted (t.ex. Deegan) tas bort från 250.
+    Om competition har provisional entry: unionera in entry-only fill-ins (zone=entry).
     """
     empty: dict[str, dict[int, dict]] = {"450": {}, "250": {}}
     try:
@@ -30536,22 +30762,40 @@ def smx_playoff_field_meta(*, limit: int = 30) -> dict[str, dict[int, dict]]:
             "rank": rank,
             "zone": _smx_qualification_zone(rank),
         }
+
+    # Provisional entry fill-ins (e.g. Dean Wilson) must be tippable
+    try:
+        entry_ids = _smx_resolve_entry_rider_ids(competition)
+        for class_key, meta in (("450", meta_450), ("250", meta_250)):
+            for rid in entry_ids.get(class_key) or ():
+                if rid in meta:
+                    continue
+                if class_key == "250" and rid in meta_450:
+                    continue
+                meta[int(rid)] = {"rank": 100, "zone": "entry"}
+    except Exception as exc:
+        print(f"WARNING smx entry union: {exc}")
+
     return {"450": meta_450, "250": meta_250}
 
 
-def smx_playoff_field_ids(*, limit: int = 30) -> dict[str, set[int]]:
-    """SMX tipp-fält: topp 20 seed + LCQ-bubbla 21–30."""
-    meta = smx_playoff_field_meta(limit=limit)
+def smx_playoff_field_ids(
+    *, limit: int = 30, competition: Competition | None = None
+) -> dict[str, set[int]]:
+    """SMX tipp-fält: topp 20 seed + LCQ-bubbla 21–30 (+ entry fill-ins)."""
+    meta = smx_playoff_field_meta(limit=limit, competition=competition)
     return {
         "450": set(meta.get("450") or {}),
         "250": set(meta.get("250") or {}),
     }
 
 
-def _restrict_riders_to_smx_field(riders: list, class_key: str) -> list:
+def _restrict_riders_to_smx_field(
+    riders: list, class_key: str, *, competition: Competition | None = None
+) -> list:
     """Keep only SMX playoff-field riders, sorted by Combined seed rank. Empty → unchanged."""
     key = "450" if class_key == "450" else "250"
-    meta = smx_playoff_field_meta().get(key) or {}
+    meta = smx_playoff_field_meta(competition=competition).get(key) or {}
     if not meta:
         return riders
     filtered = [r for r in riders if getattr(r, "id", None) in meta]
@@ -30565,12 +30809,12 @@ def _restrict_riders_to_smx_field(riders: list, class_key: str) -> list:
 
 
 def prune_off_roster_smx_picks(competition_id: int) -> dict[str, int]:
-    """Ta bort tippa/holeshot/wildcard utanför SMX topp-30-fältet."""
+    """Ta bort tippa/holeshot/wildcard utanför SMX-fältet (Combined∪entry)."""
     comp = Competition.query.get(int(competition_id))
     if not comp or (getattr(comp, "series", None) or "").upper() != "SMX":
         return {"deleted_race": 0, "deleted_hs": 0, "deleted_wc": 0, "skipped": 1}
 
-    field = smx_playoff_field_ids()
+    field = smx_playoff_field_ids(competition=comp)
     allowed = set(field.get("450") or ()) | set(field.get("250") or ())
     if not allowed:
         return {"deleted_race": 0, "deleted_hs": 0, "deleted_wc": 0, "skipped": 1}
