@@ -50,9 +50,10 @@
             {% for n in nations %}
             {% set seat = (n.lineup or {}).get(key) or {} %}
             {% set rider = 'TBA' if seat.get('is_tba') or not seat.get('rider_name') else seat.get('rider_name') %}
+            {% set num = seat.get('rider_number') %}
             <option value="{{ n.id }}"
               {% if class_results.get(key) and class_results[key].nation_id == n.id %}selected{% endif %}>
-              {{ n.name }} — {{ rider }} ({{ n.code }})
+              {{ n.name }} — {% if num is not none %}#{{ num }} {% endif %}{{ rider }} ({{ n.code }})
             </option>
             {% endfor %}
           </select>

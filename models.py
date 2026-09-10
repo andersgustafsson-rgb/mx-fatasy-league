@@ -608,6 +608,7 @@ class MxonTeamEntry(db.Model):
     class_name = db.Column(db.String(10), nullable=False)  # mxgp | mx2 | open
     rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"), nullable=True)
     rider_name = db.Column(db.String(120), nullable=True)
+    rider_number = db.Column(db.Integer, nullable=True)  # official MXoN bib (plate)
     is_tba = db.Column(db.Boolean, default=False, nullable=False)
     nation = db.relationship("MxonNation", backref=db.backref("team_entries", lazy="dynamic"))
     rider = db.relationship("Rider", lazy=True)

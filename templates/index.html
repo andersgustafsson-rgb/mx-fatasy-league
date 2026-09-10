@@ -4740,11 +4740,14 @@
       const name = (pick.rider_name && !pick.is_tba)
         ? pick.rider_name
         : (pick.name || '—');
+      const numLabel = pick.rider_number != null
+        ? `#${_escHome(pick.rider_number)}`
+        : _escHome(pick.code || '');
       return `<li class="wizard-summary-slot">
         <span class="wizard-summary-pos wizard-summary-pos--class">${_escHome(label)}</span>
         ${flag}
         <div class="wizard-summary-rider">
-          <span class="wizard-summary-num">${_escHome(pick.code || '')}</span>
+          <span class="wizard-summary-num">${numLabel}</span>
           <span class="wizard-summary-name">${_escHome(name)}</span>
         </div>
       </li>`;

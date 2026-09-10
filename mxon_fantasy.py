@@ -21,40 +21,41 @@ from models import (
 
 # Speedweek / FIM provisional entry list (Ernée 2026), Sep 2026.
 # TBA seats marked with rider name "TBA" / is_tba=True.
+# `no` = official plate numbers (MXGP, MX2, OPEN) from FIM entry list.
 MXON_2026_ERNEE_TEAMS: list[dict[str, Any]] = [
-    {"code": "AUS", "name": "Australia", "mxgp": "Jed Beaton", "mx2": "Alex Larwood", "open": "Aaron Tanti"},
-    {"code": "USA", "name": "United States", "mxgp": "Chance Hymas", "mx2": "Levi Kitchen", "open": "Cooper Webb"},
-    {"code": "FRA", "name": "France", "mxgp": "Romain Febvre", "mx2": "Mathis Valin", "open": "Tom Vialle"},
-    {"code": "BEL", "name": "Belgium", "mxgp": "Lucas Coenen", "mx2": "Sacha Coenen", "open": "Liam Everts"},
-    {"code": "SLO", "name": "Slovenia", "mxgp": "Tim Gajser", "mx2": "Jaka Peklaj", "open": "Jan Pancar"},
-    {"code": "ITA", "name": "Italy", "mxgp": "Andrea Adamo", "mx2": "Ferruccio Zanchi", "open": "Andrea Bonacorsi"},
-    {"code": "SWE", "name": "Sweden", "mxgp": "Isak Gifting", "mx2": "Alve Callemo", "open": "Alvin Östlund"},
-    {"code": "SUI", "name": "Switzerland", "mxgp": "Valentin Guillod", "mx2": "Jeremy Seewer", "open": "Kevin Brumann"},
-    {"code": "LAT", "name": "Latvia", "mxgp": "Karlis Alberts Reisulis", "mx2": "Janis Martins Reisulis", "open": "Pauls Jonass"},
-    {"code": "ESP", "name": "Spain", "mxgp": "Jorge Prado", "mx2": "Guillem Farres", "open": "Ruben Fernandez"},
-    {"code": "JPN", "name": "Japan", "mxgp": "Kainosuke Oshiro", "mx2": "Haruki Yokoyama", "open": "Yuki Okura"},
-    {"code": "BRA", "name": "Brazil", "mxgp": "Fabio Santos", "mx2": "TBA", "open": "Enzo Lopes"},
-    {"code": "EST", "name": "Estonia", "mxgp": "Jorgen-Matthias Talviku", "mx2": "Sebastian Leok", "open": "Harri Kullas"},
-    {"code": "RSA", "name": "South Africa", "mxgp": "Tristan Purdon", "mx2": "Camden McLellan", "open": "Slade Smith"},
-    {"code": "GER", "name": "Germany", "mxgp": "Tom Koch", "mx2": "Valentin Kees", "open": "Noah Ludwig"},
-    {"code": "GBR", "name": "Great Britain", "mxgp": "Taylor Hammal", "mx2": "Ben Mustoe", "open": "Ben Watson"},
-    {"code": "NOR", "name": "Norway", "mxgp": "Kevin Horgmo", "mx2": "Pelle Gundersen", "open": "Hakon Osterhagen"},
-    {"code": "NED", "name": "Netherlands", "mxgp": "TBA", "mx2": "Roan van de Moosdijk", "open": "Jeffrey Herlings"},
-    {"code": "DEN", "name": "Denmark", "mxgp": "Mads Fredsoe", "mx2": "Nicolai Skovbjerg", "open": "Mikkel Haarup"},
-    {"code": "AUT", "name": "Austria", "mxgp": "Michael Kratzer", "mx2": "Ricardo Bauer", "open": "Michael Sandner"},
-    {"code": "CAN", "name": "Canada", "mxgp": "Tanner Ward", "mx2": "Dylan Rempel", "open": "Dylan Wright"},
-    {"code": "FIN", "name": "Finland", "mxgp": "Emil Weckman", "mx2": "Saku Mansikkamäki", "open": "Jere Haavisto"},
-    {"code": "CHI", "name": "Chile", "mxgp": "Benjamin Garib", "mx2": "Nicolas Israel", "open": "Cesar Paine Diaz"},
-    {"code": "IRL", "name": "Ireland", "mxgp": "Lennox Cambridge", "mx2": "Glenn McCormick", "open": "Jason Meara"},
-    {"code": "LAM", "name": "FIM Latin America", "mxgp": "Joaquin Poli", "mx2": "Carlos Badiali", "open": "Fabricio Chacon"},
-    {"code": "MAR", "name": "Morocco", "mxgp": "Maxime Simon", "mx2": "Saad Soulimani", "open": "Noam Jayal"},
-    {"code": "MEX", "name": "Mexico", "mxgp": "Jorge Israel Rubalcava", "mx2": "Fernando Velazquez", "open": "Erick Ismael Vasquez Diaz"},
-    {"code": "ISL", "name": "Iceland", "mxgp": "Ingvar Sverrir Einarsson", "mx2": "Eric Mani Gudmundsson", "open": "Tristan Berg Arason"},
-    {"code": "UKR", "name": "Ukraine", "mxgp": "Roman Morozov", "mx2": "Vasyl Kurosh", "open": "Mykhailo Vasko"},
-    {"code": "CZE", "name": "Czech Republic", "mxgp": "Petr Rathousky", "mx2": "Julius Mikula", "open": "Vaclav Kovar"},
-    {"code": "CRO", "name": "Croatia", "mxgp": "Matija Kelava", "mx2": "Simun Ivandic", "open": "Matej Jaros"},
-    {"code": "SVK", "name": "Slovakia", "mxgp": "Tomas Kohut", "mx2": "Jaroslav Katrinak", "open": "Pavol Repcak"},
-    {"code": "LTU", "name": "Lithuania", "mxgp": "Domantas Jazdauskas", "mx2": "Marius Adomaitis", "open": "Erlandas Mackonis"},
+    {"code": "AUS", "name": "Australia", "mxgp": "Jed Beaton", "mx2": "Alex Larwood", "open": "Aaron Tanti", "no": (1, 2, 3)},
+    {"code": "USA", "name": "United States", "mxgp": "Chance Hymas", "mx2": "Levi Kitchen", "open": "Cooper Webb", "no": (4, 5, 6)},
+    {"code": "FRA", "name": "France", "mxgp": "Romain Febvre", "mx2": "Mathis Valin", "open": "Tom Vialle", "no": (7, 8, 9)},
+    {"code": "BEL", "name": "Belgium", "mxgp": "Lucas Coenen", "mx2": "Sacha Coenen", "open": "Liam Everts", "no": (10, 11, 12)},
+    {"code": "SLO", "name": "Slovenia", "mxgp": "Tim Gajser", "mx2": "Jaka Peklaj", "open": "Jan Pancar", "no": (13, 14, 15)},
+    {"code": "ITA", "name": "Italy", "mxgp": "Andrea Adamo", "mx2": "Ferruccio Zanchi", "open": "Andrea Bonacorsi", "no": (16, 17, 18)},
+    {"code": "SWE", "name": "Sweden", "mxgp": "Isak Gifting", "mx2": "Alve Callemo", "open": "Alvin Östlund", "no": (19, 20, 21)},
+    {"code": "SUI", "name": "Switzerland", "mxgp": "Valentin Guillod", "mx2": "Jeremy Seewer", "open": "Kevin Brumann", "no": (22, 23, 24)},
+    {"code": "LAT", "name": "Latvia", "mxgp": "Karlis Alberts Reisulis", "mx2": "Janis Martins Reisulis", "open": "Pauls Jonass", "no": (25, 26, 27)},
+    {"code": "ESP", "name": "Spain", "mxgp": "Jorge Prado", "mx2": "Guillem Farres", "open": "Ruben Fernandez", "no": (28, 29, 30)},
+    {"code": "JPN", "name": "Japan", "mxgp": "Kainosuke Oshiro", "mx2": "Haruki Yokoyama", "open": "Yuki Okura", "no": (31, 32, 33)},
+    {"code": "BRA", "name": "Brazil", "mxgp": "Fabio Santos", "mx2": "TBA", "open": "Enzo Lopes", "no": (34, 35, 36)},
+    {"code": "EST", "name": "Estonia", "mxgp": "Jorgen-Matthias Talviku", "mx2": "Sebastian Leok", "open": "Harri Kullas", "no": (37, 38, 39)},
+    {"code": "RSA", "name": "South Africa", "mxgp": "Tristan Purdon", "mx2": "Camden McLellan", "open": "Slade Smith", "no": (40, 41, 42)},
+    {"code": "GER", "name": "Germany", "mxgp": "Tom Koch", "mx2": "Valentin Kees", "open": "Noah Ludwig", "no": (43, 44, 45)},
+    {"code": "GBR", "name": "Great Britain", "mxgp": "Taylor Hammal", "mx2": "Ben Mustoe", "open": "Ben Watson", "no": (46, 47, 48)},
+    {"code": "NOR", "name": "Norway", "mxgp": "Kevin Horgmo", "mx2": "Pelle Gundersen", "open": "Hakon Osterhagen", "no": (52, 53, 54)},
+    {"code": "NED", "name": "Netherlands", "mxgp": "TBA", "mx2": "Roan van de Moosdijk", "open": "Jeffrey Herlings", "no": (55, 56, 57)},
+    {"code": "DEN", "name": "Denmark", "mxgp": "Mads Fredsoe", "mx2": "Nicolai Skovbjerg", "open": "Mikkel Haarup", "no": (58, 59, 60)},
+    {"code": "AUT", "name": "Austria", "mxgp": "Michael Kratzer", "mx2": "Ricardo Bauer", "open": "Michael Sandner", "no": (61, 62, 63)},
+    {"code": "CAN", "name": "Canada", "mxgp": "Tanner Ward", "mx2": "Dylan Rempel", "open": "Dylan Wright", "no": (64, 65, 66)},
+    {"code": "FIN", "name": "Finland", "mxgp": "Emil Weckman", "mx2": "Saku Mansikkamäki", "open": "Jere Haavisto", "no": (67, 68, 69)},
+    {"code": "CHI", "name": "Chile", "mxgp": "Benjamin Garib", "mx2": "Nicolas Israel", "open": "Cesar Paine Diaz", "no": (70, 71, 72)},
+    {"code": "IRL", "name": "Ireland", "mxgp": "Lennox Cambridge", "mx2": "Glenn McCormick", "open": "Jason Meara", "no": (85, 86, 87)},
+    {"code": "LAM", "name": "FIM Latin America", "mxgp": "Joaquin Poli", "mx2": "Carlos Badiali", "open": "Fabricio Chacon", "no": (88, 89, 90)},
+    {"code": "MAR", "name": "Morocco", "mxgp": "Maxime Simon", "mx2": "Saad Soulimani", "open": "Noam Jayal", "no": (91, 92, 93)},
+    {"code": "MEX", "name": "Mexico", "mxgp": "Jorge Israel Rubalcava", "mx2": "Fernando Velazquez", "open": "Erick Ismael Vasquez Diaz", "no": (97, 98, 99)},
+    {"code": "ISL", "name": "Iceland", "mxgp": "Ingvar Sverrir Einarsson", "mx2": "Eric Mani Gudmundsson", "open": "Tristan Berg Arason", "no": (100, 101, 102)},
+    {"code": "UKR", "name": "Ukraine", "mxgp": "Roman Morozov", "mx2": "Vasyl Kurosh", "open": "Mykhailo Vasko", "no": (103, 104, 105)},
+    {"code": "CZE", "name": "Czech Republic", "mxgp": "Petr Rathousky", "mx2": "Julius Mikula", "open": "Vaclav Kovar", "no": (115, 116, 117)},
+    {"code": "CRO", "name": "Croatia", "mxgp": "Matija Kelava", "mx2": "Simun Ivandic", "open": "Matej Jaros", "no": (118, 119, 120)},
+    {"code": "SVK", "name": "Slovakia", "mxgp": "Tomas Kohut", "mx2": "Jaroslav Katrinak", "open": "Pavol Repcak", "no": (121, 122, 123)},
+    {"code": "LTU", "name": "Lithuania", "mxgp": "Domantas Jazdauskas", "mx2": "Marius Adomaitis", "open": "Erlandas Mackonis", "no": (124, 125, 126)},
 ]
 
 # Motorsport codes → ISO 3166-1 alpha-2 for flag emoji
@@ -132,20 +133,59 @@ CLASS_FAVORITE_POINTS = 15
 
 
 def rider_seat_for_nation(nation_id: int, class_name: str) -> dict[str, Any]:
-    """Return {rider_name, is_tba} for a nation's class seat."""
+    """Return {rider_name, rider_number, is_tba} for a nation's class seat."""
     key = (class_name or "").lower()
     entry = MxonTeamEntry.query.filter_by(nation_id=nation_id, class_name=key).first()
     if not entry:
-        return {"rider_name": "TBA", "is_tba": True}
+        return {"rider_name": "TBA", "rider_number": None, "is_tba": True}
     is_tba = bool(entry.is_tba) or not (entry.rider_name or "").strip()
     return {
         "rider_name": "TBA" if is_tba else (entry.rider_name or "").strip(),
+        "rider_number": entry.rider_number,
         "is_tba": is_tba,
     }
 
 
+def format_mxon_rider_label(seat: dict[str, Any] | None, *, with_number: bool = True) -> str:
+    """Display label like '#19 Isak Gifting' or 'TBA'."""
+    if not seat:
+        return "TBA"
+    name = "TBA" if seat.get("is_tba") else (seat.get("rider_name") or "TBA")
+    num = seat.get("rider_number")
+    if with_number and num is not None:
+        return f"#{num} {name}"
+    return name
+
+
 def class_rider_label(nation_id: int, class_name: str) -> str:
-    return rider_seat_for_nation(nation_id, class_name)["rider_name"]
+    return format_mxon_rider_label(rider_seat_for_nation(nation_id, class_name))
+
+
+def _ensure_mxon_team_rider_number_column() -> None:
+    """Best-effort ADD COLUMN so prod works before/without alembic migrate."""
+    try:
+        url = str(db.engine.url)
+        if "sqlite" in url:
+            rows = db.session.execute(db.text("PRAGMA table_info(mxon_team_entries)")).fetchall()
+            cols = {r[1] for r in rows}
+            if "rider_number" not in cols:
+                db.session.execute(
+                    db.text("ALTER TABLE mxon_team_entries ADD COLUMN rider_number INTEGER")
+                )
+                db.session.commit()
+        else:
+            db.session.execute(
+                db.text(
+                    "ALTER TABLE mxon_team_entries "
+                    "ADD COLUMN IF NOT EXISTS rider_number INTEGER"
+                )
+            )
+            db.session.commit()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
 
 
 def flag_emoji_for_code(code: str) -> str:
@@ -201,6 +241,7 @@ def nation_dict(n: MxonNation, *, include_lineup: bool = True) -> dict:
         for e in MxonTeamEntry.query.filter_by(nation_id=n.id).all():
             lineup[e.class_name] = {
                 "rider_name": e.rider_name,
+                "rider_number": e.rider_number,
                 "is_tba": bool(e.is_tba),
                 "rider_id": e.rider_id,
             }
@@ -210,6 +251,7 @@ def nation_dict(n: MxonNation, *, include_lineup: bool = True) -> dict:
 
 def ensure_mxon_2026(*, attach_track_image: bool = True) -> dict:
     """Upsert MXON Series + Ernée competition + 33 nations + provisional lineups."""
+    _ensure_mxon_team_rider_number_column()
     created_series = False
     mxon = Series.query.filter(
         Series.year == 2026,
@@ -298,20 +340,28 @@ def ensure_mxon_2026(*, attach_track_image: bool = True) -> dict:
             nation.is_active = True
             nations_updated += 1
 
-        for cls_key in ("mxgp", "mx2", "open"):
+        for cls_i, cls_key in enumerate(("mxgp", "mx2", "open")):
             rider_name = (team.get(cls_key) or "").strip() or "TBA"
             is_tba = rider_name.upper() == "TBA"
+            numbers = team.get("no") or (None, None, None)
+            rider_number = None
+            try:
+                rider_number = int(numbers[cls_i]) if numbers[cls_i] is not None else None
+            except (TypeError, ValueError, IndexError):
+                rider_number = None
             entry = MxonTeamEntry.query.filter_by(nation_id=nation.id, class_name=cls_key).first()
             if not entry:
                 entry = MxonTeamEntry(
                     nation_id=nation.id,
                     class_name=cls_key,
                     rider_name=None if is_tba else rider_name,
+                    rider_number=rider_number,
                     is_tba=is_tba,
                 )
                 db.session.add(entry)
             else:
                 entry.rider_name = None if is_tba else rider_name
+                entry.rider_number = rider_number
                 entry.is_tba = is_tba
             entries_upserted += 1
 
@@ -455,6 +505,7 @@ def get_user_class_picks(user_id: int, competition_id: int) -> dict[str, dict]:
             "name": n.name if n else None,
             "flag_url": flag_image_url(code) if code else None,
             "rider_name": seat["rider_name"],
+            "rider_number": seat.get("rider_number"),
             "is_tba": seat["is_tba"],
         }
     return out
@@ -531,6 +582,7 @@ def get_class_results(competition_id: int) -> dict[str, dict]:
             "code": code or None,
             "name": n.name if n else None,
             "rider_name": seat["rider_name"],
+            "rider_number": seat.get("rider_number"),
             "is_tba": seat["is_tba"],
         }
     return out

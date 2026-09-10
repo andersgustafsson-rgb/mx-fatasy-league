@@ -58,7 +58,7 @@
             {% endif %}
             {% if pick %}
             <div class="wizard-summary-rider">
-              <span class="wizard-summary-num">{{ pick.code or '' }}</span>
+              <span class="wizard-summary-num">{% if pick.rider_number is not none %}#{{ pick.rider_number }}{% else %}{{ pick.code or '' }}{% endif %}</span>
               <span class="wizard-summary-name">{% if pick.rider_name and not pick.is_tba %}{{ pick.rider_name }}{% else %}{{ pick.name or '—' }}{% endif %}</span>
             </div>
             {% else %}

@@ -842,7 +842,8 @@
           ];
           listEl.innerHTML = rows.map(([cls, seat]) => {
             const name = seat && seat.is_tba ? 'TBA' : ((seat && seat.rider_name) || 'TBA');
-            return `<li><span class="cls">${cls}</span><span class="rider">${name}</span></li>`;
+            const num = seat && seat.rider_number != null ? `#${seat.rider_number} ` : '';
+            return `<li><span class="cls">${cls}</span><span class="rider">${num}${name}</span></li>`;
           }).join('');
           modal.hidden = false;
           document.body.style.overflow = 'hidden';

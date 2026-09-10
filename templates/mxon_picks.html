@@ -801,16 +801,18 @@
 
     function lineupLabel(n, onlyClass) {
       if (!n || !n.lineup) return '';
-      if (onlyClass) {
-        const seat = n.lineup[onlyClass] || {};
+      const seatLabel = (seat) => {
+        if (!seat) return 'TBA';
         const nm = seat.is_tba ? 'TBA' : (seat.rider_name || 'TBA');
+        return seat.rider_number != null ? `#${seat.rider_number} ${nm}` : nm;
+      };
+      if (onlyClass) {
         return `${n.name}`;
       }
       const parts = [];
       for (const [key, label] of [['mxgp','MXGP'],['mx2','MX2'],['open','OPEN']]) {
         const seat = n.lineup[key] || {};
-        const nm = seat.is_tba ? 'TBA' : (seat.rider_name || 'TBA');
-        parts.push(`${label}: ${nm}`);
+        parts.push(`${label}: ${seatLabel(seat)}`);
       }
       return parts.join(' · ');
     }
@@ -818,7 +820,8 @@
     function riderName(n, cls) {
       if (!n || !n.lineup) return 'TBA';
       const seat = n.lineup[cls] || {};
-      return seat.is_tba ? 'TBA' : (seat.rider_name || 'TBA');
+      const nm = seat.is_tba ? 'TBA' : (seat.rider_name || 'TBA');
+      return seat.rider_number != null ? `#${seat.rider_number} ${nm}` : nm;
     }
 
     function selectedMap() {
