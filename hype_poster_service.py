@@ -9,6 +9,8 @@ from typing import Any
 from models import (
     Competition,
     HoleshotPick,
+    MxonClassPick,
+    MxonNationPick,
     RacePick,
     Rider,
     User,
@@ -45,7 +47,17 @@ def _format_countdown_short(delta: timedelta) -> str:
 
 
 def _user_has_complete_picks(user_id: int, comp: Competition) -> bool:
-    is_wsx = (comp.series or "").upper() == "WSX"
+    series = (comp.series or "").upper()
+    if series == "MXON":
+        nations = MxonNationPick.query.filter_by(
+            user_id=user_id, competition_id=comp.id
+        ).count()
+        classes = MxonClassPick.query.filter_by(
+            user_id=user_id, competition_id=comp.id
+        ).count()
+        return nations >= 5 and classes >= 3
+
+    is_wsx = series == "WSX"
     picks = (
         db.session.query(RacePick, Rider.class_name)
         .join(Rider, Rider.id == RacePick.rider_id)
@@ -84,13 +96,30 @@ def _user_has_complete_picks(user_id: int, comp: Competition) -> bool:
 
 def _picks_stats(comp: Competition) -> dict[str, Any]:
     """Count tippare with any picks vs complete lineups for this race."""
-    user_ids_with_any = {
-        uid
-        for (uid,) in db.session.query(RacePick.user_id)
-        .filter(RacePick.competition_id == comp.id)
-        .distinct()
-        .all()
-    }
+    series = (comp.series or "").upper()
+    if series == "MXON":
+        user_ids_with_any = {
+            uid
+            for (uid,) in db.session.query(MxonNationPick.user_id)
+            .filter(MxonNationPick.competition_id == comp.id)
+            .distinct()
+            .all()
+        }
+        user_ids_with_any |= {
+            uid
+            for (uid,) in db.session.query(MxonClassPick.user_id)
+            .filter(MxonClassPick.competition_id == comp.id)
+            .distinct()
+            .all()
+        }
+    else:
+        user_ids_with_any = {
+            uid
+            for (uid,) in db.session.query(RacePick.user_id)
+            .filter(RacePick.competition_id == comp.id)
+            .distinct()
+            .all()
+        }
     total_users = User.query.count()
     complete = 0
     for uid in user_ids_with_any:
@@ -99,8 +128,6 @@ def _picks_stats(comp: Competition) -> dict[str, Any]:
 
     started = len(user_ids_with_any)
     missing_complete = max(0, started - complete)
-    # Also count users with zero picks among active tippare interest:
-    # for hype we emphasize "have you set picks" vs those who already did.
     pct = round(100.0 * complete / started, 0) if started else 0.0
     return {
         "total_users": total_users,
@@ -173,7 +200,12 @@ def build_hype_poster_data(competition_id: int) -> dict[str, Any]:
     # Prefer pick-deadline countdown for urgency; fall back to race start
     primary_delta = deadline_delta if deadline_delta and deadline_delta.total_seconds() > 0 else race_delta
     countdown_parts = _format_parts(primary_delta) if primary_delta else {"days": 0, "hours": 0, "minutes": 0, "seconds": 0}
-    countdown_label = "PICKS STÄNGER OM" if (deadline_delta and deadline_delta.total_seconds() > 0) else "RACET STARTAR OM"
+    if series == "MXON" and deadline_delta and deadline_delta.total_seconds() > 0:
+        countdown_label = "PICKS LÅSES FÖRE KVAL OM"
+    elif deadline_delta and deadline_delta.total_seconds() > 0:
+        countdown_label = "PICKS STÄNGER OM"
+    else:
+        countdown_label = "RACET STARTAR OM"
     if primary_delta and primary_delta.total_seconds() <= 0:
         countdown_label = "DEADLINE PASSERAD"
         countdown_parts = {"days": 0, "hours": 0, "minutes": 0, "seconds": 0}
@@ -190,12 +222,25 @@ def build_hype_poster_data(competition_id: int) -> dict[str, Any]:
             location_line = copy.get("location") or location_line
         except Exception:
             pass
+    elif series == "MXON":
+        location_line = "Ernée · Circuit Raymond Demy · kval lör · race sön"
 
     hero = None
     try:
         hero = resolve_competition_hero_static_url(comp)
     except Exception:
         hero = None
+    if series == "MXON":
+        from pathlib import Path
+
+        for rel in (
+            "images/mxon/ernee_aerial.jpg",
+            "images/mxon/ernee_layout.png",
+            "images/mxon/ernee_2026.jpg",
+        ):
+            if (Path("static") / rel).is_file():
+                hero = rel
+                break
     if not hero:
         try:
             from trackmap_utils import race_background_static_url
@@ -204,9 +249,17 @@ def build_hype_poster_data(competition_id: int) -> dict[str, Any]:
         except Exception:
             hero = None
 
+    display_series = "MXoN" if series == "MXON" else series
+    if series == "MXON":
+        hook = "Vem tar Nations?"
+        subhook = "Topp 5 nationer · Klassfavoriter MXGP/MX2/OPEN"
+    else:
+        hook = "Har ni satt era picks?"
+        subhook = "Topp 6 · Holeshot" + ("" if series == "WSX" else " · Wildcard")
+
     caption = build_facebook_caption(
         race_name=race_name,
-        series=series,
+        series=display_series,
         countdown_short=_format_countdown_short(primary_delta) if primary_delta else "snart",
         deadline_display=deadline_display or race_start_display,
         stats=stats,
@@ -216,7 +269,8 @@ def build_hype_poster_data(competition_id: int) -> dict[str, Any]:
     return {
         "competition_id": comp.id,
         "race_name": race_name,
-        "series": series,
+        "series": display_series,
+        "series_code": series,
         "event_date_display": event_date_display,
         "race_start_display": race_start_display,
         "deadline_display": deadline_display,
@@ -228,8 +282,8 @@ def build_hype_poster_data(competition_id: int) -> dict[str, Any]:
         "hero_static": hero,
         "caption": caption,
         "cta_url": "mx-fantasy.se",
-        "hook": "Har ni satt era picks?",
-        "subhook": "Topp 6 · Holeshot" + ("" if series == "WSX" else " · Wildcard"),
+        "hook": hook,
+        "subhook": subhook,
     }
 
 
@@ -243,30 +297,51 @@ def build_facebook_caption(
     still_open: bool,
 ) -> str:
     series_tag = series or "MX"
+    tag_u = series_tag.upper().replace("Ó", "O")
+    is_mxon = tag_u == "MXON" or "MXON" in tag_u
+
+    # Normalize display tag
+    if is_mxon:
+        series_tag = "MXoN"
 
     lines = [
-        f"🔥 {race_name} — {series_tag}",
+        f"🏁 {race_name} — {series_tag}",
         "",
     ]
     if still_open:
-        lines.append(f"⏳ Picks stänger om {countdown_short}")
+        if is_mxon:
+            lines.append(f"⏳ Picks låses om {countdown_short} — före lördagens kval")
+        else:
+            lines.append(f"⏳ Picks stänger om {countdown_short}")
         if deadline_display:
             lines.append(f"📅 Deadline: {deadline_display}")
         lines.append("")
-        lines.append("Har ni satt era picks ännu?")
-        lines.append("")
-        lines.append("Tippa topp 6, holeshot" + ("" if series_tag == "WSX" else " & wildcard") + " — gratis.")
+        if is_mxon:
+            lines.append("Vem tippar rätt topp 5 nationer?")
+            lines.append("Plus klassfavoriter i MXGP, MX2 & OPEN — gratis.")
+        else:
+            lines.append("Har ni satt era picks ännu?")
+            lines.append("")
+            lines.append(
+                "Tippa topp 6, holeshot"
+                + ("" if series_tag == "WSX" else " & wildcard")
+                + " — gratis."
+            )
     else:
         lines.append("Picks är stängda — dags att följa racet 🏁")
         lines.append("")
 
     lines.extend(
         [
+            "",
             "👉 mx-fantasy.se",
             "",
-            "#MXFantasy #Motocross #Supercross #FantasyLeague",
         ]
     )
+    if is_mxon:
+        lines.append("#MXoN #MotocrossOfNations #Ernée2026 #MXFantasy #Nations")
+    else:
+        lines.append("#MXFantasy #Motocross #Supercross #FantasyLeague")
     return "\n".join(lines)
 
 
@@ -280,7 +355,10 @@ def render_hype_poster_png(data: dict[str, Any], *, layout: str = "facebook") ->
 
 
 def _series_colors(series: str) -> tuple[tuple[int, int, int], tuple[int, int, int]]:
-    s = (series or "").upper()
+    s = (series or "").upper().replace("Ó", "O")
+    if s in ("MXON", "MXONATIONS") or "MXON" in s:
+        # Nations gold + emerald outdoor
+        return (250, 204, 21), (52, 211, 153)
     if s == "WSX":
         return (255, 90, 40), (255, 140, 70)
     if s == "SMX":
@@ -644,7 +722,10 @@ def _render_landscape(data: dict[str, Any], width: int, height: int, *, compact:
     _draw_styled_text(draw, (width - margin - pw // 2, top_h // 2), pill, pf, WHITE, anchor="mm")
 
     # One inset title card — photo stays dominant above/around it
+    series_u = (data.get("series_code") or data.get("series") or "").upper().replace("Ó", "O")
     panel_h = 285 if compact else 305
+    if "MXON" in series_u and not compact:
+        panel_h = 330
     panel_top = height - margin - panel_h
     _draw_title_card(
         img,
