@@ -2805,6 +2805,12 @@ def is_admin_user():
             if user.username and not username:
                 session["username"] = user.username
             return True
+        # Log soft-misses for admin POSTs (helps diagnose "unauthorized" after deploy)
+        if username or user_id:
+            print(
+                f"is_admin_user miss: username={username!r} user_id={user_id!r} "
+                f"found={bool(user)} is_admin={getattr(user, 'is_admin', None) if user else None}"
+            )
     except Exception as e:
         print(f"Error checking is_admin flag: {e}")
     # Fallback to old method for backward compatibility

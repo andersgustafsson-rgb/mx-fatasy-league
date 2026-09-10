@@ -3136,6 +3136,7 @@
             try {
                 const response = await fetch('/admin/send_bulk_email', {
                     method: 'POST',
+                    credentials: 'same-origin',
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -3146,8 +3147,14 @@
                     })
                 });
                 
-                const result = await response.json();
+                const result = await response.json().catch(() => ({}));
                 
+                if (response.status === 401 || response.status === 403 || result.error === 'unauthorized') {
+                    statusDiv.className = 'mt-4 p-3 bg-red-900/40 border border-red-500 rounded text-red-300';
+                    statusDiv.innerHTML = '❌ Sessionen gäller inte längre (unauthorized).<br>Logga ut och in igen som admin, öppna /admin, och skicka mailen på nytt.';
+                    return;
+                }
+
                 if (response.ok && result.success) {
                     // Check if SendGrid limit was reached
                     if (result.sendgrid_limit_reached) {

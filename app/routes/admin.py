@@ -50,16 +50,25 @@ def get_today() -> date:
 
 
 def is_admin_user() -> bool:
+	"""Check if current user is admin (username or user_id session)."""
 	username = session.get("username")
-	if not username:
-		return False
+	user_id = session.get("user_id")
 	try:
-		user = User.query.filter_by(username=username).first()
-		if user and hasattr(user, 'is_admin') and user.is_admin:
+		user = None
+		if username:
+			user = User.query.filter_by(username=username).first()
+		if user is None and user_id:
+			try:
+				user = User.query.get(int(user_id))
+			except Exception:
+				user = None
+		if user and getattr(user, "is_admin", False):
+			if user.username and not username:
+				session["username"] = user.username
 			return True
 	except Exception:
 		pass
-	return username == "test"
+	return bool(username == "test")
 
 
 def login_required(f):
