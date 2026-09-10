@@ -382,19 +382,28 @@ def get_trackmaps_for_competition(competition) -> list:
             continue
         if _url_exists_locally(url):
             valid_db.append(i)
-    if valid_db:
-        return valid_db
 
     series = (getattr(competition, "series", None) or "").strip().upper()
     if series == "MXON":
+        urls: list[str] = []
+        seen: set[str] = set()
+        for i in valid_db:
+            url = (getattr(i, "image_url", None) or "").strip()
+            if url and url not in seen:
+                urls.append(url)
+                seen.add(url)
         for mxon_rel in (
             "images/mxon/ernee_layout.png",
             "images/mxon/ernee_aerial.jpg",
             "images/mxon/ernee_2026.jpg",
         ):
-            if (Path("static") / mxon_rel).is_file():
-                return as_trackmap_image_objects([mxon_rel])
-        return []
+            if mxon_rel not in seen and (Path("static") / mxon_rel).is_file():
+                urls.append(mxon_rel)
+                seen.add(mxon_rel)
+        return as_trackmap_image_objects(urls)
+
+    if valid_db:
+        return valid_db
 
     if is_smx_competition(competition):
         urls = resolve_smx_trackmap_urls(competition.name or "")

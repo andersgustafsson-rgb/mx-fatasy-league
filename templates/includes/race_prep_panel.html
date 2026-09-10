@@ -1,25 +1,35 @@
-{# Shared "Inför racet" panel for race_picks.html #}
+{# Shared "Inför racet" panel for race_picks.html / mxon_picks.html #}
 {% from 'includes/mx_icon.html' import mx_icon %}
 {% set _is_wsx_hdr = competition.series == 'WSX' %}
+{% set _is_mxon = (competition.series or '')|upper == 'MXON' %}
 {% set _class_450_hdr = 'SX1' if _is_wsx_hdr else '450cc' %}
 {% set _class_250_hdr = 'SX2' if _is_wsx_hdr else '250cc' %}
 {% set _trackmap_urls = trackmap_urls | default([]) %}
 {% set _good_to_know = picks_good_to_know | default([]) %}
 {% set _is_mx = is_mx_race | default(competition.series == 'MX') %}
-{% set _show_layout_images = (not _is_mx) and (_trackmap_urls|length > 0) %}
+{# MXON shows layout gallery like SX; Pro MX uses hero background instead #}
+{% set _show_layout_images = (_trackmap_urls|length > 0) and ((not _is_mx) or _is_mxon) %}
 {% set _venue = race_prep_venue | default(none) %}
 {% set _start_label = race_prep_start_label | default(none) %}
 {% set _out_count = (out_ids | default([])) | length %}
 {% set _wc_names = race_prep_wildcard_names | default([]) %}
 {% set _has_weather = picks_weather and picks_weather.get('available') %}
-{% set _open_know = _has_weather or (_good_to_know | length > 0) or _is_wsx_hdr %}
-<div class="mb-6 race-prep-panel {% if _is_mx %}race-prep-panel--mx{% else %}race-prep-panel--sx{% endif %}">
-  <div class="race-prep-head {% if _is_mx %}race-prep-head--mx{% else %}race-prep-head--sx{% endif %}">
+{% set _open_know = _has_weather or (_good_to_know | length > 0) or _is_wsx_hdr or _is_mxon %}
+{% set _riders_450 = riders_450_json | default([]) %}
+{% set _riders_250 = riders_250_json | default([]) %}
+{% set _active_n = race_prep_active_count | default(_riders_450|length + _riders_250|length) %}
+{% set _nation_n = race_prep_nation_count | default(0) %}
+<div class="mb-6 race-prep-panel {% if _is_mx or _is_mxon %}race-prep-panel--mx{% else %}race-prep-panel--sx{% endif %}">
+  <div class="race-prep-head {% if _is_mx or _is_mxon %}race-prep-head--mx{% else %}race-prep-head--sx{% endif %}">
     <h2>{% if _show_layout_images %}{{ mx_icon('map-pin') }} <span data-i18n="prep.layout_title">Banlayout &amp; inför racet</span>{% else %}{{ mx_icon('map-pin') }} <span data-i18n="prep.title">Inför racet</span>{% endif %}</h2>
     <p class="race-prep-teaser">
       {{ competition.name }}
       {% if competition.event_date %} · {{ competition.event_date.strftime('%Y-%m-%d') }}{% endif %}
-      · {{ riders_450_json|length + riders_250_json|length }} <span data-i18n="picks.active_riders_n">aktiva förare</span>
+      {% if _is_mxon and _nation_n %}
+      · {{ _nation_n }} nationer · {{ _active_n }} förare
+      {% else %}
+      · {{ _active_n }} <span data-i18n="picks.active_riders_n">aktiva förare</span>
+      {% endif %}
     </p>
   </div>
 
@@ -52,10 +62,12 @@
           {% endif %}
           <div class="race-prep-kv"><span data-i18n="prep.date">Datum</span><span>{{ competition.event_date.strftime('%Y-%m-%d') if competition.event_date else 'TBA' }}</span></div>
           {% if _start_label %}
-          <div class="race-prep-kv"><span data-i18n="prep.start">Start</span><span>{{ _start_label }}</span></div>
+          <div class="race-prep-kv"><span data-i18n="prep.start">Start</span><span>{{ _start_label }}{% if _is_mxon %} (kval){% endif %}</span></div>
           {% endif %}
           {% if _is_wsx_hdr %}
           <div class="race-prep-kv"><span data-i18n="prep.series">Serie</span><span>WSX · SX1 + SX2</span></div>
+          {% elif _is_mxon %}
+          <div class="race-prep-kv"><span data-i18n="prep.series">Serie</span><span>Motocross of Nations</span></div>
           {% elif _is_mx %}
           <div class="race-prep-kv"><span data-i18n="prep.series">Serie</span><span>Pro Motocross</span></div>
           {% elif competition.coast_250 %}
@@ -105,14 +117,20 @@
       <details class="race-prep-details">
         <summary>{{ mx_icon('chart') }} <span data-i18n="panel.stats">Statistik</span></summary>
         <div class="race-prep-details__body">
-          <div class="race-prep-kv"><span data-i18n="prep.active_riders">Aktiva förare</span><span>{{ riders_450_json|length + riders_250_json|length }}</span></div>
-          <div class="race-prep-kv"><span>{{ _class_450_hdr }}</span><span>{{ riders_450_json|length }}</span></div>
-          <div class="race-prep-kv"><span>{{ _class_250_hdr }}</span><span>{{ riders_250_json|length }}</span></div>
+          {% if _is_mxon %}
+          <div class="race-prep-kv"><span>Nationer</span><span>{{ _nation_n }}</span></div>
+          <div class="race-prep-kv"><span>Förare (3×land)</span><span>{{ _active_n }}</span></div>
+          <div class="race-prep-kv"><span>Klasser</span><span>MXGP · MX2 · OPEN</span></div>
+          {% else %}
+          <div class="race-prep-kv"><span data-i18n="prep.active_riders">Aktiva förare</span><span>{{ _active_n }}</span></div>
+          <div class="race-prep-kv"><span>{{ _class_450_hdr }}</span><span>{{ _riders_450|length }}</span></div>
+          <div class="race-prep-kv"><span>{{ _class_250_hdr }}</span><span>{{ _riders_250|length }}</span></div>
           {% if _out_count > 0 %}
           <div class="race-prep-kv"><span>OUT</span><span>{{ _out_count }}</span></div>
           {% endif %}
           {% if _wc_names %}
           <div class="race-prep-kv"><span data-i18n="prep.wc_this_round">WC denna runda</span><span>{{ _wc_names | length }}</span></div>
+          {% endif %}
           {% endif %}
         </div>
       </details>

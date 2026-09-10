@@ -1969,8 +1969,11 @@ def _race_prep_venue_label(comp: Competition | None) -> str | None:
     loc = (getattr(comp, "location", None) or "").strip()
     if loc:
         return loc
-    if (getattr(comp, "series", None) or "").upper() == "WSX":
+    series = (getattr(comp, "series", None) or "").upper()
+    if series == "WSX":
         return _WSX_VENUE_BY_NAME.get((comp.name or "").strip())
+    if series == "MXON":
+        return "Ernée — Circuit Raymond Demy · kval lör · race sön"
     return None
 
 
@@ -1992,6 +1995,8 @@ def _race_prep_start_label(comp: Competition | None) -> str | None:
         hhmm = {
             "Canadian GP": "19:30",
         }.get((comp.name or "").strip())
+    if not hhmm and (getattr(comp, "series", None) or "").upper() == "MXON":
+        hhmm = "14:30"  # MXGP Qual (provisional)
     if not hhmm:
         return None
     tz = (getattr(comp, "timezone", None) or "").strip()
@@ -2002,6 +2007,7 @@ def _race_prep_start_label(comp: Competition | None) -> str | None:
         "America/Chicago": "CT",
         "America/New_York": "ET",
         "Europe/London": "BST/GMT",
+        "Europe/Paris": "CEST/CET",
         "Australia/Brisbane": "AEST",
         "Pacific/Auckland": "NZDT",
         "America/Argentina/Buenos_Aires": "ART",
@@ -10734,6 +10740,46 @@ def mxon_picks_page(competition_id):
     except Exception:
         pass
 
+    trackmap_images = []
+    trackmap_urls: list[str] = []
+    picks_good_to_know: list[str] = []
+    picks_weather = None
+    try:
+        from trackmap_utils import get_picks_good_to_know, get_trackmaps_for_competition
+
+        trackmap_images = get_trackmaps_for_competition(comp)
+        trackmap_urls = [
+            ci.image_url for ci in trackmap_images if getattr(ci, "image_url", None)
+        ]
+        picks_good_to_know = get_picks_good_to_know(comp)
+    except Exception:
+        app.logger.exception(
+            "mxon_picks trackmap/tips failed for competition_id=%s", competition_id
+        )
+        picks_good_to_know = [
+            "MXoN: tippa topp 5 nationer + klassfavoriter (förare i MXGP/MX2/OPEN).",
+            "Picks låses 2 timmar före lördagens MXGP-kval.",
+        ]
+
+    try:
+        from track_weather import build_picks_weather_tips, get_weather_for_competition
+
+        picks_weather = get_weather_for_competition(comp)
+        weather_tips = build_picks_weather_tips(
+            picks_weather, series=getattr(comp, "series", None)
+        )
+        if weather_tips:
+            generic = [t for t in picks_good_to_know if t not in weather_tips]
+            picks_good_to_know = weather_tips + generic[:3]
+    except Exception:
+        app.logger.exception(
+            "mxon_picks weather tips failed for competition_id=%s", competition_id
+        )
+        picks_weather = None
+
+    nation_count = len(nations)
+    rider_count = nation_count * 3
+
     return render_template(
         "mxon_picks.html",
         competition=comp,
@@ -10744,6 +10790,19 @@ def mxon_picks_page(competition_id):
         initial_class_json=json.dumps(initial_class),
         deadline_display=schedule.get("pick_deadline_display"),
         hero_image=hero_image,
+        trackmap_images=trackmap_images,
+        trackmap_urls=trackmap_urls,
+        picks_good_to_know=picks_good_to_know,
+        picks_weather=picks_weather,
+        is_mx_race=False,
+        race_prep_venue=_race_prep_venue_label(comp),
+        race_prep_start_label=_race_prep_start_label(comp),
+        race_prep_wildcard_names=[],
+        race_prep_nation_count=nation_count,
+        race_prep_active_count=rider_count,
+        out_ids=[],
+        riders_450_json=[],
+        riders_250_json=[],
     )
 
 

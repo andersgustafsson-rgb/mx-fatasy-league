@@ -60,6 +60,13 @@ TRACK_GEO: dict[str, dict[str, Any]] = {
     "SMX Playoff 1": {"lat": 39.9689, "lon": -83.0111, "city": "Columbus, OH", "timezone": "America/New_York"},
     "SMX Playoff 2": {"lat": 33.8644, "lon": -118.2611, "city": "Carson, CA", "timezone": "America/Los_Angeles"},
     "SMX Final": {"lat": 36.5153, "lon": -93.2188, "city": "Ridgedale, MO", "timezone": "America/Chicago"},
+    # Motocross of Nations
+    "MXoN Ernée 2026": {
+        "lat": 48.2967,
+        "lon": -0.9319,
+        "city": "Ernée, FR",
+        "timezone": "Europe/Paris",
+    },
 }
 
 _WEATHER_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
@@ -246,7 +253,7 @@ def build_picks_weather_tips(
         return []
 
     series_u = (series or "").upper()
-    is_outdoor = series_u in ("MX", "WSX") or series_u == ""
+    is_outdoor = series_u in ("MX", "WSX", "MXON", "SMX") or series_u == ""
     # SX is stadium — weather barely changes track; still show mild context for MX focus
     if series_u == "SX":
         return []
