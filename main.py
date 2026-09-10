@@ -2617,26 +2617,41 @@ def admin_mxon_results_page():
         return redirect(url_for("login", next=request.path))
     from mxon_fantasy import get_class_results, list_active_nations, mxon_competitions_for_year, nation_dict
 
-    comps = mxon_competitions_for_year(2026)
-    comp = comps[0] if comps else None
+    try:
+        db.create_all()
+    except Exception:
+        pass
+
+    comps = []
+    comp = None
     current_codes = ""
     class_results = {}
     nations = []
-    if comp:
-        rows = (
-            MxonNationResult.query.filter_by(competition_id=comp.id)
-            .order_by(MxonNationResult.position.asc())
-            .all()
-        )
-        codes = []
-        for r in rows:
-            n = MxonNation.query.get(r.nation_id)
-            if n:
-                codes.append(n.code)
-        current_codes = "\n".join(codes)
-        class_results = get_class_results(comp.id)
-        nations = [nation_dict(n, include_lineup=True) for n in list_active_nations()]
-        nations.sort(key=lambda d: ((d.get("name") or "").lower(), d.get("code") or ""))
+    try:
+        comps = mxon_competitions_for_year(2026)
+        comp = comps[0] if comps else None
+        if comp:
+            rows = (
+                MxonNationResult.query.filter_by(competition_id=comp.id)
+                .order_by(MxonNationResult.position.asc())
+                .all()
+            )
+            codes = []
+            for r in rows:
+                n = MxonNation.query.get(r.nation_id)
+                if n:
+                    codes.append(n.code)
+            current_codes = "\n".join(codes)
+            class_results = get_class_results(comp.id)
+            nations = [nation_dict(n, include_lineup=True) for n in list_active_nations()]
+            nations.sort(key=lambda d: ((d.get("name") or "").lower(), d.get("code") or ""))
+    except Exception as e:
+        app.logger.exception("admin_mxon_results_page load failed: %s", e)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
     return render_template(
         "admin_mxon_results.html",
         competition=comp,
