@@ -301,6 +301,12 @@ def race_background_static_url(competition) -> Optional[str]:
         elif "swedish" in lower:
             candidates.extend(["swedishgp", "swedish"])
 
+    if series == "MXON":
+        for rel in ("images/mxon/ernee_layout.png", "images/mxon/ernee_aerial.jpg", "images/mxon/ernee_2026.jpg"):
+            if Path(f"static/{rel}").is_file():
+                return rel
+        return None
+
     base = Path("static/trackmaps/compressed")
     seen: set[str] = set()
     for cand in candidates:
@@ -379,6 +385,17 @@ def get_trackmaps_for_competition(competition) -> list:
     if valid_db:
         return valid_db
 
+    series = (getattr(competition, "series", None) or "").strip().upper()
+    if series == "MXON":
+        for mxon_rel in (
+            "images/mxon/ernee_layout.png",
+            "images/mxon/ernee_aerial.jpg",
+            "images/mxon/ernee_2026.jpg",
+        ):
+            if (Path("static") / mxon_rel).is_file():
+                return as_trackmap_image_objects([mxon_rel])
+        return []
+
     if is_smx_competition(competition):
         urls = resolve_smx_trackmap_urls(competition.name or "")
         return as_trackmap_image_objects(urls)
@@ -438,6 +455,16 @@ def get_picks_good_to_know(competition) -> list[str]:
                 "Fyra fill-ins (WC) kör bara denna runda: Alessi, Wilson, Chambers, Fauser.",
                 "OUT-listan gömmer säsongsförare som inte står på Calgary-grinden.",
             ]
+        return tips
+
+    if series == "MXON":
+        tips.extend(
+            [
+                "MXoN: tippa topp 5 nationer + klassfavoriter (förare i MXGP/MX2/OPEN).",
+                "Picks låses 2 timmar före lördagens MXGP-kval — inte söndagens Race 1.",
+                "Kval lördag sätter gate; söndag körs tre kombinationsheat för nationsställning.",
+            ]
+        )
         return tips
 
     coast = (getattr(competition, "coast_250", None) or "").lower()

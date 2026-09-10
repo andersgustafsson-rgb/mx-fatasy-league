@@ -42,6 +42,8 @@
     'lb.game_highscores':    { sv: 'Spel — Highscores',      en: 'Game Highscores' },
     'lb.series_leaders':     { sv: 'Serieledare & SMX',      en: 'Series Leaders & SMX' },
     'lb.wsx_leaders':        { sv: 'WSX Serieledare',        en: 'WSX Series Leaders' },
+    'lb.mxon_leaders':       { sv: 'MXoN Serieledare',       en: 'MXoN Series Leaders' },
+    'picks.guess_title_mxon':{ sv: 'Gissa topp 5 nationer',  en: 'Guess top 5 nations' },
 
     /* ---- Race picks wizard ---- */
     'picks.step1':           { sv: 'Steg 1',         en: 'Step 1' },

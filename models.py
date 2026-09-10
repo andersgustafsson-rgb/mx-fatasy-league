@@ -585,3 +585,90 @@ class DailyVisitorSighting(db.Model):
     day = db.Column(db.Date, primary_key=True)
     visitor_key = db.Column(db.String(64), primary_key=True)
 
+
+# --- Motocross of Nations (MXoN) fantasy ---
+
+
+class MxonNation(db.Model):
+    """Nation / team entry for Motocross of Nations tippa."""
+    __tablename__ = "mxon_nations"
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(8), nullable=False, unique=True)  # SWE, USA, LAM, …
+    name = db.Column(db.String(80), nullable=False)
+    flag_emoji = db.Column(db.String(16), nullable=True)
+    sort_order = db.Column(db.Integer, default=0, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+
+
+class MxonTeamEntry(db.Model):
+    """Provisional / final rider seat on a nation team (MXGP / MX2 / OPEN)."""
+    __tablename__ = "mxon_team_entries"
+    id = db.Column(db.Integer, primary_key=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey("mxon_nations.id"), nullable=False, index=True)
+    class_name = db.Column(db.String(10), nullable=False)  # mxgp | mx2 | open
+    rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"), nullable=True)
+    rider_name = db.Column(db.String(120), nullable=True)
+    is_tba = db.Column(db.Boolean, default=False, nullable=False)
+    nation = db.relationship("MxonNation", backref=db.backref("team_entries", lazy="dynamic"))
+    rider = db.relationship("Rider", lazy=True)
+    __table_args__ = (
+        db.UniqueConstraint("nation_id", "class_name", name="uq_mxon_team_nation_class"),
+    )
+
+
+class MxonNationPick(db.Model):
+    """User tippa: ordered top-5 nations for one MXoN competition."""
+    __tablename__ = "mxon_nation_picks"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"), nullable=False, index=True)
+    position = db.Column(db.Integer, nullable=False)  # 1–5
+    nation_id = db.Column(db.Integer, db.ForeignKey("mxon_nations.id"), nullable=False)
+    nation = db.relationship("MxonNation", lazy=True)
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "competition_id", "position", name="uq_mxon_pick_user_comp_pos"),
+        db.UniqueConstraint("user_id", "competition_id", "nation_id", name="uq_mxon_pick_user_comp_nation"),
+        db.Index("idx_mxon_pick_comp_user", "competition_id", "user_id"),
+    )
+
+
+class MxonNationResult(db.Model):
+    """Official final nation classification for scoring."""
+    __tablename__ = "mxon_nation_results"
+    id = db.Column(db.Integer, primary_key=True)
+    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"), nullable=False, index=True)
+    position = db.Column(db.Integer, nullable=False)
+    nation_id = db.Column(db.Integer, db.ForeignKey("mxon_nations.id"), nullable=False)
+    nation = db.relationship("MxonNation", lazy=True)
+    __table_args__ = (
+        db.UniqueConstraint("competition_id", "position", name="uq_mxon_result_comp_pos"),
+        db.UniqueConstraint("competition_id", "nation_id", name="uq_mxon_result_comp_nation"),
+    )
+
+
+class MxonClassPick(db.Model):
+    """User tippa: favorite rider per class (stored as nation_id — one seat per nation/class)."""
+    __tablename__ = "mxon_class_picks"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"), nullable=False, index=True)
+    class_name = db.Column(db.String(10), nullable=False)  # mxgp | mx2 | open
+    nation_id = db.Column(db.Integer, db.ForeignKey("mxon_nations.id"), nullable=False)
+    nation = db.relationship("MxonNation", lazy=True)
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "competition_id", "class_name", name="uq_mxon_class_pick"),
+    )
+
+
+class MxonClassResult(db.Model):
+    """Official class-winning rider (nation seat for MXGP / MX2 / OPEN) for scoring."""
+    __tablename__ = "mxon_class_results"
+    id = db.Column(db.Integer, primary_key=True)
+    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"), nullable=False, index=True)
+    class_name = db.Column(db.String(10), nullable=False)  # mxgp | mx2 | open
+    nation_id = db.Column(db.Integer, db.ForeignKey("mxon_nations.id"), nullable=False)
+    nation = db.relationship("MxonNation", lazy=True)
+    __table_args__ = (
+        db.UniqueConstraint("competition_id", "class_name", name="uq_mxon_class_result"),
+    )
+

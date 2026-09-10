@@ -1,0 +1,932 @@
+{% from 'includes/mx_icon.html' import mx_icon %}
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ competition.name }} — MXoN Tippa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
+  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=mxon2"></script>
+  <style>
+    html { overflow-x: hidden; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Rajdhani', system-ui, sans-serif;
+      background: #0b1220;
+      color: #e2e8f0;
+    }
+    .mxon-hero {
+      position: relative;
+      min-height: 210px;
+      background: #0b1220 center / contain no-repeat;
+      border-bottom: 1px solid #1e293b;
+    }
+    {% if hero_image %}
+    .mxon-hero {
+      background-image:
+        linear-gradient(180deg, rgba(11,18,32,0.15) 0%, rgba(11,18,32,0.88) 72%, #0b1220 100%),
+        url('{{ hero_image }}');
+      background-color: #f8fafc;
+      background-size: cover, contain;
+      background-position: center, center;
+      background-repeat: no-repeat, no-repeat;
+    }
+    {% endif %}
+    .brand { font-family: 'Orbitron', sans-serif; letter-spacing: 0.06em; }
+    .status-ok { border-color: rgba(16,185,129,0.5); background: rgba(6,78,59,0.25); }
+    .status-warn { border-color: rgba(245,158,11,0.45); background: rgba(120,53,15,0.25); }
+
+    .slot {
+      border: 1px solid #1e293b;
+      border-radius: 0.9rem;
+      background: rgba(15, 23, 42, 0.92);
+      overflow: hidden;
+    }
+    .slot-head {
+      display: grid;
+      grid-template-columns: 2.75rem 1fr;
+      gap: 0.65rem;
+      align-items: stretch;
+    }
+    .slot-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      color: #67e8f9;
+      font-size: 1.2rem;
+      background: rgba(8, 47, 73, 0.55);
+      border-right: 1px solid #1e293b;
+    }
+    .pick-trigger {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      background: transparent;
+      border: none;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .pick-trigger:disabled { cursor: default; opacity: 0.85; }
+    .pick-trigger:not(:disabled):hover { background: rgba(30, 41, 59, 0.55); }
+    .pick-flag {
+      width: 2.35rem;
+      height: 1.55rem;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pick-flag img {
+      width: 2.35rem;
+      height: 1.55rem;
+      object-fit: cover;
+      border-radius: 0.2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      background: #020617;
+    }
+    .pick-flag--empty {
+      color: #64748b;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .pick-meta { min-width: 0; flex: 1; }
+    .pick-code {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      color: #67e8f9;
+      font-weight: 700;
+    }
+    .pick-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pick-placeholder { color: #64748b; font-weight: 600; font-size: 0.98rem; }
+    .pick-chevron { color: #64748b; font-size: 0.85rem; flex-shrink: 0; }
+    .lineup-chip {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      padding: 0 1rem 0.7rem 3.5rem;
+      line-height: 1.35;
+    }
+
+    .picker-sheet[hidden] { display: none !important; }
+    .picker-sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    @media (min-width: 640px) {
+      .picker-sheet { align-items: center; padding: 1rem; }
+    }
+    .picker-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.72);
+      backdrop-filter: blur(2px);
+    }
+    .picker-panel {
+      position: relative;
+      width: min(36rem, 100%);
+      max-height: min(82vh, 40rem);
+      display: flex;
+      flex-direction: column;
+      border-radius: 1rem 1rem 0 0;
+      background: #0f172a;
+      border: 1px solid #334155;
+      box-shadow: 0 -12px 40px rgba(0,0,0,0.4);
+    }
+    @media (min-width: 640px) {
+      .picker-panel { border-radius: 1rem; }
+    }
+    .picker-head {
+      padding: 0.9rem 1rem 0.65rem;
+      border-bottom: 1px solid #1e293b;
+    }
+    .picker-head h2 {
+      margin: 0 0 0.55rem;
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #cbd5e1;
+    }
+    .picker-search {
+      width: 100%;
+      background: #020617;
+      border: 1px solid #334155;
+      border-radius: 0.55rem;
+      color: #f1f5f9;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.95rem;
+    }
+    .picker-grid {
+      overflow: auto;
+      padding: 0.65rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+      gap: 0.45rem;
+    }
+    .picker-grid.is-riders {
+      grid-template-columns: 1fr;
+      gap: 0.35rem;
+    }
+    .picker-grid.is-nations-lineup {
+      grid-template-columns: 1fr;
+      gap: 0.4rem;
+    }
+    .nation-opt {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.55rem 0.6rem;
+      border-radius: 0.65rem;
+      border: 1px solid #1e293b;
+      background: #152033;
+      color: #e2e8f0;
+      cursor: pointer;
+      text-align: left;
+    }
+    .nation-opt:hover:not(:disabled) {
+      border-color: rgba(103, 232, 249, 0.45);
+      background: #1c2c44;
+    }
+    .nation-opt:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .nation-opt.is-current {
+      border-color: rgba(52, 211, 153, 0.55);
+      background: rgba(6, 78, 59, 0.35);
+    }
+    .nation-opt__flag {
+      width: 2.1rem;
+      height: 1.4rem;
+      flex-shrink: 0;
+    }
+    .nation-opt__flag img {
+      width: 2.1rem;
+      height: 1.4rem;
+      object-fit: cover;
+      border-radius: 0.18rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.35);
+      background: #020617;
+    }
+    .nation-opt__code {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #67e8f9;
+    }
+    .nation-opt__name {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      line-height: 1.15;
+    }
+    .nation-opt__meta { min-width: 0; flex: 1; }
+    .nation-opt__lineup {
+      margin-top: 0.2rem;
+      font-size: 0.68rem;
+      color: #94a3b8;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .rider-opt {
+      display: grid;
+      grid-template-columns: 2.2rem 1fr auto;
+      align-items: start;
+      gap: 0.55rem 0.65rem;
+      width: 100%;
+      padding: 0.7rem 0.75rem;
+      border-radius: 0.7rem;
+      border: 1px solid #1e293b;
+      background: #152033;
+      color: #e2e8f0;
+      text-align: left;
+      cursor: default;
+    }
+    .rider-opt.is-current {
+      border-color: rgba(52, 211, 153, 0.55);
+      background: rgba(6, 78, 59, 0.28);
+    }
+    .rider-opt__name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      line-height: 1.2;
+    }
+    .rider-opt__nation {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      margin-top: 0.1rem;
+    }
+    .rider-opt__code {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      color: #67e8f9;
+      font-weight: 700;
+      padding-top: 0.15rem;
+    }
+    .rider-opt__trio {
+      grid-column: 2 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.35rem;
+    }
+    .rider-chip {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.1rem;
+      padding: 0.4rem 0.65rem;
+      border-radius: 0.5rem;
+      border: 1px solid #334155;
+      background: #0b1220;
+      color: #94a3b8;
+      font-size: 0.72rem;
+      line-height: 1.2;
+      cursor: default;
+      max-width: 100%;
+    }
+    .rider-chip__cls {
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .rider-chip__nm {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #cbd5e1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 11rem;
+    }
+    .rider-chip--pick {
+      border-color: rgba(16, 185, 129, 0.55);
+      background: linear-gradient(180deg, rgba(6, 95, 70, 0.55), rgba(6, 78, 59, 0.35));
+      color: #ecfdf5;
+      cursor: pointer;
+      box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.12);
+    }
+    .rider-chip--pick:hover {
+      border-color: rgba(52, 211, 153, 0.85);
+      background: linear-gradient(180deg, rgba(5, 150, 105, 0.65), rgba(6, 95, 70, 0.45));
+      transform: translateY(-1px);
+    }
+    .rider-chip--pick:active {
+      transform: translateY(0);
+    }
+    .rider-chip--pick .rider-chip__cls {
+      color: #6ee7b7;
+    }
+    .rider-chip--pick .rider-chip__nm {
+      color: #ecfdf5;
+    }
+    .rider-chip--pick .rider-chip__hint {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: #a7f3d0;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .score-panel {
+      margin-top: 2.5rem;
+      border-radius: 1rem;
+      border: 1px solid #1e293b;
+      background: linear-gradient(165deg, rgba(15, 23, 42, 0.95), rgba(8, 47, 73, 0.25));
+      padding: 1.15rem 1.1rem 1.25rem;
+    }
+    .score-panel__head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.35rem 1rem;
+      margin-bottom: 0.9rem;
+    }
+    .score-panel__title {
+      margin: 0;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #67e8f9;
+    }
+    .score-panel__sub {
+      margin: 0;
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+    .score-ladder {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+    @media (min-width: 520px) {
+      .score-ladder { grid-template-columns: repeat(6, 1fr); }
+    }
+    .score-tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.2rem;
+      padding: 0.7rem 0.35rem;
+      border-radius: 0.7rem;
+      border: 1px solid #243044;
+      background: rgba(2, 6, 23, 0.55);
+      text-align: center;
+    }
+    .score-tile--exact {
+      border-color: rgba(52, 211, 153, 0.45);
+      background: linear-gradient(180deg, rgba(6, 78, 59, 0.45), rgba(2, 6, 23, 0.55));
+      box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.12);
+    }
+    .score-tile__diff {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    .score-tile--exact .score-tile__diff { color: #6ee7b7; }
+    .score-tile__pts {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #f8fafc;
+      line-height: 1;
+    }
+    .score-tile--exact .score-tile__pts { color: #a7f3d0; }
+  </style>
+</head>
+<body>
+  <div class="mxon-hero">
+    <div class="max-w-3xl mx-auto px-4 py-8">
+      <p class="text-cyan-300/90 text-sm uppercase tracking-widest brand mb-1">Motocross of Nations</p>
+      <h1 class="brand text-2xl sm:text-3xl font-bold text-white">{{ competition.name }}</h1>
+      <p class="text-slate-200 mt-2 text-sm sm:text-base" style="text-shadow:0 1px 8px rgba(0,0,0,.55)">
+        Topp 5 + klassfavoriter · Ernée · kval lör 3 okt · race sön 4 okt
+      </p>
+      {% if deadline_display %}
+      <p class="text-amber-200 text-sm mt-1" style="text-shadow:0 1px 8px rgba(0,0,0,.55)">
+        Deadline (före kval): {{ deadline_display }}
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+  <main class="max-w-3xl mx-auto px-4 py-6 pb-24">
+    <div class="flex items-center justify-between gap-3 mb-5">
+      <a href="{{ url_for('index') }}" class="text-cyan-300 underline text-sm">← Startsida</a>
+      {% if picks_locked %}
+      <span class="text-rose-300 text-sm font-semibold">{{ mx_icon('lock') }} Picks låsta</span>
+      {% endif %}
+    </div>
+
+    <div id="status-banner" class="mb-5 p-4 rounded-lg border status-warn text-sm">
+      Välj topp 5 nationer + en favoritförare per klass (MXGP, MX2, OPEN).
+    </div>
+
+    <h2 class="brand text-sm uppercase tracking-widest text-slate-400 mb-3">Topp 5 nationer</h2>
+    <div id="slots" class="space-y-3">
+      {% for pos in range(1, 6) %}
+      <div class="slot" data-slot="{{ pos }}">
+        <div class="slot-head">
+          <div class="slot-num">{{ pos }}</div>
+          <button type="button" class="pick-trigger" data-mode="top" data-pos="{{ pos }}" {% if picks_locked %}disabled{% endif %}>
+            <span class="pick-flag pick-flag--empty" data-flag>—</span>
+            <span class="pick-meta">
+              <span class="pick-code" data-code></span>
+              <span class="pick-name pick-placeholder" data-name>Välj nation</span>
+            </span>
+            {% if not picks_locked %}<span class="pick-chevron">▼</span>{% endif %}
+          </button>
+        </div>
+        <div class="lineup-chip" data-lineup-for="{{ pos }}"></div>
+        <input type="hidden" class="nation-value" data-pos="{{ pos }}" value="">
+      </div>
+      {% endfor %}
+    </div>
+
+    <h2 class="brand text-sm uppercase tracking-widest text-slate-400 mb-3 mt-8">Klassfavoriter</h2>
+    <p class="text-sm text-slate-500 mb-3">Vilken förare tar klassen? <span class="text-emerald-300/90">+15 p</span> per rätt.</p>
+    <div id="class-slots" class="space-y-3">
+      {% for key, label in [('mxgp','MXGP'),('mx2','MX2'),('open','OPEN')] %}
+      <div class="slot" data-class="{{ key }}">
+        <div class="slot-head">
+          <div class="slot-num" style="font-size:0.7rem;letter-spacing:0.06em;">{{ label }}</div>
+          <button type="button" class="pick-trigger" data-mode="class" data-class="{{ key }}" {% if picks_locked %}disabled{% endif %}>
+            <span class="pick-flag pick-flag--empty" data-flag>—</span>
+            <span class="pick-meta">
+              <span class="pick-code" data-code></span>
+              <span class="pick-name pick-placeholder" data-name>Välj förare</span>
+            </span>
+            {% if not picks_locked %}<span class="pick-chevron">▼</span>{% endif %}
+          </button>
+        </div>
+        <div class="lineup-chip" data-class-lineup="{{ key }}"></div>
+        <input type="hidden" class="class-value" data-class="{{ key }}" value="">
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if not picks_locked %}
+    <div class="flex flex-wrap gap-3 pt-5">
+      <button type="button" id="submit-btn" class="rp-btn rp-btn--primary">Lämna in picks</button>
+      <button type="button" id="clear-btn" class="rp-btn rp-btn--ghost">Rensa</button>
+    </div>
+    {% endif %}
+
+    <section class="score-panel" aria-labelledby="score-title">
+      <div class="score-panel__head">
+        <h2 id="score-title" class="score-panel__title">Poäng</h2>
+        <p class="score-panel__sub">Närhet topp 5 · +15 per rätt klassfavorit (förare)</p>
+      </div>
+      <div class="score-ladder">
+        <div class="score-tile score-tile--exact">
+          <span class="score-tile__diff">Exakt</span>
+          <span class="score-tile__pts">25</span>
+        </div>
+        <div class="score-tile">
+          <span class="score-tile__diff">±1</span>
+          <span class="score-tile__pts">18</span>
+        </div>
+        <div class="score-tile">
+          <span class="score-tile__diff">±2</span>
+          <span class="score-tile__pts">13</span>
+        </div>
+        <div class="score-tile">
+          <span class="score-tile__diff">±3</span>
+          <span class="score-tile__pts">9</span>
+        </div>
+        <div class="score-tile">
+          <span class="score-tile__diff">±4</span>
+          <span class="score-tile__pts">6</span>
+        </div>
+        <div class="score-tile">
+          <span class="score-tile__diff">±5+</span>
+          <span class="score-tile__pts">3</span>
+        </div>
+      </div>
+      <div class="score-ladder" style="margin-top:0.5rem;grid-template-columns:repeat(3,1fr);">
+        <div class="score-tile score-tile--exact">
+          <span class="score-tile__diff">MXGP</span>
+          <span class="score-tile__pts">15</span>
+        </div>
+        <div class="score-tile score-tile--exact">
+          <span class="score-tile__diff">MX2</span>
+          <span class="score-tile__pts">15</span>
+        </div>
+        <div class="score-tile score-tile--exact">
+          <span class="score-tile__diff">OPEN</span>
+          <span class="score-tile__pts">15</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="picker-sheet" class="picker-sheet" hidden>
+    <div class="picker-backdrop" data-close-picker></div>
+    <div class="picker-panel" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+      <div class="picker-head">
+        <h2 id="picker-title">Välj</h2>
+        <input id="picker-search" class="picker-search" type="search" placeholder="Sök…" autocomplete="off">
+      </div>
+      <div id="picker-grid" class="picker-grid"></div>
+    </div>
+  </div>
+
+  <script type="application/json" id="nations-json">{{ nations|tojson }}</script>
+  <script>
+    const COMP_ID = {{ competition.id }};
+    const LOCKED = {{ 'true' if picks_locked else 'false' }};
+    const INITIAL = {{ initial_picks_json|safe }};
+    const INITIAL_CLASS = {{ initial_class_json|safe }};
+    const LOGGED_IN = {{ 'true' if is_logged_in else 'false' }};
+    const NATIONS = JSON.parse(document.getElementById('nations-json').textContent || '[]')
+      .slice()
+      .sort((a, b) => (a.code || '').localeCompare(b.code || '', 'sv')
+        || (a.name || '').localeCompare(b.name || '', 'sv'));
+    const byId = Object.fromEntries(NATIONS.map((n) => [String(n.id), n]));
+    const CLASS_LABELS = { mxgp: 'MXGP', mx2: 'MX2', open: 'OPEN' };
+
+    const banner = document.getElementById('status-banner');
+    const sheet = document.getElementById('picker-sheet');
+    const grid = document.getElementById('picker-grid');
+    const search = document.getElementById('picker-search');
+    const titleEl = document.getElementById('picker-title');
+    let activeMode = null; // 'top' | 'class'
+    let activePos = null;
+    let activeClass = null;
+
+    function lineupLabel(n, onlyClass) {
+      if (!n || !n.lineup) return '';
+      if (onlyClass) {
+        const seat = n.lineup[onlyClass] || {};
+        const nm = seat.is_tba ? 'TBA' : (seat.rider_name || 'TBA');
+        return `${n.name}`;
+      }
+      const parts = [];
+      for (const [key, label] of [['mxgp','MXGP'],['mx2','MX2'],['open','OPEN']]) {
+        const seat = n.lineup[key] || {};
+        const nm = seat.is_tba ? 'TBA' : (seat.rider_name || 'TBA');
+        parts.push(`${label}: ${nm}`);
+      }
+      return parts.join(' · ');
+    }
+
+    function riderName(n, cls) {
+      if (!n || !n.lineup) return 'TBA';
+      const seat = n.lineup[cls] || {};
+      return seat.is_tba ? 'TBA' : (seat.rider_name || 'TBA');
+    }
+
+    function selectedMap() {
+      const map = {};
+      document.querySelectorAll('.nation-value').forEach((inp) => {
+        if (inp.value) map[inp.dataset.pos] = inp.value;
+      });
+      return map;
+    }
+
+    function selectedIds() {
+      return Object.values(selectedMap()).filter(Boolean);
+    }
+
+    function classMap() {
+      const map = {};
+      document.querySelectorAll('.class-value').forEach((inp) => {
+        if (inp.value) map[inp.dataset.class] = inp.value;
+      });
+      return map;
+    }
+
+    function classCount() {
+      return Object.keys(classMap()).length;
+    }
+
+    function flagHtml(n, emptyLabel) {
+      if (n && n.flag_url) {
+        return `<img src="${n.flag_url}" alt="${n.code || ''}" width="40" height="26">`;
+      }
+      return emptyLabel || '—';
+    }
+
+    function paintTopSlot(pos, nationId) {
+      const slot = document.querySelector(`.slot[data-slot="${pos}"]`);
+      if (!slot) return;
+      const inp = slot.querySelector('.nation-value');
+      const flag = slot.querySelector('[data-flag]');
+      const code = slot.querySelector('[data-code]');
+      const name = slot.querySelector('[data-name]');
+      const chip = slot.querySelector(`[data-lineup-for="${pos}"]`);
+      inp.value = nationId ? String(nationId) : '';
+      const n = nationId ? byId[String(nationId)] : null;
+      if (n) {
+        flag.classList.remove('pick-flag--empty');
+        flag.innerHTML = flagHtml(n);
+        code.textContent = n.code;
+        name.textContent = n.name;
+        name.classList.remove('pick-placeholder');
+        if (chip) chip.textContent = lineupLabel(n);
+      } else {
+        flag.classList.add('pick-flag--empty');
+        flag.textContent = '—';
+        code.textContent = '';
+        name.textContent = 'Välj nation';
+        name.classList.add('pick-placeholder');
+        if (chip) chip.textContent = '';
+      }
+    }
+
+    function paintClassSlot(cls, nationId) {
+      const slot = document.querySelector(`.slot[data-class="${cls}"]`);
+      if (!slot) return;
+      const inp = slot.querySelector('.class-value');
+      const flag = slot.querySelector('[data-flag]');
+      const code = slot.querySelector('[data-code]');
+      const name = slot.querySelector('[data-name]');
+      const chip = slot.querySelector(`[data-class-lineup="${cls}"]`);
+      inp.value = nationId ? String(nationId) : '';
+      const n = nationId ? byId[String(nationId)] : null;
+      if (n) {
+        flag.classList.remove('pick-flag--empty');
+        flag.innerHTML = flagHtml(n);
+        code.textContent = n.code;
+        name.textContent = riderName(n, cls);
+        name.classList.remove('pick-placeholder');
+        if (chip) chip.textContent = n.name;
+      } else {
+        flag.classList.add('pick-flag--empty');
+        flag.textContent = '—';
+        code.textContent = '';
+        name.textContent = 'Välj förare';
+        name.classList.add('pick-placeholder');
+        if (chip) chip.textContent = '';
+      }
+    }
+
+    function updateBanner(submitted) {
+      const n = selectedIds().length;
+      const c = classCount();
+      banner.classList.remove('status-ok', 'status-warn');
+      if (LOCKED) {
+        banner.classList.add('status-ok');
+        banner.textContent = (submitted || n || c)
+          ? 'Picks är låsta. Dina val är sparade.'
+          : 'Picks är låsta.';
+        return;
+      }
+      if (submitted && n === 5 && c === 3) {
+        banner.classList.add('status-ok');
+        banner.textContent = 'Inlämnat! Du kan ändra tills deadline.';
+      } else if (n > 0 || c > 0) {
+        banner.classList.add('status-warn');
+        banner.textContent = `Ofullständigt — nationer ${n}/5 · klassförare ${c}/3.`;
+      } else {
+        banner.classList.add('status-warn');
+        banner.textContent = 'Välj topp 5 nationer + en favoritförare per klass (MXGP, MX2, OPEN).';
+      }
+    }
+
+    function renderPicker(filterText) {
+      const q = (filterText || '').trim().toLowerCase();
+      let current = '';
+      grid.classList.remove('is-riders', 'is-nations-lineup');
+
+      if (activeMode === 'class') {
+        grid.classList.add('is-riders');
+        current = classMap()[activeClass] || '';
+        const classOrder = [['mxgp', 'MXGP'], ['mx2', 'MX2'], ['open', 'OPEN']];
+        const list = NATIONS
+          .filter((nat) => {
+            if (!q) return true;
+            const hay = [
+              nat.code,
+              nat.name,
+              riderName(nat, 'mxgp'),
+              riderName(nat, 'mx2'),
+              riderName(nat, 'open'),
+            ].join(' ').toLowerCase();
+            return hay.includes(q);
+          })
+          .sort((a, b) =>
+            (a.code || '').localeCompare(b.code || '', 'sv')
+            || (a.name || '').localeCompare(b.name || '', 'sv')
+          );
+        grid.innerHTML = list.map((nat) => {
+          const id = String(nat.id);
+          const isCurrent = id === current;
+          const trio = classOrder.map(([key, label]) => {
+            const nm = riderName(nat, key);
+            if (key === activeClass) {
+              return `
+                <button type="button" class="rider-chip rider-chip--pick" data-pick-id="${id}">
+                  <span class="rider-chip__cls">${label}</span>
+                  <span class="rider-chip__nm">${nm}</span>
+                  <span class="rider-chip__hint">${isCurrent ? 'Vald' : 'Tryck för att välja'}</span>
+                </button>`;
+            }
+            return `
+              <span class="rider-chip" aria-hidden="true">
+                <span class="rider-chip__cls">${label}</span>
+                <span class="rider-chip__nm">${nm}</span>
+              </span>`;
+          }).join('');
+          return `
+            <div class="rider-opt${isCurrent ? ' is-current' : ''}" data-id="${id}">
+              <span class="nation-opt__flag">${flagHtml(nat, '—')}</span>
+              <span>
+                <div class="rider-opt__name">${nat.name}</div>
+                <div class="rider-opt__nation">${CLASS_LABELS[activeClass] || activeClass}-plats</div>
+              </span>
+              <span class="rider-opt__code">${nat.code}</span>
+              <div class="rider-opt__trio">${trio}</div>
+            </div>`;
+        }).join('');
+        grid.querySelectorAll('.rider-chip--pick').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            paintClassSlot(activeClass, btn.dataset.pickId);
+            closePicker();
+            updateBanner(false);
+          });
+        });
+        return;
+      }
+
+      // Topp 5 — nation med flagga + tre förare
+      grid.classList.add('is-nations-lineup');
+      const taken = new Set(selectedIds());
+      current = selectedMap()[String(activePos)] || '';
+      const list = NATIONS.filter((n) => {
+        if (!q) return true;
+        const lu = lineupLabel(n).toLowerCase();
+        return (
+          n.code.toLowerCase().includes(q) ||
+          n.name.toLowerCase().includes(q) ||
+          lu.includes(q)
+        );
+      });
+      grid.innerHTML = list.map((nat) => {
+        const id = String(nat.id);
+        const isTaken = taken.has(id) && id !== current;
+        const isCurrent = id === current;
+        return `
+          <button type="button" class="nation-opt${isCurrent ? ' is-current' : ''}"
+            data-id="${id}" ${isTaken ? 'disabled' : ''}>
+            <span class="nation-opt__flag">${flagHtml(nat, '—')}</span>
+            <span class="nation-opt__meta">
+              <div class="nation-opt__code">${nat.code}</div>
+              <div class="nation-opt__name">${nat.name}</div>
+              <div class="nation-opt__lineup">${lineupLabel(nat)}</div>
+            </span>
+          </button>`;
+      }).join('');
+      grid.querySelectorAll('.nation-opt:not(:disabled)').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          paintTopSlot(activePos, btn.dataset.id);
+          closePicker();
+          updateBanner(false);
+        });
+      });
+    }
+
+    function openTopPicker(pos) {
+      if (LOCKED) return;
+      activeMode = 'top';
+      activePos = pos;
+      activeClass = null;
+      titleEl.textContent = `Plats ${pos} — välj nation`;
+      search.placeholder = 'Sök land, kod eller förare…';
+      search.value = '';
+      renderPicker('');
+      sheet.hidden = false;
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => search.focus(), 50);
+    }
+
+    function openClassPicker(cls) {
+      if (LOCKED) return;
+      activeMode = 'class';
+      activeClass = cls;
+      activePos = null;
+      titleEl.textContent = `${CLASS_LABELS[cls] || cls} — favoritförare`;
+      search.placeholder = 'Sök förare, land eller kod…';
+      search.value = '';
+      renderPicker('');
+      sheet.hidden = false;
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => search.focus(), 50);
+    }
+
+    function closePicker() {
+      sheet.hidden = true;
+      document.body.style.overflow = '';
+      activeMode = null;
+      activePos = null;
+      activeClass = null;
+    }
+
+    document.querySelectorAll('.pick-trigger').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.mode === 'class') openClassPicker(btn.dataset.class);
+        else openTopPicker(btn.dataset.pos);
+      });
+    });
+    sheet.querySelectorAll('[data-close-picker]').forEach((el) => {
+      el.addEventListener('click', closePicker);
+    });
+    search.addEventListener('input', () => renderPicker(search.value));
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && !sheet.hidden) closePicker();
+    });
+
+    document.getElementById('clear-btn')?.addEventListener('click', () => {
+      for (let pos = 1; pos <= 5; pos++) paintTopSlot(pos, null);
+      ['mxgp', 'mx2', 'open'].forEach((cls) => paintClassSlot(cls, null));
+      updateBanner(false);
+    });
+
+    document.getElementById('submit-btn')?.addEventListener('click', async () => {
+      if (LOCKED) return;
+      if (!LOGGED_IN) {
+        window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+        return;
+      }
+      const ids = [];
+      for (let pos = 1; pos <= 5; pos++) {
+        const v = document.querySelector(`.nation-value[data-pos="${pos}"]`)?.value;
+        ids.push(v ? parseInt(v, 10) : null);
+      }
+      const classPicks = {};
+      for (const cls of ['mxgp', 'mx2', 'open']) {
+        const v = document.querySelector(`.class-value[data-class="${cls}"]`)?.value;
+        classPicks[cls] = v ? parseInt(v, 10) : null;
+      }
+      if (ids.some((x) => !x) || new Set(ids).size !== 5) {
+        banner.classList.remove('status-ok');
+        banner.classList.add('status-warn');
+        banner.textContent = 'Välj exakt fem olika nationer i topp 5.';
+        return;
+      }
+      if (Object.values(classPicks).some((x) => !x)) {
+        banner.classList.remove('status-ok');
+        banner.classList.add('status-warn');
+        banner.textContent = 'Välj klassfavorit (förare) för MXGP, MX2 och OPEN.';
+        return;
+      }
+      const btn = document.getElementById('submit-btn');
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch(`/mxon_picks/${COMP_ID}/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nation_ids: ids, class_picks: classPicks }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'save_failed');
+        updateBanner(true);
+      } catch (err) {
+        banner.classList.remove('status-ok');
+        banner.classList.add('status-warn');
+        banner.textContent = 'Kunde inte spara: ' + (err.message || err);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+
+    (INITIAL || []).forEach((p) => paintTopSlot(p.position, p.nation_id));
+    Object.entries(INITIAL_CLASS || {}).forEach(([cls, p]) => {
+      if (p && p.nation_id) paintClassSlot(cls, p.nation_id);
+    });
+    updateBanner(
+      (INITIAL || []).length === 5 && Object.keys(INITIAL_CLASS || {}).length === 3
+    );
+  </script>
+</body>
+</html>

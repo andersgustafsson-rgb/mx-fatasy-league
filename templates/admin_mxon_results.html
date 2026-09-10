@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MXoN Resultat — Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-3xl mx-auto px-4 py-8">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-bold text-cyan-300">MXoN resultat</h1>
+      <a href="{{ url_for('admin_organized') }}" class="text-sm text-slate-400 underline">← Admin</a>
+    </div>
+
+    {% if not competition %}
+    <p class="text-rose-300">Ingen MXON-tävling hittades. Kör seed först.</p>
+    <form method="post" action="{{ url_for('admin_seed_mxon_2026') }}" class="mt-4">
+      <button class="bg-cyan-700 hover:bg-cyan-600 px-4 py-2 rounded" type="submit">Seed MXoN 2026</button>
+    </form>
+    {% else %}
+    <p class="text-slate-300 mb-4">
+      {{ competition.name }} (id {{ competition.id }})
+    </p>
+
+    <h2 class="text-lg font-semibold text-cyan-200 mb-2">Nationsordning (1 = vinnare)</h2>
+    <p class="text-slate-400 text-sm mb-2">Koder en per rad eller kommaseparerat.</p>
+    <form id="results-form" class="space-y-4 mb-8">
+      <textarea id="order-input" rows="10" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 font-mono text-sm"
+        placeholder="FRA&#10;USA&#10;BEL&#10;…">{{ current_codes }}</textarea>
+
+      <h2 class="text-lg font-semibold text-cyan-200 mb-1 pt-2">Klassvinnare (förare)</h2>
+      <p class="text-slate-400 text-sm mb-2">Vilken förare vann MXGP / MX2 / OPEN?</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {% for key, label in [('mxgp','MXGP'),('mx2','MX2'),('open','OPEN')] %}
+        <label class="block text-sm">
+          <span class="text-slate-400">{{ label }}</span>
+          <select id="class-{{ key }}" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm">
+            <option value="">— välj —</option>
+            {% for n in nations %}
+            {% set seat = (n.lineup or {}).get(key) or {} %}
+            {% set rider = 'TBA' if seat.get('is_tba') or not seat.get('rider_name') else seat.get('rider_name') %}
+            <option value="{{ n.id }}"
+              {% if class_results.get(key) and class_results[key].nation_id == n.id %}selected{% endif %}>
+              {{ n.name }} — {{ rider }} ({{ n.code }})
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+        {% endfor %}
+      </div>
+
+      <div class="flex flex-wrap gap-3 pt-2">
+        <button type="submit" class="bg-emerald-700 hover:bg-emerald-600 px-4 py-2 rounded font-semibold">
+          Spara allt + beräkna poäng
+        </button>
+        <button type="button" id="score-only" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded">
+          Beräkna poäng igen
+        </button>
+      </div>
+    </form>
+    <pre id="out" class="mt-4 text-xs text-slate-400 whitespace-pre-wrap"></pre>
+    {% endif %}
+  </div>
+
+  {% if competition %}
+  <script>
+    const COMP_ID = {{ competition.id }};
+    const out = document.getElementById('out');
+
+    function classWinners() {
+      return {
+        mxgp: document.getElementById('class-mxgp').value,
+        mx2: document.getElementById('class-mx2').value,
+        open: document.getElementById('class-open').value,
+      };
+    }
+
+    async function post(url, body) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data;
+    }
+
+    document.getElementById('results-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const raw = document.getElementById('order-input').value;
+      const cw = classWinners();
+      try {
+        const data = await post(`/admin/mxon/${COMP_ID}/results`, {
+          order_text: raw,
+          class_winners: cw,
+          score: true,
+        });
+        out.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        out.textContent = 'Error: ' + err.message;
+      }
+    });
+
+    document.getElementById('score-only').addEventListener('click', async () => {
+      try {
+        const data = await post(`/admin/mxon/${COMP_ID}/score`, {});
+        out.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        out.textContent = 'Error: ' + err.message;
+      }
+    });
+  </script>
+  {% endif %}
+</body>
+</html>

@@ -31,7 +31,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, rider_query_for_list_ui
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, rider_query_for_list_ui
 
 _INDEX_SCHEMA_CHECKED = False
 _RIDER_IMAGE_COLUMN_CHECKED = False
@@ -1252,8 +1252,24 @@ def _home_primary_competition(*, require_open: bool = False) -> Competition | No
     return None
 
 
+# Tippa-only series (no season team; excluded from AMA fantasy totals)
+TIPPA_ONLY_SERIES = frozenset({"WSX", "MXON"})
+
+
+def is_tippa_only_series(series: str | None) -> bool:
+    return (series or "").strip().upper() in TIPPA_ONLY_SERIES
+
+
+def ama_competition_clause():
+    """SQLAlchemy filter: competitions that count on AMA / global boards."""
+    return db.or_(
+        Competition.series.is_(None),
+        ~Competition.series.in_(tuple(TIPPA_ONLY_SERIES)),
+    )
+
+
 def _home_default_countdown_series() -> str:
-    """Default countdown series for homepage (never auto-select WSX)."""
+    """Default countdown series for homepage (never auto-select WSX/MXON)."""
     for series_code in ("SX", "MX", "SMX"):
         if _next_competition_for_picks(series=series_code, require_open=False) is not None:
             return series_code
@@ -1263,15 +1279,18 @@ def _home_default_countdown_series() -> str:
 def _normalize_countdown_series(raw: str | None) -> str | None:
     if not raw:
         return None
-    key = str(raw).strip().upper()
+    key = str(raw).strip().upper().replace(" ", "")
     aliases = {
         "SX": "SX",
         "SUPERCROSS": "SX",
         "MX": "MX",
         "MOTOCROSS": "MX",
         "SMX": "SMX",
-        "SMX FINALS": "SMX",
+        "SMXFINALS": "SMX",
         "WSX": "WSX",
+        "MXON": "MXON",
+        "MXONATIONS": "MXON",
+        "MOTOCROSSOFNATIONS": "MXON",
     }
     return aliases.get(key)
 
@@ -2565,6 +2584,172 @@ def admin_seed_wsx_2026():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+
+@app.post("/admin/seed_mxon_2026")
+def admin_seed_mxon_2026():
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    try:
+        from mxon_fantasy import ensure_mxon_2026
+
+        db.create_all()
+        info = ensure_mxon_2026(attach_track_image=True)
+        if request.form or (request.accept_mimetypes.best or "").startswith("text/html"):
+            return redirect(url_for("admin_mxon_results_page"))
+        return jsonify({"message": "MXON 2026 seeded/verified", "info": info})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.get("/admin/mxon")
+def admin_mxon_results_page():
+    if not is_admin_user():
+        return redirect(url_for("login", next=request.path))
+    from mxon_fantasy import get_class_results, list_active_nations, mxon_competitions_for_year, nation_dict
+
+    comps = mxon_competitions_for_year(2026)
+    comp = comps[0] if comps else None
+    current_codes = ""
+    class_results = {}
+    nations = []
+    if comp:
+        rows = (
+            MxonNationResult.query.filter_by(competition_id=comp.id)
+            .order_by(MxonNationResult.position.asc())
+            .all()
+        )
+        codes = []
+        for r in rows:
+            n = MxonNation.query.get(r.nation_id)
+            if n:
+                codes.append(n.code)
+        current_codes = "\n".join(codes)
+        class_results = get_class_results(comp.id)
+        nations = [nation_dict(n, include_lineup=True) for n in list_active_nations()]
+        nations.sort(key=lambda d: ((d.get("name") or "").lower(), d.get("code") or ""))
+    return render_template(
+        "admin_mxon_results.html",
+        competition=comp,
+        current_codes=current_codes,
+        class_results=class_results,
+        nations=nations,
+    )
+
+
+@app.post("/admin/mxon/<int:competition_id>/results")
+def admin_mxon_save_results(competition_id: int):
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    from mxon_fantasy import calculate_mxon_scores, set_class_results, set_nation_results
+
+    comp = Competition.query.get_or_404(competition_id)
+    if (comp.series or "").upper() != "MXON":
+        return jsonify({"error": "not_mxon"}), 400
+    data = request.get_json(silent=True) or {}
+    order_text = (data.get("order_text") or data.get("order") or "").strip()
+    if isinstance(data.get("nation_codes"), list):
+        codes = [str(c).strip().upper() for c in data["nation_codes"] if str(c).strip()]
+    else:
+        raw = order_text.replace(",", "\n").replace(";", "\n")
+        codes = [ln.strip().upper() for ln in raw.splitlines() if ln.strip()]
+    if not codes:
+        return jsonify({"error": "empty_order"}), 400
+    nations = {n.code.upper(): n for n in MxonNation.query.filter_by(is_active=True).all()}
+    ordered_ids = []
+    missing = []
+    for code in codes:
+        n = nations.get(code)
+        if not n:
+            missing.append(code)
+        else:
+            ordered_ids.append(n.id)
+    if missing:
+        return jsonify({"error": "unknown_codes", "missing": missing}), 400
+
+    class_map = data.get("class_winners") or {}
+    class_ids: dict[str, int] = {}
+    if class_map:
+        for key in ("mxgp", "mx2", "open"):
+            raw = class_map.get(key)
+            if raw is None or raw == "":
+                continue
+            if isinstance(raw, int) or (isinstance(raw, str) and str(raw).isdigit()):
+                class_ids[key] = int(raw)
+            else:
+                n = nations.get(str(raw).strip().upper())
+                if not n:
+                    return jsonify({"error": "unknown_class_code", "class": key, "code": raw}), 400
+                class_ids[key] = n.id
+        if len(class_ids) not in (0, 3):
+            return jsonify({"error": "need_all_three_class_winners_or_none"}), 400
+
+    try:
+        count = set_nation_results(competition_id, ordered_ids)
+        class_saved = 0
+        if len(class_ids) == 3:
+            class_saved = set_class_results(competition_id, class_ids)
+        score_info = None
+        if data.get("score", True):
+            score_info = calculate_mxon_scores(competition_id)
+        return jsonify({
+            "ok": True,
+            "saved": count,
+            "class_saved": class_saved,
+            "score": score_info,
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/admin/mxon/<int:competition_id>/class_results")
+def admin_mxon_save_class_results(competition_id: int):
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    from mxon_fantasy import calculate_mxon_scores, set_class_results
+
+    comp = Competition.query.get_or_404(competition_id)
+    if (comp.series or "").upper() != "MXON":
+        return jsonify({"error": "not_mxon"}), 400
+    data = request.get_json(silent=True) or {}
+    class_map = data.get("class_winners") or data
+    nations = {n.code.upper(): n for n in MxonNation.query.filter_by(is_active=True).all()}
+    class_ids: dict[str, int] = {}
+    for key in ("mxgp", "mx2", "open"):
+        raw = class_map.get(key)
+        if raw is None or raw == "":
+            return jsonify({"error": f"missing_{key}"}), 400
+        if isinstance(raw, int) or (isinstance(raw, str) and str(raw).isdigit()):
+            class_ids[key] = int(raw)
+        else:
+            n = nations.get(str(raw).strip().upper())
+            if not n:
+                return jsonify({"error": "unknown_code", "code": raw}), 400
+            class_ids[key] = n.id
+    try:
+        saved = set_class_results(competition_id, class_ids)
+        score_info = calculate_mxon_scores(competition_id) if data.get("score", True) else None
+        return jsonify({"ok": True, "saved": saved, "score": score_info})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/admin/mxon/<int:competition_id>/score")
+def admin_mxon_score(competition_id: int):
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    from mxon_fantasy import calculate_mxon_scores
+
+    try:
+        info = calculate_mxon_scores(competition_id)
+        return jsonify({"ok": True, **info})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
 def is_admin_user():
     """Check if current user is admin"""
     username = session.get("username")
@@ -3034,6 +3219,8 @@ def _invite_picks_target() -> tuple[str, str]:
     """Return (race_name, next_url) for invite / Pit Pass flows."""
     race = _current_picks_competition()
     if race and not is_picks_locked(race):
+        if (getattr(race, "series", None) or "").upper() == "MXON":
+            return race.name, url_for("mxon_picks_page", competition_id=race.id)
         return race.name, url_for("race_picks_page", competition_id=race.id)
     return "MX Fantasy League", url_for("index")
 
@@ -3351,8 +3538,8 @@ def build_series_status_list() -> list[dict]:
         )
     ).all()
 
-    # SX/MX first on homepage; WSX is selectable but not default focus
-    series_order = {"Supercross": 1, "Motocross": 2, "SMX Finals": 3, "WSX": 4}
+    # SX/MX first on homepage; WSX/MXON selectable but not default focus
+    series_order = {"Supercross": 1, "Motocross": 2, "SMX Finals": 3, "WSX": 4, "MXON": 5, "MXoN": 5}
     all_series.sort(key=lambda s: series_order.get(s.name, 999))
 
     simulation_active = False
@@ -3376,6 +3563,8 @@ def build_series_status_list() -> list[dict]:
             series_code = "SMX"
         elif s.name == "WSX":
             series_code = "WSX"
+        elif s.name in ("MXON", "MXoN"):
+            series_code = "MXON"
 
         next_race = None
         if series_code:
@@ -4523,6 +4712,22 @@ def get_wsx_leaderboard():
         return jsonify({"error": str(e), "leaderboard": []}), 500
 
 
+@app.get("/get_mxon_leaderboard")
+def get_mxon_leaderboard():
+    """Standalone MXoN fantasy leaderboard."""
+    try:
+        from mxon_fantasy import fantasy_mxon_leaderboard_for_year
+
+        year_raw = request.args.get("year")
+        year = int(year_raw) if year_raw else 2026
+        rows = fantasy_mxon_leaderboard_for_year(year)
+        return jsonify({"series": "MXON", "year": year, "leaderboard": rows})
+    except Exception as e:
+        print(f"ERROR in get_mxon_leaderboard: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e), "leaderboard": []}), 500
+
+
 @app.get("/supercross/sasong/<int:year>")
 def sx_season_recap(year: int):
     """Säsongssammanfattning: AMA-pall + fantasy-leaderboard enbart Supercross."""
@@ -4902,7 +5107,7 @@ def _completed_competitions_for_league(limit: int | None = None) -> list[Competi
         return []
     q = (
         Competition.query.filter(Competition.id.in_(ids_with_results))
-        .filter(db.or_(Competition.series.is_(None), Competition.series != "WSX"))
+        .filter(ama_competition_clause())
         .order_by(Competition.event_date.desc().nullslast(), Competition.id.desc())
     )
     if limit:
@@ -4971,7 +5176,7 @@ def _upcoming_competitions(limit: int = 4) -> list[dict]:
     }
     upcoming = (
         Competition.query.filter(
-            db.or_(Competition.series.is_(None), Competition.series != "WSX")
+            ama_competition_clause()
         )
         .order_by(Competition.event_date.asc().nullslast(), Competition.id.asc())
         .all()
@@ -8473,7 +8678,7 @@ def calculate_leaderboard_deltas():
         Competition.event_date.isnot(None),
         Competition.event_date >= week_ago_date,
         Competition.event_date <= today_utc,
-        db.or_(Competition.series.is_(None), Competition.series != "WSX"),
+        ama_competition_clause(),
     ).all()
     # Endast *körda* tävlingar — annars finns inga race-poäng i fönstret, alla får samma baseline
     # som total → delta 0 för alla → Raket/Ankare "Ingen data".
@@ -8782,7 +8987,7 @@ def get_weekly_fun_stats():
                 Competition.event_date.isnot(None),
                 Competition.event_date >= week_ago_date,
                 Competition.event_date <= today_utc,
-                db.or_(Competition.series.is_(None), Competition.series != "WSX"),
+                ama_competition_clause(),
             ).all()
         comp_ids = [c.id for c in recent_competitions]
 
@@ -9628,7 +9833,7 @@ def create_season_team():
 def _parse_my_scores_series_scope() -> tuple[str, int | None]:
     """Series scope for Mina poäng. WSX defaults to active season year (not all years)."""
     series_filter = (request.args.get("series") or "").strip().upper()
-    if series_filter not in ("WSX", "SX", "MX", "SMX", "AMA"):
+    if series_filter not in ("WSX", "MXON", "SX", "MX", "SMX", "AMA"):
         series_filter = ""
     wsx_year: int | None = None
     if series_filter == "WSX":
@@ -9650,7 +9855,11 @@ def _filter_my_score_rows(rows, series_filter: str, wsx_year: int | None):
         allowed = {int(c.id) for c in _wsx_competitions_for_year(int(wsx_year))}
         return [r for r in rows if int(r.competition_id) in allowed]
     if series_filter == "AMA":
-        return [r for r in rows if (r.series or "").upper() != "WSX"]
+        return [
+            r
+            for r in rows
+            if (r.series or "").upper() not in TIPPA_ONLY_SERIES
+        ]
     if series_filter:
         return [r for r in rows if (r.series or "").upper() == series_filter]
     return rows
@@ -10043,11 +10252,21 @@ def series_page(series_id):
         competition_gates = {}
         for c in competitions:
             label = competition_schedule_venue_label(c) or wsx_venue_by_name.get(c.name)
+            if not label and (getattr(c, "series", None) or "").upper() == "MXON":
+                label = "Ernée — Circuit Raymond Demy · kval lör · race sön"
             if label:
                 competition_venues[c.id] = label
             gate = competition_gate_label(c)
             if gate:
                 competition_gates[c.id] = gate
+
+        mxon_nations = []
+        if series.name in ("MXON", "MXoN"):
+            from mxon_fantasy import list_active_nations, nation_dict
+
+            mxon_nations = [
+                nation_dict(n, include_lineup=True) for n in list_active_nations()
+            ]
         
         # Check if there's an active race set in admin panel
         active_race_id = None
@@ -10131,6 +10350,21 @@ def series_page(series_id):
             
             # Check if current user has made picks for this competition
             if "user_id" in session:
+                if (comp.series or "").upper() == "MXON":
+                    n = MxonNationPick.query.filter_by(
+                        user_id=int(session["user_id"]), competition_id=int(comp.id)
+                    ).count()
+                    c = MxonClassPick.query.filter_by(
+                        user_id=int(session["user_id"]), competition_id=int(comp.id)
+                    ).count()
+                    user_picks_status[comp.id] = {
+                        "has_picks": n >= 5 and c >= 3,
+                        "race_picks_count": n,
+                        "holeshot_picks_count": c,
+                        "has_wildcard": False,
+                    }
+                    continue
+
                 race_picks_list = race_picks_by_comp.get(comp.id, [])
                 holeshot_picks_list = holeshot_picks_by_comp.get(comp.id, [])
                 wildcard_pick = wildcard_picks_by_comp.get(comp.id)
@@ -10190,6 +10424,8 @@ def series_page(series_id):
             series_code = "SMX"
         elif series.name == "WSX":
             series_code = "WSX"
+        elif series.name in ("MXON", "MXoN"):
+            series_code = "MXON"
 
         next_race = None
         if series_code:
@@ -10207,6 +10443,8 @@ def series_page(series_id):
             picks_locked_status[next_race.id] = not picks_open
 
         next_race_bg_url = race_background_static_url(next_race) if next_race else None
+        if next_race and (getattr(next_race, "series", None) or "").upper() == "MXON":
+            next_race_bg_url = "images/mxon/ernee_aerial.jpg"
         
         # Simple template render with all required variables
         print(f"DEBUG: About to render series_page.html for series {series_id}")
@@ -10223,6 +10461,7 @@ def series_page(series_id):
                              picks_open=picks_open,
                              current_date=get_today(),
                              active_race_id=active_race_id,
+                             mxon_nations=mxon_nations,
                              user_logged_in="user_id" in session)
         
     except Exception as e:
@@ -10442,6 +10681,124 @@ def _build_pick_suggestions_for_user(
     }
 
 
+@app.route("/mxon_picks/<int:competition_id>")
+def mxon_picks_page(competition_id):
+    """MXoN tippa — topp 5 nationer (egen UI, ingen AMA/WSX-wizard)."""
+    import json
+
+    from mxon_fantasy import (
+        get_user_class_picks,
+        get_user_nation_picks,
+        list_active_nations,
+        nation_dict,
+    )
+
+    is_logged_in = "user_id" in session and bool(session.get("user_id"))
+    if is_logged_in and not check_session_timeout():
+        flash("Din session har gått ut. Logga in igen.", "error")
+        return redirect(url_for("login", next=request.path))
+    is_logged_in = "user_id" in session and bool(session.get("user_id"))
+
+    comp = Competition.query.get_or_404(competition_id)
+    if (getattr(comp, "series", None) or "").upper() != "MXON":
+        return redirect(url_for("race_picks_page", competition_id=competition_id))
+
+    picks_locked = is_picks_locked(comp)
+    nations_raw = list_active_nations()
+    nations = []
+    for n in nations_raw:
+        d = nation_dict(n, include_lineup=True)
+        lineup = d.get("lineup") or {}
+        parts = []
+        for cls_key, label in (("mxgp", "MXGP"), ("mx2", "MX2"), ("open", "OPEN")):
+            seat = lineup.get(cls_key) or {}
+            nm = "TBA" if seat.get("is_tba") else (seat.get("rider_name") or "TBA")
+            parts.append(f"{label}: {nm}")
+        d["lineup_label"] = " · ".join(parts)
+        nations.append(d)
+
+    initial = []
+    initial_class = {}
+    if is_logged_in:
+        uid = int(session["user_id"])
+        initial = get_user_nation_picks(uid, int(comp.id))
+        initial_class = get_user_class_picks(uid, int(comp.id))
+
+    schedule = _competition_race_schedule(comp)
+    hero_image = "/static/images/mxon/ernee_layout.png"
+    try:
+        from pathlib import Path
+
+        if not (Path("static") / "images/mxon/ernee_layout.png").is_file():
+            hero_image = "/static/images/mxon/ernee_aerial.jpg"
+    except Exception:
+        pass
+
+    return render_template(
+        "mxon_picks.html",
+        competition=comp,
+        nations=nations,
+        picks_locked=picks_locked,
+        is_logged_in=is_logged_in,
+        initial_picks_json=json.dumps(initial),
+        initial_class_json=json.dumps(initial_class),
+        deadline_display=schedule.get("pick_deadline_display"),
+        hero_image=hero_image,
+    )
+
+
+@app.post("/mxon_picks/<int:competition_id>/save")
+def mxon_picks_save(competition_id):
+    if "user_id" not in session:
+        return jsonify({"error": "login_required"}), 401
+    if not check_session_timeout():
+        return jsonify({"error": "session_expired"}), 401
+
+    from mxon_fantasy import save_user_class_picks, save_user_nation_picks
+
+    comp = Competition.query.get_or_404(competition_id)
+    if (getattr(comp, "series", None) or "").upper() != "MXON":
+        return jsonify({"error": "not_mxon"}), 400
+    if is_picks_locked(comp):
+        return jsonify({"error": "picks_locked"}), 403
+
+    data = request.get_json(silent=True) or {}
+    nation_ids = data.get("nation_ids") or []
+    class_picks = data.get("class_picks") or {}
+    try:
+        nation_ids = [int(x) for x in nation_ids]
+        uid = int(session["user_id"])
+        picks = save_user_nation_picks(uid, int(comp.id), nation_ids)
+        class_out = save_user_class_picks(uid, int(comp.id), class_picks)
+        return jsonify({"ok": True, "picks": picks, "class_picks": class_out})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.get("/mxon_picks/<int:competition_id>/mine")
+def mxon_picks_mine(competition_id):
+    if "user_id" not in session:
+        return jsonify({"error": "login_required"}), 401
+    from mxon_fantasy import get_user_class_picks, get_user_nation_picks
+
+    comp = Competition.query.get_or_404(competition_id)
+    uid = int(session["user_id"])
+    picks = get_user_nation_picks(uid, int(comp.id))
+    class_picks = get_user_class_picks(uid, int(comp.id))
+    complete = len(picks) == 5 and len(class_picks) == 3
+    return jsonify(
+        {
+            "picks": picks,
+            "class_picks": class_picks,
+            "complete": complete,
+            "picks_locked": is_picks_locked(comp),
+        }
+    )
+
+
 @app.route("/race_picks/<int:competition_id>")
 def race_picks_page(competition_id):
     """Race picks — gäster kan titta; Pit Pass krävs för att sätta/spara picks."""
@@ -10452,6 +10809,9 @@ def race_picks_page(competition_id):
         return redirect(url_for("login", next=request.path))
     is_logged_in = "user_id" in session and bool(session.get("user_id"))
     comp = Competition.query.get_or_404(competition_id)
+
+    if (getattr(comp, "series", None) or "").upper() == "MXON":
+        return redirect(url_for("mxon_picks_page", competition_id=comp.id))
     
     
     # Use the unified picks lock check function
@@ -11952,7 +12312,7 @@ def _last_completed_competition(*, series: str | None = None) -> Competition | N
     if series_code:
         q = q.filter(Competition.series == series_code)
     else:
-        q = q.filter(db.or_(Competition.series.is_(None), Competition.series != "WSX"))
+        q = q.filter(ama_competition_clause())
     return q.order_by(Competition.event_date.desc(), Competition.id.desc()).first()
 
 
@@ -18369,6 +18729,18 @@ def _user_picks_status_code(user_id: int | None, comp: Competition | None) -> st
     if not user_id or not comp:
         return "no_picks"
     try:
+        if (getattr(comp, "series", None) or "").upper() == "MXON":
+            n = MxonNationPick.query.filter_by(
+                user_id=int(user_id), competition_id=int(comp.id)
+            ).count()
+            c = MxonClassPick.query.filter_by(
+                user_id=int(user_id), competition_id=int(comp.id)
+            ).count()
+            if n >= 5 and c >= 3:
+                return "has_picks"
+            if n > 0 or c > 0:
+                return "partial_picks"
+            return "no_picks"
         is_wsx = (getattr(comp, "series", None) or "") == "WSX"
         my = _my_picks_api_dict(int(user_id), comp)
         top6 = my.get("top6_picks") or []
@@ -21746,7 +22118,7 @@ def get_competitions_for_import():
         else:
             q = Competition.query
             if series_filter == "AMA":
-                q = q.filter(db.or_(Competition.series.is_(None), Competition.series != "WSX"))
+                q = q.filter(ama_competition_clause())
             elif series_filter == "WSX":
                 q = q.filter(Competition.series == "WSX")
             elif series_filter:
@@ -28897,6 +29269,9 @@ def _competition_race_schedule(comp) -> dict:
 
     timezone_val = (getattr(comp, "timezone", None) or "America/Los_Angeles").strip()
     start_time = _parse_start_time_value(getattr(comp, "start_time", None))
+    # MXoN: lock against Saturday MXGP Qual (~14:30), not Sunday Race 1
+    if not start_time and (getattr(comp, "series", None) or "").upper() == "MXON":
+        start_time = datetime.min.time().replace(hour=14, minute=30)
 
     if start_time:
         race_local_naive = datetime.combine(event_date, start_time)
@@ -28934,6 +29309,7 @@ def _competition_race_schedule(comp) -> dict:
                 "America/Argentina/Buenos_Aires": -3,
                 "Australia/Brisbane": 10,
                 "Europe/Stockholm": 2 if summer else 1,
+                "Europe/Paris": 2 if summer else 1,
             }
             utc_offset = offsets.get(timezone_val, -8)
             race_datetime_utc = race_local_naive - timedelta(hours=utc_offset)

@@ -897,6 +897,21 @@
       min-height: 180px;
       background-repeat: no-repeat;
     }
+    .bg-mxon {
+      background-image: url('/static/images/mxon/ernee_aerial.jpg') !important;
+      background-size: cover !important;
+      background-position: center 40% !important;
+      background-repeat: no-repeat !important;
+      background-color: #1a2744;
+      min-height: 180px;
+    }
+    .home-series-card.bg-mxon:hover,
+    .home-series-card.bg-wsx:hover,
+    .home-series-card.bg-supercross:hover,
+    .home-series-card.bg-motocross:hover,
+    .home-series-card.bg-smx:hover {
+      background-color: transparent;
+    }
     
     /* Racing Logo Styling */
     .racing-logo {
@@ -3427,22 +3442,29 @@
       c.innerHTML = homeLbLoading('cyan');
 
       const isWSX = homeSelectedSeries === 'WSX';
+      const isMXON = homeSelectedSeries === 'MXON';
+      const isTippaOnly = isTippaOnlyHomeSeries(homeSelectedSeries);
       if (titleEl) {
-        titleEl.innerHTML = isWSX
-          ? `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>WSX Fantasy 2026</span></span>`
-          : `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>SMX Leaderboard</span></span>`;
+        if (isMXON) {
+          titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>MXoN Fantasy 2026</span></span>`;
+        } else if (isWSX) {
+          titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>WSX Fantasy 2026</span></span>`;
+        } else {
+          titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>SMX Leaderboard</span></span>`;
+        }
       }
-      // Season-team is AMA-only — hide when browsing WSX
+      // Season-team is AMA-only — hide when browsing tippa-only series
       const seasonTeamPanel = document.getElementById('season-team-leaderboard-list')?.closest('.home-ui-panel');
-      if (seasonTeamPanel) seasonTeamPanel.style.display = isWSX ? 'none' : '';
+      if (seasonTeamPanel) seasonTeamPanel.style.display = isTippaOnly ? 'none' : '';
 
       try {
         let leaderboard;
-        if (isWSX) {
-          const res = await fetch(`/get_wsx_leaderboard?year=2026`);
+        if (isWSX || isMXON) {
+          const lbUrl = isMXON ? `/get_mxon_leaderboard?year=2026` : `/get_wsx_leaderboard?year=2026`;
+          const res = await fetch(lbUrl);
           if (requestId !== window.seasonLeaderboardRequestId) return;
           if (!res.ok) {
-            c.innerHTML = '<p class="text-red-400 text-center">Kunde inte hämta WSX-leaderboard</p>';
+            c.innerHTML = `<p class="text-red-400 text-center">Kunde inte hämta ${isMXON ? 'MXoN' : 'WSX'}-leaderboard</p>`;
             return;
           }
           const payload = await res.json();
@@ -3477,7 +3499,9 @@
 
         if (leaderboard.length === 0) {
           c.innerHTML = homeLbEmpty(
-            isWSX
+            isMXON
+              ? 'Inga MXoN-poäng ännu — highscoren fylls efter Ernée.'
+              : isWSX
               ? 'Inga WSX-poäng ännu — highscoren fylls efter Canadian GP.'
               : 'Inga poäng registrerade ännu.',
             'cyan'
@@ -3489,7 +3513,7 @@
         window.seasonLeaderboardData = leaderboard;
 
         // Populate header chips for current user only on AMA leaderboard
-        if (!isWSX) {
+        if (!isTippaOnly) {
           try {
             const currentUsername = (window.currentUsername || '').toString().trim().toLowerCase();
             if (currentUsername) {
@@ -3941,17 +3965,22 @@
     let realCountdownServerSyncInterval;
     let _realCountdownSeconds = { race: null, deadline: null };
     let _realCountdownLastSyncMs = 0;
-    // Homepage default stays on AMA chain (SX→MX→SMX). WSX only via series card.
+    // Homepage default stays on AMA chain (SX→MX→SMX). WSX/MXON only via series card.
     let homeSelectedSeries = null;
     var _seriesStatusCache = []; // var so language toggle (other script) can re-render cards
 
     function seriesNameToCode(name) {
       const n = String(name || '').toLowerCase();
+      if (n.includes('mxon') || n === 'mxon') return 'MXON';
       if (n.includes('wsx')) return 'WSX';
       if (n.includes('supercross')) return 'SX';
-      if (n.includes('motocross')) return 'MX';
       if (n.includes('smx')) return 'SMX';
+      if (n.includes('motocross')) return 'MX';
       return null;
+    }
+
+    function isTippaOnlyHomeSeries(code) {
+      return code === 'WSX' || code === 'MXON';
     }
 
     function seriesNextRaceSortKey(serie) {
@@ -3964,7 +3993,7 @@
     }
 
     function sortSeriesByNextRace(seriesList) {
-      const order = { SX: 1, MX: 2, SMX: 3, WSX: 4 };
+      const order = { SX: 1, MX: 2, SMX: 3, WSX: 4, MXON: 5 };
       return [...(Array.isArray(seriesList) ? seriesList : [])].sort((a, b) => {
         const ka = seriesNextRaceSortKey(a);
         const kb = seriesNextRaceSortKey(b);
@@ -4004,7 +4033,8 @@
       let preferred = null;
       try { preferred = localStorage.getItem('home_selected_series'); } catch (_) {}
       if (preferred === 'WSX' && validCodes.has('WSX')) return 'WSX';
-      if (preferred && preferred !== 'WSX' && validCodes.has(preferred)) return preferred;
+      if (preferred === 'MXON' && validCodes.has('MXON')) return 'MXON';
+      if (preferred && preferred !== 'WSX' && preferred !== 'MXON' && validCodes.has(preferred)) return preferred;
       return validCodes.has(nextActive) ? nextActive : 'SX';
     }
 
@@ -4045,7 +4075,7 @@
     }
 
     function updateAmaOnlyHomeUi() {
-      const isWSX = homeSelectedSeries === 'WSX';
+      const isTippaOnly = isTippaOnlyHomeSeries(homeSelectedSeries);
       const seriesQ = homeSelectedSeries
         ? `?series=${encodeURIComponent(homeSelectedSeries)}`
         : '';
@@ -4056,8 +4086,8 @@
 
       const teamTile = document.getElementById('quick-action-season-team');
       if (teamTile) {
-        teamTile.classList.toggle('home-inner-tile--muted', isWSX);
-        if (isWSX) {
+        teamTile.classList.toggle('home-inner-tile--muted', isTippaOnly);
+        if (isTippaOnly) {
           teamTile.setAttribute('aria-disabled', 'true');
           teamTile.setAttribute('title', 'Säsongsteam gäller bara SX, MX och SMX');
         } else {
@@ -4067,8 +4097,8 @@
       }
       const teamTabs = document.querySelectorAll('.tab-season-team-btn');
       teamTabs.forEach((teamTab) => {
-        teamTab.disabled = isWSX;
-        if (isWSX) {
+        teamTab.disabled = isTippaOnly;
+        if (isTippaOnly) {
           teamTab.setAttribute('title', 'Säsongsteam gäller bara SX, MX och SMX');
           if (teamTab.classList.contains('active')) {
             const raceTab = document.querySelector('.tab-btn[data-tab="race-info"]');
@@ -4745,25 +4775,35 @@
       const panel = document.getElementById('home-sidebar-picks-status');
       if (!panel) return;
       const compId = data?.picks_competition_id || data?.next_race?.id;
+      const seriesHint = (data?.series || data?.next_race?.series || homeSelectedSeries || '');
+      const isMXON = seriesHint === 'MXON';
       const openHref =
-        (compId ? `/race_picks/${compId}` : null) ||
+        (compId ? (isMXON ? `/mxon_picks/${compId}` : `/race_picks/${compId}`) : null) ||
         document.getElementById('real-picks-open-status')?.getAttribute('href') ||
         '/race_picks_active';
-      const isWSX = (data?.series || data?.next_race?.series || homeSelectedSeries) === 'WSX';
+      const isWSX = seriesHint === 'WSX';
       const picksStatus = data?.picks_status || 'no_picks';
 
       if (!compId || !window.__MX_LOGGED_IN__) {
         // Keep SSR content for guests; for logged-in without race just show empty prompt
         if (window.__MX_LOGGED_IN__) {
-          renderHomePicksBoard(null, { picksStatus: 'no_picks', openHref, isWSX });
+          renderHomePicksBoard(null, { picksStatus: 'no_picks', openHref, isWSX: isWSX || isMXON });
         }
         return;
       }
 
       try {
-        const res = await fetch(`/get_my_picks/${compId}`);
+        const picksUrl = isMXON ? `/mxon_picks/${compId}/mine` : `/get_my_picks/${compId}`;
+        const res = await fetch(picksUrl);
         if (!res.ok) throw new Error('picks fetch failed');
         const myPicks = await res.json();
+        if (isMXON) {
+          const complete = !!myPicks.complete;
+          const partial = Array.isArray(myPicks.picks) && myPicks.picks.length > 0 && !complete;
+          const status = complete ? 'has_picks' : (partial ? 'partial_picks' : 'no_picks');
+          applySidebarPicksStatusFallback(status, openHref);
+          return;
+        }
         renderHomePicksBoard(myPicks, { picksStatus, openHref, isWSX });
       } catch (e) {
         console.warn('refreshHomePicksBoard:', e);
@@ -5678,14 +5718,18 @@
           
           // Add background class based on series
           let backgroundClass = '';
-          if (serie.name.toLowerCase().includes('supercross')) {
+          const nameLower = (serie.name || '').toLowerCase();
+          const codeLower = (seriesCode || '').toLowerCase();
+          if (codeLower === 'mxon' || nameLower.includes('mxon')) {
+            backgroundClass = 'bg-mxon';
+          } else if (nameLower.includes('supercross') || codeLower === 'sx') {
             backgroundClass = 'bg-supercross';
-          } else if (serie.name.toLowerCase().includes('motocross')) {
-            backgroundClass = 'bg-motocross';
-          } else if (serie.name.toLowerCase().includes('smx')) {
+          } else if (nameLower.includes('smx') || codeLower === 'smx') {
             backgroundClass = 'bg-smx';
-          } else if (serie.name.toLowerCase().includes('wsx')) {
+          } else if (nameLower.includes('wsx') || codeLower === 'wsx') {
             backgroundClass = 'bg-wsx';
+          } else if (nameLower.includes('motocross') || codeLower === 'mx') {
+            backgroundClass = 'bg-motocross';
           }
 
           console.debug('[SeriesCard]', {
@@ -5695,10 +5739,13 @@
           });
           
           const finalCardClass = `${cardClass} ${backgroundClass}`;
-          // WSX inline fallback to ensure the hero shows even if class fails
-          const wsxInlineBg = serie.name.toLowerCase().includes('wsx')
-            ? 'background-image: url("/static/images/wsx_hero.jpg"); background-size: cover; background-position: center;'
-            : '';
+          // Inline fallback so hero shows even if class fails
+          let inlineBg = '';
+          if (backgroundClass === 'bg-wsx') {
+            inlineBg = 'background-image: url("/static/images/wsx_hero.jpg"); background-size: cover; background-position: center;';
+          } else if (backgroundClass === 'bg-mxon') {
+            inlineBg = 'background-image: url(\"/static/images/mxon/ernee_aerial.jpg\"); background-size: cover; background-position: center 40%; background-repeat: no-repeat; background-color: transparent;';
+          }
 
           const hintText = isSelected
             ? (isEn ? 'Selected · see schedule below' : 'Vald · se schema nedan')
@@ -5708,7 +5755,7 @@
           const cardContent = `
             <div class="home-series-card__scrim"></div>
             <div class="relative z-10 text-center">
-              <h3 class="home-series-card__title">${serie.name}</h3>
+              <h3 class="home-series-card__title">${serie.name === 'MXON' ? 'MXoN' : serie.name}</h3>
               <p class="text-sm ${statusColor} mb-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${statusText}</p>
               ${nextRace ? `<p class="text-xs text-gray-200 mb-3" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Next' : 'Nästa'}: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
               <div class="text-xs text-gray-300 mt-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)" data-series-hint>${hintText}</div>
@@ -5718,8 +5765,8 @@
           
           
           return isClickable
-            ? `<div role="button" tabindex="0" data-series-code="${seriesCode}" data-series-id="${serie.id}" class="block ${finalCardClass}" style="${wsxInlineBg}">${cardContent}</div>`
-            : `<div class="${finalCardClass}" style="${wsxInlineBg}">${cardContent}</div>`;
+            ? `<div role="button" tabindex="0" data-series-code="${seriesCode}" data-series-id="${serie.id}" class="block ${finalCardClass}" style="${inlineBg}">${cardContent}</div>`
+            : `<div class="${finalCardClass}" style="${inlineBg}">${cardContent}</div>`;
         }).join('');
         
         // Set the HTML content
@@ -5744,33 +5791,25 @@
         });
         if (homeSelectedSeries) markSelectedSeriesCard(homeSelectedSeries);
 
-        // WSX background debug: verify computed background image loads
+        // Force tippa-only hero backgrounds if CSS class missed (cache / cascade)
         try {
-          const DEBUG_WSX = false;
-          const wsxCards = [...seriesContainer.querySelectorAll('.bg-wsx')];
-          wsxCards.forEach((el, idx) => {
-            if (DEBUG_WSX) el.style.outline = '2px dashed red';
+          seriesContainer.querySelectorAll('.bg-mxon').forEach((el) => {
+            el.style.setProperty('background-image', 'url("/static/images/mxon/ernee_aerial.jpg")', 'important');
+            el.style.setProperty('background-size', 'cover', 'important');
+            el.style.setProperty('background-position', 'center 40%', 'important');
+            el.style.setProperty('background-repeat', 'no-repeat', 'important');
+            el.style.backgroundColor = 'transparent';
+          });
+          seriesContainer.querySelectorAll('.bg-wsx').forEach((el) => {
             const cs = getComputedStyle(el).backgroundImage;
-            console.debug('[WSX-BG] card', idx, 'computed backgroundImage:', cs);
-            const m = cs && cs.match(/url\("?(.*?)"?\)/);
-            const url = m ? m[1] : null;
-            console.debug('[WSX-BG] parsed url:', url);
-
-            if (!url || cs === 'none') {
-              console.warn('[WSX-BG] Missing background, forcing inline WSX image');
+            if (!cs || cs === 'none') {
               el.style.backgroundImage = 'url("/static/images/wsx_hero.jpg")';
               el.style.backgroundSize = 'cover';
               el.style.backgroundPosition = 'center';
             }
-
-            const probeUrl = url || '/static/images/wsx_hero.jpg';
-            const probe = new Image();
-            probe.onload = () => console.debug('[WSX-BG] loaded OK:', probeUrl, probe.width, probe.height);
-            probe.onerror = (e) => console.error('[WSX-BG] load FAILED:', probeUrl, e);
-            probe.src = probeUrl;
           });
-        } catch (dbgErr) {
-          console.error('[WSX-BG] debug failed:', dbgErr);
+        } catch (bgErr) {
+          console.warn('series card bg force failed', bgErr);
         }
     }
 

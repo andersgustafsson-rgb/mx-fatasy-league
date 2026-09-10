@@ -286,6 +286,115 @@
       border-color: #3d4f66;
       color: #fff;
     }
+    .mxon-flag-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+      gap: 0.55rem;
+    }
+    .mxon-flag-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      padding: 0.55rem 0.35rem 0.45rem;
+      border-radius: 0.65rem;
+      border: 1px solid var(--sp-border);
+      background: #152033;
+      color: #e2e8f0;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.12s;
+    }
+    .mxon-flag-btn:hover {
+      border-color: rgba(103, 232, 249, 0.45);
+      background: #1c2c44;
+      transform: translateY(-1px);
+    }
+    .mxon-flag-btn__img {
+      width: 2.4rem;
+      height: 1.55rem;
+      object-fit: cover;
+      border-radius: 0.2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+      background: #0f172a;
+    }
+    .mxon-flag-btn__code {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #94a3b8;
+    }
+    .mxon-modal[hidden] { display: none !important; }
+    .mxon-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .mxon-modal__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.72);
+      backdrop-filter: blur(2px);
+    }
+    .mxon-modal__card {
+      position: relative;
+      width: min(24rem, 100%);
+      border-radius: 0.85rem;
+      border: 1px solid #334155;
+      background: #152033;
+      padding: 1.25rem 1.25rem 1rem;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.45);
+    }
+    .mxon-modal__x {
+      position: absolute;
+      top: 0.45rem;
+      right: 0.65rem;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .mxon-modal__title {
+      margin: 0 0 0.85rem;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #f1f5f9;
+    }
+    .mxon-modal__list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.55rem;
+    }
+    .mxon-modal__list li {
+      display: grid;
+      grid-template-columns: 4.5rem 1fr;
+      gap: 0.75rem;
+      align-items: baseline;
+      padding: 0.55rem 0.65rem;
+      border-radius: 0.5rem;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+    }
+    .mxon-modal__list .cls {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: #67e8f9;
+      text-transform: uppercase;
+    }
+    .mxon-modal__list .rider {
+      font-size: 0.95rem;
+      font-weight: 650;
+      color: #e2e8f0;
+    }
   </style>
 </head>
 <body>
@@ -293,7 +402,7 @@
     <div class="container mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
         <a href="/" class="sp-brand">MX Fantasy</a>
-        <span class="sp-brand__sub">{{ series.name }} {{ series.year }}</span>
+        <span class="sp-brand__sub">{% if series.name in ('MXON', 'MXoN') %}MXoN{% else %}{{ series.name }}{% endif %} {{ series.year }}</span>
       </div>
       <div class="flex items-center gap-2">
         {% if session.username %}
@@ -309,7 +418,7 @@
     <!-- Season meta -->
     <section class="sp-panel">
       <div class="sp-panel__head">
-        <h2>{{ series.name }} {{ series.year }}</h2>
+        <h2>{% if series.name in ('MXON', 'MXoN') %}MXoN{% else %}{{ series.name }}{% endif %} {{ series.year }}</h2>
       </div>
       <div class="sp-panel__body">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -365,6 +474,8 @@
             {% set race_name_slug = race_name_lower.replace(" ", "").replace("national", "").replace("classic", "") %}
             {% set bg_image = "trackmaps/compressed/" + race_name_slug + ".jpg" %}
           {% endif %}
+        {% elif race_series == "MXON" %}
+          {% set bg_image = "images/mxon/ernee_aerial.jpg" %}
         {% else %}
           {% set race_name_slug = race_name_lower.replace(" ", "").replace("national", "").replace("classic", "") %}
           {% set bg_image = "trackmaps/compressed/" + race_name_slug + ".jpg" %}
@@ -543,6 +654,40 @@
       </div>
     </section>
 
+    {% if mxon_nations %}
+    <section class="sp-panel">
+      <div class="sp-panel__head">
+        <h2>Nationer &amp; laguppställning</h2>
+      </div>
+      <div class="sp-panel__body">
+        <p class="text-slate-400 text-sm mb-4">Klicka på en flagga för att se MXGP / MX2 / OPEN.</p>
+        <div class="mxon-flag-grid" id="mxon-flag-grid">
+          {% for n in mxon_nations %}
+          <button type="button"
+            class="mxon-flag-btn"
+            data-nation-id="{{ n.id }}"
+            data-code="{{ n.code }}"
+            data-name="{{ n.name }}"
+            title="{{ n.name }}">
+            <img class="mxon-flag-btn__img" src="{{ n.flag_url }}" alt="{{ n.code }}" loading="lazy" width="40" height="26">
+            <span class="mxon-flag-btn__code">{{ n.code }}</span>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <div id="mxon-lineup-modal" class="mxon-modal" hidden>
+      <div class="mxon-modal__backdrop" data-mxon-close></div>
+      <div class="mxon-modal__card" role="dialog" aria-modal="true" aria-labelledby="mxon-modal-title">
+        <button type="button" class="mxon-modal__x" data-mxon-close aria-label="Stäng">×</button>
+        <h3 id="mxon-modal-title" class="mxon-modal__title"></h3>
+        <ul id="mxon-modal-lineup" class="mxon-modal__list"></ul>
+      </div>
+    </div>
+    <script type="application/json" id="mxon-nations-json">{{ mxon_nations|tojson }}</script>
+    {% endif %}
+
     {% if series.name and 'SMX' in series.name %}
     <section class="sp-panel">
       <div class="sp-panel__head">
@@ -567,10 +712,10 @@
 
     <nav class="sp-actions" aria-label="Snabbval">
       <a href="/" class="sp-action">← Startsida</a>
-      {% if series.name and 'WSX' not in series.name %}
+      {% if series.name and 'WSX' not in series.name and 'MXON' not in series.name and 'MXoN' not in series.name %}
       <a href="/season_team_page" class="sp-action"><span class="mx-heading-icon">{{ mx_icon('users') }}</span> Säsongsteam</a>
       {% endif %}
-      <a href="/my_scores{% if series.name and 'WSX' in series.name %}?series=WSX{% endif %}" class="sp-action"><span class="mx-heading-icon">{{ mx_icon('chart') }}</span> Mina poäng</a>
+      <a href="/my_scores{% if series.name and 'WSX' in series.name %}?series=WSX{% elif series.name and ('MXON' in series.name or 'MXoN' in series.name) %}?series=MXON{% endif %}" class="sp-action"><span class="mx-heading-icon">{{ mx_icon('chart') }}</span> Mina poäng</a>
     </nav>
   </main>
 
@@ -673,6 +818,48 @@
     document.addEventListener('DOMContentLoaded', function () {
       if (document.getElementById('smx-qualification-container')) {
         loadSMXQualification();
+      }
+
+      const nationsEl = document.getElementById('mxon-nations-json');
+      const modal = document.getElementById('mxon-lineup-modal');
+      if (nationsEl && modal) {
+        let nations = [];
+        try { nations = JSON.parse(nationsEl.textContent || '[]'); } catch (_) {}
+        const byId = Object.fromEntries(nations.map((n) => [String(n.id), n]));
+        const titleEl = document.getElementById('mxon-modal-title');
+        const listEl = document.getElementById('mxon-modal-lineup');
+        const openModal = (nation) => {
+          if (!nation) return;
+          titleEl.textContent = `${nation.code} — ${nation.name}`;
+          if (nation.flag_url) {
+            titleEl.innerHTML = `<img src="${nation.flag_url}" alt="" style="width:1.75rem;height:1.15rem;object-fit:cover;border-radius:2px;vertical-align:-2px;margin-right:0.4rem;">${nation.code} — ${nation.name}`;
+          }
+          const lineup = nation.lineup || {};
+          const rows = [
+            ['MXGP', lineup.mxgp],
+            ['MX2', lineup.mx2],
+            ['OPEN', lineup.open],
+          ];
+          listEl.innerHTML = rows.map(([cls, seat]) => {
+            const name = seat && seat.is_tba ? 'TBA' : ((seat && seat.rider_name) || 'TBA');
+            return `<li><span class="cls">${cls}</span><span class="rider">${name}</span></li>`;
+          }).join('');
+          modal.hidden = false;
+          document.body.style.overflow = 'hidden';
+        };
+        const closeModal = () => {
+          modal.hidden = true;
+          document.body.style.overflow = '';
+        };
+        document.querySelectorAll('.mxon-flag-btn').forEach((btn) => {
+          btn.addEventListener('click', () => openModal(byId[btn.dataset.nationId]));
+        });
+        modal.querySelectorAll('[data-mxon-close]').forEach((el) => {
+          el.addEventListener('click', closeModal);
+        });
+        document.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Escape' && !modal.hidden) closeModal();
+        });
       }
     });
   </script>
