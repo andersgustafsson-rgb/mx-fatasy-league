@@ -15,14 +15,20 @@
 
     {% if not competition %}
     <p class="text-rose-300">Ingen MXON-tävling hittades. Kör seed först.</p>
-    <form method="post" action="{{ url_for('admin_seed_mxon_2026') }}" class="mt-4">
-      <button class="bg-cyan-700 hover:bg-cyan-600 px-4 py-2 rounded" type="submit">Seed MXoN 2026</button>
-    </form>
     {% else %}
     <p class="text-slate-300 mb-4">
       {{ competition.name }} (id {{ competition.id }})
     </p>
+    {% endif %}
 
+    <form method="post" action="{{ url_for('admin_seed_mxon_2026') }}" class="mb-6">
+      <button class="bg-cyan-700 hover:bg-cyan-600 px-4 py-2 rounded" type="submit">
+        {% if competition %}Uppdatera MXoN-seed{% else %}Seed MXoN 2026{% endif %}
+      </button>
+      <p class="text-slate-500 text-xs mt-2">Skapar/uppdaterar serie, Ernée-tävling, 33 nationer + lineup. Seriekortet syns på startsidan efter seed.</p>
+    </form>
+
+    {% if competition %}
     <h2 class="text-lg font-semibold text-cyan-200 mb-2">Nationsordning (1 = vinnare)</h2>
     <p class="text-slate-400 text-sm mb-2">Koder en per rad eller kommaseparerat.</p>
     <form id="results-form" class="space-y-4 mb-8">

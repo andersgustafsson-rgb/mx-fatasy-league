@@ -2598,8 +2598,11 @@ def admin_seed_mxon_2026():
     try:
         from mxon_fantasy import ensure_mxon_2026
 
+        global _SERIES_STATUS_CACHE
+
         db.create_all()
         info = ensure_mxon_2026(attach_track_image=True)
+        _SERIES_STATUS_CACHE = None
         if request.form or (request.accept_mimetypes.best or "").startswith("text/html"):
             return redirect(url_for("admin_mxon_results_page"))
         return jsonify({"message": "MXON 2026 seeded/verified", "info": info})
@@ -26663,6 +26666,14 @@ def init_database():
                     sync_wsx_canadian_gp_entry_list()
                 except Exception as seed_err:
                     print(f"Warning: WSX Canadian GP entry sync failed: {seed_err}")
+                try:
+                    from mxon_fantasy import ensure_mxon_2026
+
+                    ensure_mxon_2026(attach_track_image=True)
+                    global _SERIES_STATUS_CACHE
+                    _SERIES_STATUS_CACHE = None
+                except Exception as seed_err:
+                    print(f"Warning: MXON 2026 seed failed: {seed_err}")
             except Exception as e:
                 print(f"Warning: Could not create tables (they may already exist): {e}")
             
