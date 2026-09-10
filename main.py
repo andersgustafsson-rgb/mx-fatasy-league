@@ -3737,6 +3737,8 @@ def index():
                     current_holeshot_450=None,
                     current_holeshot_250=None,
                     current_wildcard=None,
+                    current_mxon_nations=None,
+                    current_mxon_classes=None,
                     new_bulletin_posts=0,
                     latest_post_author=None,
                     league_requests_count=0,
@@ -3972,6 +3974,8 @@ def _index_impl():
     current_holeshot_450 = None
     current_holeshot_250 = None
     current_wildcard = None
+    current_mxon_nations: list[dict] = []
+    current_mxon_classes: dict[str, dict] = {}
     home_pick_portraits: dict[str, dict[str, str]] = {}
     picks_status = "no_picks"
     picks_locked = True
@@ -4030,84 +4034,96 @@ def _index_impl():
             try:
                 # Use the unified picks lock check function
                 picks_locked = is_picks_locked(upcoming_race)
-                
+
                 # Use the correct competition_id for picks lookup
                 competition_id_for_picks = upcoming_race.id
-                
-                # Get race picks for both classes
-                all_race_picks = RacePick.query.filter_by(
-                    user_id=uid, 
-                    competition_id=competition_id_for_picks
-                ).order_by(RacePick.predicted_position).all()
-                
-                # Remove duplicates - keep only the most recent pick for each rider (highest id)
-                seen_rider_ids = {}
-                race_picks = []
-                for pick in all_race_picks:
-                    if pick.rider_id not in seen_rider_ids:
-                        seen_rider_ids[pick.rider_id] = pick
-                        race_picks.append(pick)
-                    elif pick.pick_id > seen_rider_ids[pick.rider_id].pick_id:
-                        # Replace with more recent pick
-                        race_picks.remove(seen_rider_ids[pick.rider_id])
-                        seen_rider_ids[pick.rider_id] = pick
-                        race_picks.append(pick)
-                
-                # Sort again after deduplication
-                race_picks.sort(key=lambda p: p.predicted_position)
-                
-                # Get holeshot picks
-                holeshot_picks = HoleshotPick.query.filter_by(
-                    user_id=uid,
-                    competition_id=competition_id_for_picks
-                ).all()
-                
-                # Get wildcard pick
-                wildcard_pick = WildcardPick.query.filter_by(
-                    user_id=uid,
-                    competition_id=competition_id_for_picks
-                ).first()
 
-                pick_rider_ids = {p.rider_id for p in race_picks}
-                pick_rider_ids.update(h.rider_id for h in holeshot_picks)
-                if wildcard_pick and wildcard_pick.rider_id:
-                    pick_rider_ids.add(wildcard_pick.rider_id)
-                riders_by_id = {
-                    r.id: r
-                    for r in rider_query_for_list_ui()
-                    .filter(Rider.id.in_(pick_rider_ids))
-                    .all()
-                } if pick_rider_ids else {}
-                riders_by_name = (
-                    _riders_by_name_for(list(riders_by_id.values()))
-                    if riders_by_id
-                    else {}
-                )
+                if (getattr(upcoming_race, "series", None) or "").upper() == "MXON":
+                    from mxon_fantasy import get_user_class_picks, get_user_nation_picks
 
-                def _remember_pick_portraits(rider: Rider) -> dict[str, str]:
-                    payload = _rider_portrait_payload(
-                        rider, riders_by_name=riders_by_name
+                    current_mxon_nations = get_user_nation_picks(uid, int(competition_id_for_picks))
+                    current_mxon_classes = get_user_class_picks(uid, int(competition_id_for_picks))
+                    n_ok = len(current_mxon_nations) >= 5
+                    c_ok = len(current_mxon_classes) >= 3
+                    if n_ok and c_ok:
+                        picks_status = "has_picks"
+                    elif current_mxon_nations or current_mxon_classes:
+                        picks_status = "partial_picks"
+                    else:
+                        picks_status = "no_picks"
+                else:
+                    # Get race picks for both classes
+                    all_race_picks = RacePick.query.filter_by(
+                        user_id=uid,
+                        competition_id=competition_id_for_picks
+                    ).order_by(RacePick.predicted_position).all()
+
+                    # Remove duplicates - keep only the most recent pick for each rider (highest id)
+                    seen_rider_ids = {}
+                    race_picks = []
+                    for pick in all_race_picks:
+                        if pick.rider_id not in seen_rider_ids:
+                            seen_rider_ids[pick.rider_id] = pick
+                            race_picks.append(pick)
+                        elif pick.pick_id > seen_rider_ids[pick.rider_id].pick_id:
+                            # Replace with more recent pick
+                            race_picks.remove(seen_rider_ids[pick.rider_id])
+                            seen_rider_ids[pick.rider_id] = pick
+                            race_picks.append(pick)
+
+                    # Sort again after deduplication
+                    race_picks.sort(key=lambda p: p.predicted_position)
+
+                    # Get holeshot picks
+                    holeshot_picks = HoleshotPick.query.filter_by(
+                        user_id=uid,
+                        competition_id=competition_id_for_picks
+                    ).all()
+
+                    # Get wildcard pick
+                    wildcard_pick = WildcardPick.query.filter_by(
+                        user_id=uid,
+                        competition_id=competition_id_for_picks
+                    ).first()
+
+                    pick_rider_ids = {p.rider_id for p in race_picks}
+                    pick_rider_ids.update(h.rider_id for h in holeshot_picks)
+                    if wildcard_pick and wildcard_pick.rider_id:
+                        pick_rider_ids.add(wildcard_pick.rider_id)
+                    riders_by_id = {
+                        r.id: r
+                        for r in rider_query_for_list_ui()
+                        .filter(Rider.id.in_(pick_rider_ids))
+                        .all()
+                    } if pick_rider_ids else {}
+                    riders_by_name = (
+                        _riders_by_name_for(list(riders_by_id.values()))
+                        if riders_by_id
+                        else {}
                     )
-                    home_pick_portraits[str(rider.id)] = payload
-                    return payload
 
-                current_holeshot_450 = None
-                current_holeshot_250 = None
-                current_wildcard = None
-                
-                # Check if picks are complete (all required picks must be filled)
-                is_wsx = upcoming_race.series == "WSX"
-                
-                # First, populate the picks lists (needed for display)
+                    def _remember_pick_portraits(rider: Rider) -> dict[str, str]:
+                        payload = _rider_portrait_payload(
+                            rider, riders_by_name=riders_by_name
+                        )
+                        home_pick_portraits[str(rider.id)] = payload
+                        return payload
+
+                    current_holeshot_450 = None
+                    current_holeshot_250 = None
+                    current_wildcard = None
+
+                    # Check if picks are complete (all required picks must be filled)
+                    is_wsx = upcoming_race.series == "WSX"
+
                     # Always show user's own picks (they can see their own choices)
-                # Remove duplicates based on rider_id first
-                seen_rider_ids_450 = set()
-                seen_rider_ids_250 = set()
-                home_wc_names = _wsx_wildcard_names_for_competition(upcoming_race)
-                
-                # Sort picks by predicted_position to ensure correct order
-                sorted_race_picks = sorted(race_picks, key=lambda p: p.predicted_position)
-                for pick in sorted_race_picks:
+                    seen_rider_ids_450 = set()
+                    seen_rider_ids_250 = set()
+                    home_wc_names = _wsx_wildcard_names_for_competition(upcoming_race)
+
+                    # Sort picks by predicted_position to ensure correct order
+                    sorted_race_picks = sorted(race_picks, key=lambda p: p.predicted_position)
+                    for pick in sorted_race_picks:
                         rider = riders_by_id.get(pick.rider_id)
                         if rider:
                             portraits = _remember_pick_portraits(rider)
@@ -4123,100 +4139,105 @@ def _index_impl():
                                 "bike_brand": portraits["bike_brand"],
                                 "is_wildcard": (rider.name or "") in home_wc_names,
                             }
-                            
+
                             # Separate by class (map WSX classes to display classes)
-                            # For WSX: wsx_sx1 -> 450cc display, wsx_sx2 -> 250cc display
-                            # For other series: use class_name directly
                             if rider.class_name in ("450cc", "wsx_sx1"):
-                                # Only add if we haven't seen this rider_id before
                                 if pick.rider_id not in seen_rider_ids_450:
                                     current_picks_450.append(pick_data)
                                     seen_rider_ids_450.add(pick.rider_id)
                             elif rider.class_name in ("250cc", "wsx_sx2"):
-                                # Only add if we haven't seen this rider_id before
                                 if pick.rider_id not in seen_rider_ids_250:
                                     current_picks_250.append(pick_data)
                                     seen_rider_ids_250.add(pick.rider_id)
-                
-                # Sort the lists by position after populating
-                current_picks_450.sort(key=lambda x: x["position"])
-                current_picks_250.sort(key=lambda x: x["position"])
-                
-                # Count race picks by class (after populating lists and removing duplicates)
-                race_picks_450_count = len(current_picks_450)
-                race_picks_250_count = len(current_picks_250)
-                
-                # Count holeshot picks by class
-                holeshot_450 = False
-                holeshot_250 = False
-                for holeshot in holeshot_picks:
-                    rider = riders_by_id.get(holeshot.rider_id)
-                    if rider:
-                        if rider.class_name in ("450cc", "wsx_sx1"):
-                            holeshot_450 = True
-                        elif rider.class_name in ("250cc", "wsx_sx2"):
-                            holeshot_250 = True
-                
-                # Check if wildcard is complete (only for non-WSX series)
-                wildcard_complete = False
-                if is_wsx:
-                    wildcard_complete = True  # Not required for WSX
-                else:
-                    wildcard_complete = wildcard_pick and wildcard_pick.rider_id and wildcard_pick.position is not None
-                
-                # Required: 6 race picks for 450cc, 6 for 250cc, 2 holeshot picks, 1 wildcard (if not WSX)
-                race_picks_complete = race_picks_450_count == 6 and race_picks_250_count == 6
-                holeshot_complete = holeshot_450 and holeshot_250
-                
-                # Only mark as "has_picks" if ALL required picks are complete
-                if race_picks_complete and holeshot_complete and wildcard_complete:
-                    picks_status = "has_picks"
-                elif (
-                    race_picks_450_count > 0
-                    or race_picks_250_count > 0
-                    or holeshot_450
-                    or holeshot_250
-                    or (wildcard_pick and wildcard_pick.rider_id)
-                ):
-                    picks_status = "partial_picks"
-                else:
-                    picks_status = "no_picks"
-                
-                # Process holeshot picks for display
-                for holeshot in holeshot_picks:
-                    rider = riders_by_id.get(holeshot.rider_id)
-                    if rider:
-                        portraits = _remember_pick_portraits(rider)
-                        hs_data = {
-                            "rider_id": rider.id,
-                            "rider_name": rider.name,
-                            "rider_number": rider.rider_number,
-                            "class": rider.class_name,
-                            "portrait_url": portraits["portrait_url"],
-                            "image_url": portraits["image_url"],
-                            "racerx_portrait_url": portraits["racerx_portrait_url"],
-                            "bike_brand": portraits["bike_brand"],
-                        }
-                        if rider.class_name in ("450cc", "wsx_sx1"):
-                            current_holeshot_450 = hs_data
-                        elif rider.class_name in ("250cc", "wsx_sx2"):
-                            current_holeshot_250 = hs_data
-                
-                if wildcard_pick and wildcard_pick.rider_id and upcoming_race and upcoming_race.series != "WSX":
-                    rider = riders_by_id.get(wildcard_pick.rider_id)
-                    if rider:
-                        portraits = _remember_pick_portraits(rider)
-                        current_wildcard = {
-                            "rider_id": rider.id,
-                            "rider_name": rider.name,
-                            "rider_number": rider.rider_number,
-                            "class": rider.class_name,
-                            "position": wildcard_pick.position,
-                            "portrait_url": portraits["portrait_url"],
-                            "image_url": portraits["image_url"],
-                            "racerx_portrait_url": portraits["racerx_portrait_url"],
-                            "bike_brand": portraits["bike_brand"],
-                        }
+
+                    # Sort the lists by position after populating
+                    current_picks_450.sort(key=lambda x: x["position"])
+                    current_picks_250.sort(key=lambda x: x["position"])
+
+                    # Count race picks by class (after populating lists and removing duplicates)
+                    race_picks_450_count = len(current_picks_450)
+                    race_picks_250_count = len(current_picks_250)
+
+                    # Count holeshot picks by class
+                    holeshot_450 = False
+                    holeshot_250 = False
+                    for holeshot in holeshot_picks:
+                        rider = riders_by_id.get(holeshot.rider_id)
+                        if rider:
+                            if rider.class_name in ("450cc", "wsx_sx1"):
+                                holeshot_450 = True
+                            elif rider.class_name in ("250cc", "wsx_sx2"):
+                                holeshot_250 = True
+
+                    # Check if wildcard is complete (only for non-WSX series)
+                    if is_wsx:
+                        wildcard_complete = True  # Not required for WSX
+                    else:
+                        wildcard_complete = (
+                            wildcard_pick
+                            and wildcard_pick.rider_id
+                            and wildcard_pick.position is not None
+                        )
+
+                    # Required: 6+6 race picks, 2 holeshots, 1 wildcard (if not WSX)
+                    race_picks_complete = race_picks_450_count == 6 and race_picks_250_count == 6
+                    holeshot_complete = holeshot_450 and holeshot_250
+
+                    # Only mark as "has_picks" if ALL required picks are complete
+                    if race_picks_complete and holeshot_complete and wildcard_complete:
+                        picks_status = "has_picks"
+                    elif (
+                        race_picks_450_count > 0
+                        or race_picks_250_count > 0
+                        or holeshot_450
+                        or holeshot_250
+                        or (wildcard_pick and wildcard_pick.rider_id)
+                    ):
+                        picks_status = "partial_picks"
+                    else:
+                        picks_status = "no_picks"
+
+                    # Process holeshot picks for display
+                    for holeshot in holeshot_picks:
+                        rider = riders_by_id.get(holeshot.rider_id)
+                        if rider:
+                            portraits = _remember_pick_portraits(rider)
+                            hs_data = {
+                                "rider_id": rider.id,
+                                "rider_name": rider.name,
+                                "rider_number": rider.rider_number,
+                                "class": rider.class_name,
+                                "portrait_url": portraits["portrait_url"],
+                                "image_url": portraits["image_url"],
+                                "racerx_portrait_url": portraits["racerx_portrait_url"],
+                                "bike_brand": portraits["bike_brand"],
+                            }
+                            if rider.class_name in ("450cc", "wsx_sx1"):
+                                current_holeshot_450 = hs_data
+                            elif rider.class_name in ("250cc", "wsx_sx2"):
+                                current_holeshot_250 = hs_data
+
+                    if (
+                        wildcard_pick
+                        and wildcard_pick.rider_id
+                        and upcoming_race
+                        and upcoming_race.series != "WSX"
+                    ):
+                        rider = riders_by_id.get(wildcard_pick.rider_id)
+                        if rider:
+                            portraits = _remember_pick_portraits(rider)
+                            current_wildcard = {
+                                "rider_id": rider.id,
+                                "rider_name": rider.name,
+                                "rider_number": rider.rider_number,
+                                "class": rider.class_name,
+                                "position": wildcard_pick.position,
+                                "portrait_url": portraits["portrait_url"],
+                                "image_url": portraits["image_url"],
+                                "racerx_portrait_url": portraits["racerx_portrait_url"],
+                                "bike_brand": portraits["bike_brand"],
+                            }
+
             except Exception as e:
                 print(f"Error getting current picks: {e}")
                 current_picks_450 = []
@@ -4394,6 +4415,8 @@ def _index_impl():
         current_holeshot_450=current_holeshot_450 if is_logged_in and 'current_holeshot_450' in locals() else None,
         current_holeshot_250=current_holeshot_250 if is_logged_in and 'current_holeshot_250' in locals() else None,
         current_wildcard=current_wildcard if is_logged_in and 'current_wildcard' in locals() else None,
+        current_mxon_nations=current_mxon_nations if is_logged_in else None,
+        current_mxon_classes=current_mxon_classes if is_logged_in else None,
         new_bulletin_posts=new_bulletin_posts,
         latest_post_author=latest_post_author,
         league_requests_count=league_requests_count if is_logged_in else 0,
