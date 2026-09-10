@@ -2780,6 +2780,16 @@ function applyOrientation(mode, opts = {}) {
   if (isVertical) {
     c.options.plugins.legend.position = "top";
     c.options.plugins.legend.labels.font = { size: 11 };
+    // Mindre tom yta på sidorna i PNG/Excel
+    c.options.layout = {
+      padding: { top: 4, right: 6, bottom: 2, left: 2 },
+    };
+    c.options.datasets = c.options.datasets || {};
+    c.options.datasets.bar = {
+      ...(c.options.datasets.bar || {}),
+      categoryPercentage: 0.92,
+      barPercentage: 0.9,
+    };
 
     const forceAllLabels = verticalLimit === "all";
     c.options.scales.x.ticks.autoSkip = !forceAllLabels;
@@ -2794,6 +2804,9 @@ function applyOrientation(mode, opts = {}) {
   } else {
     c.options.plugins.legend.position = "right";
     c.options.plugins.legend.labels.font = { size: 12 };
+    c.options.layout = {
+      padding: { top: 4, right: 4, bottom: 4, left: 4 },
+    };
     if (c.options.plugins.tidrapportValueLabels) {
       c.options.plugins.tidrapportValueLabels.rotateVertical = false;
       c.options.plugins.tidrapportValueLabels.fontSize = 11;
@@ -3003,10 +3016,12 @@ function exportChartPngDataUrl(chartInstance, state, slideMeta) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      const pad = 28;
-      const headerH = summary ? 118 : 56;
-      const W = Math.max(img.width, 900);
-      const H = headerH + img.height + pad;
+      // Matcha diagrammets bredd exakt — tvinga inte min-bredd (skapade tomma sidomarginaler i Excel).
+      const padX = 16;
+      const padBottom = 16;
+      const headerH = summary ? 110 : 48;
+      const W = Math.max(img.width, padX * 2);
+      const H = headerH + img.height + padBottom;
       const canvas = document.createElement("canvas");
       canvas.width = W;
       canvas.height = H;
@@ -3017,13 +3032,13 @@ function exportChartPngDataUrl(chartInstance, state, slideMeta) {
 
       // titel
       ctx.fillStyle = "#f8fafc";
-      ctx.font = "bold 22px system-ui, Segoe UI, sans-serif";
-      ctx.fillText(String(title || "Tidrapport").slice(0, 90), pad, 34);
+      ctx.font = "bold 20px system-ui, Segoe UI, sans-serif";
+      ctx.fillText(String(title || "Tidrapport").slice(0, 90), padX, 30);
 
       if (slideLine) {
         ctx.fillStyle = "#94a3b8";
-        ctx.font = "14px system-ui, Segoe UI, sans-serif";
-        ctx.fillText(slideLine, W - pad - ctx.measureText(slideLine).width, 34);
+        ctx.font = "13px system-ui, Segoe UI, sans-serif";
+        ctx.fillText(slideLine, W - padX - ctx.measureText(slideLine).width, 30);
       }
 
       if (summary) {
@@ -3044,12 +3059,12 @@ function exportChartPngDataUrl(chartInstance, state, slideMeta) {
             value: `${summary.peakLabel} ${fmtHoursSv(summary.peakHours)} h`,
           });
         }
-        const gap = 12;
-        const cardW = (W - pad * 2 - gap * (cards.length - 1)) / cards.length;
-        const cardY = 48;
-        const cardH = 56;
+        const gap = 10;
+        const cardW = (W - padX * 2 - gap * (cards.length - 1)) / cards.length;
+        const cardY = 42;
+        const cardH = 52;
         cards.forEach((card, i) => {
-          const x = pad + i * (cardW + gap);
+          const x = padX + i * (cardW + gap);
           ctx.fillStyle = "#1e293b";
           ctx.strokeStyle = "#334155";
           ctx.lineWidth = 1;
@@ -3058,23 +3073,22 @@ function exportChartPngDataUrl(chartInstance, state, slideMeta) {
           ctx.stroke();
           ctx.fillStyle = "#94a3b8";
           ctx.font = "bold 11px system-ui, Segoe UI, sans-serif";
-          ctx.fillText(card.label, x + 12, cardY + 18);
+          ctx.fillText(card.label, x + 10, cardY + 16);
           ctx.fillStyle = "#f1f5f9";
-          ctx.font = "bold 15px system-ui, Segoe UI, sans-serif";
+          ctx.font = "bold 14px system-ui, Segoe UI, sans-serif";
           const val = String(card.value);
           // trim if needed
           let draw = val;
-          while (ctx.measureText(draw).width > cardW - 24 && draw.length > 4) {
+          while (ctx.measureText(draw).width > cardW - 20 && draw.length > 4) {
             draw = draw.slice(0, -2);
           }
           if (draw !== val) draw = `${draw}…`;
-          ctx.fillText(draw, x + 12, cardY + 42);
+          ctx.fillText(draw, x + 10, cardY + 40);
         });
       }
 
-      // diagram under header (centrera om canvas bredare)
-      const dx = Math.max(0, (W - img.width) / 2);
-      ctx.drawImage(img, dx, headerH);
+      // Diagram edge-to-edge under header (ingen sido-centrering)
+      ctx.drawImage(img, 0, headerH);
       resolve(canvas.toDataURL("image/png"));
     };
     img.onerror = () => resolve(chartUrl);
