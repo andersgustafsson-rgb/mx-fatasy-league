@@ -424,9 +424,9 @@
                 <label class="block text-xs text-slate-300 mb-1" for="namesPerSlideSelect">Namn per sida (slides)</label>
                 <select id="namesPerSlideSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" title="Delar upp diagrammet i flera sidor när det är många namn.">
                   <option value="15">15 namn / sida</option>
-                  <option value="18" selected>18 namn / sida</option>
+                  <option value="18" selected>18 namn / sida (bra för Excel)</option>
                   <option value="25">25 namn / sida</option>
-                  <option value="0">Ingen uppdelning (allt på en gång)</option>
+                  <option value="0">Ingen uppdelning (kan bli väldigt högt)</option>
                 </select>
               </div>
               <div>
@@ -769,7 +769,7 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=png-tight-margins-1"></script>
+  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=png-height-cap-2"></script>
 </body>
 </html>
 

@@ -2754,18 +2754,22 @@ function palette(i) {
 function setChartHeightByLabels(labelCount) {
   const container = els.chartCanvas?.parentElement;
   if (!container) return;
-  const h = Math.max(360, Math.min(1200, 140 + labelCount * 26));
+  // Liggande staplar: begränsa höjd så PNG/Excel inte blir "milhög"
+  const h = Math.max(300, Math.min(680, 80 + labelCount * 22));
   container.style.height = `${h}px`;
+  container.style.minWidth = "";
 }
 
 function setChartHeightByMode(mode, labelCount) {
-  // In vertical mode, height should be stable; in horizontal mode, scale with number of names.
   const container = els.chartCanvas?.parentElement;
   if (!container) return;
   if (mode === "vertical") {
-    // Vertical needs a lot more height when showing many names (desktop use-case).
-    const h = Math.max(520, Math.min(4200, 320 + labelCount * 22));
+    // Stående staplar: höjden ska vara STABIL (namn ligger längs botten).
+    // Fler personer → mer bredd, inte mer höjd (det gjorde PNG:en absurd).
+    const h = labelCount > 30 ? 620 : labelCount > 18 ? 560 : 520;
     container.style.height = `${h}px`;
+    const minW = Math.max(560, Math.min(1800, 80 + labelCount * 30));
+    container.style.minWidth = `${minW}px`;
     return;
   }
   setChartHeightByLabels(labelCount);
@@ -3020,8 +3024,19 @@ function exportChartPngDataUrl(chartInstance, state, slideMeta) {
       const padX = 16;
       const padBottom = 16;
       const headerH = summary ? 110 : 48;
-      const W = Math.max(img.width, padX * 2);
-      const H = headerH + img.height + padBottom;
+      let W = Math.max(img.width, padX * 2);
+      let chartH = img.height;
+      let chartW = img.width;
+      // Cap total PNG-höjd så Excel-klister inte blir "8 mil"
+      const MAX_TOTAL_H = 820;
+      const maxChartH = Math.max(280, MAX_TOTAL_H - headerH - padBottom);
+      if (chartH > maxChartH) {
+        const s = maxChartH / chartH;
+        chartH = Math.round(chartH * s);
+        chartW = Math.round(chartW * s);
+        W = Math.max(chartW, padX * 2);
+      }
+      const H = headerH + chartH + padBottom;
       const canvas = document.createElement("canvas");
       canvas.width = W;
       canvas.height = H;
@@ -3087,8 +3102,9 @@ function exportChartPngDataUrl(chartInstance, state, slideMeta) {
         });
       }
 
-      // Diagram edge-to-edge under header (ingen sido-centrering)
-      ctx.drawImage(img, 0, headerH);
+      // Diagram under header (skalat om det var för högt)
+      const dx = Math.max(0, Math.floor((W - chartW) / 2));
+      ctx.drawImage(img, dx, headerH, chartW, chartH);
       resolve(canvas.toDataURL("image/png"));
     };
     img.onerror = () => resolve(chartUrl);
