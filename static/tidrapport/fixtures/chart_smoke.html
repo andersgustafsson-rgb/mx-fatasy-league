@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <title>Tidrapport chart smoke test</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    body { background: #020617; color: #e2e8f0; font-family: system-ui, sans-serif; margin: 16px; }
+    #chartSizeBox { height: 520px; background: #020617; border: 1px solid #334155; }
+    #status { margin: 12px 0; white-space: pre-wrap; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    button, select { padding: 8px 12px; }
+  </style>
+</head>
+<body>
+  <h1>Tidrapport smoke</h1>
+  <div class="row">
+    <select id="orientationSelect">
+      <option value="horizontal">Liggande</option>
+      <option value="vertical">Stående</option>
+    </select>
+    <select id="verticalNamesSelect">
+      <option value="20">Top 20</option>
+      <option value="all">Alla</option>
+    </select>
+    <select id="namesPerSlideSelect">
+      <option value="18">18 / sida</option>
+      <option value="0">Ingen uppdelning</option>
+    </select>
+    <select id="monthSelect"><option>Augusti</option></select>
+    <input id="yearInput" value="2026" />
+    <button id="btnGenerate" type="button">Skapa</button>
+    <button id="btnRunBoth" type="button">Kör båda lägen</button>
+  </div>
+  <div id="status">Laddar fixture…</div>
+  <div id="titlePreview"></div>
+  <div id="colorLegend"></div>
+  <div id="chartSummaryStats"></div>
+  <div id="chartSizeBox"><canvas id="chartCanvas" height="360"></canvas></div>
+  <div id="chartSlideControls" class="hidden"><span id="chartSlideLabel"></span>
+    <button id="btnSlidePrev" type="button">◀</button>
+    <button id="btnSlideNext" type="button">▶</button>
+  </div>
+  <button id="btnDownload" type="button" style="display:none">png</button>
+  <button id="btnDownloadAllSlides" type="button" style="display:none">all</button>
+  <textarea id="pasteInput" style="width:100%;height:120px;margin-top:12px"></textarea>
+  <!-- stubs required by tidrapport.js els map -->
+  <div id="statusFilters"></div>
+  <div id="statusText"></div>
+  <div id="filterContextBanner"></div>
+  <table><thead><tr id="tableHeadRow"></tr></thead><tbody id="tableBody"></tbody></table>
+  <div id="layoutGrid"></div>
+  <datalist id="employeeList"></datalist>
+  <input id="employeeInput" />
+  <input id="titleInput" />
+  <select id="layoutSelect"><option value="side">side</option></select>
+  <select id="analysisModeSelect"><option value="normal">normal</option></select>
+  <select id="chartMeasureSelect"><option value="hours">hours</option></select>
+  <select id="chartGroupSelect"><option value="status">status</option></select>
+  <select id="omfModeSelect"><option value="auto">auto</option></select>
+  <input id="fullTimeWeekHoursInput" value="36.33" />
+  <input id="workdaysPerWeekInput" value="5" />
+  <div id="nominalDayHoursHint"></div>
+  <div id="forecastPanel"></div>
+  <input id="forecastThroughDay" />
+  <div id="forecastMonthInfo"></div>
+  <ul id="mergeQueueList"></ul>
+  <div id="mergeQueueFeedback"></div>
+  <input id="mergeFileInput" type="file" />
+  <button id="btnAddToMerge" type="button"></button>
+  <button id="btnMergePickFiles" type="button"></button>
+  <button id="btnClearMergeQueue" type="button"></button>
+  <button id="btnApplyMerge" type="button"></button>
+  <button id="btnClear" type="button"></button>
+  <button id="btnClearNearGenerate" type="button"></button>
+  <button id="btnAll" type="button"></button>
+  <button id="btnNone" type="button"></button>
+  <button id="btnClearEmployee" type="button"></button>
+  <button id="tabTidrapport" type="button"></button>
+  <button id="tabOvertime" type="button"></button>
+  <button id="tabSickManual" type="button"></button>
+  <div id="panelTidrapport"></div>
+  <div id="panelOvertime"></div>
+  <div id="panelSickManual"></div>
+  <canvas id="overtimeChartCanvas"></canvas>
+  <canvas id="sickManualChartCanvas"></canvas>
+  <div id="sickManualTitlePreview"></div>
+  <div id="sickManualStatusText"></div>
+  <tbody id="sickManualTableBody"></tbody>
+  <select id="sickManualOrientation"><option value="horizontal">h</option></select>
+  <select id="sickManualNameLimit"><option value="all">all</option></select>
+  <button id="btnSickManualDownload" type="button"></button>
+  <button id="btnSickManualAdd" type="button"></button>
+  <button id="btnSickManualGenerate" type="button"></button>
+  <button id="btnSickManualClear" type="button"></button>
+  <button id="btnSickManualRemoveSelected" type="button"></button>
+  <button id="btnSickManualPasteApply" type="button"></button>
+  <button id="btnSickManualPasteClear" type="button"></button>
+  <textarea id="sickManualPaste"></textarea>
+  <input id="sickManualName" />
+  <input id="sickManualHours" />
+  <input id="sickManualDays" />
+  <input id="sickEmploymentPct" value="100" />
+  <input id="sickRatePct" value="100" />
+  <input id="sickWeekHours" value="36.33" />
+  <input id="sickWorkdaysPerWeek" value="5" />
+  <div id="sickManualFormulaHint"></div>
+  <textarea id="overtimePaste"></textarea>
+  <button id="btnOvertimePasteApply" type="button"></button>
+  <button id="btnOvertimePasteClear" type="button"></button>
+  <button id="btnOvertimeClear" type="button"></button>
+  <select id="overtimeChartMode"><option value="timeline">timeline</option></select>
+  <div id="overtimeTitlePreview"></div>
+  <tbody id="overtimeTableBody"></tbody>
+
+  <script src="/static/tidrapport.js?v=stamp-vertical-parse-2"></script>
+  <script>
+    async function loadFixture() {
+      const res = await fetch("/static/tidrapport/fixtures/kund_augusti_2026_beslutslista.txt");
+      const text = await res.text();
+      document.getElementById("pasteInput").value = text;
+      document.getElementById("status").textContent = `Fixture laddad (${text.length} tecken).`;
+      return text;
+    }
+
+    function chartStats(label) {
+      const c = window.chart || (typeof chart !== "undefined" ? chart : null);
+      // chart is module-scoped; inspect via canvas Chart.getChart
+      const inst = Chart.getChart(document.getElementById("chartCanvas"));
+      if (!inst) return `${label}: ingen chart`;
+      const nLabels = inst.data.labels?.length || 0;
+      const nDs = inst.data.datasets?.length || 0;
+      const sum = (inst.data.datasets || []).reduce((a, ds) => a + (ds.data || []).reduce((s, v) => s + (Number(v) || 0), 0), 0);
+      const meta0 = inst.getDatasetMeta(0);
+      const bar0 = meta0?.data?.[0];
+      const props = bar0 && typeof bar0.getProps === "function" ? bar0.getProps(["x", "y", "base", "width", "height"], true) : null;
+      return `${label}: labels=${nLabels} datasets=${nDs} sum=${sum.toFixed(1)} indexAxis=${inst.options.indexAxis} bar0=${JSON.stringify(props)}`;
+    }
+
+    async function runOnce(mode) {
+      document.getElementById("orientationSelect").value = mode;
+      window.__tidrapport_state = window.__tidrapport_state || {};
+      window.__tidrapport_state.orientation = mode;
+      document.getElementById("btnGenerate").click();
+      await new Promise((r) => setTimeout(r, 400));
+      return chartStats(mode);
+    }
+
+    document.getElementById("btnRunBoth").addEventListener("click", async () => {
+      const lines = [];
+      lines.push(await runOnce("horizontal"));
+      lines.push(await runOnce("vertical"));
+      document.getElementById("status").textContent = lines.join("\n");
+      document.title = lines.every((l) => /sum=[1-9]/.test(l)) ? "PASS" : "FAIL";
+    });
+
+    loadFixture().then(async () => {
+      const lines = [];
+      lines.push(await runOnce("horizontal"));
+      lines.push(await runOnce("vertical"));
+      document.getElementById("status").textContent = lines.join("\n");
+      document.title = lines.every((l) => /sum=[1-9]/.test(l) && !/bar0=null/.test(l)) ? "PASS" : "FAIL";
+      console.log(document.getElementById("status").textContent);
+    });
+  </script>
+</body>
+</html>

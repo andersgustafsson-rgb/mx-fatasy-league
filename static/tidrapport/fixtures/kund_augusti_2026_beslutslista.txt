@@ -1,0 +1,1615 @@
+Namn
+Datum
+Kl Fom
+Kl Tom
+Kl rast
+Rast
+Typ
+Orsak
+Bemanningstyp
+Proc
+Organisation
+Kto
+Tst
+Bev
+Bvä
+Med
+Abdelli, Zaied 
+2026-08-05 
+ 06:45
+ 15:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Ahlberg, Carina 
+2026-08-31 
+ 06:45
+ 15:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Ahlberg, Carina 
+2026-08-27 
+ 20:40
+ 07:17
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Ahlberg, Carina 
+2026-08-22 
+ 20:45
+ 07:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Ahlberg, Carina 
+2026-08-15 
+ 06:40
+ 14:42
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Andersson Eriksson, Anette 
+2026-08-22 
+ 20:45
+ 06:06
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Andersson Eriksson, Anette 
+2026-08-18 
+ 12:53
+ 20:58
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Andersson Eriksson, Anette 
+2026-08-14 
+ 20:42
+ 07:05
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Andersson Eriksson, Anette 
+2026-08-09 
+ 14:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Andersson Eriksson, Anette 
+2026-08-08 
+ 20:45
+ 05:54
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Augustinsson, Petra 
+2026-08-29 
+ 20:40
+ 06:42
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Augustinsson, Petra 
+2026-08-13 
+ 10:00
+ 18:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Augustinsson, Petra 
+2026-08-06 
+ 12:55
+ 21:22
+ 16:00
+ 30
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Augustinsson, Petra 
+2026-08-05 
+ 12:55
+ 20:54
+ 16:00
+ 30
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Behrami, Adelina 
+2026-08-09 
+ 06:40
+ 15:01
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Berglund, Yvonne 
+2026-08-06 
+ 13:00
+ 17:56
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Bogren, Josefine 
+2026-08-14 
+ 18:00
+ 21:17
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Borg, Maria 
+2026-08-09 
+ 08:30
+ 16:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Borg, Maria 
+2026-08-08 
+ 20:40
+ 07:19
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Cramer Nordqvist, Kirsten 
+2026-08-02 
+ 21:15
+ 21:42
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Darwiche, Amanda 
+2026-08-28 
+ 16:00
+ 18:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Ekecrantz, Ellinor 
+2026-08-24 
+ 13:04
+ 21:15
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Ekecrantz, Ellinor 
+2026-08-22 
+ 14:33
+ 20:59
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Ekecrantz, Ellinor 
+2026-08-14 
+ 15:48
+ 21:04
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Ekecrantz, Ellinor 
+2026-08-11 
+ 20:45
+ 07:05
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Ekecrantz, Ellinor 
+2026-08-02 
+ 15:00
+ 20:30
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Ekelund, Carina 
+2026-08-10 
+ 20:45
+ 07:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Ekelund, Carina 
+2026-08-03 
+ 20:40
+ 06:48
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Ekelöf, Jadwiga 
+2026-08-20 
+ 13:00
+ 21:15
+ 16:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Ekelöf, Jadwiga 
+2026-08-07 
+ 06:45
+ 15:00
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161 53855 
+				
+.....
+Erixon, Sara 
+2026-08-13 
+ 07:00
+ 08:23
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Erixon, Sara 
+2026-08-08 
+ 06:45
+ 13:55
+ 
+ 
+ A
+Stand by ledig 
+ 
+ 
+ 
+				
+.....
+Erixon, Sara 
+2026-08-07 
+ 13:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Erixon, Sara 
+2026-08-05 
+ 20:45
+ 07:00
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Fondell, Katarina 
+2026-08-28 
+ 13:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Fondell, Katarina 
+2026-08-13 
+ 13:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Fondell, Katarina 
+2026-08-12 
+ 06:45
+ 15:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+France, Martina 
+2026-08-25 
+ 20:36
+ 07:01
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+France, Martina 
+2026-08-20 
+ 06:45
+ 15:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+France, Martina 
+2026-08-19 
+ 06:45
+ 15:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Fransson, Annelie 
+2026-08-12 
+ 05:17
+ 07:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Gruvberger, Åsa 
+2026-08-24 
+ 15:00
+ 21:40
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Gruvberger, Åsa 
+2026-08-17 
+ 20:41
+ 06:40
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Göthe Stepanovic, Karolina 
+2026-08-28 
+ 15:00
+ 21:20
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Göthe Stepanovic, Karolina 
+2026-08-25 
+ 06:37
+ 15:02
+ 12:00
+ 30
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Haine, Anna 
+2026-08-26 
+ 12:55
+ 21:16
+ 16:00
+ 30
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Haine, Anna 
+2026-08-24 
+ 15:13
+ 21:19
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Hallberg, Jeanette 
+2026-08-07 
+ 13:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Hansson, Linda 
+2026-08-30 
+ 06:40
+ 14:00
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Hansson, Linda 
+2026-08-30 
+ 15:00
+ 19:30
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Hansson, Linda 
+2026-08-30 
+ 19:31
+ 21:15
+ 
+ 
+ A
+Stand by ledig 
+ 
+ 
+ 
+				
+.....
+Hansson, Linda 
+2026-08-29 
+ 06:40
+ 14:00
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Hansson, Linda 
+2026-08-21 
+ 06:40
+ 10:00
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Hansson, Linda 
+2026-08-17 
+ 12:55
+ 21:51
+ 16:00
+ 30
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Hansson, Linda 
+2026-08-10 
+ 21:15
+ 21:55
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Hansson, Linda 
+2026-08-07 
+ 09:55
+ 10:00
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Hansson, Linda 
+2026-08-07 
+ 18:00
+ 18:37
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Hansson, Linda 
+2026-08-06 
+ 13:00
+ 21:15
+ 
+ 
+ A
+Stand by ledig 
+ 
+ 
+ 
+				
+.....
+Hansson, Linda 
+2026-08-05 
+ 13:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Hansson, Linda 
+2026-08-04 
+ 21:15
+ 21:50
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Jarl, Anita 
+2026-08-31 
+ 06:30
+ 15:45
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Jarl, Anita 
+2026-08-27 
+ 06:30
+ 15:45
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Jarl, Anita 
+2026-08-25 
+ 06:30
+ 15:45
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Jarl, Anita 
+2026-08-24 
+ 06:30
+ 15:45
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Jarl, Anita 
+2026-08-21 
+ 06:30
+ 15:45
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Jarl, Anita 
+2026-08-20 
+ 06:30
+ 15:45
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Jarl, Anita 
+2026-08-11 
+ 06:30
+ 15:45
+ 
+ 
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Jarl, Anita 
+2026-08-10 
+ 06:30
+ 15:30
+ 
+ 
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Jarl, Anita 
+2026-08-07 
+ 06:30
+ 15:45
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Jarl, Anita 
+2026-08-06 
+ 06:30
+ 15:45
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Jeppsson, Caroline 
+2026-08-12 
+ 10:00
+ 12:54
+ 
+ 
+ A
+Stand by ledig 
+ 
+ 
+ 
+				
+.....
+Jeppsson, Caroline 
+2026-08-11 
+ 12:55
+ 21:10
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Larsson, Birgitta 
+2026-08-17 
+ 12:55
+ 21:17
+ 16:00
+ 30
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Larsson, Birgitta 
+2026-08-05 
+ 06:45
+ 15:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Larsson, Christina 
+2026-08-25 
+ 21:15
+ 21:56
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Lemmen, Desirée 
+2026-08-21 
+ 06:51
+ 15:07
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Lemmen, Desirée 
+2026-08-17 
+ 10:00
+ 18:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Lemmen, Desirée 
+2026-08-08 
+ 06:45
+ 15:01
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Lindau, Fredrik 
+2026-08-21 
+ 07:00
+ 15:00
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Lindau, Fredrik 
+2026-08-20 
+ 07:00
+ 15:00
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Lindau, Fredrik 
+2026-08-19 
+ 07:00
+ 15:00
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Lindau, Fredrik 
+2026-08-18 
+ 07:00
+ 15:00
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Lindau, Fredrik 
+2026-08-17 
+ 07:00
+ 15:00
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Lindfors, Marie 
+2026-08-31 
+ 06:45
+ 15:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Lindfors, Marie 
+2026-08-24 
+ 20:34
+ 07:02
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Lindfors, Marie 
+2026-08-18 
+ 06:16
+ 15:00
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Lindfors, Marie 
+2026-08-17 
+ 20:45
+ 07:00
+ 
+ 
+ A
+Stand by ledig 
+ 
+ 
+ 
+				
+.....
+Lindfors, Marie 
+2026-08-12 
+ 06:45
+ 10:00
+ 
+ 
+ A
+Stand by ledig 
+ 
+ 
+ 
+				
+.....
+Lindfors, Marie 
+2026-08-11 
+ 13:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Lindfors, Marie 
+2026-08-02 
+ 20:45
+ 07:00
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Lindholm, Elisabeth 
+2026-08-21 
+ 20:40
+ 07:16
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Lund, Jeanette 
+2026-08-08 
+ 13:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Lund, Jeanette 
+2026-08-04 
+ 13:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Lund, Jeanette 
+2026-08-03 
+ 13:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Lundkvist Andersson, Magnus 
+2026-08-20 
+ 20:45
+ 07:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Lundkvist Andersson, Magnus 
+2026-08-13 
+ 20:45
+ 07:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Lussagnet, Ann-Christine 
+2026-08-31 
+ 06:45
+ 15:00
+ 12:00
+ 30
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Mollberg, Filip 
+2026-08-28 
+ 16:00
+ 18:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Mollberg, Filip 
+2026-08-21 
+ 15:03
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Mollberg, Filip 
+2026-08-12 
+ 21:15
+ 22:09
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Nilsson, Katarina 
+2026-08-29 
+ 13:55
+ 20:52
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Nilsson, Anitha 
+2026-08-12 
+ 13:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Olsson, Lena 
+2026-08-11 
+ 20:45
+ 07:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Olsson, Lena 
+2026-08-05 
+ 20:45
+ 07:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Olsson, Lena 
+2026-08-04 
+ 21:41
+ 07:06
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Pappila, Karin 
+2026-08-19 
+ 15:53
+ 21:15
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Persson, Emma 
+2026-08-27 
+ 15:00
+ 21:16
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Persson, Emma 
+2026-08-21 
+ 13:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Pettersson Miller, Susan 
+2026-08-23 
+ 20:40
+ 07:12
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Pettersson Miller, Susan 
+2026-08-22 
+ 20:40
+ 07:15
+ 
+ 
+ A
+Poäng åter StBy/Förskj 
+ 
+ 
+ 
+				
+.....
+Pettersson Miller, Susan 
+2026-08-13 
+ 06:40
+ 15:00
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Rathonyi Bylund, Maria 
+2026-08-02 
+ 06:45
+ 15:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Sahlén Jönsson, Elisabet 
+2026-08-25 
+ 20:40
+ 07:00
+ 
+ 
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Sahlén Jönsson, Elisabet 
+2026-08-05 
+ 20:40
+ 07:05
+ 
+ 
+ A
+Arbtid kontering 
+ 
+ 
+161A53855-LU 
+				
+.....
+Stenbeck, Cecilia 
+2026-08-13 
+ 13:00
+ 15:59
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Ströberg, Mikael 
+2026-08-15 
+ 14:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Ströberg, Mikael 
+2026-08-06 
+ 06:45
+ 15:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Sturesson, Hanna 
+2026-08-10 
+ 10:01
+ 15:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Wall, Frida 
+2026-08-19 
+ 13:00
+ 21:15
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Wall, Frida 
+2026-08-07 
+ 06:45
+ 15:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....
+Weigel, Petra 
+2026-08-05 
+ 12:55
+ 21:26
+ 16:00
+ 30
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Ydholm, Caroline 
+2026-08-30 
+ 20:40
+ 06:55
+ 
+ 
+ A
+Poäng inst kort ledig 
+ 
+ 
+ 
+				
+.....
+Ydholm, Caroline 
+2026-08-02 
+ 20:45
+ 07:00
+ 
+ 
+ A
+Stand by schema 
+ 
+ 
+ 
+				
+.....

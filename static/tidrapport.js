@@ -50,6 +50,41 @@ const BESLUTS_VERTICAL_HEADERS = [
   "Med",
 ];
 
+/**
+ * Vertikal stämpel-/tidexport (Visma m.fl.): Namn, Datum, Kl Fom/Tom, Kl rast, Rast, Typ, Orsak…
+ * Avgränsas med «.....» mellan poster.
+ */
+const STAMP_VERTICAL_HEADERS = [
+  "Namn",
+  "Datum",
+  "Kl Fom",
+  "Kl Tom",
+  "Kl rast",
+  "Rast",
+  "Typ",
+  "Orsak",
+  "Bemanningstyp",
+  "Proc",
+  "Organisation",
+  "Kto",
+  "Tst",
+  "Bev",
+  "Bvä",
+  "Med",
+];
+
+function isVerticalRecordSeparator(s) {
+  return /^\.{4,}$/.test(cleanStr(s));
+}
+
+function matchVerticalHeaderBlock(lines, expected) {
+  if (lines.length < expected.length + 2) return false;
+  for (let h = 0; h < expected.length; h += 1) {
+    if (normHeader(lines[h]) !== normHeader(expected[h])) return false;
+  }
+  return true;
+}
+
 function sortStatusesLikeOrder(statusSet) {
   const arr = [...statusSet];
   const head = ORSAK_ORDER.filter((s) => arr.includes(s));
@@ -800,12 +835,10 @@ function setSickManualChartSize(orientation, labelCount) {
   if (orientation === "vertical") {
     const h = labelCount > 30 ? 620 : labelCount > 18 ? 560 : 480;
     container.style.height = `${h}px`;
-    container.style.width = `${Math.max(480, Math.min(1600, 60 + labelCount * 28))}px`;
-    container.style.maxWidth = "";
+    container.style.width = "100%";
   } else {
     container.style.height = `${Math.max(280, Math.min(680, 70 + labelCount * 22))}px`;
     container.style.width = "";
-    container.style.maxWidth = "";
   }
 }
 
@@ -1744,27 +1777,21 @@ function tryParseVerticalBeslutslista(raw) {
     .split("\n")
     .map((l) => cleanStr(l));
 
-  if (lines.length < BESLUTS_VERTICAL_HEADERS.length + 3) return null;
-
-  for (let h = 0; h < BESLUTS_VERTICAL_HEADERS.length; h += 1) {
-    if (normHeader(lines[h]) !== normHeader(BESLUTS_VERTICAL_HEADERS[h])) return null;
-  }
+  if (!matchVerticalHeaderBlock(lines, BESLUTS_VERTICAL_HEADERS)) return null;
 
   const headers = [...BESLUTS_VERTICAL_HEADERS];
   let i = BESLUTS_VERTICAL_HEADERS.length;
   const rows = [];
 
-  const isSep = (s) => /^\.{4,}$/.test(cleanStr(s));
-
   while (i < lines.length) {
     while (i < lines.length && !lines[i]) i += 1;
     if (i >= lines.length) break;
-    if (isSep(lines[i])) {
+    if (isVerticalRecordSeparator(lines[i])) {
       i += 1;
       continue;
     }
     const chunk = [];
-    while (i < lines.length && !isSep(lines[i])) {
+    while (i < lines.length && !isVerticalRecordSeparator(lines[i])) {
       if (lines[i]) chunk.push(lines[i]);
       i += 1;
     }
@@ -1779,10 +1806,65 @@ function tryParseVerticalBeslutslista(raw) {
   return rows.length ? { headers, rows } : null;
 }
 
+/**
+ * Vertikal stämpelexport: behåll tomma fält (positionsbaserat) så Kl rast / Rast / Typ landar rätt.
+ */
+function tryParseVerticalStampLista(raw) {
+  const lines = String(raw ?? "")
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((l) => cleanStr(l));
+
+  if (!matchVerticalHeaderBlock(lines, STAMP_VERTICAL_HEADERS)) return null;
+
+  const headers = [...STAMP_VERTICAL_HEADERS];
+  let i = STAMP_VERTICAL_HEADERS.length;
+  const rows = [];
+  const nFields = headers.length;
+
+  while (i < lines.length) {
+    while (i < lines.length && !lines[i] && !isVerticalRecordSeparator(lines[i])) i += 1;
+    if (i >= lines.length) break;
+    if (isVerticalRecordSeparator(lines[i])) {
+      i += 1;
+      continue;
+    }
+
+    // Ta nFields rader (inkl. tomma) eller tills separator — padda vid behov
+    const vals = [];
+    while (vals.length < nFields && i < lines.length && !isVerticalRecordSeparator(lines[i])) {
+      vals.push(lines[i] || "");
+      i += 1;
+    }
+    while (i < lines.length && !isVerticalRecordSeparator(lines[i]) && !lines[i]) i += 1;
+    if (i < lines.length && isVerticalRecordSeparator(lines[i])) i += 1;
+
+    while (vals.length < nFields) vals.push("");
+    const row = {};
+    for (let c = 0; c < nFields; c += 1) row[headers[c]] = vals[c] || "";
+
+    const name = cleanStr(row.Namn);
+    const datum = cleanStr(row.Datum);
+    if (!name || !/^\d{4}-\d{2}-\d{2}$/.test(datum)) continue;
+    // Aggregate förväntar Datum Fom/Tom — spegla en-dags Datum
+    row["Datum Fom"] = datum;
+    row["Datum Tom"] = datum;
+    rows.push(row);
+  }
+
+  // Inkludera Datum Fom/Tom i headers så validering/aggregate hittar dem
+  const headersOut = [...headers, "Datum Fom", "Datum Tom"];
+  return rows.length ? { headers: headersOut, rows } : null;
+}
+
 function parseTable(text) {
   const raw = String(text ?? "").replace(/^\uFEFF/, "");
   const monthTpl = tryParseMonthHoursTemplate(raw);
   if (monthTpl?.headers?.length && monthTpl.rows?.length) return monthTpl;
+
+  const stamp = tryParseVerticalStampLista(raw);
+  if (stamp?.headers?.length && stamp.rows?.length) return stamp;
 
   const vert = tryParseVerticalBeslutslista(raw);
   if (vert?.headers?.length && vert.rows?.length) return vert;
@@ -2795,8 +2877,8 @@ function setChartHeightByLabels(labelCount) {
   // Liggande staplar: begränsa höjd så PNG/Excel inte blir "milhög"
   const h = Math.max(300, Math.min(680, 80 + labelCount * 22));
   container.style.height = `${h}px`;
-  container.style.minWidth = "";
   container.style.width = "";
+  container.style.minWidth = "";
   container.style.maxWidth = "";
 }
 
@@ -2804,12 +2886,11 @@ function setChartHeightByMode(mode, labelCount) {
   const container = els.chartCanvas?.parentElement;
   if (!container) return;
   if (mode === "vertical") {
-    // Stående staplar: höjden STABIL (namn längs botten). Bredd växer med antal namn.
+    // Stående: stabil höjd. Använd sidor (namn/sida) i stället för milbred PNG.
     const h = labelCount > 30 ? 640 : labelCount > 18 ? 580 : 520;
     container.style.height = `${h}px`;
+    container.style.width = "";
     container.style.minWidth = "";
-    // Explicit width så Chart.js får en riktig canvas-bredd (scrollas i overflow-x-auto)
-    container.style.width = `${Math.max(560, Math.min(1800, 80 + labelCount * 30))}px`;
     container.style.maxWidth = "";
     return;
   }
@@ -2820,29 +2901,26 @@ function applyOrientation(mode, opts = {}) {
   const c = ensureChart(mode);
   const isVertical = mode === "vertical";
   const verticalLimit = String(opts.verticalLimit || "");
-  // Håll indexAxis i synk även om chart återanvänds
-  c.options.indexAxis = desiredIndexAxis(mode);
+  // Viktigt: ändra INTE indexAxis här — bara vid create/destroy (resetChartIfOrientationChanged).
+  // Viktigt: tilldela aldrig om c.options.datasets (Chart.js-proxy → stack overflow).
 
-  // Improve readability in vertical mode (many labels).
   if (isVertical) {
     c.options.plugins.legend.position = "top";
     c.options.plugins.legend.labels.font = { size: 11 };
-    // Lite mer botten-padding så roterade namn inte äter upp plot-ytan
     c.options.layout = {
-      padding: { top: 8, right: 8, bottom: 8, left: 4 },
+      padding: { top: 8, right: 8, bottom: 12, left: 4 },
     };
-    c.options.datasets = c.options.datasets || {};
-    c.options.datasets.bar = {
-      ...(c.options.datasets.bar || {}),
-      categoryPercentage: 0.85,
-      barPercentage: 0.9,
-    };
+    if (!c.options.datasets) c.options.datasets = {};
+    if (!c.options.datasets.bar) c.options.datasets.bar = {};
+    c.options.datasets.bar.categoryPercentage = 0.85;
+    c.options.datasets.bar.barPercentage = 0.9;
 
     const forceAllLabels = verticalLimit === "all";
     c.options.scales.x.ticks.autoSkip = !forceAllLabels;
     c.options.scales.x.ticks.maxRotation = 90;
-    c.options.scales.x.ticks.minRotation = forceAllLabels ? 90 : 60;
+    c.options.scales.x.ticks.minRotation = forceAllLabels ? 90 : 45;
     c.options.scales.x.ticks.font = { size: forceAllLabels ? 8 : 10 };
+    c.options.scales.y.beginAtZero = true;
     c.options.scales.y.ticks.precision = 0;
     if (c.options.plugins.tidrapportValueLabels) {
       c.options.plugins.tidrapportValueLabels.rotateVertical = true;
@@ -2854,21 +2932,19 @@ function applyOrientation(mode, opts = {}) {
     c.options.layout = {
       padding: { top: 4, right: 4, bottom: 4, left: 4 },
     };
-    c.options.datasets = c.options.datasets || {};
-    c.options.datasets.bar = {
-      ...(c.options.datasets.bar || {}),
-      categoryPercentage: 0.9,
-      barPercentage: 0.9,
-    };
+    if (c.options.datasets?.bar) {
+      c.options.datasets.bar.categoryPercentage = 0.9;
+      c.options.datasets.bar.barPercentage = 0.9;
+    }
     if (c.options.plugins.tidrapportValueLabels) {
       c.options.plugins.tidrapportValueLabels.rotateVertical = false;
       c.options.plugins.tidrapportValueLabels.fontSize = 11;
     }
-    // Reset rotations (Chart.js ignores some of these in horizontal mode, but safe).
     c.options.scales.x.ticks.maxRotation = 0;
     c.options.scales.x.ticks.minRotation = 0;
     c.options.scales.x.ticks.autoSkip = true;
     c.options.scales.x.ticks.font = { size: 12 };
+    c.options.scales.x.beginAtZero = true;
   }
 }
 
@@ -3427,7 +3503,7 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
   }
 
   const stackScales = !useMergedGrouped;
-  // Chart.js stacked bars: båda axlarna behöver stacked:true (gäller både stående och liggande)
+  // Chart.js: stacked value-axis + stacked category-axis for proper stacks
   c.options.scales.x.stacked = stackScales;
   c.options.scales.y.stacked = stackScales;
 
@@ -3449,8 +3525,8 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
       });
       datasets.push({
         label: source,
-        backgroundColor: bg,
         data: row,
+        backgroundColor: bg,
         borderWidth: 1,
         borderColor: "rgba(15,23,42,0.5)",
       });
@@ -3487,6 +3563,7 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
 
   const valueAxis = desiredIndexAxis(mode) === "y" ? c.options.scales.x : c.options.scales.y;
   valueAxis.ticks.precision = measure === "hours" ? undefined : 0;
+  valueAxis.beginAtZero = true;
 
   if (state) {
     let titleText = buildTitleText(state);
@@ -3501,19 +3578,13 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
   }
   renderColorLegend(datasets);
   applyOrientation(mode, { verticalLimit: state?.verticalNames || "20" });
-  // Grupperade sammanslagna staplar: sätt efter applyOrientation så category% inte skrivs över
   if (useMergedGrouped) {
-    c.options.datasets.bar = {
-      categoryPercentage: Math.max(0.48, 0.9 - sourceOrder.length * 0.055),
-      barPercentage: 0.85,
-    };
+    if (!c.options.datasets) c.options.datasets = {};
+    if (!c.options.datasets.bar) c.options.datasets.bar = {};
+    c.options.datasets.bar.categoryPercentage = Math.max(0.48, 0.9 - sourceOrder.length * 0.055);
+    c.options.datasets.bar.barPercentage = 0.85;
   }
-  c.update();
-  try {
-    c.resize();
-  } catch (_) {
-    /* ignore */
-  }
+  c.update("none");
   window.__chart_kind = "normal";
   window.__tidrapport_slide_meta = slideMeta;
 }
