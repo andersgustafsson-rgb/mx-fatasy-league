@@ -780,18 +780,49 @@ function renderSickManualTable() {
   }
 }
 
-function ensureSickManualChart() {
+function resetSickManualChartIfOrientationChanged(orientation) {
+  if (!sickManualChart) return;
+  const want = orientation === "vertical" ? "x" : "y";
+  const cur = sickManualChart.options?.indexAxis || "y";
+  if (cur !== want) {
+    try {
+      sickManualChart.destroy();
+    } catch (e) {
+      console.warn("Failed to destroy sick chart cleanly", e);
+    }
+    sickManualChart = null;
+  }
+}
+
+function setSickManualChartSize(orientation, labelCount) {
+  const container = els.sickManualChartCanvas?.parentElement;
+  if (!container) return;
+  if (orientation === "vertical") {
+    const h = labelCount > 30 ? 620 : labelCount > 18 ? 560 : 480;
+    container.style.height = `${h}px`;
+    container.style.width = `${Math.max(480, Math.min(1600, 60 + labelCount * 28))}px`;
+    container.style.maxWidth = "";
+  } else {
+    container.style.height = `${Math.max(280, Math.min(680, 70 + labelCount * 22))}px`;
+    container.style.width = "";
+    container.style.maxWidth = "";
+  }
+}
+
+function ensureSickManualChart(orientation = "horizontal") {
   if (!els.sickManualChartCanvas) return null;
   if (sickManualChart) return sickManualChart;
   if (typeof Chart === "undefined") return null;
   const ctx = els.sickManualChartCanvas.getContext("2d");
+  const indexAxis = orientation === "vertical" ? "x" : "y";
   sickManualChart = new Chart(ctx, {
     type: "bar",
     data: { labels: [], datasets: [] },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      indexAxis: "y",
+      // Chart.js behöver rätt indexAxis redan vid create — byt via destroy/recreate.
+      indexAxis,
       events: [],
       animation: false,
       plugins: {
@@ -803,7 +834,7 @@ function ensureSickManualChart() {
           label: "Totalt",
           value: 0,
           suffix: " h",
-          position: "bottom-right",
+          position: orientation === "vertical" ? "top-right" : "bottom-right",
         },
         tidrapportValueLabels: {
           enabled: true,
@@ -813,16 +844,19 @@ function ensureSickManualChart() {
           pad: 6,
           color: "#f8fafc",
           strokeColor: "rgba(15, 23, 42, 0.85)",
+          rotateVertical: orientation === "vertical",
         },
       },
-      scales: sickManualScalesForOrientation("horizontal"),
+      scales: sickManualScalesForOrientation(orientation),
     },
   });
   return sickManualChart;
 }
 
 function renderSickManualChart() {
-  const c = ensureSickManualChart();
+  const orientation = getSickManualOrientation();
+  resetSickManualChartIfOrientationChanged(orientation);
+  const c = ensureSickManualChart(orientation);
   if (!c) return;
   const byName = new Map();
   for (const r of sickManualRows) {
@@ -837,9 +871,7 @@ function renderSickManualChart() {
   const rows = limit ? allRows.slice(0, limit) : allRows;
   const labels = rows.map((r) => r.name);
   const colors = rows.map((_, i) => palette(i));
-  const orientation = getSickManualOrientation();
-  c.options.indexAxis = orientation === "vertical" ? "x" : "y";
-  c.options.scales = sickManualScalesForOrientation(orientation);
+  setSickManualChartSize(orientation, labels.length || 1);
   c.data.labels = labels;
   c.data.datasets = [
     {
@@ -860,10 +892,16 @@ function renderSickManualChart() {
   c.options.plugins.tidrapportValueLabels.enabled = true;
   c.options.plugins.tidrapportValueLabels.mode = "each";
   c.options.plugins.tidrapportValueLabels.integerLabels = false;
+  c.options.plugins.tidrapportValueLabels.rotateVertical = orientation === "vertical";
   if (els.sickManualTitlePreview) {
     els.sickManualTitlePreview.textContent = rows.length ? `${ttl} · Totalt: ${totalHours.toFixed(2)} h` : ttl;
   }
   c.update();
+  try {
+    c.resize();
+  } catch (_) {
+    /* ignore */
+  }
 }
 
 function addSickManualRow(name, days, defaults = sickManualDefaults()) {
@@ -2758,18 +2796,21 @@ function setChartHeightByLabels(labelCount) {
   const h = Math.max(300, Math.min(680, 80 + labelCount * 22));
   container.style.height = `${h}px`;
   container.style.minWidth = "";
+  container.style.width = "";
+  container.style.maxWidth = "";
 }
 
 function setChartHeightByMode(mode, labelCount) {
   const container = els.chartCanvas?.parentElement;
   if (!container) return;
   if (mode === "vertical") {
-    // Stående staplar: höjden ska vara STABIL (namn ligger längs botten).
-    // Fler personer → mer bredd, inte mer höjd (det gjorde PNG:en absurd).
-    const h = labelCount > 30 ? 620 : labelCount > 18 ? 560 : 520;
+    // Stående staplar: höjden STABIL (namn längs botten). Bredd växer med antal namn.
+    const h = labelCount > 30 ? 640 : labelCount > 18 ? 580 : 520;
     container.style.height = `${h}px`;
-    const minW = Math.max(560, Math.min(1800, 80 + labelCount * 30));
-    container.style.minWidth = `${minW}px`;
+    container.style.minWidth = "";
+    // Explicit width så Chart.js får en riktig canvas-bredd (scrollas i overflow-x-auto)
+    container.style.width = `${Math.max(560, Math.min(1800, 80 + labelCount * 30))}px`;
+    container.style.maxWidth = "";
     return;
   }
   setChartHeightByLabels(labelCount);
@@ -2779,19 +2820,21 @@ function applyOrientation(mode, opts = {}) {
   const c = ensureChart(mode);
   const isVertical = mode === "vertical";
   const verticalLimit = String(opts.verticalLimit || "");
+  // Håll indexAxis i synk även om chart återanvänds
+  c.options.indexAxis = desiredIndexAxis(mode);
 
   // Improve readability in vertical mode (many labels).
   if (isVertical) {
     c.options.plugins.legend.position = "top";
     c.options.plugins.legend.labels.font = { size: 11 };
-    // Mindre tom yta på sidorna i PNG/Excel
+    // Lite mer botten-padding så roterade namn inte äter upp plot-ytan
     c.options.layout = {
-      padding: { top: 4, right: 6, bottom: 2, left: 2 },
+      padding: { top: 8, right: 8, bottom: 8, left: 4 },
     };
     c.options.datasets = c.options.datasets || {};
     c.options.datasets.bar = {
       ...(c.options.datasets.bar || {}),
-      categoryPercentage: 0.92,
+      categoryPercentage: 0.85,
       barPercentage: 0.9,
     };
 
@@ -2810,6 +2853,12 @@ function applyOrientation(mode, opts = {}) {
     c.options.plugins.legend.labels.font = { size: 12 };
     c.options.layout = {
       padding: { top: 4, right: 4, bottom: 4, left: 4 },
+    };
+    c.options.datasets = c.options.datasets || {};
+    c.options.datasets.bar = {
+      ...(c.options.datasets.bar || {}),
+      categoryPercentage: 0.9,
+      barPercentage: 0.9,
     };
     if (c.options.plugins.tidrapportValueLabels) {
       c.options.plugins.tidrapportValueLabels.rotateVertical = false;
@@ -3378,23 +3427,9 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
   }
 
   const stackScales = !useMergedGrouped;
-  const ix = desiredIndexAxis(mode);
-  if (ix === "y") {
-    c.options.scales.x.stacked = stackScales;
-    c.options.scales.y.stacked = false;
-  } else {
-    c.options.scales.x.stacked = false;
-    c.options.scales.y.stacked = stackScales;
-  }
-
-  if (useMergedGrouped) {
-    c.options.datasets.bar = {
-      categoryPercentage: Math.max(0.48, 0.9 - sourceOrder.length * 0.055),
-      barPercentage: 0.85,
-    };
-  } else {
-    c.options.datasets.bar = {};
-  }
+  // Chart.js stacked bars: båda axlarna behöver stacked:true (gäller både stående och liggande)
+  c.options.scales.x.stacked = stackScales;
+  c.options.scales.y.stacked = stackScales;
 
   const datasets = [];
   let shortLabelsForPlugin = [];
@@ -3414,8 +3449,8 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
       });
       datasets.push({
         label: source,
-        data: row,
         backgroundColor: bg,
+        data: row,
         borderWidth: 1,
         borderColor: "rgba(15,23,42,0.5)",
       });
@@ -3466,7 +3501,19 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
   }
   renderColorLegend(datasets);
   applyOrientation(mode, { verticalLimit: state?.verticalNames || "20" });
+  // Grupperade sammanslagna staplar: sätt efter applyOrientation så category% inte skrivs över
+  if (useMergedGrouped) {
+    c.options.datasets.bar = {
+      categoryPercentage: Math.max(0.48, 0.9 - sourceOrder.length * 0.055),
+      barPercentage: 0.85,
+    };
+  }
   c.update();
+  try {
+    c.resize();
+  } catch (_) {
+    /* ignore */
+  }
   window.__chart_kind = "normal";
   window.__tidrapport_slide_meta = slideMeta;
 }
