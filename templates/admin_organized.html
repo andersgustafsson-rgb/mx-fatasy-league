@@ -2137,6 +2137,27 @@
                 ? 'Komplett = 6+6 topp 6 och båda holeshots (WSX, ingen wildcard)'
                 : 'Komplett = 6+6 topp 6, båda holeshots och wildcard med position + förare';
 
+            const partialHead = document.querySelector('#picks-stats-partial-section thead tr');
+            if (partialHead) {
+                if (data.is_mxon) {
+                    partialHead.innerHTML = `
+                        <th class="px-3 py-2">Användare</th>
+                        <th class="px-3 py-2">Nationer</th>
+                        <th class="px-3 py-2">Klass</th>
+                        <th class="px-3 py-2">Favoriter</th>
+                        <th class="px-3 py-2 hidden sm:table-cell">—</th>
+                        <th class="px-3 py-2">Saknas</th>`;
+                } else {
+                    partialHead.innerHTML = `
+                        <th class="px-3 py-2">Användare</th>
+                        <th class="px-3 py-2">450 / SX1</th>
+                        <th class="px-3 py-2">250 / SX2</th>
+                        <th class="px-3 py-2">HS</th>
+                        <th class="px-3 py-2 hidden sm:table-cell">WC</th>
+                        <th class="px-3 py-2">Saknas</th>`;
+                }
+            }
+
             document.getElementById('picks-stats-title').textContent = `Picks Statistik: ${data.competition_name}`;
             document.getElementById('picks-stats-complete').textContent = data.users_complete;
             document.getElementById('picks-stats-partial').textContent = data.users_partial;
