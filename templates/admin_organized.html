@@ -2131,7 +2131,9 @@
 
             updatePicksStatsBanner(data);
 
-            document.getElementById('picks-stats-subtitle').textContent = data.is_wsx
+            document.getElementById('picks-stats-subtitle').textContent = data.is_mxon
+                ? 'Komplett = topp 5 nationer + klassfavoriter MXGP / MX2 / OPEN'
+                : data.is_wsx
                 ? 'Komplett = 6+6 topp 6 och båda holeshots (WSX, ingen wildcard)'
                 : 'Komplett = 6+6 topp 6, båda holeshots och wildcard med position + förare';
 
@@ -2149,13 +2151,28 @@
             const partialSection = document.getElementById('picks-stats-partial-section');
             if (data.users_partial_list && data.users_partial_list.length > 0) {
                 partialBody.innerHTML = data.users_partial_list.map((u) => {
+                    const name = u.display_name || u.username;
+                    const missing = (u.missing || []).join(', ');
+                    if (data.is_mxon) {
+                        const cls = [
+                            u.holeshot_450 ? 'MXGP✓' : 'MXGP—',
+                            u.holeshot_250 ? 'MX2✓' : 'MX2—',
+                            u.wildcard_rider ? 'OPEN✓' : 'OPEN—',
+                        ].join(' ');
+                        return `<tr>
+                            <td class="px-3 py-2 whitespace-nowrap">${name} <span class="text-gray-500 text-xs">(${u.username})</span></td>
+                            <td class="px-3 py-2">${u.race_450}/5</td>
+                            <td class="px-3 py-2">${u.race_250}/3</td>
+                            <td class="px-3 py-2">${cls}</td>
+                            <td class="px-3 py-2 hidden sm:table-cell">—</td>
+                            <td class="px-3 py-2 text-amber-200/90 text-xs">${missing}</td>
+                        </tr>`;
+                    }
                     const hs = `${u.holeshot_450 ? '✓' : '—'} / ${u.holeshot_250 ? '✓' : '—'}`;
                     const wc = data.is_wsx ? '—' : (
                         u.wildcard_position && u.wildcard_rider ? '✓' :
                         u.wildcard_position ? 'pos' : '—'
                     );
-                    const missing = (u.missing || []).join(', ');
-                    const name = u.display_name || u.username;
                     return `<tr>
                         <td class="px-3 py-2 whitespace-nowrap">${name} <span class="text-gray-500 text-xs">(${u.username})</span></td>
                         <td class="px-3 py-2">${u.race_450}/6</td>
@@ -2167,13 +2184,26 @@
                 }).join('');
                 if (partialCards) {
                     partialCards.innerHTML = data.users_partial_list.map((u) => {
+                        const name = u.display_name || u.username;
+                        const missing = (u.missing || []).join(', ');
+                        if (data.is_mxon) {
+                            return `<article class="picks-stats-partial-card">
+                                <div class="picks-stats-partial-card__name">${name} <span class="text-gray-500 text-xs font-normal">(${u.username})</span></div>
+                                <div class="picks-stats-partial-card__grid">
+                                    <div><span>Nationer</span><strong>${u.race_450}/5</strong></div>
+                                    <div><span>Klass</span><strong>${u.race_250}/3</strong></div>
+                                    <div><span>MXGP</span><strong>${u.holeshot_450 ? '✓' : '—'}</strong></div>
+                                    <div><span>MX2</span><strong>${u.holeshot_250 ? '✓' : '—'}</strong></div>
+                                    <div><span>OPEN</span><strong>${u.wildcard_rider ? '✓' : '—'}</strong></div>
+                                </div>
+                                <div class="picks-stats-partial-card__missing">Saknas: ${missing || '—'}</div>
+                            </article>`;
+                        }
                         const hs = `${u.holeshot_450 ? '✓' : '—'} / ${u.holeshot_250 ? '✓' : '—'}`;
                         const wc = data.is_wsx ? '—' : (
                             u.wildcard_position && u.wildcard_rider ? '✓' :
                             u.wildcard_position ? 'pos' : '—'
                         );
-                        const missing = (u.missing || []).join(', ');
-                        const name = u.display_name || u.username;
                         const wcCell = data.is_wsx ? '' : `
                             <div><span>WC</span><strong>${wc}</strong></div>`;
                         return `<article class="picks-stats-partial-card">

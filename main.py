@@ -14679,8 +14679,84 @@ def admin_debug_results(competition_id):
 
 def _competition_picks_assessment(comp: Competition) -> dict:
     """Per-user pick completeness for admin stats (matches homepage has_picks rules)."""
-    is_wsx = (comp.series or "") == "WSX"
+    series_u = (comp.series or "").upper()
+    is_wsx = series_u == "WSX"
+    is_mxon = series_u == "MXON"
     comp_id = int(comp.id)
+
+    if is_mxon:
+        nation_rows = MxonNationPick.query.filter_by(competition_id=comp_id).all()
+        class_rows = MxonClassPick.query.filter_by(competition_id=comp_id).all()
+        nation_by_user: dict[int, set[int]] = {}
+        for p in nation_rows:
+            nation_by_user.setdefault(int(p.user_id), set()).add(int(p.position or 0))
+        class_by_user: dict[int, set[str]] = {}
+        for p in class_rows:
+            class_by_user.setdefault(int(p.user_id), set()).add(
+                (p.class_name or "").strip().lower()
+            )
+
+        all_user_ids = set(nation_by_user) | set(class_by_user)
+        users_by_id = {}
+        if all_user_ids:
+            users_by_id = {u.id: u for u in User.query.filter(User.id.in_(all_user_ids)).all()}
+
+        rows = []
+        for uid in sorted(all_user_ids):
+            user = users_by_id.get(uid)
+            n_count = len(nation_by_user.get(uid, set()))
+            c_set = class_by_user.get(uid, set())
+            c_count = len(c_set)
+            missing: list[str] = []
+            if n_count < 5:
+                missing.append(f"Nationer: {n_count}/5")
+            for key, label in (("mxgp", "MXGP"), ("mx2", "MX2"), ("open", "OPEN")):
+                if key not in c_set:
+                    missing.append(f"Klassfavorit {label}")
+            if n_count >= 5 and c_count >= 3:
+                status = "complete"
+            elif n_count or c_count:
+                status = "partial"
+            else:
+                status = "none"
+            rows.append(
+                {
+                    "user_id": uid,
+                    "username": user.username if user else f"#{uid}",
+                    "display_name": (user.display_name if user else None)
+                    or (user.username if user else f"#{uid}"),
+                    "status": status,
+                    "race_450": n_count,  # reuse UI slots: nations / class picks
+                    "race_250": c_count,
+                    "holeshot_450": "mxgp" in c_set,
+                    "holeshot_250": "mx2" in c_set,
+                    "wildcard_position": "open" in c_set,
+                    "wildcard_rider": "open" in c_set,
+                    "nations": n_count,
+                    "class_favorites": c_count,
+                    "missing": missing,
+                }
+            )
+
+        complete = [r for r in rows if r["status"] == "complete"]
+        partial = [r for r in rows if r["status"] == "partial"]
+        total_users = User.query.count()
+        return {
+            "is_wsx": False,
+            "is_mxon": True,
+            "label_450": "Nationer",
+            "label_250": "Klassfavoriter",
+            "users_complete": len(complete),
+            "users_partial": len(partial),
+            "users_started": len(rows),
+            "users_not_started": max(0, total_users - len(rows)),
+            "total_users": total_users,
+            "complete_pct": round((len(complete) / total_users * 100) if total_users > 0 else 0, 1),
+            "started_pct": round((len(rows) / total_users * 100) if total_users > 0 else 0, 1),
+            "users_complete_list": complete,
+            "users_partial_list": partial,
+        }
+
     class_450 = "wsx_sx1" if is_wsx else "450cc"
     class_250 = "wsx_sx2" if is_wsx else "250cc"
     label_450 = "SX1" if is_wsx else "450cc"
@@ -14796,6 +14872,7 @@ def _competition_picks_assessment(comp: Competition) -> dict:
 
     return {
         "is_wsx": is_wsx,
+        "is_mxon": False,
         "label_450": label_450,
         "label_250": label_250,
         "users_complete": len(complete),
@@ -14832,6 +14909,9 @@ def _admin_picks_stats_payload(comp: Competition) -> dict:
         "deadline_display": sched.get("pick_deadline_display"),
         "race_display": sched.get("race_display") or sched.get("start_display"),
         "is_wsx": assessment["is_wsx"],
+        "is_mxon": assessment.get("is_mxon", False),
+        "label_450": assessment.get("label_450"),
+        "label_250": assessment.get("label_250"),
         "total_users": assessment["total_users"],
         "users_complete": assessment["users_complete"],
         "users_partial": assessment["users_partial"],
@@ -15478,7 +15558,10 @@ def send_pick_reminders():
         from trackmap_utils import resolve_competition_hero_static_url
 
         base_url = get_public_base_url()
-        competition_url = f"{base_url}/race_picks/{next_comp.id}"
+        if (getattr(next_comp, "series", None) or "").upper() == "MXON":
+            competition_url = f"{base_url}/mxon_picks/{next_comp.id}"
+        else:
+            competition_url = f"{base_url}/race_picks/{next_comp.id}"
         hero_rel = resolve_competition_hero_static_url(next_comp)
         trackmap_url = None
         if hero_rel:
