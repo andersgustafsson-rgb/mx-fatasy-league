@@ -2591,9 +2591,18 @@ def admin_seed_wsx_2026():
         return jsonify({"error": str(e)}), 500
 
 
-@app.post("/admin/seed_mxon_2026")
+@app.route("/admin/seed_mxon_2026", methods=["GET", "POST"])
 def admin_seed_mxon_2026():
     if not is_admin_user():
+        # Form POST in browser → login redirect (not raw JSON)
+        wants_html = (
+            request.method == "GET"
+            or bool(request.form)
+            or (request.accept_mimetypes.best or "").startswith("text/html")
+        )
+        if wants_html:
+            flash("Logga in som admin och kör seed igen.", "error")
+            return redirect(url_for("login", next="/admin/mxon"))
         return jsonify({"error": "unauthorized"}), 403
     try:
         from mxon_fantasy import ensure_mxon_2026
@@ -2603,11 +2612,15 @@ def admin_seed_mxon_2026():
         db.create_all()
         info = ensure_mxon_2026(attach_track_image=True)
         _SERIES_STATUS_CACHE = None
-        if request.form or (request.accept_mimetypes.best or "").startswith("text/html"):
+        if request.method == "GET" or request.form or (request.accept_mimetypes.best or "").startswith("text/html"):
+            flash("MXoN 2026 seed OK — seriekortet ska synas på startsidan.", "success")
             return redirect(url_for("admin_mxon_results_page"))
         return jsonify({"message": "MXON 2026 seeded/verified", "info": info})
     except Exception as e:
         db.session.rollback()
+        if request.method == "GET" or request.form or (request.accept_mimetypes.best or "").startswith("text/html"):
+            flash(f"MXoN seed misslyckades: {e}", "error")
+            return redirect("/admin/mxon")
         return jsonify({"error": str(e)}), 500
 
 
@@ -2775,23 +2788,27 @@ def admin_mxon_score(competition_id: int):
 
 
 def is_admin_user():
-    """Check if current user is admin"""
+    """Check if current user is admin (username or user_id session)."""
     username = session.get("username")
-    if not username:
-        return False
-    
-    # Check if user has is_admin flag
+    user_id = session.get("user_id")
     try:
-        user = User.query.filter_by(username=username).first()
-        if user and hasattr(user, 'is_admin') and user.is_admin:
+        user = None
+        if username:
+            user = User.query.filter_by(username=username).first()
+        if user is None and user_id:
+            try:
+                user = User.query.get(int(user_id))
+            except Exception:
+                user = None
+        if user and getattr(user, "is_admin", False):
+            # Keep session keys in sync for later checks
+            if user.username and not username:
+                session["username"] = user.username
             return True
     except Exception as e:
-        # If is_admin column doesn't exist, fall back to old method
         print(f"Error checking is_admin flag: {e}")
-        pass
-    
     # Fallback to old method for backward compatibility
-    return username == "test"
+    return bool(username == "test")
 
 def check_session_timeout():
     """Check if session has expired and logout if needed"""
