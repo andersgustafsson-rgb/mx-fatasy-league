@@ -803,6 +803,11 @@
       if (!n || !n.lineup) return '';
       const seatLabel = (seat) => {
         if (!seat) return 'TBA';
+        if (seat.is_out) {
+          const nm = seat.is_tba ? 'TBA' : (seat.rider_name || 'TBA');
+          const base = seat.rider_number != null ? `#${seat.rider_number} ${nm}` : nm;
+          return `${base} (OUT)`;
+        }
         const nm = seat.is_tba ? 'TBA' : (seat.rider_name || 'TBA');
         return seat.rider_number != null ? `#${seat.rider_number} ${nm}` : nm;
       };
@@ -820,8 +825,20 @@
     function riderName(n, cls) {
       if (!n || !n.lineup) return 'TBA';
       const seat = n.lineup[cls] || {};
+      if (seat.is_out) {
+        const nm = seat.is_tba ? 'TBA' : (seat.rider_name || 'TBA');
+        const base = seat.rider_number != null ? `#${seat.rider_number} ${nm}` : nm;
+        return `${base} (OUT)`;
+      }
       const nm = seat.is_tba ? 'TBA' : (seat.rider_name || 'TBA');
       return seat.rider_number != null ? `#${seat.rider_number} ${nm}` : nm;
+    }
+
+    function seatIsOut(n, cls) {
+      if (!n) return true;
+      if (n.is_out) return true;
+      const seat = (n.lineup || {})[cls] || {};
+      return !!seat.is_out;
     }
 
     function selectedMap() {
@@ -942,6 +959,7 @@
         current = classMap()[activeClass] || '';
         const classOrder = [['mxgp', 'MXGP'], ['mx2', 'MX2'], ['open', 'OPEN']];
         const list = NATIONS
+          .filter((nat) => !seatIsOut(nat, activeClass))
           .filter((nat) => {
             if (!q) return true;
             const hay = [

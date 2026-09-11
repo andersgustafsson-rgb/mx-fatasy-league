@@ -33,6 +33,55 @@
     </form>
 
     {% if competition %}
+    {% if competition %}
+    <section class="mb-10 rounded-xl border border-rose-500/30 bg-rose-950/20 p-4">
+      <h2 class="text-lg font-semibold text-rose-200 mb-1">OUT</h2>
+      <p class="text-slate-400 text-sm mb-4">
+        Markera hela nationen eller en klassplats (MXGP/MX2/OPEN). OUT-nationer syns inte i tippa;
+        OUT-platser går inte att välja som klassfavorit.
+      </p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+        <label class="block text-sm">
+          <span class="text-slate-400">Nation</span>
+          <select id="out-nation" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm">
+            <option value="">— välj —</option>
+            {% for n in nations %}
+            <option value="{{ n.id }}">{{ n.name }} ({{ n.code }})</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="block text-sm">
+          <span class="text-slate-400">Omfattning</span>
+          <select id="out-class" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm">
+            <option value="*">Hela nationen</option>
+            <option value="mxgp">MXGP-plats</option>
+            <option value="mx2">MX2-plats</option>
+            <option value="open">OPEN-plats</option>
+          </select>
+        </label>
+        <div class="flex items-end gap-2">
+          <button type="button" id="out-set" class="bg-rose-700 hover:bg-rose-600 px-3 py-2 rounded font-semibold text-sm">Sätt OUT</button>
+          <button type="button" id="out-clear" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm">Rensa</button>
+        </div>
+      </div>
+      <h3 class="text-sm font-semibold text-rose-200 mb-2">Aktuella OUT</h3>
+      <ul id="out-list" class="space-y-1.5 text-sm">
+        {% for o in mxon_outs %}
+        <li class="flex items-center justify-between gap-2 rounded-lg border border-rose-500/25 bg-slate-900/60 px-3 py-2"
+            data-nation-id="{{ o.nation_id }}" data-class="{{ o.class_name }}">
+          <span>
+            {% if o.flag_url %}<img src="{{ o.flag_url }}" alt="" class="inline-block w-5 h-3.5 object-cover rounded-sm mr-1 align-middle">{% endif %}
+            <strong>{{ o.code }}</strong> {{ o.name }}
+            — {{ o.class_label }}{% if o.rider_name %} · {% if o.rider_number is not none %}#{{ o.rider_number }} {% endif %}{{ o.rider_name }}{% endif %}
+          </span>
+          <button type="button" class="out-clear-row text-rose-300 hover:text-rose-100 text-xs font-bold" title="Rensa">✕</button>
+        </li>
+        {% else %}
+        <li id="out-empty" class="text-slate-500">Inga OUT just nu.</li>
+        {% endfor %}
+      </ul>
+    </section>
+
     <h2 class="text-lg font-semibold text-cyan-200 mb-2">Nationsordning (1 = vinnare)</h2>
     <p class="text-slate-400 text-sm mb-2">Koder en per rad eller kommaseparerat.</p>
     <form id="results-form" class="space-y-4 mb-8">
@@ -97,6 +146,63 @@
       if (!res.ok) throw new Error(data.error || res.statusText);
       return data;
     }
+
+    function renderOutList(outs) {
+      const list = document.getElementById('out-list');
+      if (!list) return;
+      if (!outs || !outs.length) {
+        list.innerHTML = '<li id="out-empty" class="text-slate-500">Inga OUT just nu.</li>';
+        return;
+      }
+      list.innerHTML = outs.map((o) => {
+        const flag = o.flag_url
+          ? `<img src="${o.flag_url}" alt="" class="inline-block w-5 h-3.5 object-cover rounded-sm mr-1 align-middle">`
+          : '';
+        const rider = o.rider_name
+          ? ` · ${o.rider_number != null ? '#' + o.rider_number + ' ' : ''}${o.rider_name}`
+          : '';
+        return `<li class="flex items-center justify-between gap-2 rounded-lg border border-rose-500/25 bg-slate-900/60 px-3 py-2"
+            data-nation-id="${o.nation_id}" data-class="${o.class_name}">
+          <span>${flag}<strong>${o.code || ''}</strong> ${o.name || ''} — ${o.class_label || o.class_name}${rider}</span>
+          <button type="button" class="out-clear-row text-rose-300 hover:text-rose-100 text-xs font-bold" title="Rensa">✕</button>
+        </li>`;
+      }).join('');
+      bindOutClearButtons();
+    }
+
+    async function setMxonOut(status, nationId, className) {
+      const nid = nationId || document.getElementById('out-nation')?.value;
+      const cls = className || document.getElementById('out-class')?.value || '*';
+      if (!nid) {
+        alert('Välj nation först');
+        return;
+      }
+      try {
+        const data = await post(`/admin/mxon/${COMP_ID}/outs`, {
+          nation_id: parseInt(nid, 10),
+          class_name: cls,
+          status,
+        });
+        renderOutList(data.outs || []);
+        if (out) out.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        alert('Fel: ' + err.message);
+      }
+    }
+
+    function bindOutClearButtons() {
+      document.querySelectorAll('.out-clear-row').forEach((btn) => {
+        btn.onclick = () => {
+          const li = btn.closest('li');
+          if (!li) return;
+          setMxonOut('CLEAR', li.dataset.nationId, li.dataset.class);
+        };
+      });
+    }
+
+    document.getElementById('out-set')?.addEventListener('click', () => setMxonOut('OUT'));
+    document.getElementById('out-clear')?.addEventListener('click', () => setMxonOut('CLEAR'));
+    bindOutClearButtons();
 
     document.getElementById('results-form').addEventListener('submit', async (e) => {
       e.preventDefault();

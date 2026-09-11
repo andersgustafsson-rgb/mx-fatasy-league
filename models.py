@@ -617,6 +617,24 @@ class MxonTeamEntry(db.Model):
     )
 
 
+class MxonCompetitionOut(db.Model):
+    """OUT for a MXoN competition: whole nation (class_name='*') or one seat (mxgp|mx2|open)."""
+    __tablename__ = "mxon_competition_outs"
+    id = db.Column(db.Integer, primary_key=True)
+    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"), nullable=False, index=True)
+    nation_id = db.Column(db.Integer, db.ForeignKey("mxon_nations.id"), nullable=False, index=True)
+    class_name = db.Column(db.String(10), nullable=False, default="*")  # * | mxgp | mx2 | open
+    nation = db.relationship("MxonNation", lazy=True)
+    __table_args__ = (
+        db.UniqueConstraint(
+            "competition_id",
+            "nation_id",
+            "class_name",
+            name="uq_mxon_out_comp_nation_class",
+        ),
+    )
+
+
 class MxonNationPick(db.Model):
     """User tippa: ordered top-5 nations for one MXoN competition."""
     __tablename__ = "mxon_nation_picks"

@@ -31,7 +31,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, rider_query_for_list_ui
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, MxonCompetitionOut, rider_query_for_list_ui
 
 _INDEX_SCHEMA_CHECKED = False
 _RIDER_IMAGE_COLUMN_CHECKED = False
@@ -2655,10 +2655,22 @@ def admin_seed_mxon_2026():
 def admin_mxon_results_page():
     if not is_admin_user():
         return redirect(url_for("login", next=request.path))
-    from mxon_fantasy import get_class_results, list_active_nations, mxon_competitions_for_year, nation_dict
+    from mxon_fantasy import (
+        apply_mxon_outs_to_nations,
+        get_class_results,
+        get_mxon_outs,
+        list_active_nations,
+        mxon_competitions_for_year,
+        nation_dict,
+        _ensure_mxon_competition_outs_table,
+    )
 
     try:
         db.create_all()
+    except Exception:
+        pass
+    try:
+        _ensure_mxon_competition_outs_table()
     except Exception:
         pass
 
@@ -2667,6 +2679,7 @@ def admin_mxon_results_page():
     current_codes = ""
     class_results = {}
     nations = []
+    mxon_outs = []
     try:
         comps = mxon_competitions_for_year(2026)
         comp = comps[0] if comps else None
@@ -2684,7 +2697,11 @@ def admin_mxon_results_page():
             current_codes = "\n".join(codes)
             class_results = get_class_results(comp.id)
             nations = [nation_dict(n, include_lineup=True) for n in list_active_nations()]
+            nations = apply_mxon_outs_to_nations(
+                nations, int(comp.id), hide_nation_out=False
+            )
             nations.sort(key=lambda d: ((d.get("name") or "").lower(), d.get("code") or ""))
+            mxon_outs = get_mxon_outs(int(comp.id))
     except Exception as e:
         app.logger.exception("admin_mxon_results_page load failed: %s", e)
         try:
@@ -2698,7 +2715,51 @@ def admin_mxon_results_page():
         current_codes=current_codes,
         class_results=class_results,
         nations=nations,
+        mxon_outs=mxon_outs,
     )
+
+
+@app.get("/admin/mxon/<int:competition_id>/outs")
+def admin_mxon_list_outs(competition_id: int):
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    from mxon_fantasy import get_mxon_outs
+
+    comp = Competition.query.get_or_404(competition_id)
+    if (comp.series or "").upper() != "MXON":
+        return jsonify({"error": "not_mxon"}), 400
+    return jsonify({"ok": True, "outs": get_mxon_outs(int(comp.id))})
+
+
+@app.post("/admin/mxon/<int:competition_id>/outs")
+def admin_mxon_set_out(competition_id: int):
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    from mxon_fantasy import get_mxon_outs, set_mxon_out
+
+    comp = Competition.query.get_or_404(competition_id)
+    if (comp.series or "").upper() != "MXON":
+        return jsonify({"error": "not_mxon"}), 400
+    data = request.get_json(silent=True) or {}
+    try:
+        nation_id = int(data.get("nation_id"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "invalid_nation_id"}), 400
+    class_name = data.get("class_name") or "*"
+    status = (data.get("status") or "OUT").upper()
+    if status not in ("OUT", "CLEAR"):
+        return jsonify({"error": "invalid_status"}), 400
+    try:
+        info = set_mxon_out(
+            int(comp.id), nation_id, class_name=class_name, status=status
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        app.logger.exception("admin_mxon_set_out failed: %s", e)
+        return jsonify({"error": "save_failed"}), 500
+    return jsonify({"ok": True, "result": info, "outs": get_mxon_outs(int(comp.id))})
 
 
 @app.post("/admin/mxon/<int:competition_id>/results")
@@ -10784,6 +10845,7 @@ def mxon_picks_page(competition_id):
     import json
 
     from mxon_fantasy import (
+        apply_mxon_outs_to_nations,
         get_user_class_picks,
         get_user_nation_picks,
         list_active_nations,
@@ -10802,17 +10864,19 @@ def mxon_picks_page(competition_id):
 
     picks_locked = is_picks_locked(comp)
     nations_raw = list_active_nations()
-    nations = []
-    for n in nations_raw:
-        d = nation_dict(n, include_lineup=True)
+    nations = [nation_dict(n, include_lineup=True) for n in nations_raw]
+    nations = apply_mxon_outs_to_nations(nations, int(comp.id), hide_nation_out=True)
+    for d in nations:
         lineup = d.get("lineup") or {}
         parts = []
         for cls_key, label in (("mxgp", "MXGP"), ("mx2", "MX2"), ("open", "OPEN")):
             seat = lineup.get(cls_key) or {}
             nm = "TBA" if seat.get("is_tba") else (seat.get("rider_name") or "TBA")
-            parts.append(f"{label}: {nm}")
+            num = seat.get("rider_number")
+            prefix = f"#{num} " if num is not None else ""
+            suffix = " (OUT)" if seat.get("is_out") else ""
+            parts.append(f"{label}: {prefix}{nm}{suffix}")
         d["lineup_label"] = " · ".join(parts)
-        nations.append(d)
 
     initial = []
     initial_class = {}

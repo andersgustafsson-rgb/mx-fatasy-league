@@ -11,6 +11,7 @@ from models import (
     CompetitionScore,
     MxonClassPick,
     MxonClassResult,
+    MxonCompetitionOut,
     MxonNation,
     MxonNationPick,
     MxonNationResult,
@@ -225,6 +226,150 @@ def list_active_nations() -> list:
     )
 
 
+def _ensure_mxon_competition_outs_table() -> None:
+    """Best-effort create table so prod works before/without alembic migrate."""
+    try:
+        MxonCompetitionOut.__table__.create(bind=db.engine, checkfirst=True)
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
+
+def get_mxon_outs(competition_id: int) -> list[dict[str, Any]]:
+    """Return OUT rows for a competition (nation and/or seat)."""
+    _ensure_mxon_competition_outs_table()
+    rows = (
+        MxonCompetitionOut.query.filter_by(competition_id=int(competition_id))
+        .order_by(MxonCompetitionOut.nation_id.asc(), MxonCompetitionOut.class_name.asc())
+        .all()
+    )
+    out = []
+    for r in rows:
+        n = r.nation or MxonNation.query.get(r.nation_id)
+        cls = (r.class_name or "*").lower()
+        seat = None
+        if cls in MXON_CLASS_KEYS:
+            seat = rider_seat_for_nation(int(r.nation_id), cls)
+        out.append(
+            {
+                "id": r.id,
+                "competition_id": r.competition_id,
+                "nation_id": r.nation_id,
+                "code": n.code if n else None,
+                "name": n.name if n else None,
+                "flag_url": flag_image_url(n.code) if n else None,
+                "class_name": cls,
+                "class_label": "Hela nationen" if cls == "*" else MXON_CLASS_LABELS.get(cls, cls.upper()),
+                "rider_name": (seat or {}).get("rider_name"),
+                "rider_number": (seat or {}).get("rider_number"),
+            }
+        )
+    return out
+
+
+def mxon_out_sets(competition_id: int) -> tuple[set[int], set[tuple[int, str]]]:
+    """Return (nation_ids_out, seat_outs as (nation_id, class_key))."""
+    _ensure_mxon_competition_outs_table()
+    nation_out: set[int] = set()
+    seat_out: set[tuple[int, str]] = set()
+    for r in MxonCompetitionOut.query.filter_by(competition_id=int(competition_id)).all():
+        cls = (r.class_name or "*").lower()
+        if cls == "*":
+            nation_out.add(int(r.nation_id))
+        elif cls in MXON_CLASS_KEYS:
+            seat_out.add((int(r.nation_id), cls))
+    return nation_out, seat_out
+
+
+def set_mxon_out(
+    competition_id: int,
+    nation_id: int,
+    class_name: str | None = "*",
+    *,
+    status: str = "OUT",
+) -> dict[str, Any]:
+    """Set or clear OUT. class_name '*' = whole nation; mxgp|mx2|open = seat."""
+    _ensure_mxon_competition_outs_table()
+    cls = (class_name or "*").strip().lower()
+    if cls in ("nation", "all", "team", ""):
+        cls = "*"
+    if cls != "*" and cls not in MXON_CLASS_KEYS:
+        raise ValueError("invalid_class")
+    nation = MxonNation.query.get(int(nation_id))
+    if not nation:
+        raise ValueError("nation_not_found")
+
+    status_u = (status or "OUT").upper()
+    existing = MxonCompetitionOut.query.filter_by(
+        competition_id=int(competition_id),
+        nation_id=int(nation_id),
+        class_name=cls,
+    ).first()
+
+    if status_u == "CLEAR":
+        deleted = 0
+        if existing:
+            db.session.delete(existing)
+            deleted = 1
+        # Clearing whole nation also clears seat-level OUTs for that nation
+        if cls == "*":
+            deleted += (
+                MxonCompetitionOut.query.filter_by(
+                    competition_id=int(competition_id),
+                    nation_id=int(nation_id),
+                )
+                .filter(MxonCompetitionOut.class_name != "*")
+                .delete(synchronize_session=False)
+            )
+        db.session.commit()
+        return {"ok": True, "cleared": deleted, "class_name": cls}
+
+    if not existing:
+        db.session.add(
+            MxonCompetitionOut(
+                competition_id=int(competition_id),
+                nation_id=int(nation_id),
+                class_name=cls,
+            )
+        )
+    # If marking whole nation OUT, remove redundant seat rows
+    if cls == "*":
+        MxonCompetitionOut.query.filter_by(
+            competition_id=int(competition_id),
+            nation_id=int(nation_id),
+        ).filter(MxonCompetitionOut.class_name != "*").delete(synchronize_session=False)
+    db.session.commit()
+    return {"ok": True, "class_name": cls, "nation_id": int(nation_id)}
+
+
+def apply_mxon_outs_to_nations(
+    nations: list[dict[str, Any]],
+    competition_id: int,
+    *,
+    hide_nation_out: bool = True,
+) -> list[dict[str, Any]]:
+    """Annotate lineup seats with is_out; optionally drop fully OUT nations."""
+    nation_out, seat_out = mxon_out_sets(competition_id)
+    filtered: list[dict[str, Any]] = []
+    for d in nations:
+        nid = int(d.get("id") or 0)
+        whole = nid in nation_out
+        if hide_nation_out and whole:
+            continue
+        d = dict(d)
+        d["is_out"] = whole
+        lineup = dict(d.get("lineup") or {})
+        for key in MXON_CLASS_KEYS:
+            seat = dict(lineup.get(key) or {})
+            seat["is_out"] = whole or ((nid, key) in seat_out)
+            lineup[key] = seat
+        d["lineup"] = lineup
+        filtered.append(d)
+    return filtered
+
+
 def nation_dict(n: MxonNation, *, include_lineup: bool = True) -> dict:
     code = n.code or ""
     payload: dict[str, Any] = {
@@ -252,6 +397,7 @@ def nation_dict(n: MxonNation, *, include_lineup: bool = True) -> dict:
 def ensure_mxon_2026(*, attach_track_image: bool = True) -> dict:
     """Upsert MXON Series + Ernée competition + 33 nations + provisional lineups."""
     _ensure_mxon_team_rider_number_column()
+    _ensure_mxon_competition_outs_table()
     created_series = False
     mxon = Series.query.filter(
         Series.year == 2026,
@@ -467,9 +613,12 @@ def save_user_nation_picks(
     if len(set(nation_ids)) != 5:
         raise ValueError("duplicate_nations")
     active_ids = {n.id for n in list_active_nations()}
+    nation_out, _seat_out = mxon_out_sets(int(competition_id))
     for nid in nation_ids:
         if int(nid) not in active_ids:
             raise ValueError(f"invalid_nation:{nid}")
+        if int(nid) in nation_out:
+            raise ValueError(f"nation_out:{nid}")
 
     MxonNationPick.query.filter_by(user_id=user_id, competition_id=competition_id).delete()
     for pos, nid in enumerate(nation_ids, start=1):
@@ -518,6 +667,7 @@ def save_user_class_picks(
 ) -> dict[str, dict]:
     """Replace class favorites. Expects keys mxgp/mx2/open → nation_id."""
     active_ids = {n.id for n in list_active_nations()}
+    nation_out, seat_out = mxon_out_sets(int(competition_id))
     cleaned: dict[str, int] = {}
     for key in MXON_CLASS_KEYS:
         raw = class_nation_ids.get(key)
@@ -526,6 +676,8 @@ def save_user_class_picks(
         nid = int(raw)
         if nid not in active_ids:
             raise ValueError(f"invalid_nation:{nid}")
+        if nid in nation_out or (nid, key) in seat_out:
+            raise ValueError(f"seat_out:{key}:{nid}")
         cleaned[key] = nid
 
     MxonClassPick.query.filter_by(user_id=user_id, competition_id=competition_id).delete()
