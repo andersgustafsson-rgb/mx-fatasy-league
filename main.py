@@ -31555,6 +31555,8 @@ def _format_smx_qualification_rows(
     for position, (_key, data) in enumerate(entries, start=1):
         rider = data["rider"]
         zone = _smx_qualification_zone(position)
+        # Playoff start: AMA-skala för seed 1–20; LCQ (21–30) börjar på 0
+        seed_points = int(get_smx_qualification_points(position)) if position <= 20 else 0
         rows.append(
             {
                 "position": position,
@@ -31573,6 +31575,7 @@ def _format_smx_qualification_rows(
                 "mx_points": int(data["mx_points"])
                 if abs(data["mx_points"] - round(data["mx_points"])) < 0.001
                 else round(data["mx_points"], 1),
+                "seed_points": seed_points,
                 "qualified": position <= 20,
                 "zone": zone,
                 "zone_label": "Direktkval" if zone == "seeded" else ("LCQ" if zone == "lcq" else "Utanför"),

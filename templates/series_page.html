@@ -695,8 +695,10 @@
       </div>
       <div class="sp-panel__body">
         <p class="text-slate-400 text-sm mb-4 leading-relaxed">
-          Officiell <strong class="text-slate-200">SX + MX</strong>-total. Topp <strong class="text-emerald-300">20</strong> är direktkvalade till playoffs.
-          Plats <strong class="text-amber-300">21–30</strong> hamnar i LCQ och tävlar om de två sista startplatserna per runda.
+          Officiell <strong class="text-slate-200">SX + MX</strong>-total styr seedningen.
+          Topp <strong class="text-emerald-300">20</strong> är direktkvalade och börjar playoffs med
+          <strong class="text-cyan-300">startpoäng</strong> (1:a = 25 p, 2:a = 22 p, … 20:e = 2 p).
+          Plats <strong class="text-amber-300">21–30</strong> går till LCQ och börjar på <strong class="text-amber-200">0 p</strong>.
         </p>
         <div class="flex flex-wrap gap-2 mb-4">
           <button type="button" id="smx-qual-class-450" class="sp-link-btn sp-link-btn--go" onclick="setSMXQualClass('450')">450cc</button>
@@ -767,6 +769,10 @@
         ? '<span class="text-slate-500 text-xs ml-1">' + rider.coast_250.toUpperCase() + '</span>'
         : '';
       const ptsClass = zone === 'seeded' ? 'text-emerald-300' : (zone === 'lcq' ? 'text-amber-200' : 'text-slate-400');
+      const seedPts = Number(rider.seed_points || 0);
+      const seedLabel = zone === 'seeded'
+        ? `<div class="text-xs text-cyan-300/90 font-semibold tabular-nums">Start ${seedPts} p</div>`
+        : `<div class="text-xs text-amber-200/80 font-semibold tabular-nums">Start 0 p</div>`;
       return `
         <div class="border rounded-lg p-3 flex justify-between items-center gap-3 ${rowClass}">
           <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
@@ -776,7 +782,8 @@
             <span class="text-slate-500 text-sm hidden md:inline">${rider.bike_brand || ''}</span>
           </div>
           <div class="text-right shrink-0">
-            <div class="${ptsClass} font-bold tabular-nums">${rider.total_points} p</div>
+            ${seedLabel}
+            <div class="${ptsClass} font-bold tabular-nums text-sm">${rider.total_points} p combined</div>
             <div class="text-xs text-slate-500">SX ${rider.sx_points} · MX ${rider.mx_points}</div>
           </div>
         </div>`;
