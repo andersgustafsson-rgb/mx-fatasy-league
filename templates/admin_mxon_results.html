@@ -36,9 +36,19 @@
     <section class="mb-10 rounded-xl border border-rose-500/30 bg-rose-950/20 p-4">
       <h2 class="text-lg font-semibold text-rose-200 mb-1">OUT</h2>
       <p class="text-slate-400 text-sm mb-4">
-        Markera hela nationen eller en klassplats (MXGP/MX2/OPEN). OUT-nationer syns inte i tippa;
+        Sök förare nedan (eller välj nation/klass manuellt). OUT-nationer syns inte i tippa;
         OUT-platser går inte att välja som klassfavorit.
       </p>
+      <div class="mb-4 relative">
+        <label class="block text-sm">
+          <span class="text-slate-400">Sök förare</span>
+          <input id="out-rider-search" type="search" autocomplete="off"
+            placeholder="t.ex. Febvre, Kitchen, Herlings…"
+            class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-rose-400/60">
+        </label>
+        <ul id="out-rider-hits" class="hidden absolute z-20 left-0 right-0 mt-1 max-h-64 overflow-y-auto rounded-lg border border-slate-600 bg-slate-900 shadow-xl text-sm"></ul>
+        <p id="out-rider-picked" class="mt-2 text-xs text-slate-500 hidden"></p>
+      </div>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
         <label class="block text-sm">
           <span class="text-slate-400">Nation</span>
@@ -125,7 +135,30 @@
   {% if competition %}
   <script>
     const COMP_ID = {{ competition.id }};
+    const NATIONS = {{ nations | tojson }};
+    const CLASS_LABEL = { mxgp: 'MXGP', mx2: 'MX2', open: 'OPEN', '*': 'Hela nationen' };
     const out = document.getElementById('out');
+
+    const RIDERS = [];
+    (NATIONS || []).forEach((n) => {
+      const lineup = n.lineup || {};
+      ['mxgp', 'mx2', 'open'].forEach((cls) => {
+        const seat = lineup[cls] || {};
+        const name = (seat.rider_name || '').trim();
+        if (!name || seat.is_tba || name.toUpperCase() === 'TBA') return;
+        RIDERS.push({
+          nationId: n.id,
+          code: n.code || '',
+          nation: n.name || '',
+          className: cls,
+          classLabel: CLASS_LABEL[cls] || cls,
+          rider: name,
+          number: seat.rider_number != null ? seat.rider_number : null,
+          hay: `${name} ${n.name || ''} ${n.code || ''} ${cls} #${seat.rider_number || ''}`.toLowerCase(),
+        });
+      });
+    });
+    RIDERS.sort((a, b) => a.rider.localeCompare(b.rider, 'sv'));
 
     function classWinners() {
       return {
@@ -198,6 +231,75 @@
         };
       });
     }
+
+    function selectRiderForOut(r) {
+      const nat = document.getElementById('out-nation');
+      const cls = document.getElementById('out-class');
+      if (nat) nat.value = String(r.nationId);
+      if (cls) cls.value = r.className;
+      const picked = document.getElementById('out-rider-picked');
+      if (picked) {
+        const num = r.number != null ? `#${r.number} ` : '';
+        picked.textContent = `Vald: ${num}${r.rider} · ${r.nation} (${r.code}) · ${r.classLabel}`;
+        picked.classList.remove('hidden');
+      }
+      const hits = document.getElementById('out-rider-hits');
+      const search = document.getElementById('out-rider-search');
+      if (hits) {
+        hits.classList.add('hidden');
+        hits.innerHTML = '';
+      }
+      if (search) search.value = r.rider;
+    }
+
+    function renderRiderHits(q) {
+      const hits = document.getElementById('out-rider-hits');
+      if (!hits) return;
+      const needle = (q || '').trim().toLowerCase();
+      if (needle.length < 1) {
+        hits.classList.add('hidden');
+        hits.innerHTML = '';
+        return;
+      }
+      const tokens = needle.split(/\s+/).filter(Boolean);
+      const matches = RIDERS.filter((r) => tokens.every((t) => r.hay.includes(t))).slice(0, 20);
+      if (!matches.length) {
+        hits.innerHTML = '<li class="px-3 py-2 text-slate-500">Ingen träff</li>';
+        hits.classList.remove('hidden');
+        return;
+      }
+      hits.innerHTML = matches.map((r, i) => {
+        const num = r.number != null ? `#${r.number} ` : '';
+        return `<li class="border-b border-slate-800 last:border-0">
+          <button type="button" data-idx="${i}"
+            class="out-rider-hit w-full text-left px-3 py-2 hover:bg-rose-950/40 flex flex-wrap items-center justify-between gap-2">
+            <span><strong>${num}${r.rider}</strong>
+              <span class="text-slate-400"> · ${r.nation} (${r.code}) · ${r.classLabel}</span>
+            </span>
+            <span class="text-rose-300 text-xs font-semibold shrink-0">Välj</span>
+          </button>
+        </li>`;
+      }).join('');
+      hits.classList.remove('hidden');
+      hits.querySelectorAll('.out-rider-hit').forEach((btn) => {
+        btn.onclick = () => {
+          const r = matches[parseInt(btn.dataset.idx, 10)];
+          if (r) selectRiderForOut(r);
+        };
+      });
+    }
+
+    const riderSearch = document.getElementById('out-rider-search');
+    riderSearch?.addEventListener('input', () => renderRiderHits(riderSearch.value));
+    riderSearch?.addEventListener('focus', () => {
+      if ((riderSearch.value || '').trim()) renderRiderHits(riderSearch.value);
+    });
+    document.addEventListener('click', (e) => {
+      const wrap = riderSearch?.closest('.relative');
+      if (wrap && !wrap.contains(e.target)) {
+        document.getElementById('out-rider-hits')?.classList.add('hidden');
+      }
+    });
 
     document.getElementById('out-set')?.addEventListener('click', () => setMxonOut('OUT'));
     document.getElementById('out-clear')?.addEventListener('click', () => setMxonOut('CLEAR'));
