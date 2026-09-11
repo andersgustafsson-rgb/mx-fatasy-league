@@ -639,6 +639,20 @@
   .race-picks-out-details__list li span {
     color: #f87171;
   }
+  .race-picks-out-details__group {
+    margin-top: 0.45rem;
+  }
+  .race-picks-out-details__group:first-child {
+    margin-top: 0;
+  }
+  .race-picks-out-details__group-title {
+    margin: 0 0 0.3rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fca5a5;
+  }
 
   .race-prep-kv {
     display: flex;
@@ -910,16 +924,33 @@
     </div>
     
     {% if out_ids %}
+    {% set _out_label_450 = 'SX1' if competition.series == 'WSX' else '450cc' %}
+    {% set _out_label_250 = 'SX2' if competition.series == 'WSX' else '250cc' %}
     <details class="race-picks-out-details mb-3">
       <summary>
         {{ out_ids|length }} <span data-i18n="picks.out_riders" data-i18n-sv="förare är OUT för detta race (syns inte i listorna)" data-i18n-en="riders are OUT for this race (hidden from lists)">förare är OUT för detta race (syns inte i listorna)</span>
       </summary>
       <div class="race-picks-out-details__body">
-        <ul class="race-picks-out-details__list">
-          {% for rider in out_riders_mini %}
-          <li>#{{ rider.rider_number }} {{ rider.name }} <span>({{ rider.class }})</span></li>
-          {% endfor %}
-        </ul>
+        {% if out_riders_450 %}
+        <div class="race-picks-out-details__group">
+          <p class="race-picks-out-details__group-title">{{ _out_label_450 }} ({{ out_riders_450|length }})</p>
+          <ul class="race-picks-out-details__list">
+            {% for rider in out_riders_450 %}
+            <li>#{{ rider.rider_number }} {{ rider.name }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        {% if out_riders_250 %}
+        <div class="race-picks-out-details__group">
+          <p class="race-picks-out-details__group-title">{{ _out_label_250 }} ({{ out_riders_250|length }})</p>
+          <ul class="race-picks-out-details__list">
+            {% for rider in out_riders_250 %}
+            <li>#{{ rider.rider_number }} {{ rider.name }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
       </div>
     </details>
     {% endif %}

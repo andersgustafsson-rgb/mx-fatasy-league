@@ -1933,6 +1933,31 @@ def sync_smx_playoff_entry_list(comp: Competition | None) -> dict:
     if marked_out or cleared or number_fixes:
         db.session.commit()
 
+    # Drop OUT rows that belong to other series (e.g. WSX twin riders)
+    stray_cleared = 0
+    try:
+        stray_rows = (
+            db.session.query(CompetitionRiderStatus)
+            .join(Rider, Rider.id == CompetitionRiderStatus.rider_id)
+            .filter(
+                CompetitionRiderStatus.competition_id == comp.id,
+                CompetitionRiderStatus.status == "OUT",
+                ~Rider.class_name.in_(("450cc", "250cc")),
+            )
+            .all()
+        )
+        for row in stray_rows:
+            db.session.delete(row)
+            stray_cleared += 1
+        if stray_cleared:
+            db.session.commit()
+    except Exception as stray_err:
+        print(f"[SMX-ENTRY] stray OUT purge skipped: {stray_err}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
     try:
         prune_off_roster_smx_picks(int(comp.id))
     except Exception as prune_err:
@@ -1944,11 +1969,13 @@ def sync_smx_playoff_entry_list(comp: Competition | None) -> dict:
         "entry_250": len(entry_ids.get("250") or ()),
         "marked_out": marked_out,
         "cleared": cleared,
+        "stray_cleared": stray_cleared,
         "number_fixes": number_fixes,
     }
     print(
         f"[SMX-ENTRY] {comp.name}: out={marked_out} cleared={cleared} "
-        f"entry={info['entry_450']}+{info['entry_250']} number_fixes={number_fixes}"
+        f"stray={stray_cleared} entry={info['entry_450']}+{info['entry_250']} "
+        f"number_fixes={number_fixes}"
     )
     return info
 
@@ -11095,7 +11122,20 @@ def race_picks_page(competition_id):
 
     _by_json_id = {r["id"]: r for r in riders_450_json + riders_250_json}
 
-    # Visa alla OUT (även Combined-förare som inte är på entry / tippa-listan)
+    # Only OUT riders in this series' classes (hide WSX twins on SMX/SX/MX etc.)
+    allowed_out_classes = ("wsx_sx1", "wsx_sx2") if is_wsx else ("450cc", "250cc")
+    if out_ids:
+        class_by_id = {
+            int(rid): (cls or "")
+            for rid, cls in db.session.query(Rider.id, Rider.class_name)
+            .filter(Rider.id.in_(list(out_ids)))
+            .all()
+        }
+        out_ids = {
+            rid for rid in out_ids if class_by_id.get(int(rid), "") in allowed_out_classes
+        }
+
+    # Visa OUT (inkl. Combined-förare som inte är på tippa-listan) — split per klass
     out_riders_mini = []
     for rid in sorted(out_ids):
         if rid in _by_json_id:
@@ -11103,6 +11143,8 @@ def race_picks_page(competition_id):
             continue
         missing = Rider.query.get(rid)
         if not missing:
+            continue
+        if (missing.class_name or "") not in allowed_out_classes:
             continue
         out_riders_mini.append(
             {
@@ -11115,7 +11157,14 @@ def race_picks_page(competition_id):
             }
         )
 
-    # JS OUT_IDS: behåll alla — blockerar ev. kvarvarande val utanför entry
+    _out_top = ("wsx_sx1", "450cc")
+    _out_bot = ("wsx_sx2", "250cc")
+    out_riders_450 = [r for r in out_riders_mini if (r.get("class") or "") in _out_top]
+    out_riders_250 = [r for r in out_riders_mini if (r.get("class") or "") in _out_bot]
+    out_riders_450.sort(key=lambda r: (r.get("rider_number") is None, r.get("rider_number") or 0, r.get("name") or ""))
+    out_riders_250.sort(key=lambda r: (r.get("rider_number") is None, r.get("rider_number") or 0, r.get("name") or ""))
+
+    # JS OUT_IDS: series-scoped — blockerar kvarvarande val i tippa-klasserna
     out_ids = list(out_ids)
     # 4) Placeholder för resultat/holeshot (om ej klart)
     actual_results = []
@@ -11203,6 +11252,8 @@ def race_picks_page(competition_id):
         riders_450_json=riders_450_json,
         riders_250_json=riders_250_json,
         out_riders_mini=out_riders_mini,
+        out_riders_450=out_riders_450,
+        out_riders_250=out_riders_250,
         actual_results=actual_results,
         holeshot_results=holeshot_results,
         out_ids=list(out_ids),
