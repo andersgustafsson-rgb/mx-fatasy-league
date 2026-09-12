@@ -2,10 +2,32 @@ from __future__ import annotations
 
 import base64
 import os
+from pathlib import Path
 
-from flask import Blueprint, Response, jsonify, redirect, render_template, request, session, url_for
+from flask import (
+	Blueprint,
+	Response,
+	current_app,
+	jsonify,
+	redirect,
+	render_template,
+	request,
+	send_from_directory,
+	session,
+	url_for,
+)
 
 bp = Blueprint('public', __name__)
+
+
+def _require_login_redirect():
+	if "user_id" not in session:
+		return redirect("/login")
+	return None
+
+
+def _schema_dist_dir() -> Path:
+	return Path(current_app.static_folder) / "schema"
 
 
 @bp.get('/health')
@@ -15,15 +37,59 @@ def health():
 	return jsonify(status='ok')
 
 
+@bp.get("/barniva")
+@bp.get("/verktyg")
+def barniva_hub():
+	"""Hub for BarnIVA tools: tidrapport + schemaanalys."""
+	denied = _require_login_redirect()
+	if denied:
+		return denied
+	return render_template("barniva_hub.html", username=session.get("username") or "")
+
+
 @bp.get("/tidrapport")
 def tidrapport_page():
 	# Endast för inloggad användare (du sa att det bara är du som använder den).
-	if "user_id" not in session:
-		# app-factory-varianten har inte alla routes här, så vi tar en robust redirect.
-		return redirect("/login")
+	denied = _require_login_redirect()
+	if denied:
+		return denied
 
 	# Vi har ingen gemensam base-template, så sidan är fristående.
 	return render_template("tidrapport.html", username=session.get("username") or "")
+
+
+@bp.get("/schema")
+@bp.get("/schema/")
+def schema_app_index():
+	"""Serve BarnIVA schema SPA (built into static/schema)."""
+	denied = _require_login_redirect()
+	if denied:
+		return denied
+	dist = _schema_dist_dir()
+	index = dist / "index.html"
+	if not index.is_file():
+		return (
+			"Schemaanalys är inte byggd ännu. Kör `npm run build:mx` i barniva-schema.",
+			503,
+		)
+	return send_from_directory(dist, "index.html")
+
+
+@bp.get("/schema/<path:asset_path>")
+def schema_app_asset(asset_path: str):
+	"""Assets for the schema SPA under /schema/…"""
+	denied = _require_login_redirect()
+	if denied:
+		return denied
+	dist = _schema_dist_dir()
+	candidate = dist / asset_path
+	if candidate.is_file():
+		return send_from_directory(dist, asset_path)
+	# SPA fallback
+	index = dist / "index.html"
+	if index.is_file():
+		return send_from_directory(dist, "index.html")
+	return ("Schemaanalys saknas.", 404)
 
 
 @bp.get("/tröjtryck")

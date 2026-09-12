@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BarnIVA verktyg</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #eef4f6;
+      --ink: #1a2b33;
+      --muted: #5a6b73;
+      --accent: #0b6e6e;
+      --accent-soft: #d8efef;
+      --card: #ffffff;
+      --line: #d5dee3;
+      --shadow: 0 18px 40px rgba(26, 43, 51, 0.1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Source Sans 3", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, #dff3f1 0%, transparent 42%),
+        linear-gradient(180deg, #e8f2f1 0%, var(--bg) 45%);
+    }
+    .wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: flex-start;
+      margin-bottom: 2rem;
+    }
+    .eyebrow {
+      margin: 0 0 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    h1 {
+      margin: 0;
+      font-family: Fraunces, Georgia, serif;
+      font-size: clamp(2.2rem, 5vw, 3rem);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .lede {
+      margin: 0.75rem 0 0;
+      max-width: 36rem;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+    .user {
+      text-align: right;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .user a {
+      color: var(--accent);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2.25rem;
+    }
+    a.choice {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 1.1rem;
+      padding: 1.5rem 1.4rem 1.35rem;
+      box-shadow: var(--shadow);
+      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+    a.choice:hover,
+    a.choice:focus-visible {
+      transform: translateY(-3px);
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+      box-shadow: 0 22px 48px rgba(11, 110, 110, 0.16);
+      outline: none;
+    }
+    a.choice:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .choice-kicker {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 0.55rem;
+    }
+    .choice h2 {
+      margin: 0;
+      font-family: Fraunces, Georgia, serif;
+      font-size: 1.65rem;
+    }
+    .choice p {
+      margin: 0.65rem 0 1.1rem;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.45;
+    }
+    .choice-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 0.95rem;
+    }
+    .note {
+      margin-top: 2rem;
+      padding: 1rem 1.1rem;
+      border-radius: 0.85rem;
+      background: var(--accent-soft);
+      color: #184848;
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <p class="eyebrow">BarnIVA</p>
+        <h1>Verktyg</h1>
+        <p class="lede">Välj vad du vill arbeta med. Data stannar i din webbläsare — inget schema eller tidrapport sparas på servern.</p>
+      </div>
+      <div class="user">
+        <div>Inloggad: <strong>{{ username }}</strong></div>
+        <a href="/">Tillbaka till MX Fantasy</a>
+      </div>
+    </div>
+
+    <div class="grid">
+      <a class="choice" href="/tidrapport">
+        <p class="choice-kicker">Diagram</p>
+        <h2>Tidrapport</h2>
+        <p>Klistra in Excel/Sheets och skapa diagram för frånvaro, övertid och prognos.</p>
+        <span class="choice-cta">Öppna tidrapport →</span>
+      </a>
+      <a class="choice" href="/schema/">
+        <p class="choice-kicker">Bemanning</p>
+        <h2>Schemaanalys</h2>
+        <p>Ladda SSK- och USK-PDF, se luckor, föreslå flyttar och spara lokalt.</p>
+        <span class="choice-cta">Öppna schemaanalys →</span>
+      </a>
+    </div>
+
+    <p class="note">
+      Tips: exportera JSON bara om du vill flytta en vecka mellan datorer eller ta backup.
+      På samma dator/webbläsare finns autospar kvar när du kommer tillbaka.
+    </p>
+  </div>
+</body>
+</html>
