@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import os
 from pathlib import Path
 
@@ -72,7 +73,31 @@ def schema_app_index():
 			"Schemaanalys är inte byggd ännu. Kör `npm run build:mx` i barniva-schema.",
 			503,
 		)
-	return send_from_directory(dist, "index.html")
+	html = index.read_text(encoding="utf-8")
+	boot = {
+		"username": (session.get("username") or "").strip(),
+		"displayName": "",
+		"userId": session.get("user_id"),
+	}
+	try:
+		from models import User
+
+		uid = session.get("user_id")
+		if uid:
+			user = User.query.get(int(uid))
+			if user and getattr(user, "display_name", None):
+				boot["displayName"] = (user.display_name or "").strip()
+	except Exception:
+		pass
+	boot_json = json.dumps(boot, ensure_ascii=False)
+	inject = (
+		f"<script>window.__BARNIVA__={boot_json};</script>\n"
+	)
+	if "</head>" in html:
+		html = html.replace("</head>", inject + "</head>", 1)
+	else:
+		html = inject + html
+	return Response(html, mimetype="text/html; charset=utf-8")
 
 
 @bp.get("/schema/<path:asset_path>")
@@ -422,3 +447,157 @@ def api_cron_reminders():
 	import reminder_service as rs
 
 	return jsonify(rs.process_due_reminders())
+
+
+# --- BarnIVA shared schema workspace (server) ---------------------------------
+
+def _ensure_barniva_workspace_table() -> None:
+	try:
+		from models import BarnivaSchemaWorkspace, db
+
+		BarnivaSchemaWorkspace.__table__.create(db.engine, checkfirst=True)
+	except Exception as e:
+		print(f"WARNING barniva workspace table: {e}")
+
+
+def _barniva_actor() -> tuple[int | None, str]:
+	uid = session.get("user_id")
+	username = (session.get("username") or "").strip()
+	display = ""
+	try:
+		from models import User
+
+		if uid:
+			user = User.query.get(int(uid))
+			if user:
+				display = (getattr(user, "display_name", None) or "").strip()
+				username = username or (user.username or "").strip()
+	except Exception:
+		pass
+	label = display or username or "Okänd"
+	try:
+		return (int(uid) if uid is not None else None, label)
+	except Exception:
+		return (None, label)
+
+
+def _workspace_payload_dict(row) -> dict:
+	import json as _json
+
+	try:
+		data = _json.loads(row.payload_json or "{}")
+	except Exception:
+		data = {}
+	if not isinstance(data, dict):
+		data = {}
+	return {
+		"kind": row.kind,
+		"version": int(row.version or 1),
+		"updatedAt": row.updated_at.isoformat() + "Z" if row.updated_at else None,
+		"updatedBy": row.updated_by_username or None,
+		"fileName": data.get("fileName"),
+		"result": data.get("result"),
+		"selectedWeek": data.get("selectedWeek"),
+		"draftsByWeek": data.get("draftsByWeek") or {},
+	}
+
+
+@bp.get("/api/barniva/session")
+def api_barniva_session():
+	uid = _require_login()
+	if uid is None:
+		return jsonify({"error": "Unauthorized"}), 401
+	_uid, label = _barniva_actor()
+	return jsonify({
+		"success": True,
+		"userId": _uid,
+		"username": (session.get("username") or "").strip(),
+		"displayName": label,
+	})
+
+
+@bp.get("/api/barniva/workspace/<kind>")
+def api_barniva_workspace_get(kind: str):
+	uid = _require_login()
+	if uid is None:
+		return jsonify({"error": "Unauthorized"}), 401
+	kind_u = (kind or "").strip().upper()
+	if kind_u not in ("SSK", "USK"):
+		return jsonify({"error": "Invalid kind"}), 400
+	_ensure_barniva_workspace_table()
+	from models import BarnivaSchemaWorkspace
+
+	row = BarnivaSchemaWorkspace.query.get(kind_u)
+	if not row or not (row.payload_json or "").strip():
+		return jsonify({"success": True, "workspace": None})
+	return jsonify({"success": True, "workspace": _workspace_payload_dict(row)})
+
+
+@bp.put("/api/barniva/workspace/<kind>")
+def api_barniva_workspace_put(kind: str):
+	uid = _require_login()
+	if uid is None:
+		return jsonify({"error": "Unauthorized"}), 401
+	kind_u = (kind or "").strip().upper()
+	if kind_u not in ("SSK", "USK"):
+		return jsonify({"error": "Invalid kind"}), 400
+	_ensure_barniva_workspace_table()
+	from models import BarnivaSchemaWorkspace, db
+
+	data = request.get_json(silent=True) or {}
+	result = data.get("result")
+	if not isinstance(result, dict) or not isinstance(result.get("weeks"), list):
+		return jsonify({"error": "Missing result.weeks"}), 400
+
+	client_version = data.get("version")
+	try:
+		client_version = int(client_version) if client_version is not None else None
+	except Exception:
+		client_version = None
+
+	force = bool(data.get("force"))
+	actor_id, actor_label = _barniva_actor()
+
+	import json as _json
+	from datetime import datetime
+
+	payload = {
+		"fileName": data.get("fileName"),
+		"result": result,
+		"selectedWeek": data.get("selectedWeek"),
+		"draftsByWeek": data.get("draftsByWeek") or {},
+	}
+
+	row = BarnivaSchemaWorkspace.query.get(kind_u)
+	if row is None:
+		row = BarnivaSchemaWorkspace(
+			kind=kind_u,
+			payload_json=_json.dumps(payload, ensure_ascii=False),
+			version=1,
+			updated_at=datetime.utcnow(),
+			updated_by_user_id=actor_id,
+			updated_by_username=actor_label,
+		)
+		db.session.add(row)
+		db.session.commit()
+		return jsonify({"success": True, "workspace": _workspace_payload_dict(row)})
+
+	if (
+		client_version is not None
+		and int(row.version or 1) != client_version
+		and not force
+	):
+		return jsonify({
+			"success": False,
+			"conflict": True,
+			"error": "Version conflict — någon annan har sparat.",
+			"workspace": _workspace_payload_dict(row),
+		}), 409
+
+	row.payload_json = _json.dumps(payload, ensure_ascii=False)
+	row.version = int(row.version or 1) + 1
+	row.updated_at = datetime.utcnow()
+	row.updated_by_user_id = actor_id
+	row.updated_by_username = actor_label
+	db.session.commit()
+	return jsonify({"success": True, "workspace": _workspace_payload_dict(row)})

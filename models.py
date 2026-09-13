@@ -691,3 +691,14 @@ class MxonClassResult(db.Model):
         db.UniqueConstraint("competition_id", "class_name", name="uq_mxon_class_result"),
     )
 
+
+class BarnivaSchemaWorkspace(db.Model):
+    """Shared BarnIVA schedule workspace (one row per SSK/USK) for all logged-in staff."""
+    __tablename__ = "barniva_schema_workspaces"
+    kind = db.Column(db.String(8), primary_key=True)  # SSK | USK
+    payload_json = db.Column(db.Text, nullable=False, default="{}")
+    version = db.Column(db.Integer, nullable=False, default=1)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    updated_by_username = db.Column(db.String(80), nullable=True)
+

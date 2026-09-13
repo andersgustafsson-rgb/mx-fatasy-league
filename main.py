@@ -31,7 +31,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, MxonCompetitionOut, rider_query_for_list_ui
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, MxonCompetitionOut, BarnivaSchemaWorkspace, rider_query_for_list_ui
 
 _INDEX_SCHEMA_CHECKED = False
 _RIDER_IMAGE_COLUMN_CHECKED = False
