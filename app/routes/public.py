@@ -452,6 +452,9 @@ def api_cron_reminders():
 # --- BarnIVA shared schema workspace (server) ---------------------------------
 
 _BARNIVA_VERSION_KEEP = 40
+# Don't create a restore-point on every 2s autosave — only when meaningful.
+_BARNIVA_SNAPSHOT_COOLDOWN_SEC = 10 * 60
+_BARNIVA_SNAPSHOT_LOG_JUMP = 8
 
 
 def _ensure_barniva_workspace_table() -> None:
@@ -524,8 +527,17 @@ def _workspace_payload_dict(row) -> dict:
 	}
 
 
-def _snapshot_workspace_row(row, *, note: str | None = None) -> None:
-	"""Store current workspace as a restore point before overwrite."""
+def _snapshot_workspace_row(
+	row,
+	*,
+	note: str | None = None,
+	force_snapshot: bool = False,
+) -> bool:
+	"""Store current workspace as a restore point before overwrite.
+
+	Routine autosaves are throttled so the history list stays usable.
+	Always snapshots when force_snapshot=True (force-write, restore, etc.).
+	"""
 	import json as _json
 	from datetime import datetime
 
@@ -540,7 +552,28 @@ def _snapshot_workspace_row(row, *, note: str | None = None) -> None:
 	week_count, edit_log_count = _payload_stats(payload)
 	# Skip empty shells
 	if week_count <= 0 and edit_log_count <= 0:
-		return
+		return False
+
+	if not force_snapshot:
+		latest = (
+			BarnivaSchemaWorkspaceVersion.query.filter_by(kind=row.kind)
+			.order_by(
+				BarnivaSchemaWorkspaceVersion.saved_at.desc(),
+				BarnivaSchemaWorkspaceVersion.id.desc(),
+			)
+			.first()
+		)
+		if latest is not None and latest.saved_at is not None:
+			age = (datetime.utcnow() - latest.saved_at).total_seconds()
+			log_jump = edit_log_count - int(latest.edit_log_count or 0)
+			routine = not note or note.startswith("Autospar")
+			if (
+				routine
+				and age < _BARNIVA_SNAPSHOT_COOLDOWN_SEC
+				and log_jump < _BARNIVA_SNAPSHOT_LOG_JUMP
+			):
+				return False
+
 	snap = BarnivaSchemaWorkspaceVersion(
 		kind=row.kind,
 		version=int(row.version or 1),
@@ -566,6 +599,7 @@ def _snapshot_workspace_row(row, *, note: str | None = None) -> None:
 	)
 	for o in old:
 		db.session.delete(o)
+	return True
 
 
 @bp.get("/api/barniva/session")
@@ -657,6 +691,24 @@ def api_barniva_workspace_versions(kind: str):
 		.limit(_BARNIVA_VERSION_KEEP)
 		.all()
 	)
+	# Collapse rapid autosave spam so the UI stays readable.
+	filtered: list = []
+	last_at = None
+	last_logs = None
+	for r in rows:
+		note = (r.note or "").strip()
+		important = note.startswith("Före") or "force" in note.lower()
+		if important or last_at is None or r.saved_at is None:
+			filtered.append(r)
+			last_at = r.saved_at
+			last_logs = int(r.edit_log_count or 0)
+			continue
+		age = (last_at - r.saved_at).total_seconds() if last_at else 0
+		log_diff = abs(int(r.edit_log_count or 0) - int(last_logs or 0))
+		if age >= _BARNIVA_SNAPSHOT_COOLDOWN_SEC or log_diff >= _BARNIVA_SNAPSHOT_LOG_JUMP:
+			filtered.append(r)
+			last_at = r.saved_at
+			last_logs = int(r.edit_log_count or 0)
 	return jsonify({
 		"success": True,
 		"versions": [
@@ -670,7 +722,7 @@ def api_barniva_workspace_versions(kind: str):
 				"weekCount": r.week_count,
 				"editLogCount": r.edit_log_count,
 			}
-			for r in rows
+			for r in filtered
 		],
 	})
 
@@ -697,6 +749,7 @@ def api_barniva_workspace_restore(kind: str, version_id: int):
 		_snapshot_workspace_row(
 			row,
 			note=f"Före återställning till snapshot #{snap.id}",
+			force_snapshot=True,
 		)
 		row.payload_json = snap.payload_json
 		row.version = int(row.version or 1) + 1
@@ -782,10 +835,11 @@ def api_barniva_workspace_put(kind: str):
 			"workspace": _workspace_payload_dict(row),
 		}), 409
 
-	# Snapshot current before overwrite (especially important on force)
+	# Snapshot before overwrite — always on force; throttled for routine autosave
 	_snapshot_workspace_row(
 		row,
 		note=("Före force-skrivning" if force else "Autospar / uppdatering"),
+		force_snapshot=bool(force),
 	)
 
 	row.payload_json = _json.dumps(payload, ensure_ascii=False)
