@@ -836,16 +836,21 @@ def api_barniva_workspace_put(kind: str):
 		}), 409
 
 	# Snapshot before overwrite — always on force; throttled for routine autosave
-	_snapshot_workspace_row(
-		row,
-		note=("Före force-skrivning" if force else "Autospar / uppdatering"),
-		force_snapshot=bool(force),
-	)
+	try:
+		_snapshot_workspace_row(
+			row,
+			note=("Före force-skrivning" if force else "Autospar / uppdatering"),
+			force_snapshot=bool(force),
+		)
 
-	row.payload_json = _json.dumps(payload, ensure_ascii=False)
-	row.version = int(row.version or 1) + 1
-	row.updated_at = datetime.utcnow()
-	row.updated_by_user_id = actor_id
-	row.updated_by_username = actor_label
-	db.session.commit()
-	return jsonify({"success": True, "workspace": _workspace_payload_dict(row)})
+		row.payload_json = _json.dumps(payload, ensure_ascii=False)
+		row.version = int(row.version or 1) + 1
+		row.updated_at = datetime.utcnow()
+		row.updated_by_user_id = actor_id
+		row.updated_by_username = actor_label
+		db.session.commit()
+		return jsonify({"success": True, "workspace": _workspace_payload_dict(row)})
+	except Exception as e:
+		db.session.rollback()
+		print(f"ERROR barniva workspace put {kind_u}: {e}")
+		return jsonify({"error": "Kunde inte spara workspace"}), 500
