@@ -451,11 +451,15 @@ def api_cron_reminders():
 
 # --- BarnIVA shared schema workspace (server) ---------------------------------
 
+_BARNIVA_VERSION_KEEP = 40
+
+
 def _ensure_barniva_workspace_table() -> None:
 	try:
-		from models import BarnivaSchemaWorkspace, db
+		from models import BarnivaSchemaWorkspace, BarnivaSchemaWorkspaceVersion, db
 
 		BarnivaSchemaWorkspace.__table__.create(db.engine, checkfirst=True)
+		BarnivaSchemaWorkspaceVersion.__table__.create(db.engine, checkfirst=True)
 	except Exception as e:
 		print(f"WARNING barniva workspace table: {e}")
 
@@ -481,6 +485,21 @@ def _barniva_actor() -> tuple[int | None, str]:
 		return (None, label)
 
 
+def _payload_stats(payload: dict) -> tuple[int, int]:
+	result = payload.get("result") if isinstance(payload, dict) else None
+	weeks = (result or {}).get("weeks") if isinstance(result, dict) else None
+	if not isinstance(weeks, list):
+		return 0, 0
+	edit_logs = 0
+	for w in weeks:
+		if not isinstance(w, dict):
+			continue
+		log = w.get("editLog") or []
+		if isinstance(log, list):
+			edit_logs += len(log)
+	return len(weeks), edit_logs
+
+
 def _workspace_payload_dict(row) -> dict:
 	import json as _json
 
@@ -490,6 +509,7 @@ def _workspace_payload_dict(row) -> dict:
 		data = {}
 	if not isinstance(data, dict):
 		data = {}
+	week_count, edit_log_count = _payload_stats(data)
 	return {
 		"kind": row.kind,
 		"version": int(row.version or 1),
@@ -499,7 +519,53 @@ def _workspace_payload_dict(row) -> dict:
 		"result": data.get("result"),
 		"selectedWeek": data.get("selectedWeek"),
 		"draftsByWeek": data.get("draftsByWeek") or {},
+		"weekCount": week_count,
+		"editLogCount": edit_log_count,
 	}
+
+
+def _snapshot_workspace_row(row, *, note: str | None = None) -> None:
+	"""Store current workspace as a restore point before overwrite."""
+	import json as _json
+	from datetime import datetime
+
+	from models import BarnivaSchemaWorkspaceVersion, db
+
+	try:
+		payload = _json.loads(row.payload_json or "{}")
+	except Exception:
+		payload = {}
+	if not isinstance(payload, dict):
+		payload = {}
+	week_count, edit_log_count = _payload_stats(payload)
+	# Skip empty shells
+	if week_count <= 0 and edit_log_count <= 0:
+		return
+	snap = BarnivaSchemaWorkspaceVersion(
+		kind=row.kind,
+		version=int(row.version or 1),
+		payload_json=row.payload_json or "{}",
+		saved_at=datetime.utcnow(),
+		saved_by_user_id=row.updated_by_user_id,
+		saved_by_username=row.updated_by_username,
+		note=note,
+		edit_log_count=edit_log_count,
+		week_count=week_count,
+	)
+	db.session.add(snap)
+	db.session.flush()
+	# Keep last N snapshots per kind
+	old = (
+		BarnivaSchemaWorkspaceVersion.query.filter_by(kind=row.kind)
+		.order_by(
+			BarnivaSchemaWorkspaceVersion.saved_at.desc(),
+			BarnivaSchemaWorkspaceVersion.id.desc(),
+		)
+		.offset(_BARNIVA_VERSION_KEEP)
+		.all()
+	)
+	for o in old:
+		db.session.delete(o)
 
 
 @bp.get("/api/barniva/session")
@@ -531,6 +597,128 @@ def api_barniva_workspace_get(kind: str):
 	if not row or not (row.payload_json or "").strip():
 		return jsonify({"success": True, "workspace": None})
 	return jsonify({"success": True, "workspace": _workspace_payload_dict(row)})
+
+
+@bp.get("/api/barniva/workspace/<kind>/summary")
+def api_barniva_workspace_summary(kind: str):
+	"""Lightweight health check: weeks + edit-log counts without full payload."""
+	uid = _require_login()
+	if uid is None:
+		return jsonify({"error": "Unauthorized"}), 401
+	kind_u = (kind or "").strip().upper()
+	if kind_u not in ("SSK", "USK"):
+		return jsonify({"error": "Invalid kind"}), 400
+	_ensure_barniva_workspace_table()
+	from models import BarnivaSchemaWorkspace
+
+	row = BarnivaSchemaWorkspace.query.get(kind_u)
+	if not row:
+		return jsonify({
+			"success": True,
+			"kind": kind_u,
+			"exists": False,
+			"weekCount": 0,
+			"editLogCount": 0,
+			"version": None,
+			"updatedBy": None,
+			"updatedAt": None,
+		})
+	ws = _workspace_payload_dict(row)
+	return jsonify({
+		"success": True,
+		"kind": kind_u,
+		"exists": True,
+		"weekCount": ws["weekCount"],
+		"editLogCount": ws["editLogCount"],
+		"version": ws["version"],
+		"updatedBy": ws["updatedBy"],
+		"updatedAt": ws["updatedAt"],
+		"fileName": ws.get("fileName"),
+	})
+
+
+@bp.get("/api/barniva/workspace/<kind>/versions")
+def api_barniva_workspace_versions(kind: str):
+	uid = _require_login()
+	if uid is None:
+		return jsonify({"error": "Unauthorized"}), 401
+	kind_u = (kind or "").strip().upper()
+	if kind_u not in ("SSK", "USK"):
+		return jsonify({"error": "Invalid kind"}), 400
+	_ensure_barniva_workspace_table()
+	from models import BarnivaSchemaWorkspaceVersion
+
+	rows = (
+		BarnivaSchemaWorkspaceVersion.query.filter_by(kind=kind_u)
+		.order_by(
+			BarnivaSchemaWorkspaceVersion.saved_at.desc(),
+			BarnivaSchemaWorkspaceVersion.id.desc(),
+		)
+		.limit(_BARNIVA_VERSION_KEEP)
+		.all()
+	)
+	return jsonify({
+		"success": True,
+		"versions": [
+			{
+				"id": r.id,
+				"kind": r.kind,
+				"version": r.version,
+				"savedAt": r.saved_at.isoformat() + "Z" if r.saved_at else None,
+				"savedBy": r.saved_by_username,
+				"note": r.note,
+				"weekCount": r.week_count,
+				"editLogCount": r.edit_log_count,
+			}
+			for r in rows
+		],
+	})
+
+
+@bp.post("/api/barniva/workspace/<kind>/restore/<int:version_id>")
+def api_barniva_workspace_restore(kind: str, version_id: int):
+	uid = _require_login()
+	if uid is None:
+		return jsonify({"error": "Unauthorized"}), 401
+	kind_u = (kind or "").strip().upper()
+	if kind_u not in ("SSK", "USK"):
+		return jsonify({"error": "Invalid kind"}), 400
+	_ensure_barniva_workspace_table()
+	from models import BarnivaSchemaWorkspace, BarnivaSchemaWorkspaceVersion, db
+	from datetime import datetime
+
+	snap = BarnivaSchemaWorkspaceVersion.query.get(version_id)
+	if not snap or snap.kind != kind_u:
+		return jsonify({"error": "Version hittades inte"}), 404
+
+	actor_id, actor_label = _barniva_actor()
+	row = BarnivaSchemaWorkspace.query.get(kind_u)
+	if row is not None:
+		_snapshot_workspace_row(
+			row,
+			note=f"Före återställning till snapshot #{snap.id}",
+		)
+		row.payload_json = snap.payload_json
+		row.version = int(row.version or 1) + 1
+		row.updated_at = datetime.utcnow()
+		row.updated_by_user_id = actor_id
+		row.updated_by_username = actor_label
+	else:
+		row = BarnivaSchemaWorkspace(
+			kind=kind_u,
+			payload_json=snap.payload_json,
+			version=1,
+			updated_at=datetime.utcnow(),
+			updated_by_user_id=actor_id,
+			updated_by_username=actor_label,
+		)
+		db.session.add(row)
+	db.session.commit()
+	return jsonify({
+		"success": True,
+		"workspace": _workspace_payload_dict(row),
+		"restoredFrom": snap.id,
+	})
 
 
 @bp.put("/api/barniva/workspace/<kind>")
@@ -593,6 +781,12 @@ def api_barniva_workspace_put(kind: str):
 			"error": "Version conflict — någon annan har sparat.",
 			"workspace": _workspace_payload_dict(row),
 		}), 409
+
+	# Snapshot current before overwrite (especially important on force)
+	_snapshot_workspace_row(
+		row,
+		note=("Före force-skrivning" if force else "Autospar / uppdatering"),
+	)
 
 	row.payload_json = _json.dumps(payload, ensure_ascii=False)
 	row.version = int(row.version or 1) + 1

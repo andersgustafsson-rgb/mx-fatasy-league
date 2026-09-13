@@ -702,3 +702,18 @@ class BarnivaSchemaWorkspace(db.Model):
     updated_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     updated_by_username = db.Column(db.String(80), nullable=True)
 
+
+class BarnivaSchemaWorkspaceVersion(db.Model):
+    """Point-in-time snapshots of BarnIVA workspaces (for restore after overwrite)."""
+    __tablename__ = "barniva_schema_workspace_versions"
+    id = db.Column(db.Integer, primary_key=True)
+    kind = db.Column(db.String(8), nullable=False, index=True)  # SSK | USK
+    version = db.Column(db.Integer, nullable=False)
+    payload_json = db.Column(db.Text, nullable=False)
+    saved_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    saved_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    saved_by_username = db.Column(db.String(80), nullable=True)
+    note = db.Column(db.String(200), nullable=True)
+    edit_log_count = db.Column(db.Integer, nullable=False, default=0)
+    week_count = db.Column(db.Integer, nullable=False, default=0)
+
