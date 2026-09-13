@@ -374,6 +374,11 @@
                                 <button onclick="bulkImportResults()" class="btn-warning px-4 py-2 rounded-lg">Importera</button>
                             </div>
                         </div>
+                        <label class="inline-flex items-center gap-2 text-sm text-gray-300 mb-3 cursor-pointer">
+                            <input type="checkbox" id="bulk-replace-class" class="rounded border-gray-600 bg-gray-800" checked />
+                            Rensa vald klass innan import (rekommenderas vid omimport — 450 och 250 påverkar inte varandra)
+                        </label>
+                        <p id="bulk-points-hint" class="text-sm text-cyan-300/90 mb-3 hidden"></p>
 
                         <div class="mb-4 p-3 bg-gray-900/60 border border-cyan-800/40 rounded-lg">
                             <label class="block text-sm font-medium text-gray-300 mb-2">Racer X-URL</label>
@@ -2701,8 +2706,19 @@
             });
             preview.classList.remove('hidden');
             const infoMessages = [];
-            if (data.rows.some(r => r.round_points != null)) {
-                infoMessages.push('MX-seriepoäng = poäng från moto 1 + moto 2 (t.ex. 1-1 → 25+25 = 50p). Overall-kolumnen används för fantasy-tips.');
+            const hintEl = document.getElementById('bulk-points-hint');
+            if (hintEl) {
+                if (data.points_hint) {
+                    hintEl.textContent = data.points_hint;
+                    hintEl.classList.remove('hidden');
+                } else {
+                    hintEl.classList.add('hidden');
+                }
+            }
+            if (data.points_hint) {
+                infoMessages.push(data.points_hint);
+            } else if (data.rows.some(r => r.round_points != null)) {
+                infoMessages.push('Seriepoäng visas per tävlingens serie (SMX = overall × multiplikator, MX = moto1+moto2).');
             }
             if (data.missing_riders && data.missing_riders.length) {
                 infoMessages.push(
@@ -2776,11 +2792,15 @@
             const className = document.getElementById('bulk-class').value;
             const format = document.getElementById('bulk-format').value;
             const text = document.getElementById('bulk-text').value;
+            const replaceClass = !!document.getElementById('bulk-replace-class')?.checked;
             if (!competitionId || !className || !format || !text.trim()) {
                 alert('Välj tävling, klass, format och klistra in resultat.');
                 return;
             }
-            if (!confirm('Importera resultaten? Detta uppdaterar/ersätter befintliga positioner för valda klassen.')) return;
+            const wipeNote = replaceClass
+                ? `\n\nRensar först alla ${className}-resultat för tävlingen (andra klassen lämnas orörd).`
+                : '';
+            if (!confirm(`Importera resultaten?${wipeNote}`)) return;
             const res = await fetch('/bulk_import_results', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2788,12 +2808,17 @@
                     competition_id: competitionId, 
                     class_name: className, 
                     format: format,
-                    pasted_text: text 
+                    pasted_text: text,
+                    replace_class: replaceClass,
                 })
             });
             const data = await res.json();
             if (data.success) {
-                alert(`✅ Importerat: ${data.imported}. Skippade (saknas i DB): ${data.skipped.length}.`);
+                const cleared = data.cleared ? ` Rensade först: ${data.cleared}.` : '';
+                const smxNote = (data.series === 'SMX')
+                    ? `\nSMX-poäng: overall × ${data.point_multiplier || 1}× (inte moto-summa). Seed syns i World Championship.`
+                    : '';
+                alert(`✅ Importerat: ${data.imported}. Skippade (saknas i DB): ${(data.skipped || []).length}.${cleared}${smxNote}`);
             } else {
                 alert('❌ Fel: ' + (data.error || 'Okänt fel'));
             }

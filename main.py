@@ -17006,6 +17006,10 @@ def bulk_preview_results():
         if not competition_id or not class_name or not pasted_text:
             return jsonify({"error": "Missing required data"}), 400
 
+        competition = Competition.query.get(competition_id)
+        if not competition:
+            return jsonify({"error": "Competition not found"}), 400
+
         parsed = _parse_bulk_results(pasted_text, format_type)
         rows = []
         missing = []
@@ -17062,10 +17066,20 @@ def bulk_preview_results():
                 "bike_brand": row.get("bike_brand"),
                 "moto_1": row.get("moto_1"),
                 "moto_2": row.get("moto_2"),
-                "round_points": (
-                    _mx_moto_championship_points(row.get("moto_1"), row.get("moto_2"))
-                    if row.get("moto_1") is not None or row.get("moto_2") is not None
-                    else None
+                "round_points": _round_championship_points_preview(
+                    competition,
+                    position=row.get("position"),
+                    moto_1=row.get("moto_1"),
+                    moto_2=row.get("moto_2"),
+                ),
+                "points_mode": (
+                    "smx_overall"
+                    if (getattr(competition, "series", None) or "").strip().upper() == "SMX"
+                    else (
+                        "mx_motos"
+                        if (getattr(competition, "series", None) or "").strip().upper() == "MX"
+                        else "overall"
+                    )
                 ),
             })
             if not rider:
@@ -17075,7 +17089,25 @@ def bulk_preview_results():
                     "bike_brand": row.get("bike_brand"),
                 })
 
-        return jsonify({"success": True, "rows": rows, "missing_riders": missing})
+        series = (getattr(competition, "series", None) or "").strip().upper()
+        mult = float(getattr(competition, "point_multiplier", None) or 1.0)
+        return jsonify({
+            "success": True,
+            "rows": rows,
+            "missing_riders": missing,
+            "series": series,
+            "point_multiplier": mult,
+            "points_hint": (
+                f"SMX: overall-placering × {mult:g}× (max {int(25 * mult)}p). "
+                "Inte moto1+moto2. Seed-poäng (Hunter 25 osv) läggs till i World Championship-listan."
+                if series == "SMX"
+                else (
+                    "MX: seriepoäng = moto1 + moto2 (1-1 = 50p)."
+                    if series == "MX"
+                    else "Seriepoäng från overall-placering (AMA-skala)."
+                )
+            ),
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -17090,12 +17122,30 @@ def bulk_import_results():
         class_name = data.get('class_name')
         format_type = data.get('format', 'motocross')  # Default to motocross
         pasted_text = data.get('pasted_text', '')
+        replace_class = bool(data.get('replace_class'))
         if not competition_id or not class_name or not pasted_text:
             return jsonify({"error": "Missing required data"}), 400
 
         competition = Competition.query.get(competition_id)
         if not competition:
             return jsonify({"error": "Competition not found"}), 400
+
+        cleared = 0
+        if replace_class:
+            # Wipe only the selected class so a re-import fully replaces that class.
+            rows = (
+                db.session.query(CompetitionResult, Rider)
+                .join(Rider, Rider.id == CompetitionResult.rider_id)
+                .filter(CompetitionResult.competition_id == competition_id)
+                .all()
+            )
+            for cr, rider in rows:
+                result_class = _normalize_result_class(
+                    getattr(cr, "class_name", None), rider.class_name
+                )
+                if result_class == class_name:
+                    db.session.delete(cr)
+                    cleared += 1
 
         parsed = _parse_bulk_results(pasted_text, format_type)
         imported = 0
@@ -17171,6 +17221,12 @@ def bulk_import_results():
                 ))
             imported += 1
 
+        # Persist SMX round points (overall × 1×/2×/3×) — never moto1+moto2
+        try:
+            _sync_smx_rider_points_for_competition(competition)
+        except Exception as sync_err:
+            print(f"WARNING SMX rider_points sync after bulk import: {sync_err}")
+
         db.session.commit()
 
         try:
@@ -17178,7 +17234,14 @@ def bulk_import_results():
         except Exception:
             pass
 
-        return jsonify({"success": True, "imported": imported, "skipped": skipped})
+        return jsonify({
+            "success": True,
+            "imported": imported,
+            "skipped": skipped,
+            "cleared": cleared,
+            "series": (getattr(competition, "series", None) or "").strip().upper(),
+            "point_multiplier": float(getattr(competition, "point_multiplier", None) or 1.0),
+        })
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
@@ -31211,6 +31274,34 @@ def _mx_moto_championship_points(m1: int | None, m2: int | None) -> int:
         if pos is not None and pos >= 1:
             total += get_smx_qualification_points(pos)
     return total
+
+
+def _round_championship_points_preview(
+    competition: Competition | None,
+    *,
+    position: int | None,
+    moto_1: int | None = None,
+    moto_2: int | None = None,
+) -> int | None:
+    """Seriepoäng shown in admin bulk preview — must match standings logic."""
+    if not competition:
+        return None
+    series = (getattr(competition, "series", None) or "").strip().upper()
+    if series == "SMX":
+        if not position:
+            return None
+        mult = float(getattr(competition, "point_multiplier", None) or 1.0)
+        return int(get_smx_qualification_points(int(position)) * mult)
+    if series == "MX":
+        if moto_1 is not None or moto_2 is not None:
+            return _mx_moto_championship_points(moto_1, moto_2)
+        if position:
+            return int(get_smx_qualification_points(int(position)))
+        return None
+    # SX / default: overall AMA points
+    if position:
+        return int(get_smx_qualification_points(int(position)))
+    return None
 
 
 def _result_points_for_standing(
