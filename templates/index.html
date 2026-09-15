@@ -116,10 +116,16 @@
     }
     
     /* Readonly mode for non-logged users */
-    .readonly-mode a:not([href*="login"]):not([href*="register"]):not([href*="forgot_password"]) {
+    .readonly-mode a:not([href*="login"]):not([href*="register"]):not([href*="forgot_password"]):not([href*="/auth/google"]) {
       opacity: 0.5;
       pointer-events: none;
       cursor: not-allowed;
+    }
+    /* Pit Pass + Google OAuth must stay clickable for guests */
+    .readonly-mode #pit-pass-modal a {
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
     }
     /* Public browse: topplistor, spel-highscores, mini-spel, guide */
     .readonly-mode a.mx-brand,
