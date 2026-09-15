@@ -1,6 +1,7 @@
 {% if not is_logged_in %}
 {% from 'includes/mx_icon.html' import mx_icon %}
-<link rel="stylesheet" href="{{ url_for('static', filename='pit_pass.css') }}?v=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='pit_pass.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}?v=1">
 <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
 <div id="pit-pass-modal" class="pit-pass-overlay{% if pit_pass_start_hidden %} is-peek{% endif %}" role="dialog" aria-modal="true" aria-labelledby="pit-pass-title">
   <div class="pit-pass-card">
@@ -15,6 +16,13 @@
       <li>{{ mx_icon('flag') }} Topp 6 + holeshot + wildcard</li>
       <li>{{ mx_icon('chart-up') }} Jämför dig med andra efter race</li>
     </ul>
+    {% set next_url = pit_pass_next_url %}
+    {% with label='Fortsätt med Google', pit_pass=true %}
+      {% include 'includes/auth_google_btn.html' %}
+    {% endwith %}
+    {% if google_login_enabled %}
+    <div class="pit-pass-divider"><span>eller manuellt</span></div>
+    {% endif %}
     <form id="pit-pass-form" class="pit-pass-form" autocomplete="off">
       <input type="hidden" name="next" value="{{ pit_pass_next_url }}">
       <input type="hidden" name="ajax" value="1">

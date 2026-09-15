@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="sv" class="dark">
+<html lang="sv">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,139 +7,85 @@
     {% set seo_description = 'Logga in på MX Fantasy League — gratis fantasy motocross-spel. Tippa race, följ poäng och spela i ligor.' %}
     {% set seo_path = '/login' %}
     {% include 'includes/seo_head.html' %}
-  {% from 'includes/mx_icon.html' import mx_icon %}
-    <script src="https://cdn.tailwindcss.com"></script>
+    {% from 'includes/mx_icon.html' import mx_icon %}
     <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
     <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
-    <style>
-        /* Fallback dark mode styles */
-        @media (prefers-color-scheme: dark) {
-            body {
-                background-color: #111827 !important;
-                color: #f9fafb !important;
-            }
-            .login-container {
-                background-color: #1f2937 !important;
-                border: 1px solid #374151 !important;
-            }
-            .login-title {
-                color: #60a5fa !important;
-            }
-            .login-input {
-                background-color: #374151 !important;
-                border-color: #4b5563 !important;
-                color: #f9fafb !important;
-            }
-            .login-label {
-                color: #d1d5db !important;
-            }
-            .login-button {
-                background-color: #2563eb !important;
-            }
-            .login-button:hover {
-                background-color: #1d4ed8 !important;
-            }
-            .login-link {
-                color: #60a5fa !important;
-            }
-        }
-    </style>
-    <script>
-        // Force dark mode - more aggressive approach
-        function applyDarkMode() {
-            const isDark = localStorage.theme === 'dark' || 
-                          (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches) ||
-                          window.matchMedia('(prefers-color-scheme: dark)').matches;
-            
-            if (isDark) {
-                document.documentElement.classList.add('dark');
-                document.body.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-                document.body.classList.remove('dark');
-            }
-        }
-        
-        // Apply when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', applyDarkMode);
-        } else {
-            applyDarkMode();
-        }
-        
-        // Apply again after a short delay to ensure it sticks
-        setTimeout(applyDarkMode, 100);
-        
-        // Listen for system theme changes
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyDarkMode);
-    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}?v=1">
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center h-screen">
-    <div class="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg border dark:border-gray-700 login-container">
-        <div class="flex flex-col items-center mb-8">
-            <!-- MotoAction.se Logga - Med subtil bakgrundseffekt -->
-            <div class="relative p-6 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 mb-4">
-                <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MotoAction.se Logotyp" class="h-20 w-auto filter brightness-110 drop-shadow-lg">
+<body class="auth-page">
+    <div class="auth-shell">
+        <div class="auth-glow" aria-hidden="true"></div>
+        <div class="auth-brand">
+            <div class="auth-logo">
+                <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MX Fantasy League">
             </div>
-            <h1 class="text-4xl font-bold text-center text-blue-500 dark:text-blue-400 login-title mb-2">MX Fantasy League</h1>
-            <p class="text-sm text-gray-600 dark:text-gray-400 text-center">Powered by MotoAction.se</p>
+            <p class="auth-eyebrow">{{ mx_icon('flag') }} Pit lane access</p>
+            <h1 class="auth-title">MX Fantasy League</h1>
+            <p class="auth-sub">Logga in och tippa innan deadline</p>
         </div>
-        
+
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="p-3 rounded-md mb-4 text-center {{ 'bg-green-500' if category == 'success' else 'bg-red-500' }} text-white">
+                    <div class="auth-flash {{ 'auth-flash--ok' if category == 'success' else 'auth-flash--err' }}">
                         {{ message }}
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
-        
-        <form method="POST" action="{{ url_for('login') }}">
-            <input type="hidden" name="next" value="{{ next_url or url_for('index') }}">
-            <div class="mb-4">
-                <label for="username" class="block text-gray-700 dark:text-gray-300 mb-2 login-label">Användarnamn eller e-post</label>
-                <input type="text" id="username" name="username" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 login-input" required autocomplete="username" placeholder="t.ex. mittnamn eller min@mail.se">
-            </div>
-            <div class="mb-4">
-                <label for="password" class="block text-gray-700 dark:text-gray-300 mb-2 login-label">Lösenord</label>
-                <div class="relative">
-                    <input type="password" id="password" name="password" class="w-full p-2 pr-11 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 login-input" required>
-                    <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white" aria-label="Visa lösenord">
+
+        {% set next_url = next_url or url_for('index') %}
+        {% with label='Fortsätt med Google', pit_pass=false %}
+            {% include 'includes/auth_google_btn.html' %}
+        {% endwith %}
+
+        {% if google_login_enabled %}
+        <div class="auth-divider"><span>eller e-post</span></div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('login') }}" class="auth-form">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <label class="auth-label" for="username">
+                Användarnamn eller e-post
+                <input type="text" id="username" name="username" class="auth-input" required autocomplete="username" placeholder="t.ex. mittnamn eller min@mail.se">
+            </label>
+            <label class="auth-label" for="password">
+                Lösenord
+                <span class="auth-field-wrap">
+                    <input type="password" id="password" name="password" class="auth-input" required autocomplete="current-password">
+                    <button type="button" id="togglePassword" class="auth-eye" aria-label="Visa lösenord">
                         <span id="togglePasswordIcon">{{ mx_icon('eye') }}</span>
                     </button>
-                </div>
-            </div>
-            <p class="text-right text-sm mb-6">
-                <a href="{{ url_for('forgot_password') }}" class="text-blue-500 dark:text-blue-400 hover:underline login-link">Glömt lösenord?</a>
+                </span>
+            </label>
+            <p class="auth-forgot">
+                <a href="{{ url_for('forgot_password') }}">Glömt lösenord?</a>
             </p>
-            <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors login-button">
-                Logga in
-            </button>
+            <button type="submit" class="auth-cta">Logga in</button>
         </form>
-        <p class="text-center text-sm text-gray-600 dark:text-gray-400 mt-4">
-            Har du inget konto? <a href="{{ url_for('register', next=next_url) if next_url else url_for('register') }}" class="text-blue-500 dark:text-blue-400 hover:underline login-link">Registrera dig här</a>
+
+        <p class="auth-foot">
+            Inget konto?
+            <a href="{{ url_for('register', next=next_url) }}">Skapa gratis</a>
         </p>
     </div>
 </body>
 </html>
-
 <script>
-  (function(){
-    const input = document.getElementById('password');
-    const btn = document.getElementById('togglePassword');
-    const icon = document.getElementById('togglePasswordIcon');
-    if (!input || !btn) return;
-    function renderIcon(showing) {
-      if (icon) icon.innerHTML = showing ? window.mxIcon('eye-off') : window.mxIcon('eye');
-    }
-    renderIcon(false);
-    btn.addEventListener('click', () => {
-      const showing = input.type === 'text';
-      input.type = showing ? 'password' : 'text';
-      renderIcon(!showing);
-      btn.setAttribute('aria-label', showing ? 'Visa lösenord' : 'Dölj lösenord');
-    });
-  })();
+(function () {
+  const input = document.getElementById('password');
+  const btn = document.getElementById('togglePassword');
+  const icon = document.getElementById('togglePasswordIcon');
+  if (!input || !btn) return;
+  function renderIcon(showing) {
+    if (icon && window.mxIcon) icon.innerHTML = showing ? window.mxIcon('eye-off') : window.mxIcon('eye');
+  }
+  renderIcon(false);
+  btn.addEventListener('click', function () {
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    renderIcon(!showing);
+    btn.setAttribute('aria-label', showing ? 'Visa lösenord' : 'Dölj lösenord');
+  });
+})();
 </script>
-

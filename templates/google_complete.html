@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% set seo_title = 'Välj användarnamn — MX Fantasy League' %}
+    {% set seo_description = 'Slutför Google-inloggning genom att välja ditt publika användarnamn.' %}
+    {% set seo_path = '/auth/google/complete' %}
+    {% include 'includes/seo_head.html' %}
+    <meta name="robots" content="noindex">
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}?v=1">
+</head>
+<body class="auth-page">
+    <div class="auth-shell">
+        <div class="auth-glow" aria-hidden="true"></div>
+        <div class="auth-brand">
+            <div class="auth-logo">
+                <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MX Fantasy League">
+            </div>
+            <p class="auth-eyebrow">Nästan klart</p>
+            <h1 class="auth-title">Välj användarnamn</h1>
+            <p class="auth-sub">Det här syns på tipp, ligor och leaderboard</p>
+        </div>
+
+        {% if email %}
+        <p class="auth-email-chip">{{ email }}</p>
+        {% endif %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="auth-flash {{ 'auth-flash--ok' if category == 'success' else 'auth-flash--err' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth_google_complete') }}" class="auth-form">
+            <label class="auth-label" for="username">
+                Användarnamn
+                <input type="text" id="username" name="username" class="auth-input"
+                       value="{{ suggested or '' }}" required maxlength="40" autocomplete="username"
+                       pattern="[a-zA-Z0-9_.\-]+"
+                       title="Bokstäver, siffror, _ . -">
+                <span class="auth-hint">2–40 tecken · bokstäver, siffror, _ . -</span>
+            </label>
+            <button type="submit" class="auth-cta">Klart — kör igång →</button>
+        </form>
+
+        <p class="auth-foot">
+            <a href="{{ url_for('login', next=next_url) if next_url else url_for('login') }}">Avbryt</a>
+        </p>
+    </div>
+</body>
+</html>

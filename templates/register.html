@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="sv" class="dark">
+<html lang="sv">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,77 +7,60 @@
     {% set seo_description = 'Skapa gratis konto på MX Fantasy League. Tippa topp 6, holeshot och wildcard i Supercross och Motocross — fantasy motocross-spel i Sverige.' %}
     {% set seo_path = '/register' %}
     {% include 'includes/seo_head.html' %}
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @media (prefers-color-scheme: dark) {
-            body { background-color: #111827 !important; color: #f9fafb !important; }
-            .login-container { background-color: #1f2937 !important; border: 1px solid #374151 !important; }
-            .login-title { color: #60a5fa !important; }
-            .login-input {
-                background-color: #374151 !important;
-                border-color: #4b5563 !important;
-                color: #f9fafb !important;
-            }
-            .login-label { color: #d1d5db !important; }
-            .login-button { background-color: #2563eb !important; }
-            .login-button:hover { background-color: #1d4ed8 !important; }
-            .login-link { color: #60a5fa !important; }
-        }
-    </style>
-    <script>
-        function applyDarkMode() {
-            const isDark = localStorage.theme === 'dark' ||
-                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches) ||
-                window.matchMedia('(prefers-color-scheme: dark)').matches;
-            document.documentElement.classList.toggle('dark', isDark);
-            document.body.classList.toggle('dark', isDark);
-        }
-        applyDarkMode();
-        setTimeout(applyDarkMode, 100);
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyDarkMode);
-    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}?v=1">
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen py-8">
-    <div class="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg border dark:border-gray-700 login-container">
-        <div class="flex justify-center items-center gap-4 mb-6">
-            <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MX Fantasy League Logotyp" class="h-32 w-32">
-            <h1 class="text-3xl font-bold text-center text-blue-500 dark:text-blue-400 login-title">MX Fantasy League</h1>
+<body class="auth-page">
+    <div class="auth-shell">
+        <div class="auth-glow" aria-hidden="true"></div>
+        <div class="auth-brand">
+            <div class="auth-logo">
+                <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MX Fantasy League">
+            </div>
+            <p class="auth-eyebrow">Nytt konto · gratis</p>
+            <h1 class="auth-title">MX Fantasy League</h1>
+            <p class="auth-sub">Skapa konto och tippa på ~20 sekunder</p>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="mb-4">
-                    {% for category, message in messages %}
-                        <div class="p-3 rounded {% if category == 'error' %}bg-red-500 text-white{% else %}bg-green-500 text-white{% endif %} mb-2">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
+                {% for category, message in messages %}
+                    <div class="auth-flash {{ 'auth-flash--ok' if category == 'success' else 'auth-flash--err' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
             {% endif %}
         {% endwith %}
 
-        <form method="POST" action="{{ url_for('register') }}" autocomplete="off">
-            <input type="hidden" name="next" value="{{ next_url or url_for('index') }}">
-            <div class="mb-4">
-                <label for="username" class="block text-gray-700 dark:text-gray-300 mb-2 login-label">Användarnamn</label>
-                <input type="text" id="username" name="username" value="" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 login-input" placeholder="Ange användarnamn" required autocomplete="username">
-            </div>
-            <div class="mb-4">
-                <label for="email" class="block text-gray-700 dark:text-gray-300 mb-2 login-label">E-post</label>
-                <input type="email" id="email" name="email" value="" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 login-input" placeholder="din@email.com" required autocomplete="email">
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Behövs för återställning av lösenord</p>
-            </div>
-            <div class="mb-6">
-                <label for="password" class="block text-gray-700 dark:text-gray-300 mb-2 login-label">Lösenord</label>
-                <input type="password" id="password" name="password" value="" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 login-input" placeholder="Minst 4 tecken" required autocomplete="new-password" minlength="4">
-            </div>
-            <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors login-button">
-                Registrera
-            </button>
+        {% set next_url = next_url or url_for('index') %}
+        {% with label='Skapa konto med Google', pit_pass=false %}
+            {% include 'includes/auth_google_btn.html' %}
+        {% endwith %}
+
+        {% if google_login_enabled %}
+        <div class="auth-divider"><span>eller manuellt</span></div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('register') }}" class="auth-form" autocomplete="off">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <label class="auth-label" for="username">
+                Användarnamn
+                <input type="text" id="username" name="username" class="auth-input" placeholder="t.ex. RiderKing" required autocomplete="username" maxlength="40">
+            </label>
+            <label class="auth-label" for="email">
+                E-post
+                <input type="email" id="email" name="email" class="auth-input" placeholder="din@email.com" required autocomplete="email">
+                <span class="auth-hint">Behövs för återställning av lösenord</span>
+            </label>
+            <label class="auth-label" for="password">
+                Lösenord
+                <input type="password" id="password" name="password" class="auth-input" placeholder="Minst 4 tecken" required autocomplete="new-password" minlength="4">
+            </label>
+            <button type="submit" class="auth-cta">Skapa konto →</button>
         </form>
-        <p class="text-center text-sm text-gray-600 dark:text-gray-400 mt-4">
-            Har du redan ett konto?
-            <a href="{{ url_for('login', next=next_url) if next_url else url_for('login') }}" class="text-blue-500 dark:text-blue-400 hover:underline login-link">Logga in här</a>
+
+        <p class="auth-foot">
+            Har du redan konto?
+            <a href="{{ url_for('login', next=next_url) }}">Logga in</a>
         </p>
     </div>
 </body>

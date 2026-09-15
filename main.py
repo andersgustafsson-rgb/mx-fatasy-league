@@ -504,6 +504,13 @@ def inject_public_base_url():
     return {"public_base_url": get_public_base_url()}
 
 
+@app.context_processor
+def inject_google_oauth_flags():
+    from google_oauth import google_oauth_configured
+
+    return {"google_login_enabled": google_oauth_configured()}
+
+
 @app.before_request
 def _redirect_legacy_render_host():
     """Send old *.onrender.com traffic to mx-fantasy.se (keep path + query)."""
@@ -2948,6 +2955,73 @@ def _looks_like_email(value: str) -> bool:
     return 5 <= len(v) <= 200
 
 
+def _google_login_enabled() -> bool:
+    try:
+        from google_oauth import google_oauth_configured
+
+        return google_oauth_configured()
+    except Exception:
+        return False
+
+
+def _ensure_google_oauth_columns() -> None:
+    """Add users.google_sub if missing (Postgres + SQLite)."""
+    try:
+        dialect = db.engine.dialect.name
+        if dialect == "sqlite":
+            _sqlite_add_column_if_missing(
+                "users", "google_sub", "google_sub VARCHAR(64)"
+            )
+        else:
+            db.session.execute(
+                db.text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(64)"
+                )
+            )
+            try:
+                db.session.execute(
+                    db.text(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_sub "
+                        "ON users (google_sub)"
+                    )
+                )
+            except Exception:
+                pass
+            db.session.commit()
+    except Exception as e:
+        print(f"ensure google_sub column: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
+
+def _login_user_session(user: User) -> None:
+    session.clear()
+    session["user_id"] = user.id
+    session["username"] = user.username
+    session["login_time"] = datetime.utcnow().isoformat()
+    session.permanent = True
+    session.modified = True
+
+
+def _suggest_username_from_google(email: str, name: str | None) -> str:
+    base = ""
+    if name:
+        base = re.sub(r"[^a-zA-Z0-9_]", "", name.replace(" ", ""))[:20]
+    if not base and email and "@" in email:
+        base = re.sub(r"[^a-zA-Z0-9_]", "", email.split("@")[0])[:20]
+    if not base:
+        base = "rider"
+    candidate = base
+    n = 1
+    while User.query.filter_by(username=candidate).first():
+        n += 1
+        suffix = str(n)
+        candidate = f"{base[: max(1, 20 - len(suffix))]}{suffix}"
+    return candidate
+
+
 def get_track_timezone(track_name):
     """Get timezone for a track based on its name"""
     timezone_map = {
@@ -3116,7 +3190,11 @@ def login():
                 return jsonify({"success": False, "error": "Användarnamn och lösenord krävs"})
             else:
                 flash("Användarnamn och lösenord krävs", "error")
-                return render_template("login.html", next_url=next_url)
+                return render_template(
+                    "login.html",
+                    next_url=next_url,
+                    google_login_enabled=_google_login_enabled(),
+                )
         
         # Match username, or e-post (många skriver mail efter lösenordsåterställning)
         user = User.query.filter_by(username=username).first()
@@ -3126,7 +3204,7 @@ def login():
                 db.func.lower(User.email) == username.lower(),
             ).first()
         
-        if user and check_password_hash(user.password_hash, password):
+        if user and user.password_hash and check_password_hash(user.password_hash, password):
             # Complete session reset - nuclear approach
             session.clear()
             
@@ -3144,16 +3222,30 @@ def login():
                 return jsonify({"success": True, "redirect": next_url})
             else:
                 return redirect(next_url)
+
+        fail_msg = "Felaktigt användarnamn eller lösenord"
+        if user and getattr(user, "google_sub", None) and _google_login_enabled():
+            fail_msg = (
+                "Fel lösenord — eller logga in med Google om du skapade kontot där."
+            )
         
         # Login failed
         if modal:
-            return jsonify({"success": False, "error": "Felaktigt användarnamn eller lösenord"})
+            return jsonify({"success": False, "error": fail_msg})
         else:
-            flash("Felaktigt användarnamn eller lösenord", "error")
-            return render_template("login.html", next_url=next_url)
+            flash(fail_msg, "error")
+            return render_template(
+                "login.html",
+                next_url=next_url,
+                google_login_enabled=_google_login_enabled(),
+            )
     
     # Handle GET request (show login page)
-    return render_template("login.html", next_url=next_url)
+    return render_template(
+        "login.html",
+        next_url=next_url,
+        google_login_enabled=_google_login_enabled(),
+    )
 
 
 @app.route("/forgot_password", methods=["GET", "POST"])
@@ -3347,7 +3439,233 @@ def register():
             db.session.rollback()
             return _fail(f"Ett fel uppstod vid registreringen: {str(e)}", 500)
 
-    return render_template("register.html", next_url=next_url)
+    return render_template(
+        "register.html",
+        next_url=next_url,
+        google_login_enabled=_google_login_enabled(),
+    )
+
+
+@app.route("/auth/google")
+def auth_google_start():
+    """Begin Google OAuth — works from login, register, and Pit Pass."""
+    _ensure_google_oauth_columns()
+    if not _google_login_enabled():
+        flash(
+            "Google-inloggning är inte konfigurerad ännu. Använd användarnamn + lösenord.",
+            "error",
+        )
+        return redirect(url_for("login"))
+    from google_oauth import build_google_authorize_url, new_oauth_state
+
+    next_url = _safe_next_url(request.args.get("next"), default=url_for("index"))
+    state = new_oauth_state()
+    session["google_oauth_state"] = state
+    session["google_oauth_next"] = next_url
+    redirect_uri = f"{get_public_base_url()}/auth/google/callback"
+    # Local/dev: allow current host so redirect matches Google console entry.
+    if not os.getenv("RENDER") and request.host_url:
+        redirect_uri = url_for("auth_google_callback", _external=True)
+    session["google_oauth_redirect_uri"] = redirect_uri
+    return redirect(
+        build_google_authorize_url(redirect_uri=redirect_uri, state=state)
+    )
+
+
+@app.route("/auth/google/callback")
+def auth_google_callback():
+    """Handle Google redirect: link/create account or ask for username."""
+    _ensure_google_oauth_columns()
+    if not _google_login_enabled():
+        flash("Google-inloggning är inte konfigurerad.", "error")
+        return redirect(url_for("login"))
+
+    err = request.args.get("error")
+    if err:
+        flash("Google-inloggning avbröts.", "error")
+        return redirect(url_for("login"))
+
+    state = request.args.get("state") or ""
+    code = request.args.get("code") or ""
+    expected = session.get("google_oauth_state")
+    next_url = _safe_next_url(
+        session.get("google_oauth_next"), default=url_for("index")
+    )
+    redirect_uri = session.get("google_oauth_redirect_uri") or (
+        f"{get_public_base_url()}/auth/google/callback"
+    )
+    if not expected or state != expected or not code:
+        flash("Ogiltig Google-inloggning (state). Försök igen.", "error")
+        return redirect(url_for("login", next=next_url))
+
+    session.pop("google_oauth_state", None)
+
+    try:
+        from google_oauth import exchange_google_code, fetch_google_userinfo
+
+        token = exchange_google_code(code=code, redirect_uri=redirect_uri)
+        access = token.get("access_token")
+        if not access:
+            raise RuntimeError("Saknar access_token från Google")
+        info = fetch_google_userinfo(access)
+    except Exception as e:
+        print(f"Google OAuth error: {e}")
+        flash("Kunde inte hämta Google-konto. Försök igen.", "error")
+        return redirect(url_for("login", next=next_url))
+
+    sub = (info.get("sub") or "").strip()
+    email = (info.get("email") or "").strip().lower()
+    email_verified = bool(info.get("email_verified", True))
+    name = (info.get("name") or "").strip() or None
+    picture = (info.get("picture") or "").strip() or None
+
+    if not sub:
+        flash("Google svarade utan användar-id.", "error")
+        return redirect(url_for("login", next=next_url))
+    if not email or not email_verified:
+        flash(
+            "Google-kontot måste ha en verifierad e-postadress för att logga in här.",
+            "error",
+        )
+        return redirect(url_for("login", next=next_url))
+
+    # 1) Already linked
+    user = User.query.filter_by(google_sub=sub).first()
+    if user:
+        _login_user_session(user)
+        flash(f"Välkommen tillbaka, {user.username}!", "success")
+        return redirect(next_url)
+
+    # 2) Existing account with same email → link Google
+    user = User.query.filter(db.func.lower(User.email) == email).first()
+    if user:
+        if user.google_sub and user.google_sub != sub:
+            flash(
+                "Den e-posten är redan kopplad till ett annat Google-konto.",
+                "error",
+            )
+            return redirect(url_for("login", next=next_url))
+        user.google_sub = sub
+        if name and not user.display_name:
+            user.display_name = name[:100]
+        if picture and not user.profile_picture_url:
+            user.profile_picture_url = picture
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Link google_sub failed: {e}")
+            flash("Kunde inte koppla Google-kontot. Försök igen.", "error")
+            return redirect(url_for("login", next=next_url))
+        _login_user_session(user)
+        flash(f"Google kopplat — välkommen, {user.username}!", "success")
+        return redirect(next_url)
+
+    # 3) Brand new — pick a public username
+    session["pending_google"] = {
+        "sub": sub,
+        "email": email,
+        "name": name,
+        "picture": picture,
+        "next": next_url,
+    }
+    session.modified = True
+    return redirect(url_for("auth_google_complete"))
+
+
+@app.route("/auth/google/complete", methods=["GET", "POST"])
+def auth_google_complete():
+    """Choose username after first Google sign-in."""
+    _ensure_google_oauth_columns()
+    pending = session.get("pending_google")
+    if not pending or not pending.get("sub") or not pending.get("email"):
+        flash("Google-sessionen har gått ut. Börja om.", "error")
+        return redirect(url_for("login"))
+
+    suggested = _suggest_username_from_google(
+        pending.get("email") or "", pending.get("name")
+    )
+    next_url = _safe_next_url(pending.get("next"), default=url_for("index"))
+
+    if request.method == "POST":
+        username = (request.form.get("username") or "").strip()
+        if not username:
+            flash("Välj ett användarnamn.", "error")
+            return render_template(
+                "google_complete.html",
+                suggested=suggested,
+                email=pending.get("email"),
+                next_url=next_url,
+            )
+        if len(username) < 2 or len(username) > 40:
+            flash("Användarnamnet måste vara 2–40 tecken.", "error")
+            return render_template(
+                "google_complete.html",
+                suggested=username,
+                email=pending.get("email"),
+                next_url=next_url,
+            )
+        if not re.match(r"^[a-zA-Z0-9_.\-]+$", username):
+            flash(
+                "Användarnamn får bara innehålla bokstäver, siffror, _ . -",
+                "error",
+            )
+            return render_template(
+                "google_complete.html",
+                suggested=username,
+                email=pending.get("email"),
+                next_url=next_url,
+            )
+        if User.query.filter_by(username=username).first():
+            flash("Användarnamnet är redan upptaget.", "error")
+            return render_template(
+                "google_complete.html",
+                suggested=username,
+                email=pending.get("email"),
+                next_url=next_url,
+            )
+        if User.query.filter(
+            db.func.lower(User.email) == pending["email"].lower()
+        ).first():
+            flash("E-posten är redan registrerad. Logga in vanligt eller med Google.", "error")
+            session.pop("pending_google", None)
+            return redirect(url_for("login", next=next_url))
+
+        try:
+            # Random unusable password — account signs in via Google (reset can set one later).
+            new_user = User(
+                username=username,
+                password_hash=generate_password_hash(secrets.token_urlsafe(32)),
+                email=pending["email"],
+                google_sub=pending["sub"],
+                display_name=(pending.get("name") or "")[:100] or None,
+                profile_picture_url=pending.get("picture"),
+            )
+            db.session.add(new_user)
+            db.session.commit()
+            session.pop("pending_google", None)
+            session.pop("google_oauth_next", None)
+            session.pop("google_oauth_redirect_uri", None)
+            _login_user_session(new_user)
+            flash("Konto skapat med Google — kör igång!", "success")
+            return redirect(next_url)
+        except Exception as e:
+            db.session.rollback()
+            print(f"Google complete signup failed: {e}")
+            flash("Kunde inte skapa kontot. Försök igen.", "error")
+            return render_template(
+                "google_complete.html",
+                suggested=username,
+                email=pending.get("email"),
+                next_url=next_url,
+            )
+
+    return render_template(
+        "google_complete.html",
+        suggested=suggested,
+        email=pending.get("email"),
+        next_url=next_url,
+    )
 
 
 def _invite_picks_target() -> tuple[str, str]:
@@ -26952,6 +27270,10 @@ def init_database():
                     _ensure_email_opt_out_column()
                 except Exception as opt_col_err:
                     print(f"Warning: email_opt_out migration skipped: {opt_col_err}")
+                try:
+                    _ensure_google_oauth_columns()
+                except Exception as g_col_err:
+                    print(f"Warning: google_sub migration skipped: {g_col_err}")
                 # Auto-seed WSX so calendar exists for the UI (2025 history + 2026 season)
                 try:
                     ensure_wsx_series_and_competitions()
