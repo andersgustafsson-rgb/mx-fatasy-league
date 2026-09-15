@@ -2548,18 +2548,19 @@
           </div>
 
           {% if not is_logged_in %}
-          <div class="flex justify-center">
-            <button type="button" onclick="openGuestSignup();" class="group w-full max-w-md rounded-xl border border-cyan-400/40 bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950 px-3.5 py-3 text-left shadow-lg shadow-cyan-950/40 transition hover:border-cyan-300/70">
-              <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-500/15 text-amber-200" aria-hidden="true">{{ mx_icon('ticket', 'mx-icon--lg') }}</div>
+          <div class="flex justify-center px-1">
+            <button type="button" onclick="openGuestSignup();" class="group w-full max-w-xl rounded-2xl border-2 border-cyan-400/50 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 px-5 py-5 text-left shadow-2xl shadow-cyan-950/50 transition hover:border-cyan-300 hover:shadow-cyan-500/20">
+              <div class="flex items-center gap-4">
+                <div class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl border border-amber-400/40 bg-amber-500/20 text-amber-200" aria-hidden="true">{{ mx_icon('ticket', 'mx-icon--xl') }}</div>
                 <div class="min-w-0 flex-1">
                   <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span class="text-sm font-extrabold text-white">Ny här? Skaffa Pit Pass</span>
-                    <span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">Gratis</span>
+                    <span class="text-lg font-extrabold tracking-tight text-white sm:text-xl">Ny här? Skaffa Pit Pass</span>
+                    <span class="rounded-full bg-emerald-500/25 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-300">Gratis</span>
                   </div>
-                  <p class="mt-0.5 truncate text-xs text-slate-300">Har du konto? Öppna menyn ⋮ uppe till höger</p>
+                  <p class="mt-1 text-sm leading-snug text-slate-300">Öppna registrering med Google eller manuellt — tippa innan deadline.</p>
+                  <p class="mt-1 text-xs text-slate-500">Har du konto? Öppna menyn ⋮ uppe till höger</p>
                 </div>
-                <svg class="h-5 w-5 flex-shrink-0 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                <svg class="h-7 w-7 flex-shrink-0 text-cyan-300 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
               </div>
             </button>
           </div>

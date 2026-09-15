@@ -21,9 +21,9 @@
 .pit-pass-card {
   position: relative;
   width: 100%;
-  max-width: 26rem;
-  border-radius: 1.25rem;
-  padding: 1.35rem 1.35rem 1.2rem;
+  max-width: 28rem;
+  border-radius: 1.35rem;
+  padding: 1.55rem 1.45rem 1.35rem;
   background: linear-gradient(165deg, #0f172a 0%, #111827 55%, #0b1220 100%);
   border: 1px solid rgba(34, 211, 238, 0.4);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(34, 211, 238, 0.08);
@@ -59,8 +59,8 @@
 .pit-pass-title {
   position: relative;
   margin: 0 0 0.5rem;
-  font-size: 1.45rem;
-  line-height: 1.2;
+  font-size: 1.65rem;
+  line-height: 1.15;
   font-weight: 800;
   color: #ecfeff;
 }
