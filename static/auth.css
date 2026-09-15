@@ -256,28 +256,31 @@
   width: 100%;
   box-sizing: border-box;
   border-radius: 999px;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
   font-family: inherit;
-  font-weight: 700;
-  font-size: 0.9rem;
+  font-weight: 800;
+  font-size: 0.95rem;
   text-decoration: none;
-  color: #f8fafc;
-  background: #0b1220;
-  border: 1px solid #475569;
+  color: #1f2937;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .auth-google:hover {
-  border-color: #94a3b8;
-  background: #111827;
+  border-color: #22d3ee;
+  background: #f8fafc;
   transform: translateY(-1px);
-  color: #fff;
+  color: #0f172a;
+  box-shadow: 0 12px 28px rgba(34, 211, 238, 0.2);
 }
 
 .auth-google-icon {
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1.25rem;
+  height: 1.25rem;
   flex-shrink: 0;
 }
 
