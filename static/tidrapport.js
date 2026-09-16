@@ -2878,8 +2878,8 @@ function palette(i) {
 function setChartHeightByLabels(labelCount) {
   const container = els.chartCanvas?.parentElement;
   if (!container) return;
-  // Liggande staplar: begränsa höjd så PNG/Excel inte blir "milhög"
-  const h = Math.max(300, Math.min(680, 80 + labelCount * 22));
+  // Mer höjd per namn så staplarna syns; slides håller listan kort.
+  const h = Math.max(340, Math.min(900, 100 + labelCount * 30));
   container.style.height = `${h}px`;
   container.style.width = "";
   container.style.minWidth = "";
@@ -3234,9 +3234,35 @@ function exportVisibleTableExcel() {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-  if (els.statusText) {
-    els.statusText.textContent =
-      "Excel-fil (CSV) nedladdad. Öppna i Excel — siffrorna går att ändra. Diagram: markera data → Infoga → Stapeldiagram.";
+  return title.replace(/\s+/g, "_");
+}
+
+async function exportExcelAndChart() {
+  const st = window.__tidrapport_state;
+  if (!st || !(st.totals instanceof Map) || st.totals.size === 0) {
+    alert("Skapa diagram först (klistra in data → Skapa / uppdatera diagram).");
+    return;
+  }
+  const base = exportVisibleTableExcel() || "tidrapport";
+  try {
+    const c = ensureChart();
+    applyChartThemeToInstance(c);
+    const slideMeta = window.__tidrapport_slide_meta;
+    const url = await exportChartPngDataUrl(c, st, slideMeta);
+    // Kort paus så webbläsaren hinner starta CSV-nedladdningen först
+    await new Promise((r) => setTimeout(r, 350));
+    downloadDataUrl(url, `${base}_diagram.png`);
+    if (els.statusText) {
+      const pages = slideMeta?.slideCount > 1 ? ` (sida ${(slideMeta.slideIndex || 0) + 1}/${slideMeta.slideCount} — använd «Spara alla diagramsidor» för resten)` : "";
+      els.statusText.textContent =
+        `Nedladdat: Excel-tabell (CSV) + diagram (PNG)${pages}. Öppna PNG:n för bilden — CSV:n är bara siffrorna.`;
+    }
+  } catch (e) {
+    console.error(e);
+    if (els.statusText) {
+      els.statusText.textContent =
+        "Tabellen sparades, men diagram-PNG misslyckades. Prova «Spara diagram (PNG)» separat.";
+    }
   }
 }
 
@@ -4228,12 +4254,37 @@ function regenerateFromText(text, selectedOverride) {
     });
   }
   buildStatusFilters(filterStatuses, selectedStatuses);
+
+  // Många personer → dela diagram automatiskt (annars blir staplarna oläsliga / "inget diagram").
+  const peopleCount = totals instanceof Map ? totals.size : 0;
+  if (peopleCount > 14 && els.namesPerSlideSelect) {
+    const cur = cleanStr(els.namesPerSlideSelect.value);
+    if (!cur || cur === "0") {
+      els.namesPerSlideSelect.value = "12";
+    }
+  }
+  if (peopleCount > 8 && els.orientationSelect) {
+    els.orientationSelect.value = "horizontal";
+  }
+  if (window.__tidrapport_state) {
+    window.__tidrapport_state.orientation = cleanStr(els.orientationSelect?.value) || "horizontal";
+  }
+
   safeRenderAll(window.__tidrapport_state);
   if (fromMonthTemplate && els.statusText) {
     const cur = els.statusText.textContent || "";
     els.statusText.textContent = cur.startsWith("Månadsmall")
       ? cur
       : `Månadsmall · ${cur} · Tips: «Helår: per månad» för Jan–Dec-staplar.`;
+  }
+  if (peopleCount > 14 && els.statusText) {
+    const per = getNamesPerSlide() || 12;
+    const pages = Math.ceil(peopleCount / per);
+    const tip =
+      pages > 1
+        ? ` Diagram: ${peopleCount} personer uppdelat på ${pages} sidor (◀ ▶). Spara med «Spara PNG» eller «Spara alla sidor» — «Exportera Excel» är bara tabellen.`
+        : ` Diagram klart. Spara med «Spara PNG». «Exportera Excel» är bara tabellen.`;
+    els.statusText.textContent = `${els.statusText.textContent || ""}${tip}`;
   }
 }
 
