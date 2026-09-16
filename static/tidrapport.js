@@ -157,7 +157,10 @@ const els = {
   pasteInput: document.getElementById("pasteInput"),
   btnGenerate: document.getElementById("btnGenerate"),
   btnDownload: document.getElementById("btnDownload"),
+  btnExportExcel: document.getElementById("btnExportExcel"),
+  chartBgSelect: document.getElementById("chartBgSelect"),
   btnDownloadAllSlides: document.getElementById("btnDownloadAllSlides"),
+  chartSizeBox: document.getElementById("chartSizeBox"),
   chartSlideControls: document.getElementById("chartSlideControls"),
   chartSlideLabel: document.getElementById("chartSlideLabel"),
   btnSlidePrev: document.getElementById("btnSlidePrev"),
@@ -2760,6 +2763,7 @@ function ensureChart(mode = "horizontal") {
       },
     },
   });
+  applyChartBackgroundUi();
   return chart;
 }
 
@@ -3132,8 +3136,136 @@ function renderSummaryStats(sortedPeople, state) {
   }
 }
 
+const CHART_BG_KEY = "mx_tidrapport_chart_bg";
+const CHART_THEMES = {
+  dark: {
+    bg: "#0f172a",
+    title: "#e2e8f0",
+    tick: "#cbd5e1",
+    label: "#f8fafc",
+    labelStroke: "rgba(15, 23, 42, 0.85)",
+    grid: "rgba(148,163,184,0.15)",
+    gridSoft: "rgba(148,163,184,0.10)",
+    cardBg: "#1e293b",
+    cardBorder: "#334155",
+    cardLabel: "#94a3b8",
+    cardValue: "#f1f5f9",
+    headerTitle: "#f8fafc",
+    muted: "#94a3b8",
+  },
+  light: {
+    bg: "#ffffff",
+    title: "#0f172a",
+    tick: "#334155",
+    label: "#0f172a",
+    labelStroke: "rgba(255, 255, 255, 0.85)",
+    grid: "rgba(100,116,139,0.25)",
+    gridSoft: "rgba(100,116,139,0.15)",
+    cardBg: "#f8fafc",
+    cardBorder: "#cbd5e1",
+    cardLabel: "#64748b",
+    cardValue: "#0f172a",
+    headerTitle: "#0f172a",
+    muted: "#64748b",
+  },
+  soft: {
+    bg: "#f1f5f9",
+    title: "#0f172a",
+    tick: "#334155",
+    label: "#0f172a",
+    labelStroke: "rgba(241, 245, 249, 0.9)",
+    grid: "rgba(100,116,139,0.22)",
+    gridSoft: "rgba(100,116,139,0.12)",
+    cardBg: "#ffffff",
+    cardBorder: "#cbd5e1",
+    cardLabel: "#64748b",
+    cardValue: "#0f172a",
+    headerTitle: "#0f172a",
+    muted: "#64748b",
+  },
+};
+
+function getChartThemeId() {
+  const raw = (els.chartBgSelect?.value || localStorage.getItem(CHART_BG_KEY) || "dark").trim();
+  return CHART_THEMES[raw] ? raw : "dark";
+}
+
+function getChartTheme() {
+  return CHART_THEMES[getChartThemeId()] || CHART_THEMES.dark;
+}
+
+function applyChartThemeToInstance(c) {
+  if (!c?.options) return;
+  const t = getChartTheme();
+  if (c.options.plugins?.legend?.labels) c.options.plugins.legend.labels.color = t.title;
+  if (c.options.plugins?.title) c.options.plugins.title.color = t.title;
+  if (c.options.plugins?.tidrapportValueLabels) {
+    c.options.plugins.tidrapportValueLabels.color = t.label;
+    c.options.plugins.tidrapportValueLabels.strokeColor = t.labelStroke;
+  }
+  if (c.options.scales?.x?.ticks) c.options.scales.x.ticks.color = t.tick;
+  if (c.options.scales?.y?.ticks) c.options.scales.y.ticks.color = t.tick;
+  if (c.options.scales?.x?.grid) c.options.scales.x.grid.color = t.grid;
+  if (c.options.scales?.y?.grid) c.options.scales.y.grid.color = t.gridSoft;
+  try {
+    c.update("none");
+  } catch (_) {}
+}
+
+function applyChartBackgroundUi() {
+  const id = getChartThemeId();
+  const t = getChartTheme();
+  try {
+    localStorage.setItem(CHART_BG_KEY, id);
+  } catch (_) {}
+  if (els.chartBgSelect && els.chartBgSelect.value !== id) els.chartBgSelect.value = id;
+  if (els.chartSizeBox) {
+    els.chartSizeBox.style.backgroundColor = t.bg;
+    els.chartSizeBox.style.borderColor = id === "dark" ? "" : "#cbd5e1";
+  }
+  if (chart) applyChartThemeToInstance(chart);
+}
+
+function exportVisibleTableExcel() {
+  const head = els.tableHeadRow;
+  const body = els.tableBody;
+  if (!head || !body || !body.querySelector("tr")) {
+    alert("Ingen tabell att exportera ännu. Skapa diagram först.");
+    return;
+  }
+  const headers = [...head.querySelectorAll("th")].map((th) => (th.textContent || "").trim());
+  const rows = [...body.querySelectorAll("tr")].map((tr) =>
+    [...tr.querySelectorAll("td")].map((td) => {
+      const span = td.querySelector("span");
+      return ((span ? span.textContent : td.textContent) || "").trim();
+    })
+  );
+  const esc = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  const lines = [headers.map(esc).join(";")].concat(rows.map((r) => r.map(esc).join(";")));
+  const title =
+    (buildTitleText(window.__tidrapport_state || { statuses: [], selectedStatuses: new Set() }) || "tidrapport")
+      .replace(/[^\w\-åäöÅÄÖ ]+/gi, "")
+      .trim()
+      .slice(0, 60) || "tidrapport";
+  const blob = new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${title.replace(/\s+/g, "_")}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  if (els.statusText) {
+    els.statusText.textContent =
+      "Excel-fil (CSV) nedladdad. Öppna i Excel — siffrorna går att ändra. Diagram: markera data → Infoga → Stapeldiagram.";
+  }
+}
+
 /** Bygg PNG med summeringsrad (period, totalt, personer …) ovanför diagrammet. */
 function exportChartPngDataUrl(chartInstance, state, slideMeta) {
+  applyChartThemeToInstance(chartInstance);
+  const theme = getChartTheme();
   const chartUrl = chartInstance.toBase64Image("image/png", 1);
   const summary = state?.lastSummary || null;
   const title = buildTitleText(state || { statuses: [], selectedStatuses: new Set(), employeeName: null });
@@ -3167,16 +3299,16 @@ function exportChartPngDataUrl(chartInstance, state, slideMeta) {
       canvas.height = H;
       const ctx = canvas.getContext("2d");
       // bakgrund
-      ctx.fillStyle = "#0f172a";
+      ctx.fillStyle = theme.bg;
       ctx.fillRect(0, 0, W, H);
 
       // titel
-      ctx.fillStyle = "#f8fafc";
+      ctx.fillStyle = theme.headerTitle;
       ctx.font = "bold 20px system-ui, Segoe UI, sans-serif";
       ctx.fillText(String(title || "Tidrapport").slice(0, 90), padX, 30);
 
       if (slideLine) {
-        ctx.fillStyle = "#94a3b8";
+        ctx.fillStyle = theme.muted;
         ctx.font = "13px system-ui, Segoe UI, sans-serif";
         ctx.fillText(slideLine, W - padX - ctx.measureText(slideLine).width, 30);
       }
@@ -3205,16 +3337,16 @@ function exportChartPngDataUrl(chartInstance, state, slideMeta) {
         const cardH = 52;
         cards.forEach((card, i) => {
           const x = padX + i * (cardW + gap);
-          ctx.fillStyle = "#1e293b";
-          ctx.strokeStyle = "#334155";
+          ctx.fillStyle = theme.cardBg;
+          ctx.strokeStyle = theme.cardBorder;
           ctx.lineWidth = 1;
           roundRectPath(ctx, x, cardY, cardW, cardH, 8);
           ctx.fill();
           ctx.stroke();
-          ctx.fillStyle = "#94a3b8";
+          ctx.fillStyle = theme.cardLabel;
           ctx.font = "bold 11px system-ui, Segoe UI, sans-serif";
           ctx.fillText(card.label, x + 10, cardY + 16);
-          ctx.fillStyle = "#f1f5f9";
+          ctx.fillStyle = theme.cardValue;
           ctx.font = "bold 14px system-ui, Segoe UI, sans-serif";
           const val = String(card.value);
           // trim if needed
@@ -4495,6 +4627,22 @@ els.btnDownload.addEventListener("click", async () => {
   const url = await exportChartPngDataUrl(c, st, slideMeta);
   downloadDataUrl(url, safePngFilename(st, slideMeta));
 });
+
+els.btnExportExcel?.addEventListener("click", () => {
+  exportVisibleTableExcel();
+});
+
+els.chartBgSelect?.addEventListener("change", () => {
+  applyChartBackgroundUi();
+});
+
+try {
+  const savedBg = localStorage.getItem(CHART_BG_KEY);
+  if (savedBg && CHART_THEMES[savedBg] && els.chartBgSelect) {
+    els.chartBgSelect.value = savedBg;
+  }
+  applyChartBackgroundUi();
+} catch (_) {}
 
 function goChartSlide(delta) {
   const st = window.__tidrapport_state;

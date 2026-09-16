@@ -41,7 +41,8 @@
                 <li>Klicka <strong class="text-slate-200 font-medium">Skapa / uppdatera diagram</strong>. Diagram och tabell visas till höger (eller under om du valt layout «Diagram under»).</li>
                 <li>I rutan <strong class="text-slate-200 font-medium">Filter</strong> längre ner: bocka vilka <strong class="text-slate-200 font-medium">statusar</strong> som ska ingå. Färgen på rutan = färg i diagrammet.</li>
                 <li>Valfritt: under <strong class="text-slate-200 font-medium">En viss person</strong> skriver du exakt namn för att bara se den personen.</li>
-                <li>Ladda ner bilden med <strong class="text-slate-200 font-medium">Spara PNG</strong>.</li>
+                <li>Ladda ner bilden med <strong class="text-slate-200 font-medium">Spara PNG</strong>, eller <strong class="text-slate-200 font-medium">Exportera Excel</strong> om du vill ändra färger/siffror i Excel.</li>
+                <li>Byt <strong class="text-slate-200 font-medium">Bakgrund</strong> till Vit om PNG ska klistras in i Excel/Word.</li>
               </ol>
             </section>
 
@@ -454,7 +455,16 @@
               <span id="chartSlideLabel" class="text-xs text-slate-300 tabular-nums min-w-[5.5rem] text-center">Sida 1/1</span>
               <button type="button" id="btnSlideNext" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600" title="Nästa sida">▶</button>
             </div>
+            <label class="flex items-center gap-1.5 text-xs text-slate-400">
+              Bakgrund
+              <select id="chartBgSelect" class="rounded-lg bg-slate-800 border border-slate-600 text-slate-100 text-sm px-2 py-1.5" title="Byt diagrammets bakgrund (påverkar skärm + PNG)">
+                <option value="dark">Mörk</option>
+                <option value="light">Vit (bra till Excel)</option>
+                <option value="soft">Ljusgrå</option>
+              </select>
+            </label>
             <button id="btnDownload" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">Spara PNG</button>
+            <button id="btnExportExcel" class="px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold" title="Ladda ner tabellen som CSV som öppnas i Excel — redigerbar">Exportera Excel</button>
             <button id="btnDownloadAllSlides" class="hidden px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600" title="Laddar ner en PNG per sida">Spara alla sidor</button>
           </div>
         </div>
@@ -773,7 +783,7 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=stamp-vertical-parse-2"></script>
+  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=chart-bg-excel-1"></script>
 </body>
 </html>
 
