@@ -3064,16 +3064,6 @@ function computeSummaryFromPeople(sortedPeople, state) {
   const people = sortedPeople.length;
   const top = sortedPeople[0];
   const byMonth = state?.hoursByMonth instanceof Map ? state.hoursByMonth : null;
-  let peakLabel = "";
-  let peakHours = 0;
-  if (byMonth && byMonth.size) {
-    for (const [m1, h] of byMonth.entries()) {
-      if (h > peakHours) {
-        peakHours = h;
-        peakLabel = monthLabelFull(m1);
-      }
-    }
-  }
   const period =
     monthSpanLabelFromHoursByMonth(byMonth, cleanStr(els.yearInput?.value)) || getMonthYearLabel();
   return {
@@ -3082,8 +3072,6 @@ function computeSummaryFromPeople(sortedPeople, state) {
     people,
     topName: top?.name || "",
     topHours: top?.sum || 0,
-    peakLabel,
-    peakHours,
   };
 }
 
@@ -3108,19 +3096,9 @@ function renderSummaryStats(sortedPeople, state) {
       title: summary.topName ? `${summary.topName}: ${fmtHoursSv(summary.topHours)} h` : "",
     },
   ];
-  if (summary.peakHours > 0) {
-    cards.push({
-      label: "Högsta månad",
-      value: summary.peakLabel,
-      sub: `${fmtHoursSv(summary.peakHours)} h`,
-    });
-  }
 
   box.classList.remove("hidden");
-  box.className =
-    summary.peakHours > 0
-      ? "mt-3 grid grid-cols-2 md:grid-cols-5 gap-2"
-      : "mt-3 grid grid-cols-2 md:grid-cols-4 gap-2";
+  box.className = "mt-3 grid grid-cols-2 md:grid-cols-4 gap-2";
   box.innerHTML = "";
   for (const c of cards) {
     const el = document.createElement("div");
