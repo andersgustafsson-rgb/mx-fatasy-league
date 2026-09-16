@@ -630,7 +630,8 @@
           <div class="flex items-center justify-between gap-3">
             <h2 class="text-lg font-semibold">Diagram</h2>
             <div class="flex items-center gap-2">
-              <button id="btnOvertimeDownload" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">Spara PNG</button>
+              <button id="btnOvertimeDownload" class="px-3 py-2 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-sm font-semibold">Spara PNG</button>
+              <button id="btnOvertimeExportExcel" class="px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold" title="Tabell + diagram i en Excel-fil">Exportera Excel + diagram</button>
             </div>
           </div>
           <div class="mt-2 text-xs text-slate-400" id="overtimeTitlePreview"></div>
@@ -774,7 +775,8 @@
                 <option value="50">Top 50</option>
                 <option value="20">Top 20</option>
               </select>
-              <button id="btnSickManualDownload" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">Spara PNG</button>
+              <button id="btnSickManualDownload" class="px-3 py-2 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-sm font-semibold">Spara PNG</button>
+              <button id="btnSickManualExportExcel" class="px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold" title="Tabell + diagram i en Excel-fil">Exportera Excel + diagram</button>
             </div>
           </div>
           <div class="mt-2 text-xs text-slate-400" id="sickManualTitlePreview"></div>
@@ -786,7 +788,7 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=title-export-xls-3"></script>
+  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=overtime-excel-1"></script>
 </body>
 </html>
 

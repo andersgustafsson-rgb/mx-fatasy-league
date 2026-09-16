@@ -226,6 +226,7 @@ const els = {
   btnOvertimeRemoveSelected: document.getElementById("btnOvertimeRemoveSelected"),
   overtimeChartCanvas: document.getElementById("overtimeChartCanvas"),
   btnOvertimeDownload: document.getElementById("btnOvertimeDownload"),
+  btnOvertimeExportExcel: document.getElementById("btnOvertimeExportExcel"),
   overtimeTitlePreview: document.getElementById("overtimeTitlePreview"),
   overtimePaste: document.getElementById("overtimePaste"),
   btnOvertimePasteApply: document.getElementById("btnOvertimePasteApply"),
@@ -251,6 +252,7 @@ const els = {
   sickManualOrientation: document.getElementById("sickManualOrientation"),
   sickManualNameLimit: document.getElementById("sickManualNameLimit"),
   btnSickManualDownload: document.getElementById("btnSickManualDownload"),
+  btnSickManualExportExcel: document.getElementById("btnSickManualExportExcel"),
   sickManualTitlePreview: document.getElementById("sickManualTitlePreview"),
   sickManualPaste: document.getElementById("sickManualPaste"),
   btnSickManualPasteApply: document.getElementById("btnSickManualPasteApply"),
@@ -3243,6 +3245,84 @@ function exportVisibleTableExcel() {
   return title.replace(/\s+/g, "_");
 }
 
+/** Excel öppnar HTML-.xls men stödjer INTE data:-bilder. MHTML bäddar in PNG. */
+function downloadMhtmlExcel({ title, headers, rows, pngDataUrl, filenameBase }) {
+  const escHtml = (s) =>
+    String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  const safeBase =
+    String(filenameBase || title || "export")
+      .replace(/[^\w\-åäöÅÄÖ ]+/gi, "")
+      .trim()
+      .slice(0, 60)
+      .replace(/\s+/g, "_") || "export";
+  const tableHtml = [
+    "<table border='1' cellspacing='0' cellpadding='4'>",
+    "<thead><tr>" + (headers || []).map((h) => `<th>${escHtml(h)}</th>`).join("") + "</tr></thead>",
+    "<tbody>" +
+      (rows || [])
+        .map((r) => "<tr>" + r.map((c) => `<td>${escHtml(c)}</td>`).join("") + "</tr>")
+        .join("") +
+      "</tbody>",
+    "</table>",
+  ].join("");
+
+  const boundary = "----=_NextPart_Tidrapport";
+  const hasPng = !!(pngDataUrl && String(pngDataUrl).startsWith("data:image/png;base64,"));
+  const imgHtml = hasPng
+    ? '<p><img src="diagram.png" alt="Diagram"></p>'
+    : "<p><em>(Diagram saknas — använd «Spara PNG»)</em></p>";
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:x="urn:schemas-microsoft-com:office:excel"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>${escHtml(title)}</title>
+</head>
+<body>
+<h1>${escHtml(title)}</h1>
+${imgHtml}
+${tableHtml}
+</body>
+</html>`;
+
+  let mhtml =
+    `MIME-Version: 1.0\r\n` +
+    `Content-Type: multipart/related; boundary="${boundary}"\r\n\r\n` +
+    `--${boundary}\r\n` +
+    `Content-Type: text/html; charset="utf-8"\r\n` +
+    `Content-Transfer-Encoding: 8bit\r\n` +
+    `Content-Location: tidrapport.htm\r\n\r\n` +
+    `${html}\r\n`;
+
+  if (hasPng) {
+    const b64 = String(pngDataUrl).slice("data:image/png;base64,".length).replace(/\s+/g, "");
+    const wrapped = b64.replace(/.{1,76}/g, "$&\r\n");
+    mhtml +=
+      `--${boundary}\r\n` +
+      `Content-Type: image/png\r\n` +
+      `Content-Transfer-Encoding: base64\r\n` +
+      `Content-Location: diagram.png\r\n\r\n` +
+      `${wrapped}\r\n`;
+  }
+  mhtml += `--${boundary}--\r\n`;
+
+  const blob = new Blob([mhtml], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${safeBase}.xls`;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  return hasPng;
+}
+
 async function exportExcelAndChart() {
   const st = window.__tidrapport_state;
   const hasPeople = st?.totals instanceof Map && st.totals.size > 0;
@@ -3254,8 +3334,6 @@ async function exportExcelAndChart() {
 
   const title =
     buildTitleText(st || { statuses: [], selectedStatuses: new Set() }) || "tidrapport";
-  const safeBase =
-    title.replace(/[^\w\-åäöÅÄÖ ]+/gi, "").trim().slice(0, 60).replace(/\s+/g, "_") || "tidrapport";
 
   const head = els.tableHeadRow;
   const body = els.tableBody;
@@ -3282,82 +3360,95 @@ async function exportExcelAndChart() {
     console.warn("PNG for excel export failed", e);
   }
 
-  // Excel öppnar HTML-.xls men stödjer INTE data:-bilder (blir trasig länk).
-  // MHTML (multipart) bäddar in PNG som egen MIME-del — en fil, fungerar i Excel.
-  const escHtml = (s) =>
-    String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  const tableHtml = [
-    "<table border='1' cellspacing='0' cellpadding='4'>",
-    "<thead><tr>" + headers.map((h) => `<th>${escHtml(h)}</th>`).join("") + "</tr></thead>",
-    "<tbody>" +
-      rows
-        .map((r) => "<tr>" + r.map((c) => `<td>${escHtml(c)}</td>`).join("") + "</tr>")
-        .join("") +
-      "</tbody>",
-    "</table>",
-  ].join("");
-
-  const boundary = "----=_NextPart_Tidrapport";
-  const hasPng = !!(pngUrl && pngUrl.startsWith("data:image/png;base64,"));
-  const imgHtml = hasPng
-    ? '<p><img src="diagram.png" alt="Diagram"></p>'
-    : "<p><em>(Diagram saknas — använd «Spara diagram PNG»)</em></p>";
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
-xmlns:x="urn:schemas-microsoft-com:office:excel"
-xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<title>${escHtml(title)}</title>
-</head>
-<body>
-<h1>${escHtml(title)}</h1>
-${imgHtml}
-${tableHtml}
-</body>
-</html>`;
-
-  let mhtml =
-    `MIME-Version: 1.0\r\n` +
-    `Content-Type: multipart/related; boundary="${boundary}"\r\n\r\n` +
-    `--${boundary}\r\n` +
-    `Content-Type: text/html; charset="utf-8"\r\n` +
-    `Content-Transfer-Encoding: 8bit\r\n` +
-    `Content-Location: tidrapport.htm\r\n\r\n` +
-    `${html}\r\n`;
-
-  if (hasPng) {
-    const b64 = pngUrl.slice("data:image/png;base64,".length).replace(/\s+/g, "");
-    const wrapped = b64.replace(/.{1,76}/g, "$&\r\n");
-    mhtml +=
-      `--${boundary}\r\n` +
-      `Content-Type: image/png\r\n` +
-      `Content-Transfer-Encoding: base64\r\n` +
-      `Content-Location: diagram.png\r\n\r\n` +
-      `${wrapped}\r\n`;
-  }
-  mhtml += `--${boundary}--\r\n`;
-
-  const blob = new Blob([mhtml], { type: "application/vnd.ms-excel;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  // .xls med MHTML-innehåll — Excel bäddar in bilden; undvik .html/.mht som öppnas i webbläsare.
-  a.download = `${safeBase}.xls`;
-  a.rel = "noopener";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  const hasPng = downloadMhtmlExcel({
+    title,
+    headers,
+    rows,
+    pngDataUrl: pngUrl,
+    filenameBase: title,
+  });
 
   if (els.statusText) {
     els.statusText.textContent = hasPng
       ? "Export sparad (.xls) med tabell + inbäddat diagram. Öppna i Excel (inte i webbläsaren)."
       : "Export sparad (.xls) med tabell. Diagram saknas — prova «Spara diagram PNG».";
   }
+}
+
+function exportOvertimeExcelAndChart() {
+  if (!overtimeRows.length) {
+    alert("Lägg till minst en stapel först.");
+    return;
+  }
+  renderOvertimeChart();
+  const c = ensureOvertimeChart();
+  const title =
+    cleanStr(els.overtimeTitlePreview?.textContent) ||
+    cleanStr(c?.options?.plugins?.title?.text) ||
+    "Övertid per månad";
+  const rows = sortOvertimeRows(overtimeRows).map((r) => [
+    r.label,
+    String(round2(r.hours)).replace(".", ","),
+  ]);
+  let pngUrl = "";
+  try {
+    if (c) pngUrl = c.toBase64Image("image/png", 1);
+  } catch (e) {
+    console.warn("Övertid PNG for excel failed", e);
+  }
+  const hasPng = downloadMhtmlExcel({
+    title,
+    headers: ["Period", "Timmar"],
+    rows,
+    pngDataUrl: pngUrl,
+    filenameBase: title,
+  });
+  setOvertimeStatus(
+    hasPng
+      ? "Export sparad (.xls) med tabell + diagram. Öppna i Excel."
+      : "Export sparad (.xls) med tabell. Diagram saknas — prova Spara PNG."
+  );
+}
+
+function exportSickManualExcelAndChart() {
+  if (!sickManualRows.length) {
+    alert("Lägg till minst en rad först.");
+    return;
+  }
+  renderSickManualChart();
+  const c = ensureSickManualChart();
+  const title =
+    cleanStr(els.sickManualTitlePreview?.textContent) ||
+    cleanStr(c?.options?.plugins?.title?.text) ||
+    "Sjuktimmar";
+  const rows = [...sickManualRows]
+    .map((r) => ({ r, h: sickManualRowHours(r) || 0 }))
+    .sort((a, b) => b.h - a.h)
+    .map(({ r, h }) => [
+      r.name || "",
+      String(r.days ?? "").replace(".", ","),
+      String(r.employmentPct ?? "").replace(".", ","),
+      String(r.sickPct ?? "").replace(".", ","),
+      String(round2(h)).replace(".", ","),
+    ]);
+  let pngUrl = "";
+  try {
+    if (c) pngUrl = c.toBase64Image("image/png", 1);
+  } catch (e) {
+    console.warn("Sjuktimmar PNG for excel failed", e);
+  }
+  const hasPng = downloadMhtmlExcel({
+    title,
+    headers: ["Namn", "Dagar", "Syss %", "Sjuk %", "Sjuktimmar"],
+    rows,
+    pngDataUrl: pngUrl,
+    filenameBase: title,
+  });
+  setSickManualStatus(
+    hasPng
+      ? "Export sparad (.xls) med tabell + diagram. Öppna i Excel."
+      : "Export sparad (.xls) med tabell. Diagram saknas — prova Spara PNG."
+  );
 }
 
 /** Bygg PNG med summeringsrad (period, totalt, personer …) ovanför diagrammet. */
@@ -4508,6 +4599,9 @@ els.btnOvertimeDownload?.addEventListener("click", () => {
   a.download = `overtid_${new Date().toISOString().slice(0, 10)}.png`;
   a.click();
 });
+els.btnOvertimeExportExcel?.addEventListener("click", () => {
+  exportOvertimeExcelAndChart();
+});
 
 // Sick hours (manual): actions
 els.btnSickManualAdd?.addEventListener("click", addSickManualRowFromInputs);
@@ -4554,6 +4648,9 @@ els.btnSickManualDownload?.addEventListener("click", () => {
   a.href = url;
   a.download = `sjuktimmar_${new Date().toISOString().slice(0, 10)}.png`;
   a.click();
+});
+els.btnSickManualExportExcel?.addEventListener("click", () => {
+  exportSickManualExcelAndChart();
 });
 
 for (const el of [els.fullTimeWeekHoursInput, els.workdaysPerWeekInput]) {
