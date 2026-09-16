@@ -3282,7 +3282,8 @@ async function exportExcelAndChart() {
     console.warn("PNG for excel export failed", e);
   }
 
-  // En enda fil (HTML som Excel öppnar) — dubbla nedladdningar blockeras ofta på mobil.
+  // Excel öppnar HTML-.xls men stödjer INTE data:-bilder (blir trasig länk).
+  // MHTML (multipart) bäddar in PNG som egen MIME-del — en fil, fungerar i Excel.
   const escHtml = (s) =>
     String(s)
       .replace(/&/g, "&amp;")
@@ -3300,18 +3301,51 @@ async function exportExcelAndChart() {
     "</table>",
   ].join("");
 
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escHtml(
-    title
-  )}</title></head><body>
+  const boundary = "----=_NextPart_Tidrapport";
+  const hasPng = !!(pngUrl && pngUrl.startsWith("data:image/png;base64,"));
+  const imgHtml = hasPng
+    ? '<p><img src="diagram.png" alt="Diagram"></p>'
+    : "<p><em>(Diagram saknas — använd «Spara diagram PNG»)</em></p>";
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:x="urn:schemas-microsoft-com:office:excel"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>${escHtml(title)}</title>
+</head>
+<body>
 <h1>${escHtml(title)}</h1>
-${pngUrl ? `<p><img src="${pngUrl}" alt="Diagram" style="max-width:100%;height:auto" /></p>` : "<p>(Diagram kunde inte bäddas in — använd Spara diagram PNG)</p>"}
+${imgHtml}
 ${tableHtml}
-</body></html>`;
+</body>
+</html>`;
 
-  const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
+  let mhtml =
+    `MIME-Version: 1.0\r\n` +
+    `Content-Type: multipart/related; boundary="${boundary}"\r\n\r\n` +
+    `--${boundary}\r\n` +
+    `Content-Type: text/html; charset="utf-8"\r\n` +
+    `Content-Transfer-Encoding: 8bit\r\n` +
+    `Content-Location: tidrapport.htm\r\n\r\n` +
+    `${html}\r\n`;
+
+  if (hasPng) {
+    const b64 = pngUrl.slice("data:image/png;base64,".length).replace(/\s+/g, "");
+    const wrapped = b64.replace(/.{1,76}/g, "$&\r\n");
+    mhtml +=
+      `--${boundary}\r\n` +
+      `Content-Type: image/png\r\n` +
+      `Content-Transfer-Encoding: base64\r\n` +
+      `Content-Location: diagram.png\r\n\r\n` +
+      `${wrapped}\r\n`;
+  }
+  mhtml += `--${boundary}--\r\n`;
+
+  const blob = new Blob([mhtml], { type: "application/vnd.ms-excel;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
+  // .xls med MHTML-innehåll — Excel bäddar in bilden; undvik .html/.mht som öppnas i webbläsare.
   a.download = `${safeBase}.xls`;
   a.rel = "noopener";
   document.body.appendChild(a);
@@ -3320,10 +3354,9 @@ ${tableHtml}
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 
   if (els.statusText) {
-    els.statusText.textContent =
-      "Export sparad som Excel-fil (.xls) med tabell" +
-      (pngUrl ? " + diagram." : ".") +
-      " Öppna filen i Excel.";
+    els.statusText.textContent = hasPng
+      ? "Export sparad (.xls) med tabell + inbäddat diagram. Öppna i Excel (inte i webbläsaren)."
+      : "Export sparad (.xls) med tabell. Diagram saknas — prova «Spara diagram PNG».";
   }
 }
 
