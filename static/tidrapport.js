@@ -3245,6 +3245,15 @@ function exportVisibleTableExcel() {
   return title.replace(/\s+/g, "_");
 }
 
+function tableCellExportText(td) {
+  if (!td) return "";
+  const input = td.querySelector("input:not([type='checkbox']):not([type='radio'])");
+  if (input) return cleanStr(input.value);
+  const span = td.querySelector("span");
+  if (span) return cleanStr(span.textContent);
+  return cleanStr(td.textContent);
+}
+
 /** Excel öppnar HTML-.xls men stödjer INTE data:-bilder. MHTML bäddar in PNG. */
 function downloadMhtmlExcel({ title, headers, rows, pngDataUrl, filenameBase }) {
   const escHtml = (s) =>
@@ -3342,19 +3351,18 @@ async function exportExcelAndChart() {
     : ["Namn", "Summa"];
   const rows = body
     ? [...body.querySelectorAll("tr")].map((tr) =>
-        [...tr.querySelectorAll("td")].map((td) => {
-          const span = td.querySelector("span");
-          return ((span ? span.textContent : td.textContent) || "").trim();
-        })
+        [...tr.querySelectorAll("td")].map((td) => tableCellExportText(td))
       )
     : [];
 
   let pngUrl = "";
   try {
-    if (hasPeople || chart) {
+    if ((hasPeople || chart) && typeof Chart !== "undefined") {
       const c = ensureChart();
-      applyChartThemeToInstance(c);
-      pngUrl = await exportChartPngDataUrl(c, st, window.__tidrapport_slide_meta);
+      if (c) {
+        applyChartThemeToInstance(c);
+        pngUrl = await exportChartPngDataUrl(c, st, window.__tidrapport_slide_meta);
+      }
     }
   } catch (e) {
     console.warn("PNG for excel export failed", e);
@@ -4844,7 +4852,15 @@ els.btnApplyMerge?.addEventListener("click", () => {
 
 els.btnDownload.addEventListener("click", async () => {
   const st = window.__tidrapport_state;
+  if (!st && !chart) {
+    alert("Skapa diagram först (klistra in data → Skapa / uppdatera diagram).");
+    return;
+  }
   const c = ensureChart();
+  if (!c) {
+    alert("Diagrammet kunde inte skapas. Ladda om sidan och försök igen.");
+    return;
+  }
   const slideMeta = window.__tidrapport_slide_meta;
   const url = await exportChartPngDataUrl(c, st, slideMeta);
   downloadDataUrl(url, safePngFilename(st, slideMeta));

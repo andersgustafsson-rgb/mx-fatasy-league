@@ -467,7 +467,7 @@
               </select>
             </label>
             <button id="btnDownload" class="px-3 py-2 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-sm font-semibold" title="Ladda ner diagrammet som bild (det du vill klistra in / skicka)">Spara diagram (PNG)</button>
-            <button id="btnExportExcel" class="px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold" title="Laddar ner tabellen (CSV) + diagrammet (PNG)">Exportera Excel + diagram</button>
+            <button id="btnExportExcel" class="px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold" title="Laddar ner tabell + diagram i en Excel-fil (.xls)">Exportera Excel + diagram</button>
             <button id="btnDownloadAllSlides" class="hidden px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600" title="Laddar ner en PNG per sida">Spara alla diagramsidor</button>
           </div>
         </div>
@@ -788,7 +788,7 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=overtime-excel-1"></script>
+  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=export-all-charts-1"></script>
 </body>
 </html>
 
