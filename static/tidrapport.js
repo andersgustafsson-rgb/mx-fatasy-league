@@ -2829,8 +2829,12 @@ function getSelectedEmployeeName(totals) {
 
 function buildTitleText(state) {
   const custom = cleanStr(els.titleInput?.value);
-  const span = monthSpanLabelFromHoursByMonth(state?.hoursByMonth, cleanStr(els.yearInput?.value));
-  const base = custom || span || getMonthYearLabel();
+  // Om användaren valt en specifik månad: använd den i rubriken (inte hela exportens spann).
+  const filt = getUiMonthYearFilter();
+  const span = filt
+    ? null
+    : monthSpanLabelFromHoursByMonth(state?.hoursByMonth, cleanStr(els.yearInput?.value));
+  const base = custom || (filt ? getMonthYearLabel() : null) || span || getMonthYearLabel();
   const employee = state.employeeName ? ` — ${state.employeeName}` : "";
   const selected = [...(state.selectedStatuses || [])];
   const allCount =
@@ -3064,8 +3068,10 @@ function computeSummaryFromPeople(sortedPeople, state) {
   const people = sortedPeople.length;
   const top = sortedPeople[0];
   const byMonth = state?.hoursByMonth instanceof Map ? state.hoursByMonth : null;
-  const period =
-    monthSpanLabelFromHoursByMonth(byMonth, cleanStr(els.yearInput?.value)) || getMonthYearLabel();
+  const filt = getUiMonthYearFilter();
+  const period = filt
+    ? getMonthYearLabel()
+    : monthSpanLabelFromHoursByMonth(byMonth, cleanStr(els.yearInput?.value)) || getMonthYearLabel();
   return {
     period,
     total,
@@ -3968,31 +3974,22 @@ function renderAll(state) {
     renderMonthChart(monthTotals, statuses, selectedStatuses, year, measure);
     updateSlideControls({ slideIndex: 0, slideCount: 1, perSlide: 0, totalNames: 0 });
     if (els.chartSummaryStats) {
-      // Månadsläge: visa totalt + högsta månad
-      let peakM = 0;
-      let peakH = 0;
+      // Månadsläge: totalt + antal månader (ingen «högsta månad» — vilseledande)
       let totalH = 0;
+      let monthsWithData = 0;
       for (let m1 = 1; m1 <= 12; m1 += 1) {
         const by = monthTotals.get(m1) || new Map();
         let sum = 0;
         for (const st of selectedStatuses) sum += by.get(st) || 0;
         totalH += sum;
-        if (sum > peakH) {
-          peakH = sum;
-          peakM = m1;
-        }
+        if (sum > 0) monthsWithData += 1;
       }
       els.chartSummaryStats.classList.remove("hidden");
+      els.chartSummaryStats.className = "mt-3 grid grid-cols-2 md:grid-cols-3 gap-2";
       els.chartSummaryStats.innerHTML = "";
       const cards = [
         { label: "Totalt", value: measure === "hours" ? `${fmtHoursSv(totalH)} h` : String(Math.round(totalH)) },
-        { label: "Månader med data", value: String([...monthTotals.keys()].filter((m) => {
-          const by = monthTotals.get(m) || new Map();
-          let s = 0;
-          for (const st of selectedStatuses) s += by.get(st) || 0;
-          return s > 0;
-        }).length) },
-        { label: "Högsta månad", value: peakM ? monthLabelShort(peakM) : "—", sub: peakH ? (measure === "hours" ? `${fmtHoursSv(peakH)} h` : String(Math.round(peakH))) : "" },
+        { label: "Månader med data", value: String(monthsWithData) },
         { label: "År", value: String(year) },
       ];
       for (const c of cards) {
@@ -4000,8 +3997,7 @@ function renderAll(state) {
         el.className = "rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2";
         el.innerHTML =
           `<div class="text-[10px] uppercase tracking-wide text-slate-500">${c.label}</div>` +
-          `<div class="text-sm font-semibold text-slate-100 tabular-nums truncate">${c.value}</div>` +
-          (c.sub ? `<div class="text-[11px] text-slate-400 tabular-nums">${c.sub}</div>` : "");
+          `<div class="text-sm font-semibold text-slate-100 tabular-nums truncate">${c.value}</div>`;
         els.chartSummaryStats.appendChild(el);
       }
     }
@@ -4670,7 +4666,7 @@ els.btnDownload.addEventListener("click", async () => {
 });
 
 els.btnExportExcel?.addEventListener("click", () => {
-  exportVisibleTableExcel();
+  exportExcelAndChart();
 });
 
 els.chartBgSelect?.addEventListener("change", () => {
