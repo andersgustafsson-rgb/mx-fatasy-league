@@ -3303,12 +3303,6 @@ function exportChartPngDataUrl(chartInstance, state, slideMeta) {
               : "—",
           },
         ];
-        if (summary.peakHours > 0) {
-          cards.push({
-            label: "HÖGSTA MÅNAD",
-            value: `${summary.peakLabel} ${fmtHoursSv(summary.peakHours)} h`,
-          });
-        }
         const gap = 10;
         const cardW = (W - padX * 2 - gap * (cards.length - 1)) / cards.length;
         const cardY = 42;
@@ -4106,8 +4100,26 @@ function regenerateFromText(text, selectedOverride) {
       s0
         ? ` Exempel rad ${s0.row}: Namn="${s0.name}" • Omf="${s0.omfRaw}"→${s0.omfParsed} • Tim/dag="${s0.timDagRaw}"→${s0.timDagParsed} • Kl Fom="${s0.fomRaw}"→${s0.fomParsed} • Kl Tom="${s0.tomRaw}"→${s0.tomParsed}`
         : "";
-    const msg = `Hittade tabellen, men kunde inte räkna ut timmar. Rader: ${stats.rawRows} • Använda: ${stats.usedRows} • Skip: tid=${stats.skippedNoTime}, namn=${stats.skippedNoName}.${ex} ` +
-      `Kontrollera att «Omf»/«Tim/dag» innehåller tal (t.ex. 1.000) eller att «Kl Fom»/«Kl Tom» har klockslag. Klicka sedan «Skapa / uppdatera diagram».`;
+    const filt = getUiMonthYearFilter();
+    let dateHint = "";
+    try {
+      const parsed = parseTable(text);
+      const dates = (parsed?.rows || [])
+        .map((r) => cleanStr(r["Datum Fom"] || r.Datum || ""))
+        .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+        .sort();
+      if (dates.length) {
+        dateHint = ` Datum i klistringen: ${dates[0]} … ${dates[dates.length - 1]}.`;
+      }
+      if (filt && dates.length) {
+        dateHint += ` Du har valt filter ${SWEDISH_MONTHS[filt.month - 1]} ${filt.year} — prova «Alla månader» eller rätt månad/år.`;
+      }
+    } catch {
+      // ignore
+    }
+    const msg =
+      `Hittade tabellen, men kunde inte räkna ut timmar. Rader: ${stats.rawRows} • Använda: ${stats.usedRows} • Skip: tid=${stats.skippedNoTime}, namn=${stats.skippedNoName}.${dateHint}${ex} ` +
+      `Kontrollera månad/år-filter, eller att «Omf»/«Tim/dag» innehåller tal (t.ex. 1.000) eller att «Kl Fom»/«Kl Tom» har klockslag. Klicka sedan «Skapa / uppdatera diagram».`;
 
     // Devtools log: gör det lätt att se i konsolen exakt vad som inte parsades.
     const debugMeta = debug?.debugMeta || null;
