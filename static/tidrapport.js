@@ -2830,26 +2830,26 @@ function getSelectedEmployeeName(totals) {
 function buildTitleText(state) {
   const custom = cleanStr(els.titleInput?.value);
   // Om användaren valt en specifik månad: använd den i rubriken (inte hela exportens spann).
-  const filt = getUiMonthYearFilter();
-  const span = filt
+  const monthFilt = getUiMonthYearFilter();
+  const span = monthFilt
     ? null
     : monthSpanLabelFromHoursByMonth(state?.hoursByMonth, cleanStr(els.yearInput?.value));
-  const base = custom || (filt ? getMonthYearLabel() : null) || span || getMonthYearLabel();
+  const base = custom || (monthFilt ? getMonthYearLabel() : null) || span || getMonthYearLabel();
   const employee = state.employeeName ? ` — ${state.employeeName}` : "";
   const selected = [...(state.selectedStatuses || [])];
   const allCount =
     state.mergedSourceSplit && state.baseStatuses?.length
       ? state.baseStatuses.length
       : (state.statuses || []).length;
-  let filt = "";
+  let statusFilt = "";
   if (selected.length === 0) {
-    filt = " — (inga statusar)";
+    statusFilt = " — (inga statusar)";
   } else if (allCount > 0 && selected.length !== allCount) {
     const shown = selected.slice(0, 3).join(", ");
     const more = selected.length > 3 ? ` (+${selected.length - 3})` : "";
-    filt = ` — ${shown}${more}`;
+    statusFilt = ` — ${shown}${more}`;
   }
-  let out = `${base}${employee}${filt}`;
+  let out = `${base}${employee}${statusFilt}`;
   if (state.mergedSourceSplit) {
     out = `${out} · Samlat: grupperade staplar per månad/del (valda orsaker summerade)`;
   }
@@ -3245,30 +3245,85 @@ function exportVisibleTableExcel() {
 
 async function exportExcelAndChart() {
   const st = window.__tidrapport_state;
-  if (!st || !(st.totals instanceof Map) || st.totals.size === 0) {
+  const hasPeople = st?.totals instanceof Map && st.totals.size > 0;
+  const hasTable = !!(els.tableBody && els.tableBody.querySelector("tr"));
+  if (!hasPeople && !hasTable) {
     alert("Skapa diagram först (klistra in data → Skapa / uppdatera diagram).");
     return;
   }
-  const base = exportVisibleTableExcel() || "tidrapport";
+
+  const title =
+    buildTitleText(st || { statuses: [], selectedStatuses: new Set() }) || "tidrapport";
+  const safeBase =
+    title.replace(/[^\w\-åäöÅÄÖ ]+/gi, "").trim().slice(0, 60).replace(/\s+/g, "_") || "tidrapport";
+
+  const head = els.tableHeadRow;
+  const body = els.tableBody;
+  const headers = head
+    ? [...head.querySelectorAll("th")].map((th) => (th.textContent || "").trim())
+    : ["Namn", "Summa"];
+  const rows = body
+    ? [...body.querySelectorAll("tr")].map((tr) =>
+        [...tr.querySelectorAll("td")].map((td) => {
+          const span = td.querySelector("span");
+          return ((span ? span.textContent : td.textContent) || "").trim();
+        })
+      )
+    : [];
+
+  let pngUrl = "";
   try {
-    const c = ensureChart();
-    applyChartThemeToInstance(c);
-    const slideMeta = window.__tidrapport_slide_meta;
-    const url = await exportChartPngDataUrl(c, st, slideMeta);
-    // Kort paus så webbläsaren hinner starta CSV-nedladdningen först
-    await new Promise((r) => setTimeout(r, 350));
-    downloadDataUrl(url, `${base}_diagram.png`);
-    if (els.statusText) {
-      const pages = slideMeta?.slideCount > 1 ? ` (sida ${(slideMeta.slideIndex || 0) + 1}/${slideMeta.slideCount} — använd «Spara alla diagramsidor» för resten)` : "";
-      els.statusText.textContent =
-        `Nedladdat: Excel-tabell (CSV) + diagram (PNG)${pages}. Öppna PNG:n för bilden — CSV:n är bara siffrorna.`;
+    if (hasPeople || chart) {
+      const c = ensureChart();
+      applyChartThemeToInstance(c);
+      pngUrl = await exportChartPngDataUrl(c, st, window.__tidrapport_slide_meta);
     }
   } catch (e) {
-    console.error(e);
-    if (els.statusText) {
-      els.statusText.textContent =
-        "Tabellen sparades, men diagram-PNG misslyckades. Prova «Spara diagram (PNG)» separat.";
-    }
+    console.warn("PNG for excel export failed", e);
+  }
+
+  // En enda fil (HTML som Excel öppnar) — dubbla nedladdningar blockeras ofta på mobil.
+  const escHtml = (s) =>
+    String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  const tableHtml = [
+    "<table border='1' cellspacing='0' cellpadding='4'>",
+    "<thead><tr>" + headers.map((h) => `<th>${escHtml(h)}</th>`).join("") + "</tr></thead>",
+    "<tbody>" +
+      rows
+        .map((r) => "<tr>" + r.map((c) => `<td>${escHtml(c)}</td>`).join("") + "</tr>")
+        .join("") +
+      "</tbody>",
+    "</table>",
+  ].join("");
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escHtml(
+    title
+  )}</title></head><body>
+<h1>${escHtml(title)}</h1>
+${pngUrl ? `<p><img src="${pngUrl}" alt="Diagram" style="max-width:100%;height:auto" /></p>` : "<p>(Diagram kunde inte bäddas in — använd Spara diagram PNG)</p>"}
+${tableHtml}
+</body></html>`;
+
+  const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${safeBase}.xls`;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+  if (els.statusText) {
+    els.statusText.textContent =
+      "Export sparad som Excel-fil (.xls) med tabell" +
+      (pngUrl ? " + diagram." : ".") +
+      " Öppna filen i Excel.";
   }
 }
 
