@@ -2679,7 +2679,7 @@ def admin_seed_wsx():
         return jsonify({"error": str(e)}), 500
 
 
-@app.post("/admin/seed_wsx_2026")
+@app.route("/admin/seed_wsx_2026", methods=["GET", "POST"])
 def admin_seed_wsx_2026():
     if not is_admin_user():
         return jsonify({"error": "unauthorized"}), 403
