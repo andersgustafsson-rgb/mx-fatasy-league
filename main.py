@@ -1679,6 +1679,7 @@ _WSX_2026_ROSTER = [
     # Season / later rounds (OUT for Calgary if not on gate)
     ("Joey Savatgy", "wsx_sx1", 17, "Honda", "Quad Lock Honda"),
     ("Enzo Lopes", "wsx_sx1", 16, "Honda", "MotoConcepts Racing"),
+    ("Tom Vialle", "wsx_sx1", None, "KTM", "Red Bull KTM"),  # British GP SX1 wildcard
     # --- SX2 Calgary line-up ---
     ("Max Anstie", "wsx_sx2", 1, "Honda", "Fire Power Honda"),
     ("Devin Simonson", "wsx_sx2", 70, "Honda", "Fire Power Honda"),
@@ -1700,7 +1701,6 @@ _WSX_2026_ROSTER = [
     ("Shane McElrath", "wsx_sx2", 12, "Honda", "Quad Lock Honda"),
     ("Jake Cannon", "wsx_sx2", 3, "Kawasaki", "Venum Bud Racing Kawasaki"),
     ("Hector Assuncao", "wsx_sx2", 4, "KTM", "595 Racing"),
-    ("Tom Vialle", "wsx_sx2", 28, "KTM", "Red Bull KTM"),  # British GP wildcard
 ]
 
 # Calgary Canadian GP gate lists (official SX1/SX2 Calgary line-up cards).
@@ -1751,8 +1751,14 @@ _WSX_ROUND_WILDCARDS = {
         "Luke Fauser",  # fill-in for Hector Assuncao
     },
     "British GP": {
-        "Tom Vialle",
+        "Tom Vialle",  # SX1 wildcard debut (Birmingham)
     },
+}
+
+
+# Wildcards who only tippa on listed GPs (OUT on all other WSX 2026 rounds).
+_WSX_ROUND_ONLY_WILDCARDS = {
+    "Tom Vialle": frozenset({"British GP"}),
 }
 
 
@@ -2594,6 +2600,73 @@ def sync_wsx_canadian_gp_entry_list() -> dict:
     return info
 
 
+def sync_wsx_round_only_wildcards() -> dict:
+    """
+    Round-only wildcards (t.ex. Tom Vialle @ British GP): tippa bara på listade GP.
+    Markeras OUT på övriga WSX 2026-omgångar; OUT rensas på deras GP.
+    """
+    wsx = Series.query.filter_by(name="WSX", year=2026).first()
+    if not wsx:
+        return {"skipped": True, "reason": "no_wsx_2026"}
+    if not _WSX_ROUND_ONLY_WILDCARDS:
+        return {"skipped": True, "reason": "none"}
+
+    comps = Competition.query.filter_by(series_id=wsx.id).all()
+    if not comps:
+        return {"skipped": True, "reason": "no_comps"}
+
+    marked_out = 0
+    cleared = 0
+    missing = []
+
+    for name, allowed in _WSX_ROUND_ONLY_WILDCARDS.items():
+        rider = (
+            Rider.query.filter(
+                Rider.name == name,
+                Rider.class_name.in_(("wsx_sx1", "wsx_sx2")),
+            ).first()
+        )
+        if not rider:
+            missing.append(name)
+            continue
+        allowed_names = {str(x).strip() for x in allowed}
+        for comp in comps:
+            on_round = (comp.name or "").strip() in allowed_names
+            row = CompetitionRiderStatus.query.filter_by(
+                competition_id=comp.id, rider_id=rider.id
+            ).first()
+            if on_round:
+                if row:
+                    db.session.delete(row)
+                    cleared += 1
+                continue
+            if not row:
+                db.session.add(
+                    CompetitionRiderStatus(
+                        competition_id=comp.id, rider_id=rider.id, status="OUT"
+                    )
+                )
+                marked_out += 1
+            elif row.status != "OUT":
+                row.status = "OUT"
+                marked_out += 1
+
+    if marked_out or cleared:
+        db.session.commit()
+
+    info = {
+        "marked_out": marked_out,
+        "cleared": cleared,
+        "missing_riders": missing,
+        "skipped": False,
+    }
+    print(
+        f"[WSX-SEED] round-only wildcards: out={marked_out} cleared={cleared} "
+        f"missing={missing}"
+    )
+    return info
+
+
 @app.post("/admin/seed_wsx")
 def admin_seed_wsx():
     """Legacy: ensure WSX 2025 rows exist (history). Prefer /admin/seed_wsx_2026."""
@@ -2614,11 +2687,13 @@ def admin_seed_wsx_2026():
         series_info = ensure_wsx_2026(deactivate_2025=True)
         roster_info = ensure_wsx_2026_roster()
         entry_info = sync_wsx_canadian_gp_entry_list()
+        wc_info = sync_wsx_round_only_wildcards()
         return jsonify({
             "message": "WSX 2026 seeded/verified",
             "series": series_info,
             "roster": roster_info,
             "canadian_gp_entry": entry_info,
+            "round_only_wildcards": wc_info,
         })
     except Exception as e:
         db.session.rollback()
@@ -18027,12 +18102,18 @@ def sync_wsx_official_results():
 
         # Calgary gate OUT/IN sync when importing Canadian GP
         entry_info = None
+        wc_info = None
         if (competition.name or "").strip().lower() == "canadian gp":
             try:
                 entry_info = sync_wsx_canadian_gp_entry_list()
             except Exception as entry_err:
                 db.session.rollback()
                 print(f"[WSX-SYNC] canadian entry sync skipped: {entry_err}")
+        try:
+            wc_info = sync_wsx_round_only_wildcards()
+        except Exception as wc_err:
+            db.session.rollback()
+            print(f"[WSX-SYNC] round-only wildcard sync skipped: {wc_err}")
 
         fetched = _fetch(url)
         events = fetched["events"]
@@ -27310,6 +27391,10 @@ def init_database():
                     sync_wsx_canadian_gp_entry_list()
                 except Exception as seed_err:
                     print(f"Warning: WSX Canadian GP entry sync failed: {seed_err}")
+                try:
+                    sync_wsx_round_only_wildcards()
+                except Exception as seed_err:
+                    print(f"Warning: WSX round-only wildcard sync failed: {seed_err}")
                 try:
                     from mxon_fantasy import ensure_mxon_2026
 
