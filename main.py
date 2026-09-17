@@ -1669,7 +1669,7 @@ _WSX_2026_ROSTER = [
     ("Cooper Webb", "wsx_sx1", 2, "Yamaha", "Rick Ware Racing"),
     ("Justin Hill", "wsx_sx1", 46, "Yamaha", "Rick Ware Racing"),
     ("Austin Politelli", "wsx_sx1", 98, "Honda", "MotoConcepts Racing"),
-    ("Mike Alessi", "wsx_sx1", 800, "Honda", "MotoConcepts Racing"),  # Canadian GP
+    ("Michael Alessi", "wsx_sx1", 800, "Honda", "MotoConcepts Racing"),  # Canadian GP
     ("Dean Wilson", "wsx_sx1", 15, "Honda", "Fire Power Honda / KMG"),
     ("Christian Craig", "wsx_sx1", 28, "Honda", "Fire Power Honda / KMG"),
     ("Vince Friese", "wsx_sx1", 719, "Stark", "Stark Racing"),
@@ -1683,7 +1683,7 @@ _WSX_2026_ROSTER = [
     # --- SX2 Calgary line-up ---
     ("Max Anstie", "wsx_sx2", 1, "Honda", "Fire Power Honda"),
     ("Devin Simonson", "wsx_sx2", 70, "Honda", "Fire Power Honda"),
-    ("Crockett Meyers", "wsx_sx2", 411, "Suzuki", "Pipes Motorsport Group"),
+    ("Crockett Myers", "wsx_sx2", 411, "Suzuki", "Pipes Motorsport Group"),
     ("Kyle Peters", "wsx_sx2", 110, "Suzuki", "Pipes Motorsport Group"),
     ("Cole Thompson", "wsx_sx2", 16, "Yamaha", "Team GSM"),
     ("Calvin Fonvieille", "wsx_sx2", 11, "Yamaha", "Team GSM"),
@@ -1700,7 +1700,7 @@ _WSX_2026_ROSTER = [
     # Season / later rounds (OUT for Calgary if not on gate)
     ("Shane McElrath", "wsx_sx2", 12, "Honda", "Quad Lock Honda"),
     ("Jake Cannon", "wsx_sx2", 3, "Kawasaki", "Venum Bud Racing Kawasaki"),
-    ("Hector Assuncao", "wsx_sx2", 4, "KTM", "595 Racing"),
+    ("Hector Assunção", "wsx_sx2", 4, "KTM", "595 Racing"),
 ]
 
 # Calgary Canadian GP gate lists (official SX1/SX2 Calgary line-up cards).
@@ -1714,7 +1714,7 @@ _WSX_CANADIAN_GP_SX1 = {
     "Cooper Webb",
     "Justin Hill",
     "Austin Politelli",
-    "Mike Alessi",
+    "Michael Alessi",
     "Dean Wilson",
     "Christian Craig",
     "Vince Friese",
@@ -1725,7 +1725,7 @@ _WSX_CANADIAN_GP_SX1 = {
 _WSX_CANADIAN_GP_SX2 = {
     "Max Anstie",
     "Devin Simonson",
-    "Crockett Meyers",
+    "Crockett Myers",
     "Kyle Peters",
     "Cole Thompson",
     "Calvin Fonvieille",
@@ -1745,10 +1745,10 @@ _WSX_CANADIAN_GP_SX2 = {
 # Shown with a small WC badge next to the tippa portrait.
 _WSX_ROUND_WILDCARDS = {
     "Canadian GP": {
-        "Mike Alessi",  # fill-in for Enzo Lopes
+        "Michael Alessi",  # fill-in for Enzo Lopes
         "Dean Wilson",  # fill-in for Joey Savatgy
         "Jack Chambers",  # fill-in for Jake Cannon
-        "Luke Fauser",  # fill-in for Hector Assuncao
+        "Luke Fauser",  # fill-in for Hector Assunção
     },
     "British GP": {
         "Tom Vialle",  # SX1 wildcard debut (Birmingham)
@@ -2305,7 +2305,7 @@ def _repair_orphaned_wsx_p1_results() -> dict:
 
 def _dedupe_wsx_roster_riders() -> dict:
     """
-    Ta bort felklassade/duplicerade WSX-rader (t.ex. Crockett Meyers som wsx_sx1 orphan
+    Ta bort felklassade/duplicerade WSX-rader (t.ex. Crockett Myers som wsx_sx1 orphan
     medan tippa använder wsx_sx2 #411). Remappar OUT/picks till kanonisk rad.
     """
     merged = 0
@@ -6516,9 +6516,10 @@ def _wsx_portrait_slug(name: str | None) -> str:
 # Also used when matching official WSX.com results (Michael Alessi, Crockett Myers, …).
 _WSX_NAME_ALIASES = {
     "Jason Andersson": "Jason Anderson",
-    "Crockett Myers": "Crockett Meyers",
-    "Michael Alessi": "Mike Alessi",
-    "Mike Alesssi": "Mike Alessi",
+    "Crockett Meyers": "Crockett Myers",
+    "Mike Alessi": "Michael Alessi",
+    "Mike Alesssi": "Michael Alessi",
+    "Hector Assuncao": "Hector Assunção",
     "Cameron Mcadoo": "Cameron McAdoo",
 }
 
@@ -17651,7 +17652,7 @@ def _match_rider_for_results_import(
     if not raw_name and rider_number is None:
         return None
 
-    # Prefer known WSX alt spellings (Michael Alessi → Mike Alessi, Myers → Meyers)
+    # Prefer known WSX alt spellings (Mike Alessi → Michael Alessi, Meyers → Myers)
     name_candidates = []
     if raw_name:
         name_candidates.append(raw_name)

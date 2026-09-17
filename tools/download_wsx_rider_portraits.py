@@ -64,10 +64,10 @@ ROSTER_NAMES = {
     "Michael Hicks",
     "Brian Hsu",
     "Kyle Peters",
-    "Crockett Meyers",
-    "Hector Assuncao",
+    "Crockett Myers",
+    "Hector Assunção",
     "Nico Koch",
-    "Mike Alessi",
+    "Michael Alessi",
     "Tom Vialle",
     "Dean Wilson",
     "Jack Chambers",
@@ -76,12 +76,13 @@ ROSTER_NAMES = {
     "Brodie Connolly",
 }
 
-# Alternate spellings on WSX site → our DB name
+# Alternate spellings on WSX site / files → official roster name
 NAME_ALIASES = {
-    "hector assunção": "Hector Assuncao",
-    "hector assuncao": "Hector Assuncao",
+    "hector assuncao": "Hector Assunção",
+    "hector assunção": "Hector Assunção",
     "cameron mcadoo": "Cameron McAdoo",
-    "crockett myers": "Crockett Meyers",
+    "crockett meyers": "Crockett Myers",
+    "mike alessi": "Michael Alessi",
 }
 
 
