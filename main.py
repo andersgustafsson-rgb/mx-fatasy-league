@@ -18570,6 +18570,7 @@ def compute_series_championship_totals():
                 "rider_number": rider.rider_number,
                 "bike_brand": rider.bike_brand or "",
                 "coast_250": rider.coast_250 or "",
+                "class_name": getattr(rider, "class_name", None) or "",
                 "image_url": merged_img,
             }
 
@@ -18583,6 +18584,52 @@ def compute_series_championship_totals():
         )
     except Exception as exc:
         print(f"WARNING apply_official_smx_2026_to_championship_totals: {exc}")
+
+    def _norm_rider_name(rid: int) -> str:
+        try:
+            from official_smx_2026 import _norm_name
+
+            return _norm_name((rider_meta.get(rid) or {}).get("rider_name") or "")
+        except Exception:
+            return str((rider_meta.get(rid) or {}).get("rider_name") or "").strip().lower()
+
+    def _prefer_ama_rid(rids: list[int], *, want_250: bool | None = None) -> int:
+        """Pick AMA 450/250 row over WSX twin when collapsing duplicate names."""
+
+        def score(rid: int) -> tuple[int, int]:
+            cls = str((rider_meta.get(rid) or {}).get("class_name") or "").strip().lower()
+            if want_250 is True and cls == "250cc":
+                pri = 0
+            elif want_250 is False and cls == "450cc":
+                pri = 0
+            elif cls in ("450cc", "250cc"):
+                pri = 1
+            elif cls.startswith("wsx"):
+                pri = 3
+            else:
+                pri = 2
+            return (pri, rid)
+
+        return sorted({int(r) for r in rids}, key=score)[0]
+
+    def _collapse_points_by_name(
+        points_by_rid: dict[int, float],
+        *,
+        want_250: bool | None = None,
+    ) -> dict[int, float]:
+        """Sum twin-row points (AMA+WSX same name) onto one canonical rider id."""
+        by_name: dict[str, list[int]] = {}
+        for rid in points_by_rid:
+            by_name.setdefault(_norm_rider_name(int(rid)), []).append(int(rid))
+        out: dict[int, float] = {}
+        for norm, rids in by_name.items():
+            if not norm:
+                for rid in rids:
+                    out[rid] = float(points_by_rid.get(rid) or 0)
+                continue
+            keeper = _prefer_ama_rid(rids, want_250=want_250)
+            out[keeper] = sum(float(points_by_rid.get(rid) or 0) for rid in rids)
+        return out
 
     def top_list(*bucket_parts, limit=12):
         bucket = tuple(bucket_parts)
@@ -18607,6 +18654,7 @@ def compute_series_championship_totals():
             bucket = tuple(bucket_parts)
             for rid, p in (totals.get(bucket) or {}).items():
                 merged[rid] += float(p)
+        merged = _collapse_points_by_name(merged, want_250=False)
         items = sorted(merged.items(), key=lambda x: (-x[1], x[0]))
         out = []
         for rank, (rid, p) in enumerate(items, start=1):
@@ -18636,6 +18684,7 @@ def compute_series_championship_totals():
                 bucket = tuple(bucket_parts)
                 for rid, p in (totals.get(bucket) or {}).items():
                     merged[int(rid)] += float(p)
+        merged = _collapse_points_by_name(merged, want_250=True)
         items = sorted(merged.items(), key=lambda x: (-x[1], x[0]))
         out = []
         for rank, (rid, p) in enumerate(items, start=1):
@@ -18652,20 +18701,22 @@ def compute_series_championship_totals():
                 break
         return out
 
-    def smx_playoff_top_list(sx_bucket, mx_bucket, smx_bucket, limit=12):
+    def smx_playoff_top_list(sx_bucket, mx_bucket, smx_bucket, limit=25):
         """Official SMX World Championship: seed adjustment (top 20 combined) + playoff rounds."""
         combined = defaultdict(float)
         for rid, p in (totals.get(sx_bucket) or {}).items():
             combined[int(rid)] += float(p)
         for rid, p in (totals.get(mx_bucket) or {}).items():
             combined[int(rid)] += float(p)
+        combined = _collapse_points_by_name(combined, want_250=False)
 
         playoff_pts = defaultdict(float)
         ranked = sorted(combined.items(), key=lambda x: (-x[1], x[0]))
         for rank, (rid, _) in enumerate(ranked[:20], start=1):
             playoff_pts[rid] += float(get_smx_qualification_points(rank))
 
-        for rid, p in (totals.get(smx_bucket) or {}).items():
+        smx_raw = {int(rid): float(p) for rid, p in (totals.get(smx_bucket) or {}).items()}
+        for rid, p in _collapse_points_by_name(smx_raw, want_250=False).items():
             playoff_pts[int(rid)] += float(p)
 
         items = sorted(playoff_pts.items(), key=lambda x: (-x[1], x[0]))
@@ -18678,7 +18729,7 @@ def compute_series_championship_totals():
             out.append(row)
         return out
 
-    def smx_playoff_top_list_unified_250(limit=12):
+    def smx_playoff_top_list_unified_250(limit=25):
         """SMX World Championship 250 — unified combined seed + playoff rounds."""
         combined = defaultdict(float)
         for coast in ("east", "west"):
@@ -18686,16 +18737,20 @@ def compute_series_championship_totals():
                 bucket = tuple(bucket_parts)
                 for rid, p in (totals.get(bucket) or {}).items():
                     combined[int(rid)] += float(p)
+        combined = _collapse_points_by_name(combined, want_250=True)
 
         playoff_pts = defaultdict(float)
         ranked = sorted(combined.items(), key=lambda x: (-x[1], x[0]))
         for rank, (rid, _) in enumerate(ranked[:20], start=1):
             playoff_pts[rid] += float(get_smx_qualification_points(rank))
 
+        smx_raw: dict[int, float] = defaultdict(float)
         for coast in ("east", "west"):
             smx_bucket = ("smx", "250", coast)
             for rid, p in (totals.get(smx_bucket) or {}).items():
-                playoff_pts[int(rid)] += float(p)
+                smx_raw[int(rid)] += float(p)
+        for rid, p in _collapse_points_by_name(dict(smx_raw), want_250=True).items():
+            playoff_pts[int(rid)] += float(p)
 
         items = sorted(playoff_pts.items(), key=lambda x: (-x[1], x[0]))
         out = []

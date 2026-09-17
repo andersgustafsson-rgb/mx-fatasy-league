@@ -158,28 +158,108 @@ def apply_official_smx_2026_to_championship_totals(
     *,
     season_year: int,
 ) -> None:
-    """Patch SX/MX bucket totals so SMX Combined matches supermotocross.com (2026)."""
+    """Patch SX/MX bucket totals so SMX Combined matches supermotocross.com (2026).
+
+    Important: the same person can exist as both AMA (450cc/250cc) and WSX (wsx_sx*).
+    Only the AMA row should carry Combined seed points — otherwise seed ranks shift
+    (duplicate Cooper Webb etc.) and World Championship totals drift from official.
+    """
     if season_year != 2026:
         return
 
-    id_by_name: dict[str, int] = {}
+    ids_by_name: dict[str, list[int]] = {}
     for rid, meta in rider_meta.items():
-        id_by_name[_norm_name(meta.get("rider_name") or "")] = int(rid)
+        norm = _norm_name(meta.get("rider_name") or "")
+        if not norm:
+            continue
+        ids_by_name.setdefault(norm, []).append(int(rid))
+
+    def _prefer_ama_id(norm: str, *, want_250: bool) -> int | None:
+        ids = list(ids_by_name.get(norm) or [])
+        ama_cls = "250cc" if want_250 else "450cc"
+
+        # If only a WSX twin is in rider_meta, pull the AMA row from DB.
+        try:
+            from models import Rider
+
+            ama_row = (
+                Rider.query.filter(
+                    Rider.class_name == ama_cls,
+                )
+                .all()
+            )
+            for r in ama_row:
+                if _norm_name(r.name) == norm:
+                    ids.append(int(r.id))
+                    if int(r.id) not in rider_meta:
+                        rider_meta[int(r.id)] = {
+                            "rider_id": int(r.id),
+                            "rider_name": r.name,
+                            "rider_number": r.rider_number,
+                            "bike_brand": r.bike_brand or "",
+                            "coast_250": r.coast_250 or "",
+                            "class_name": r.class_name or "",
+                            "image_url": getattr(r, "rider_image_data", None) or r.image_url,
+                        }
+                    break
+        except Exception:
+            pass
+
+        ids = sorted(set(ids))
+        if not ids:
+            return None
+
+        def score(rid: int) -> tuple[int, int]:
+            cls = str((rider_meta.get(rid) or {}).get("class_name") or "").strip().lower()
+            if cls == ama_cls:
+                pri = 0
+            elif cls.startswith("wsx"):
+                pri = 2
+            else:
+                pri = 1
+            return (pri, rid)
+
+        return sorted(ids, key=score)[0]
+
+    def _clear_name_from_bucket(bucket: tuple, norm: str) -> None:
+        bucket_map = totals.get(bucket)
+        if not bucket_map:
+            return
+        for rid in ids_by_name.get(norm) or []:
+            bucket_map.pop(int(rid), None)
 
     for name, sx, mx in OFFICIAL_SMX_450_2026:
-        rid = id_by_name.get(_norm_name(name))
+        norm = _norm_name(name)
+        rid = _prefer_ama_id(norm, want_250=False)
         if not rid:
             continue
+        _clear_name_from_bucket(("sx", "450"), norm)
+        _clear_name_from_bucket(("mx", "450"), norm)
         totals.setdefault(("sx", "450"), {})[rid] = float(sx)
         totals.setdefault(("mx", "450"), {})[rid] = float(mx)
 
     for name, sx, mx in OFFICIAL_SMX_250_2026:
-        rid = id_by_name.get(_norm_name(name))
+        norm = _norm_name(name)
+        rid = _prefer_ama_id(norm, want_250=True)
         if not rid:
             continue
         coast = str((rider_meta.get(rid) or {}).get("coast_250") or "").strip().lower()
         if coast not in ("east", "west"):
+            # Fall back to any sibling id that has a coast
+            for alt in ids_by_name.get(norm) or []:
+                c2 = str((rider_meta.get(alt) or {}).get("coast_250") or "").strip().lower()
+                if c2 in ("east", "west"):
+                    rid = alt
+                    coast = c2
+                    break
+        if coast not in ("east", "west"):
             continue
+        _clear_name_from_bucket(("sx", "250", coast), norm)
+        _clear_name_from_bucket(("mx", "250", coast), norm)
+        # Also clear opposite coast leftovers for this name
+        other = "west" if coast == "east" else "east"
+        _clear_name_from_bucket(("sx", "250", other), norm)
+        _clear_name_from_bucket(("mx", "250", other), norm)
         totals.setdefault(("sx", "250", coast), {})[rid] = float(sx)
         totals.setdefault(("mx", "250", coast), {})[rid] = float(mx)
 
