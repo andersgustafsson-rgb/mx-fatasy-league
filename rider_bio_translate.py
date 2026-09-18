@@ -63,22 +63,51 @@ def _translate_chunk_en_sv(text: str) -> str:
     return _translate_chunk(text, source="en", target="sv")
 
 
-# MC-shopord som GTX ofta översätter fel (sv "styre" → da "tavle").
+# Ord/fraser som GTX ofta översätter fel i kundmail.
+# Hälsningar: "Tjena" → da "Vente!" / en "Wait!". Ortnamn: "Helsingborg" → "Helsinki".
 _KUNDMAIL_TERM_MAP = {
     "da": {
+        "tjena": "Hej",
+        "tja": "Hej",
+        "hejsan": "Hej",
         "styre": "styre",
         "styret": "styret",
         "styren": "styren",
         "styrets": "styrets",
+        "helsingborg": "Helsingborg",
+        "hälsingborg": "Helsingborg",
     },
     "en": {
+        "tjena": "Hey",
+        "tja": "Hey",
+        "hejsan": "Hi",
         "styre": "handlebar",
         "styret": "handlebar",
         "styren": "handlebars",
         "styrets": "handlebar's",
+        "helsingborg": "Helsingborg",
+        "hälsingborg": "Helsingborg",
+    },
+    "sv": {
+        "helsingborg": "Helsingborg",
+        "hälsingborg": "Helsingborg",
     },
 }
-_KUNDMAIL_TERM_RE = re.compile(r"\b(styrets|styret|styren|styre)\b", re.IGNORECASE)
+_KUNDMAIL_TERM_RE = re.compile(
+    r"\b(hälsingborg|helsingborg|hejsan|tjena|styrets|styret|styren|styre|tja)\b",
+    re.IGNORECASE,
+)
+
+
+def _match_term_case(src: str, repl: str) -> str:
+    """Behåll ungefär samma versaler som i originalordet."""
+    if not repl:
+        return repl
+    if src.isupper():
+        return repl.upper()
+    if src[:1].isupper():
+        return repl[:1].upper() + repl[1:]
+    return repl[:1].lower() + repl[1:] if len(repl) > 1 else repl.lower()
 
 
 def _protect_kundmail_terms(text: str, target: str) -> tuple[str, list[str]]:
@@ -88,12 +117,18 @@ def _protect_kundmail_terms(text: str, target: str) -> tuple[str, list[str]]:
     tokens: list[str] = []
 
     def _repl(match: re.Match[str]) -> str:
-        key = match.group(0).lower()
+        raw = match.group(0)
+        key = raw.lower()
         replacement = term_map.get(key)
         if not replacement:
-            return match.group(0)
+            return raw
+        # Ortnamn: behåll alltid kanonisk form (inte lower-case från meningen).
+        if key in ("helsingborg", "hälsingborg"):
+            final = replacement
+        else:
+            final = _match_term_case(raw, replacement)
         token = f"⟦KM{len(tokens)}⟧"
-        tokens.append(replacement)
+        tokens.append(final)
         return token
 
     return _KUNDMAIL_TERM_RE.sub(_repl, text), tokens

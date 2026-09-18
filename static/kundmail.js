@@ -2053,33 +2053,59 @@ function forceGenerate() {
   generate({ force: true });
 }
 
-/** MC-shopord som GTX ofta missar (sv "styre" → da "tavle"). */
+/** Ord GTX ofta missar: hälsningar (Tjena→Vente), ortnamn (Helsingborg→Helsinki), MC (styre→tavle). */
 const KUNDMAIL_TERM_MAP = {
   da: {
+    tjena: "Hej",
+    tja: "Hej",
+    hejsan: "Hej",
     styre: "styre",
     styret: "styret",
     styren: "styren",
     styrets: "styrets",
+    helsingborg: "Helsingborg",
+    hälsingborg: "Helsingborg",
   },
   en: {
+    tjena: "Hey",
+    tja: "Hey",
+    hejsan: "Hi",
     styre: "handlebar",
     styret: "handlebar",
     styren: "handlebars",
     styrets: "handlebar's",
+    helsingborg: "Helsingborg",
+    hälsingborg: "Helsingborg",
+  },
+  sv: {
+    helsingborg: "Helsingborg",
+    hälsingborg: "Helsingborg",
   },
 };
+
+function matchKundmailTermCase(src, repl) {
+  if (!repl) return repl;
+  if (src === src.toUpperCase()) return repl.toUpperCase();
+  if (src[0] && src[0] === src[0].toUpperCase()) {
+    return repl[0].toUpperCase() + repl.slice(1);
+  }
+  return repl[0].toLowerCase() + repl.slice(1);
+}
 
 function protectKundmailTerms(text, target) {
   const map = KUNDMAIL_TERM_MAP[target];
   if (!map || !text) return { text, tokens: [] };
   const tokens = [];
-  const re = /\b(styrets|styret|styren|styre)\b/gi;
+  const re = /\b(hälsingborg|helsingborg|hejsan|tjena|styrets|styret|styren|styre|tja)\b/gi;
   const protectedText = text.replace(re, (match) => {
     const key = match.toLowerCase();
     const replacement = map[key];
     if (!replacement) return match;
+    const final = (key === "helsingborg" || key === "hälsingborg")
+      ? replacement
+      : matchKundmailTermCase(match, replacement);
     const token = `⟦KM${tokens.length}⟧`;
-    tokens.push(replacement);
+    tokens.push(final);
     return token;
   });
   return { text: protectedText, tokens };
@@ -2181,7 +2207,8 @@ async function translateMailTo(targetLang) {
   if (btn) btn.textContent = "Översätter…";
   setTranslateStatus(`Översätter till ${label}…`);
 
-  const source = "auto";
+  // Prefer the language selector over "auto" — auto misreads slang (Tjena→Vente).
+  const source = cleanStr(els.language?.value) || "sv";
   try {
     let subjectOut = "";
     let bodyOut = "";
