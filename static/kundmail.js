@@ -2053,35 +2053,47 @@ function forceGenerate() {
   generate({ force: true });
 }
 
-/** Ord GTX ofta missar: hälsningar (Tjena→Vente), ortnamn (Helsingborg→Helsinki), MC (styre→tavle). */
-const KUNDMAIL_TERM_MAP = {
-  da: {
-    tjena: "Hej",
-    tja: "Hej",
-    hejsan: "Hej",
-    styre: "styre",
-    styret: "styret",
-    styren: "styren",
-    styrets: "styrets",
-    helsingborg: "Helsingborg",
-    hälsingborg: "Helsingborg",
-  },
-  en: {
-    tjena: "Hey",
-    tja: "Hey",
-    hejsan: "Hi",
-    styre: "handlebar",
-    styret: "handlebar",
-    styren: "handlebars",
-    styrets: "handlebar's",
-    helsingborg: "Helsingborg",
-    hälsingborg: "Helsingborg",
-  },
-  sv: {
-    helsingborg: "Helsingborg",
-    hälsingborg: "Helsingborg",
-  },
+/** GTX-missar i kundmail — fraser först, sedan ord (mvh→osv, Tjena→Vente, returen→afkastet …). */
+const KUNDMAIL_PHRASES = [
+  ["med vänliga hälsningar", { da: "Med venlig hilsen", en: "Kind regards" }],
+  ["med vänlig hälsning", { da: "Med venlig hilsen", en: "Kind regards" }],
+  ["bästa hälsningar", { da: "Venlig hilsen", en: "Best regards" }],
+  ["öppet köp", { da: "åbent køb", en: "right of withdrawal" }],
+  ["hör gärna av dig", { da: "Vend gerne tilbage", en: "Feel free to get in touch" }],
+  ["hör av dig", { da: "Vend tilbage", en: "Get in touch" }],
+  ["återkom gärna", { da: "Vend gerne tilbage", en: "Please get back to us" }],
+];
+
+const KUNDMAIL_WORDS = {
+  mvh: { da: "Mvh", en: "Kind regards" },
+  tjena: { da: "Hej", en: "Hey" },
+  tja: { da: "Hej", en: "Hey" },
+  hejsan: { da: "Hej", en: "Hi" },
+  hälsningar: { da: "Hilsen", en: "Regards" },
+  vänligen: { da: "Venligst", en: "Please" },
+  snälla: { da: "Venligst", en: "Please" },
+  obs: { da: "OBS", en: "Note" },
+  styre: { da: "styre", en: "handlebar" },
+  styret: { da: "styret", en: "handlebar" },
+  styren: { da: "styren", en: "handlebars" },
+  styrets: { da: "styrets", en: "handlebar's" },
+  helsingborg: { da: "Helsingborg", en: "Helsingborg", sv: "Helsingborg" },
+  hälsingborg: { da: "Helsingborg", en: "Helsingborg", sv: "Helsingborg" },
+  returen: { da: "returnen", en: "the return" },
+  retur: { da: "retur", en: "return" },
+  returärende: { da: "retursag", en: "return case" },
+  returärendet: { da: "retursagen", en: "the return case" },
+  reklamation: { da: "reklamation", en: "claim" },
+  reklamationen: { da: "reklamationen", en: "the claim" },
+  återbetalning: { da: "tilbagebetaling", en: "refund" },
+  återbetalar: { da: "tilbagebetaler", en: "refunds" },
+  däck: { da: "dæk", en: "tire" },
+  tröja: { da: "trøje", en: "jersey" },
+  tröjan: { da: "trøjen", en: "the jersey" },
+  knäskydd: { da: "knæbeskyttere", en: "knee guards" },
 };
+
+const KUNDMAIL_CANONICAL = new Set(["helsingborg", "hälsingborg", "obs", "mvh"]);
 
 function matchKundmailTermCase(src, repl) {
   if (!repl) return repl;
@@ -2092,23 +2104,50 @@ function matchKundmailTermCase(src, repl) {
   return repl[0].toLowerCase() + repl.slice(1);
 }
 
+function escapeRegExp(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function protectKundmailTerms(text, target) {
-  const map = KUNDMAIL_TERM_MAP[target];
-  if (!map || !text) return { text, tokens: [] };
+  if (!text || !["da", "en", "sv"].includes(target)) return { text, tokens: [] };
   const tokens = [];
-  const re = /\b(hälsingborg|helsingborg|hejsan|tjena|styrets|styret|styren|styre|tja)\b/gi;
-  const protectedText = text.replace(re, (match) => {
-    const key = match.toLowerCase();
-    const replacement = map[key];
-    if (!replacement) return match;
-    const final = (key === "helsingborg" || key === "hälsingborg")
-      ? replacement
-      : matchKundmailTermCase(match, replacement);
+  let out = text;
+
+  const pushToken = (replacement) => {
     const token = `⟦KM${tokens.length}⟧`;
-    tokens.push(final);
+    tokens.push(replacement);
     return token;
+  };
+
+  const phrases = [...KUNDMAIL_PHRASES].sort((a, b) => b[0].length - a[0].length);
+  for (const [phrase, langMap] of phrases) {
+    const repl = langMap[target];
+    if (!repl) continue;
+    const re = new RegExp(escapeRegExp(phrase), "gi");
+    out = out.replace(re, () => pushToken(repl));
+  }
+
+  const wordKeys = Object.keys(KUNDMAIL_WORDS).sort((a, b) => b.length - a.length);
+  const wordRe = new RegExp(`\\b(${wordKeys.map(escapeRegExp).join("|")})\\b`, "gi");
+  out = out.replace(wordRe, (match) => {
+    const key = match.toLowerCase();
+    const replacement = KUNDMAIL_WORDS[key]?.[target];
+    if (!replacement) return match;
+    let final;
+    if (KUNDMAIL_CANONICAL.has(key)) {
+      final = replacement;
+      if (match === match.toUpperCase() && key === "obs") {
+        final = replacement.toUpperCase();
+      } else if (match === match.toUpperCase() && key === "mvh" && target === "da") {
+        final = "MVH";
+      }
+    } else {
+      final = matchKundmailTermCase(match, replacement);
+    }
+    return pushToken(final);
   });
-  return { text: protectedText, tokens };
+
+  return { text: out, tokens };
 }
 
 function restoreKundmailTerms(text, tokens) {

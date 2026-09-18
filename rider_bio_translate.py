@@ -63,38 +63,89 @@ def _translate_chunk_en_sv(text: str) -> str:
     return _translate_chunk(text, source="en", target="sv")
 
 
-# Ord/fraser som GTX ofta översätter fel i kundmail.
-# Hälsningar: "Tjena" → da "Vente!" / en "Wait!". Ortnamn: "Helsingborg" → "Helsinki".
-_KUNDMAIL_TERM_MAP = {
-    "da": {
-        "tjena": "Hej",
-        "tja": "Hej",
-        "hejsan": "Hej",
-        "styre": "styre",
-        "styret": "styret",
-        "styren": "styren",
-        "styrets": "styrets",
-        "helsingborg": "Helsingborg",
-        "hälsingborg": "Helsingborg",
-    },
-    "en": {
-        "tjena": "Hey",
-        "tja": "Hey",
-        "hejsan": "Hi",
-        "styre": "handlebar",
-        "styret": "handlebar",
-        "styren": "handlebars",
-        "styrets": "handlebar's",
-        "helsingborg": "Helsingborg",
-        "hälsingborg": "Helsingborg",
-    },
-    "sv": {
-        "helsingborg": "Helsingborg",
-        "hälsingborg": "Helsingborg",
-    },
+# GTX-missar i kundmail — fraser först (längsta vinner), sedan enstaka ord.
+# Exempel: "mvh"→"osv", "Tjena"→"Vente", "returen"→"afkastet", "styre"→"herske".
+_KUNDMAIL_PHRASES: list[tuple[str, dict[str, str]]] = [
+    (
+        "med vänliga hälsningar",
+        {"da": "Med venlig hilsen", "en": "Kind regards"},
+    ),
+    (
+        "med vänlig hälsning",
+        {"da": "Med venlig hilsen", "en": "Kind regards"},
+    ),
+    (
+        "bästa hälsningar",
+        {"da": "Venlig hilsen", "en": "Best regards"},
+    ),
+    (
+        "öppet köp",
+        {"da": "åbent køb", "en": "right of withdrawal"},
+    ),
+    (
+        "hör gärna av dig",
+        {"da": "Vend gerne tilbage", "en": "Feel free to get in touch"},
+    ),
+    (
+        "hör av dig",
+        {"da": "Vend tilbage", "en": "Get in touch"},
+    ),
+    (
+        "återkom gärna",
+        {"da": "Vend gerne tilbage", "en": "Please get back to us"},
+    ),
+]
+
+# Ord → {target_lang: replacement}. Saknas språk = ingen skydd för det målet.
+_KUNDMAIL_WORDS: dict[str, dict[str, str]] = {
+    "mvh": {"da": "Mvh", "en": "Kind regards"},
+    "tjena": {"da": "Hej", "en": "Hey"},
+    "tja": {"da": "Hej", "en": "Hey"},
+    "hejsan": {"da": "Hej", "en": "Hi"},
+    "hälsningar": {"da": "Hilsen", "en": "Regards"},
+    "vänligen": {"da": "Venligst", "en": "Please"},
+    "snälla": {"da": "Venligst", "en": "Please"},
+    "obs": {"da": "OBS", "en": "Note"},
+    "styre": {"da": "styre", "en": "handlebar"},
+    "styret": {"da": "styret", "en": "handlebar"},
+    "styren": {"da": "styren", "en": "handlebars"},
+    "styrets": {"da": "styrets", "en": "handlebar's"},
+    "helsingborg": {"da": "Helsingborg", "en": "Helsingborg", "sv": "Helsingborg"},
+    "hälsingborg": {"da": "Helsingborg", "en": "Helsingborg", "sv": "Helsingborg"},
+    "returen": {"da": "returnen", "en": "the return"},
+    "retur": {"da": "retur", "en": "return"},
+    "returärende": {"da": "retursag", "en": "return case"},
+    "returärendet": {"da": "retursagen", "en": "the return case"},
+    "reklamation": {"da": "reklamation", "en": "claim"},
+    "reklamationen": {"da": "reklamationen", "en": "the claim"},
+    "återbetalning": {"da": "tilbagebetaling", "en": "refund"},
+    "återbetalar": {"da": "tilbagebetaler", "en": "refunds"},
+    "däck": {"da": "dæk", "en": "tire"},
+    "tröja": {"da": "trøje", "en": "jersey"},
+    "tröjan": {"da": "trøjen", "en": "the jersey"},
+    "knäskydd": {"da": "knæbeskyttere", "en": "knee guards"},
 }
-_KUNDMAIL_TERM_RE = re.compile(
-    r"\b(hälsingborg|helsingborg|hejsan|tjena|styrets|styret|styren|styre|tja)\b",
+
+# Ord som alltid ska ha kanonisk form (inte case-match från källan).
+_KUNDMAIL_CANONICAL = frozenset(
+    {
+        "helsingborg",
+        "hälsingborg",
+        "obs",
+        "mvh",
+    }
+)
+
+_KUNDMAIL_WORD_RE = re.compile(
+    r"\b("
+    + "|".join(
+        sorted(
+            (re.escape(w) for w in _KUNDMAIL_WORDS),
+            key=len,
+            reverse=True,
+        )
+    )
+    + r")\b",
     re.IGNORECASE,
 )
 
@@ -111,27 +162,50 @@ def _match_term_case(src: str, repl: str) -> str:
 
 
 def _protect_kundmail_terms(text: str, target: str) -> tuple[str, list[str]]:
-    term_map = _KUNDMAIL_TERM_MAP.get((target or "").lower())
-    if not term_map or not text:
+    target = (target or "").lower()
+    if not text or target not in ("da", "en", "sv"):
         return text, []
     tokens: list[str] = []
+    out = text
 
-    def _repl(match: re.Match[str]) -> str:
-        raw = match.group(0)
-        key = raw.lower()
-        replacement = term_map.get(key)
-        if not replacement:
-            return raw
-        # Ortnamn: behåll alltid kanonisk form (inte lower-case från meningen).
-        if key in ("helsingborg", "hälsingborg"):
-            final = replacement
-        else:
-            final = _match_term_case(raw, replacement)
+    def _token(replacement: str) -> str:
         token = f"⟦KM{len(tokens)}⟧"
-        tokens.append(final)
+        tokens.append(replacement)
         return token
 
-    return _KUNDMAIL_TERM_RE.sub(_repl, text), tokens
+    # 1) Fraser (längsta först) — case-insensitive.
+    for phrase, lang_map in sorted(_KUNDMAIL_PHRASES, key=lambda x: len(x[0]), reverse=True):
+        repl = lang_map.get(target)
+        if not repl:
+            continue
+        pattern = re.compile(re.escape(phrase), re.IGNORECASE)
+
+        def _phrase_repl(match: re.Match[str], _repl: str = repl) -> str:
+            return _token(_repl)
+
+        out = pattern.sub(_phrase_repl, out)
+
+    # 2) Enstaka ord.
+    def _word_repl(match: re.Match[str]) -> str:
+        raw = match.group(0)
+        key = raw.lower()
+        lang_map = _KUNDMAIL_WORDS.get(key) or {}
+        replacement = lang_map.get(target)
+        if not replacement:
+            return raw
+        if key in _KUNDMAIL_CANONICAL:
+            final = replacement
+            # Behåll OBS/MVH i versaler på danska; engelska får alltid full fras för mvh.
+            if raw.isupper() and key == "obs":
+                final = replacement.upper()
+            elif raw.isupper() and key == "mvh" and target == "da":
+                final = "MVH"
+        else:
+            final = _match_term_case(raw, replacement)
+        return _token(final)
+
+    out = _KUNDMAIL_WORD_RE.sub(_word_repl, out)
+    return out, tokens
 
 
 def _restore_kundmail_terms(text: str, tokens: list[str]) -> str:
