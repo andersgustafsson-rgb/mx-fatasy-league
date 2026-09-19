@@ -16,7 +16,7 @@
 
     {# —— Har konto —— #}
     <section class="pit-pass-panel pit-pass-panel--login" data-pit-panel="login" hidden>
-      <button type="button" class="pit-pass-back" data-pit-mode="signup">← Tillbaka</button>
+      <button type="button" class="pit-pass-back" data-pit-mode="signup">← Skapa konto istället</button>
       <h3 class="pit-pass-section-title">Logga in</h3>
       <p class="pit-pass-section-lead">Välkommen tillbaka — fortsätt tippa där du var.</p>
       <form id="pit-pass-login-form" class="pit-pass-form" autocomplete="on">
@@ -96,8 +96,9 @@
     peekKey: {{ pit_pass_peek_key | default('mx_pit_pass_peek') | tojson }},
     autoShow: {{ pit_pass_auto_show | default(true) | tojson }},
     startHidden: {{ pit_pass_start_hidden | default(false) | tojson }},
+    initialMode: {{ pit_pass_initial_mode | default('signup') | tojson }},
     guardSelectors: {{ pit_pass_guard_selectors | default([]) | tojson }}
   };
 </script>
-<script src="{{ url_for('static', filename='pit_pass.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='pit_pass.js') }}?v=3"></script>
 {% endif %}

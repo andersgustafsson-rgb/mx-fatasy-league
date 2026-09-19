@@ -26,10 +26,10 @@
     }
   }
 
-  function showPitPass() {
+  function showPitPass(mode) {
     overlay.classList.remove("is-peek");
     document.body.style.overflow = "hidden";
-    setMode("signup");
+    setMode(mode || cfg.initialMode || "signup");
   }
 
   function peek() {
@@ -40,10 +40,11 @@
     } catch (e) {}
   }
 
-  window.MXShowPitPass = showPitPass;
+  window.MXShowPitPass = function () {
+    showPitPass(cfg.initialMode || "signup");
+  };
   window.MXShowPitPassLogin = function () {
-    showPitPass();
-    setMode("login");
+    showPitPass("login");
   };
 
   overlay.querySelectorAll("[data-pit-mode]").forEach(function (btn) {
