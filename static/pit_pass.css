@@ -81,6 +81,27 @@
   font-size: 0.82rem;
   color: #cbd5e1;
 }
+.pit-pass-login {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 0 0 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 999px;
+  border: 1.5px solid rgba(103, 232, 249, 0.55);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e2e8f0;
+  font-weight: 800;
+  font-size: 0.95rem;
+  text-decoration: none;
+}
+.pit-pass-login:hover {
+  border-color: #67e8f9;
+  background: rgba(34, 211, 238, 0.12);
+  color: #fff;
+}
 .pit-pass-google {
   margin-bottom: 0.15rem;
 }
@@ -165,10 +186,6 @@
   text-align: center;
   font-size: 0.78rem;
   color: #64748b;
-}
-.pit-pass-foot a {
-  color: #67e8f9;
-  text-decoration: underline;
 }
 .pit-pass-peek {
   background: none;
