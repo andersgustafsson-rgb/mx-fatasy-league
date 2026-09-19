@@ -30109,8 +30109,12 @@ def _competition_race_schedule(comp) -> dict:
     """
     Race start + pick deadline in UTC (naive) and labels for countdown UI.
     start_time is interpreted in competition.timezone (banens lokala tidszon).
+
+    Default: picks lock 2h before start_time (gate/race).
+    SMX: if first_quali is set in SMX_RACE_META, lock at that local time instead
+    (qualifying reveals pace — same idea as MXoN locking vs Saturday kval).
     """
-    from datetime import date, datetime, timedelta
+    from datetime import date, datetime, time as time_type, timedelta
 
     raw_date = getattr(comp, "event_date", None)
     if isinstance(raw_date, str):
@@ -30169,8 +30173,47 @@ def _competition_race_schedule(comp) -> dict:
             utc_offset = offsets.get(timezone_val, -8)
             race_datetime_utc = race_local_naive - timedelta(hours=utc_offset)
 
-    deadline_datetime_utc = race_datetime_utc - timedelta(hours=2)
     deadline_local_naive = race_local_naive - timedelta(hours=2)
+    deadline_datetime_utc = race_datetime_utc - timedelta(hours=2)
+    deadline_aware = None
+
+    # SMX: lock when first qualifying starts (not 2h before gate drop).
+    try:
+        from trackmap_utils import get_smx_race_meta
+
+        smx_meta = get_smx_race_meta(getattr(comp, "name", "") or "")
+        fq = (smx_meta or {}).get("first_quali")
+        if fq and len(fq) >= 2:
+            deadline_local_naive = datetime.combine(
+                event_date, time_type(int(fq[0]), int(fq[1]))
+            )
+            try:
+                from zoneinfo import ZoneInfo
+
+                deadline_aware = deadline_local_naive.replace(tzinfo=ZoneInfo(timezone_val))
+                deadline_datetime_utc = deadline_aware.astimezone(ZoneInfo("UTC")).replace(
+                    tzinfo=None
+                )
+            except Exception:
+                try:
+                    import pytz
+
+                    deadline_aware = pytz.timezone(timezone_val).localize(deadline_local_naive)
+                    deadline_datetime_utc = deadline_aware.astimezone(pytz.UTC).replace(
+                        tzinfo=None
+                    )
+                except Exception:
+                    month = event_date.month
+                    summer = month in (3, 4, 5, 6, 7, 8, 9, 10)
+                    offsets = {
+                        "America/Los_Angeles": -7 if summer else -8,
+                        "America/Chicago": -5 if summer else -6,
+                        "America/New_York": -4 if summer else -5,
+                    }
+                    utc_offset = offsets.get(timezone_val, -7)
+                    deadline_datetime_utc = deadline_local_naive - timedelta(hours=utc_offset)
+    except Exception as exc:
+        print(f"WARNING SMX first_quali deadline override: {exc}")
 
     tz_label = _tz_display_label(timezone_val)
     m = _SV_MONTHS[event_date.month]
@@ -32596,6 +32639,17 @@ def is_picks_locked(competition):
         
         race_date = competition_obj.event_date
         
+        # Single source of truth with countdown / race hero (incl. SMX first_quali lock).
+        try:
+            sched = _competition_race_schedule(competition_obj)
+            deadline_utc = sched.get("deadline_utc")
+            if deadline_utc is not None:
+                current_time = get_current_time()
+                picks_locked = (deadline_utc - current_time).total_seconds() <= 0
+                return picks_locked
+        except Exception as sched_exc:
+            print(f"DEBUG: is_picks_locked schedule fallback: {sched_exc}")
+
         # Use start_time from database if available, otherwise default to 8 PM
         if competition_obj.start_time:
             race_datetime_local = datetime.combine(race_date, competition_obj.start_time)

@@ -46,11 +46,14 @@ SMX_RACES_2026: list[dict[str, Any]] = [
 ]
 
 SMX_RACE_META: dict[str, dict[str, Any]] = {
+    # start_time = gate drop (visas som racestart).
+    # first_quali = när picks låses (absolut lokal tid) — samma princip som MXoN/kval.
     "SMX Playoff 1": {
         "venue": "Historic Crew Stadium",
         "city": "Columbus, OH",
         "timezone": "America/New_York",
         "start_time": (15, 0),
+        "first_quali": (12, 50),  # 250 unseeded (historical)
         "gate_label": "15:00 ET",
     },
     "SMX Playoff 2": {
@@ -58,6 +61,7 @@ SMX_RACE_META: dict[str, dict[str, Any]] = {
         "city": "Carson, CA",
         "timezone": "America/Los_Angeles",
         "start_time": (16, 0),
+        "first_quali": (9, 50),  # 250 Unseeded Qualifying
         "gate_label": "16:00 PT",
     },
     "SMX Final": {
@@ -65,6 +69,7 @@ SMX_RACE_META: dict[str, dict[str, Any]] = {
         "city": "Ridgedale, MO",
         "timezone": "America/Chicago",
         "start_time": (18, 0),
+        "first_quali": (11, 0),  # Saturday FanFest / qualifying day start
         "gate_label": "18:00 CT",
     },
 }
