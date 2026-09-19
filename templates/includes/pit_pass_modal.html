@@ -1,58 +1,97 @@
 {% if not is_logged_in %}
 {% from 'includes/mx_icon.html' import mx_icon %}
-<link rel="stylesheet" href="{{ url_for('static', filename='pit_pass.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='pit_pass.css') }}?v=5">
 <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}?v=2">
 <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
 <div id="pit-pass-modal" class="pit-pass-overlay{% if pit_pass_start_hidden %} is-peek{% endif %}" role="dialog" aria-modal="true" aria-labelledby="pit-pass-title">
-  <div class="pit-pass-card">
+  <div class="pit-pass-card" data-mode="signup">
     <div class="pit-pass-glow" aria-hidden="true"></div>
     <p class="pit-pass-eyebrow">{{ mx_icon('ticket') }} Pit Pass — gratis</p>
     <h2 id="pit-pass-title" class="pit-pass-title">{{ pit_pass_race_name }} väntar</h2>
     <p class="pit-pass-lead">
-      Registrera dig på ~20 sek och sätt topp 6, holeshot &amp; wildcard innan deadline.
+      Tippa topp 6, holeshot &amp; wildcard innan deadline — ~20 sek att komma igång.
     </p>
-    <ul class="pit-pass-bullets">
-      <li>{{ mx_icon('zap') }} Konto på 20 sekunder</li>
-      <li>{{ mx_icon('flag') }} Topp 6 + holeshot + wildcard</li>
-      <li>{{ mx_icon('chart-up') }} Jämför dig med andra efter race</li>
-    </ul>
+
     {% set next_url = pit_pass_next_url %}
-    <a href="{{ url_for('login', next=pit_pass_next_url) }}" class="pit-pass-login">
-      Har du konto? Logga in →
-    </a>
-    {% with label='Skapa konto med Google', pit_pass=true %}
-      {% include 'includes/auth_google_btn.html' %}
-    {% endwith %}
-    {% if google_login_enabled %}
-    <div class="pit-pass-divider"><span>eller skapa manuellt</span></div>
-    {% endif %}
-    <form id="pit-pass-form" class="pit-pass-form" autocomplete="off">
-      <input type="hidden" name="next" value="{{ pit_pass_next_url }}">
-      <input type="hidden" name="ajax" value="1">
-      <label class="pit-pass-label">
-        Användarnamn
-        <input name="username" required maxlength="40" autocomplete="username" class="pit-pass-input" placeholder="t.ex. RiderKing">
-      </label>
-      <label class="pit-pass-label">
-        E-post
-        <input type="email" name="email" required autocomplete="email" class="pit-pass-input" placeholder="din@email.com">
-        <span class="pit-pass-hint">Behövs för återställning av lösenord</span>
-      </label>
-      <label class="pit-pass-label">
-        Lösenord
-        <input type="password" name="password" required minlength="4" autocomplete="new-password" class="pit-pass-input" placeholder="Minst 4 tecken">
-      </label>
-      <p id="pit-pass-error" class="pit-pass-error hidden"></p>
-      <button type="submit" id="pit-pass-submit" class="pit-pass-cta">Kör igång →</button>
-    </form>
-    <p class="pit-pass-foot">
-      <button type="button" id="pit-pass-peek" class="pit-pass-peek">Titta runt först</button>
-    </p>
+
+    {# —— Har konto —— #}
+    <section class="pit-pass-panel pit-pass-panel--login" data-pit-panel="login" hidden>
+      <button type="button" class="pit-pass-back" data-pit-mode="signup">← Tillbaka</button>
+      <h3 class="pit-pass-section-title">Logga in</h3>
+      <p class="pit-pass-section-lead">Välkommen tillbaka — fortsätt tippa där du var.</p>
+      <form id="pit-pass-login-form" class="pit-pass-form" autocomplete="on">
+        <input type="hidden" name="modal" value="true">
+        <input type="hidden" name="next" value="{{ pit_pass_next_url }}">
+        <label class="pit-pass-label">
+          Användarnamn eller e-post
+          <input type="text" name="username" required autocomplete="username" class="pit-pass-input" placeholder="Namn eller e-post">
+        </label>
+        <label class="pit-pass-label">
+          Lösenord
+          <input type="password" name="password" required autocomplete="current-password" class="pit-pass-input" placeholder="Ditt lösenord">
+        </label>
+        <p id="pit-pass-login-error" class="pit-pass-error hidden"></p>
+        <button type="submit" id="pit-pass-login-submit" class="pit-pass-cta">Logga in →</button>
+      </form>
+      {% if google_login_enabled %}
+      <div class="pit-pass-divider"><span>eller</span></div>
+      {% with label='Fortsätt med Google', pit_pass=true %}
+        {% include 'includes/auth_google_btn.html' %}
+      {% endwith %}
+      {% endif %}
+      <p class="pit-pass-foot">
+        <a href="{{ url_for('forgot_password') }}" class="pit-pass-peek">Glömt lösenord?</a>
+      </p>
+    </section>
+
+    {# —— Ny här —— #}
+    <section class="pit-pass-panel pit-pass-panel--signup" data-pit-panel="signup">
+      <div class="pit-pass-box pit-pass-box--existing">
+        <p class="pit-pass-box-label">Har du redan konto?</p>
+        <button type="button" class="pit-pass-login" data-pit-mode="login">
+          Logga in →
+        </button>
+      </div>
+
+      <div class="pit-pass-box pit-pass-box--new">
+        <p class="pit-pass-box-label">Ny här — skapa konto</p>
+        <form id="pit-pass-form" class="pit-pass-form" autocomplete="off">
+          <input type="hidden" name="next" value="{{ pit_pass_next_url }}">
+          <input type="hidden" name="ajax" value="1">
+          <label class="pit-pass-label">
+            Användarnamn
+            <input name="username" required maxlength="40" autocomplete="username" class="pit-pass-input" placeholder="t.ex. RiderKing">
+          </label>
+          <label class="pit-pass-label">
+            E-post
+            <input type="email" name="email" required autocomplete="email" class="pit-pass-input" placeholder="din@email.com">
+            <span class="pit-pass-hint">Behövs för återställning av lösenord</span>
+          </label>
+          <label class="pit-pass-label">
+            Lösenord
+            <input type="password" name="password" required minlength="4" autocomplete="new-password" class="pit-pass-input" placeholder="Minst 4 tecken">
+          </label>
+          <p id="pit-pass-error" class="pit-pass-error hidden"></p>
+          <button type="submit" id="pit-pass-submit" class="pit-pass-cta">Kör igång →</button>
+        </form>
+        {% if google_login_enabled %}
+        <div class="pit-pass-divider"><span>eller med Google</span></div>
+        {% with label='Skapa konto med Google', pit_pass=true %}
+          {% include 'includes/auth_google_btn.html' %}
+        {% endwith %}
+        {% endif %}
+      </div>
+
+      <p class="pit-pass-foot">
+        <button type="button" id="pit-pass-peek" class="pit-pass-peek">Titta runt först</button>
+      </p>
+    </section>
   </div>
 </div>
 <script>
   window.MXPitPassConfig = {
     registerUrl: {{ url_for('register') | tojson }},
+    loginUrl: {{ url_for('login') | tojson }},
     nextUrl: {{ pit_pass_next_url | tojson }},
     peekKey: {{ pit_pass_peek_key | default('mx_pit_pass_peek') | tojson }},
     autoShow: {{ pit_pass_auto_show | default(true) | tojson }},
@@ -60,5 +99,5 @@
     guardSelectors: {{ pit_pass_guard_selectors | default([]) | tojson }}
   };
 </script>
-<script src="{{ url_for('static', filename='pit_pass.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='pit_pass.js') }}?v=2"></script>
 {% endif %}

@@ -22,12 +22,13 @@
   position: relative;
   width: 100%;
   max-width: 28rem;
+  max-height: min(92vh, 52rem);
+  overflow-y: auto;
   border-radius: 1.35rem;
   padding: 1.55rem 1.45rem 1.35rem;
   background: linear-gradient(165deg, #0f172a 0%, #111827 55%, #0b1220 100%);
   border: 1px solid rgba(34, 211, 238, 0.4);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(34, 211, 238, 0.08);
-  overflow: hidden;
   animation: pit-pass-in 0.35s ease-out;
 }
 @keyframes pit-pass-in {
@@ -66,40 +67,88 @@
 }
 .pit-pass-lead {
   position: relative;
-  margin: 0 0 0.85rem;
+  margin: 0 0 1rem;
   font-size: 0.9rem;
   line-height: 1.45;
   color: #94a3b8;
 }
-.pit-pass-bullets {
+.pit-pass-panel[hidden] {
+  display: none !important;
+}
+.pit-pass-section-title {
   position: relative;
-  list-style: none;
-  margin: 0 0 1rem;
+  margin: 0.35rem 0 0.35rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ecfeff;
+}
+.pit-pass-section-lead {
+  position: relative;
+  margin: 0 0 0.9rem;
+  font-size: 0.88rem;
+  color: #94a3b8;
+}
+.pit-pass-back {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 0.5rem;
   padding: 0;
-  display: grid;
-  gap: 0.35rem;
-  font-size: 0.82rem;
-  color: #cbd5e1;
+  border: 0;
+  background: none;
+  color: #67e8f9;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pit-pass-back:hover {
+  color: #a5f3fc;
+  text-decoration: underline;
+}
+.pit-pass-box {
+  position: relative;
+  border-radius: 1rem;
+  padding: 0.9rem 0.95rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.pit-pass-box--existing {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(103, 232, 249, 0.35);
+}
+.pit-pass-box--new {
+  background: rgba(2, 6, 23, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+.pit-pass-box-label {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.pit-pass-box--existing .pit-pass-box-label {
+  color: #67e8f9;
 }
 .pit-pass-login {
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  margin: 0 0 0.75rem;
+  margin: 0;
   padding: 0.85rem 1rem;
   border-radius: 999px;
-  border: 1.5px solid rgba(103, 232, 249, 0.55);
-  background: rgba(15, 23, 42, 0.9);
-  color: #e2e8f0;
+  border: 1.5px solid rgba(103, 232, 249, 0.65);
+  background: rgba(34, 211, 238, 0.1);
+  color: #ecfeff;
   font-weight: 800;
   font-size: 0.95rem;
   text-decoration: none;
+  cursor: pointer;
 }
 .pit-pass-login:hover {
   border-color: #67e8f9;
-  background: rgba(34, 211, 238, 0.12);
+  background: rgba(34, 211, 238, 0.2);
   color: #fff;
 }
 .pit-pass-google {
@@ -182,7 +231,7 @@
 }
 .pit-pass-foot {
   position: relative;
-  margin: 0.9rem 0 0;
+  margin: 0.75rem 0 0;
   text-align: center;
   font-size: 0.78rem;
   color: #64748b;
@@ -195,4 +244,7 @@
   text-decoration: underline;
   cursor: pointer;
   font: inherit;
+}
+a.pit-pass-peek {
+  color: #67e8f9;
 }

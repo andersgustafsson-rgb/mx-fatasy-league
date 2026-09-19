@@ -6700,6 +6700,10 @@
     }
 
     function openLoginModal() {
+      if (typeof window.MXShowPitPassLogin === 'function') {
+        window.MXShowPitPassLogin();
+        return;
+      }
       const modal = document.getElementById('loginModal');
       if (modal) {
         modal.classList.remove('hidden');
@@ -6755,7 +6759,7 @@
               if (window.MXPushNotify && window.MXPushNotify.markLoginForPrompt) {
                 window.MXPushNotify.markLoginForPrompt();
               }
-              window.location.href = '/';
+              window.location.href = result.redirect || '/';
             } else {
               // Show error message
               errorDiv.textContent = result.error;
