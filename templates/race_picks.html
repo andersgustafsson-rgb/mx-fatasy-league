@@ -3427,7 +3427,7 @@ function onPickChange(cls, pos, riderId = null) {
           inner += `<div class="mt-3 rounded-xl bg-gray-900/60 p-3 border border-purple-500/20"><p class="text-purple-300 text-[10px] font-bold uppercase mb-1">Wildcard</p><p class="text-white text-sm">Plats ${w.position}: ${w.short} ${w.pct}%</p></div>`;
         }
         return `<div class="mb-5 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 to-gray-900/80 p-4">
-          <div class="flex justify-between items-center gap-2 mb-2"><h4 class="text-emerald-200 font-bold text-sm">${mxIcon('crystal')} Fältets favoriter</h4>${n ? `<span class="text-[10px] text-emerald-100/80">${n} spelare</span>` : ''}</div>
+          <div class="mb-2"><h4 class="text-emerald-200 font-bold text-sm">${mxIcon('crystal')} Fältets favoriter</h4></div>
           <p class="text-white/45 text-[10px] mb-3">Andelar bland alla som låst lineups.</p>${inner}</div>`;
       }
 
