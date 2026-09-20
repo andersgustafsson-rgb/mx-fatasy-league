@@ -71,18 +71,25 @@ def is_admin_user() -> bool:
 	return bool(username == "test")
 
 
+def _requested_next_path() -> str:
+	path = (request.full_path or request.path or "/").strip()
+	if path.endswith("?"):
+		path = path[:-1]
+	return path or "/"
+
+
 def login_required(f):
 	@wraps(f)
 	def decorated_function(*args, **kwargs):
 		if "user_id" not in session:
-			return redirect(url_for("login"))
+			return redirect(url_for("login", next=_requested_next_path()))
 		# session timeout handling (match main.py)
 		if "login_time" in session:
 			try:
 				login_time = datetime.fromisoformat(session["login_time"])
 				if datetime.utcnow() - login_time > timedelta(hours=24):
 					session.clear()
-					return redirect(url_for("login"))
+					return redirect(url_for("login", next=_requested_next_path()))
 			except Exception:
 				pass
 		return f(*args, **kwargs)

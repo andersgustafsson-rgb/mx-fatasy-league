@@ -3004,6 +3004,21 @@ def check_session_timeout():
             return False
     return True
 
+def _requested_next_path() -> str:
+    """Current request path (+ query) for post-login redirect."""
+    path = (request.full_path or request.path or "/").strip()
+    if path.endswith("?"):
+        path = path[:-1]
+    return path or "/"
+
+
+def _redirect_to_login(*, flash_msg: str | None = None):
+    """Send user to login and remember where they tried to go."""
+    if flash_msg:
+        flash(flash_msg, "error")
+    return redirect(url_for("login", next=_requested_next_path()))
+
+
 def login_required(f):
     """Decorator to require login for routes"""
     from functools import wraps
@@ -3012,13 +3027,15 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         # Check if user is logged in
         if "user_id" not in session:
-            flash("Du måste logga in för att komma åt denna sida", "error")
-            return redirect(url_for("login"))
+            return _redirect_to_login(
+                flash_msg="Du måste logga in för att komma åt denna sida"
+            )
         
         # Check session timeout
         if not check_session_timeout():
-            flash("Din session har gått ut. Logga in igen.", "error")
-            return redirect(url_for("login"))
+            return _redirect_to_login(
+                flash_msg="Din session har gått ut. Logga in igen."
+            )
         
         return f(*args, **kwargs)
     return decorated_function
@@ -3247,13 +3264,13 @@ def require_login(f):
     """Decorator to require login for routes"""
     def decorated_function(*args, **kwargs):
         if "user_id" not in session or "username" not in session:
-            return redirect(url_for("login"))
+            return _redirect_to_login()
         
         # Verify user still exists in database
         user = User.query.get(session["user_id"])
         if not user or user.username != session["username"]:
             session.clear()
-            return redirect(url_for("login"))
+            return _redirect_to_login()
         
         return f(*args, **kwargs)
     decorated_function.__name__ = f.__name__
@@ -5364,7 +5381,7 @@ def sx_season_recap(year: int):
 @app.route("/leagues")
 def leagues_page():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
 
     uid = session["user_id"]
 
@@ -5456,7 +5473,7 @@ def leagues_page():
 def browse_leagues():
     """Browse all public leagues"""
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     return redirect(url_for("leagues_page", tab="explore"))
 
 
@@ -8450,7 +8467,7 @@ def _build_re_resolve_challenges_report(competition_id: int) -> dict:
 @app.route("/leagues/<int:league_id>")
 def league_detail_page(league_id):
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     league = League.query.get_or_404(league_id)
     is_member = LeagueMembership.query.filter_by(league_id=league_id, user_id=session["user_id"]).first()
     if not is_member:
@@ -9006,7 +9023,7 @@ def _season_team_riders_for_user(user_id: int):
 @app.route("/season_team")
 def season_team_page():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
 
     user_id = session["user_id"]
     team, riders = _season_team_riders_for_user(user_id)
@@ -9029,7 +9046,7 @@ def season_team_page():
 def view_user_season_team(user_id: int):
     """Andras säsongsteam: poäng per tävling (från leaderboard)."""
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     if user_id == session["user_id"]:
         return redirect(url_for("season_team_page"))
 
@@ -10132,7 +10149,7 @@ def profile_page():
 @app.post("/update_profile")
 def update_profile():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     try:
         user = User.query.get(session["user_id"])
@@ -10482,7 +10499,7 @@ def _my_scores_payload(uid: int, series_filter: str, wsx_year: int | None) -> tu
 @app.route("/my_scores")
 def my_scores():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     # Rollback any existing transaction to avoid "aborted transaction" errors
     db.session.rollback()
@@ -11765,7 +11782,7 @@ def race_picks_page(competition_id):
 @app.post("/create_league")
 def create_league():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     try:
         name = (request.form.get("league_name") or "").strip()
@@ -11851,7 +11868,7 @@ def reset_database():
 @app.post("/join_league")
 def join_league():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     code = (request.form.get("invite_code") or "").strip().upper()
     league = League.query.filter_by(invite_code=code).first()
     if not league:
@@ -11870,7 +11887,7 @@ def join_league():
 @app.post("/leagues/<int:league_id>/leave")
 def leave_league(league_id):
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     league = League.query.get_or_404(league_id)
     if league.creator_id == session["user_id"]:
         flash("Skaparen kan inte lämna sin egen liga. Du kan radera ligan i stället.", "error")
@@ -11886,7 +11903,7 @@ def leave_league(league_id):
 @app.post("/leagues/<int:league_id>/edit")
 def edit_league(league_id):
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     league = League.query.get_or_404(league_id)
     if league.creator_id != session["user_id"]:
@@ -11950,7 +11967,7 @@ def edit_league(league_id):
 @app.post("/leagues/<int:league_id>/delete")
 def delete_league(league_id):
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     try:
         league = League.query.get_or_404(league_id)
@@ -19103,7 +19120,7 @@ def race_results_page():
 @app.get("/trackmaps")
 def trackmaps_page():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     comps = (
         Competition.query
         .filter(Competition.series == "SX")
@@ -19139,7 +19156,7 @@ def trackmaps_page():
 @app.get("/trackmaps/<int:competition_id>")
 def trackmaps_competition_page(competition_id):
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     comp = Competition.query.get_or_404(competition_id)
     # hämta bilder sorterade
     images = comp.images.order_by(CompetitionImage.sort_order.asc()).all()
@@ -19154,7 +19171,7 @@ def trackmaps_competition_page(competition_id):
 def create_trackmaps_route():
     """Manual route to create track map images"""
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     print("DEBUG: Manual track map creation triggered")
     create_trackmap_images()
@@ -19164,7 +19181,7 @@ def create_trackmaps_route():
 def reset_trackmaps_route():
     """Reset and recreate all track map images"""
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     print("DEBUG: Resetting all track map images")
     # Clear all existing CompetitionImage records
@@ -19180,7 +19197,7 @@ def reset_trackmaps_route():
 def list_trackmap_files():
     """List all files in compressed trackmaps folder"""
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     from pathlib import Path
     compressed_dir = Path("static/trackmaps/compressed")
@@ -19407,7 +19424,7 @@ def admin_set_out_status():
 @app.get("/season_team_build")
 def season_team_build():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
 
     # Hämta alla riders till buildern
     riders = (
@@ -26141,7 +26158,7 @@ def debug_rider_coasts():
 def user_race_results(user_id):
     """View another user's race results and points breakdown"""
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     try:
         # Get the user to view
@@ -26241,7 +26258,7 @@ def user_profile_image(user_id: int):
 def view_user_profile(user_id):
     """View another user's profile"""
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     try:
         # Get the user to view
@@ -27896,7 +27913,7 @@ def force_recreate_data():
 def debug_riders():
     """Debug riders in database"""
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     try:
         all_riders = Rider.query.all()
@@ -28096,7 +28113,7 @@ def simple_debug():
 def check_anaheim2():
     """Check if Anaheim 2 simulation worked"""
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     try:
         # Find Anaheim 2 competition
@@ -28645,7 +28662,7 @@ def debug_anaheim1():
 def debug_database():
     """Debug database configuration and status"""
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     try:
         with app.app_context():
@@ -28761,7 +28778,7 @@ def clear_anaheim1():
 def trackmap_status():
     """Show track map status for debugging"""
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     try:
         with app.app_context():
@@ -28842,7 +28859,7 @@ def force_create_all_trackmaps():
 def bulletin_board():
     """Trash Talk Brädan - visa alla posts"""
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     
     try:
         # Hämta alla posts (ej borttagna, ej replies) sorterade efter datum (nyaste först)
@@ -31266,10 +31283,10 @@ def set_active_race_only():
 
 @app.route("/race_picks_active")
 def race_picks_active():
-    """Redirect to race picks for the next competition with open picks."""
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-    
+    """Redirect to race picks for the next competition with open picks.
+
+    Guests are allowed through — race_picks_page shows Pit Pass when saving.
+    """
     try:
         comp = _next_open_picks_competition()
         if comp:
@@ -32851,7 +32868,7 @@ def parse_csv_simple(csv_path, class_name):
 @app.get("/tidrapport")
 def tidrapport():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     return render_template(
         "tidrapport.html",
         username=session.get("username") or "",
@@ -32862,7 +32879,7 @@ def tidrapport():
 @app.get("/kundmail")
 def kundmail():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return _redirect_to_login()
     return render_template(
         "kundmail.html",
         username=session.get("username") or "",
