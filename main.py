@@ -83,6 +83,15 @@ def _peek_power_ranking_cache(competition_id: int) -> dict | None:
     return None
 
 
+def invalidate_homepage_result_caches() -> None:
+    """Drop spotlight / series / power-rank caches after results change."""
+    global _SERIES_STATUS_CACHE
+    _RIDER_SPOTLIGHT_CACHE.clear()
+    _RIDER_SPOTLIGHT_MODE_CACHE.clear()
+    _POWER_RANKING_CACHE.clear()
+    _SERIES_STATUS_CACHE = None
+
+
 def _warm_homepage_caches() -> None:
     """Pre-build heavy homepage payloads so first visitor does not wait on cold cache."""
     with app.app_context():
@@ -13427,7 +13436,7 @@ def _spotlight_mode_needs_portrait_refresh(mode: dict) -> bool:
 
 
 def _spotlight_shell_stale(payload: dict, *, series: str | None = None) -> bool:
-    """Shell med crowd_pick-flik ska byggas om när picks ännu/inte längre finns."""
+    """Rebuild shell when crowd-tab or latest completed race no longer matches cache."""
     if not payload.get("available"):
         return False
     lazy = payload.get("lazy_modes") or []
@@ -13441,7 +13450,21 @@ def _spotlight_shell_stale(payload: dict, *, series: str | None = None) -> bool:
     crowd_ok = bool(
         upcoming and not locked and _crowd_spotlight_ready(upcoming)
     )
-    return has_crowd_tab != crowd_ok
+    if has_crowd_tab != crowd_ok:
+        return True
+
+    # Stale "Senaste race" after new results (per-series cache can linger otherwise).
+    last_comp = _last_completed_competition(series=series)
+    lr = modes.get("last_race") or {}
+    headline = str(lr.get("headline") or "")
+    if last_comp and headline and last_comp.name and last_comp.name not in headline:
+        return True
+    if last_comp and not lr and "last_race" not in lazy:
+        # Shell claims last_race available but never loaded and not lazy — odd; rebuild.
+        available_keys = payload.get("mode_tabs") or []
+        if any((t.get("key") == "last_race") for t in available_keys):
+            return True
+    return False
 
 
 def _spotlight_cache_needs_refresh(payload: dict) -> bool:
@@ -13643,9 +13666,18 @@ def build_spotlight_mode(
     *,
     series: str | None = None,
 ) -> dict[str, Any] | None:
-    """Bygg ett spotlight-läge (cachad per flik + serie)."""
+    """Bygg ett spotlight-läge (cachad per flik + serie + race-id)."""
     series_code = _normalize_countdown_series(series)
-    cache_key = f"{_spotlight_series_cache_key(series_code)}:{mode_key}"
+    last_comp = _last_completed_competition(series=series_code)
+    upcoming = _spotlight_upcoming_competition(series=series_code)
+    last_id = int(last_comp.id) if last_comp else 0
+    up_id = int(upcoming.id) if upcoming else 0
+    # Bind cache to the competition that backs the mode so new results cannot reuse
+    # an older "Senaste race" payload (seen on SMX after Playoff 2 import).
+    if mode_key == "crowd_pick":
+        cache_key = f"{_spotlight_series_cache_key(series_code)}:{mode_key}:u{up_id}"
+    else:
+        cache_key = f"{_spotlight_series_cache_key(series_code)}:{mode_key}:c{last_id}"
     now = time.time()
     cached = _RIDER_SPOTLIGHT_MODE_CACHE.get(cache_key)
     if cached and cached[0] > now:
@@ -13657,8 +13689,6 @@ def build_spotlight_mode(
         elif not _spotlight_mode_needs_portrait_refresh(mode_data):
             return mode_data
 
-    last_comp = _last_completed_competition(series=series_code)
-    upcoming = _spotlight_upcoming_competition(series=series_code)
     season_year = _spotlight_season_year(last_comp)
     mode_data, riders = _build_spotlight_mode_data(
         mode_key,
@@ -13671,6 +13701,9 @@ def build_spotlight_mode(
 
     _patch_spotlight_portraits({mode_key: mode_data}, riders)
     mode_data["_portrait_v"] = _SPOTLIGHT_PORTRAIT_CACHE_V
+    if last_comp:
+        mode_data["_comp_id"] = int(last_comp.id)
+        mode_data["_comp_name"] = last_comp.name
     if mode_key == "rocket":
         mode_data["_calc_v"] = 3
     if mode_key == "crowd_pick":
@@ -16627,6 +16660,11 @@ def submit_results():
         print(f"📊 DEBUG: SX1/450cc results: {len(sx1_results)}, SX2/250cc results: {len(sx2_results)}")
     
     calculate_scores(comp_id)
+
+    try:
+        invalidate_homepage_result_caches()
+    except Exception as cache_exc:
+        print(f"WARNING invalidate_homepage_result_caches: {cache_exc}")
 
     flash("Resultat sparade och poäng beräknade!", "success")
     return redirect(url_for("admin_page"))
@@ -21768,6 +21806,12 @@ def calculate_scores(comp_id: int):
             print(f"⚔️ Resolved {resolved} league challenge(s) for competition {comp_id}")
     except Exception as e:
         print(f"❌ Error resolving league challenges: {e}")
+
+    try:
+        invalidate_homepage_result_caches()
+    except Exception as cache_exc:
+        print(f"WARNING invalidate_homepage_result_caches: {cache_exc}")
+
 
 # -------------------------------------------------
 # Felsökning: lista routes
