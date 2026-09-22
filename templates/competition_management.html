@@ -257,6 +257,49 @@
     .cm-table tbody tr:hover {
       background: rgba(34, 211, 238, 0.04);
     }
+    .cm-table tbody tr.cm-row--past {
+      opacity: 0.55;
+    }
+    .cm-table tbody tr.cm-row--past:hover {
+      opacity: 0.8;
+    }
+    .cm-table tbody tr.cm-row--upcoming {
+      background: rgba(34, 211, 238, 0.035);
+    }
+    .cm-table tbody tr.cm-row--next {
+      background: linear-gradient(90deg, rgba(34, 211, 238, 0.14), rgba(34, 211, 238, 0.04) 55%, transparent);
+      box-shadow: inset 3px 0 0 #22d3ee;
+    }
+    .cm-table tbody tr.cm-row--next .cm-name {
+      color: #ecfeff;
+    }
+    .cm-pill-next {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 0.45rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: rgba(34, 211, 238, 0.2);
+      color: #a5f3fc;
+      vertical-align: middle;
+    }
+    .cm-section-label td {
+      padding: 0.65rem 0.85rem 0.35rem !important;
+      border-bottom: none !important;
+      background: transparent !important;
+      opacity: 1 !important;
+    }
+    .cm-section-label span {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
 
     .cm-name {
       font-weight: 600;
@@ -668,7 +711,7 @@
         const response = await fetch("/api/competitions/list");
         if (!response.ok) throw new Error("Kunde inte hämta tävlingar");
         competitions = await response.json();
-        applyFilters();
+        applyFilters({ scrollToNext: true });
         showStatus("Listan uppdaterad", "success");
       } catch (error) {
         console.error("Error:", error);
@@ -682,31 +725,80 @@
       document.querySelectorAll("#series-chips .cm-chip").forEach((el) => {
         el.classList.toggle("is-active", el === btn);
       });
-      applyFilters();
+      applyFilters({ scrollToNext: true });
     }
 
     function filterBySeries() {
       activeSeries = document.getElementById("series-filter").value || "";
-      applyFilters();
+      applyFilters({ scrollToNext: true });
     }
 
-    function applyFilters() {
-      const q = (document.getElementById("search-filter")?.value || "").trim().toLowerCase();
-      filteredCompetitions = competitions.filter((comp) => {
-        if (activeSeries && comp.series !== activeSeries) return false;
-        if (q && !(comp.name || "").toLowerCase().includes(q)) return false;
-        return true;
+    function todayIso() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function isUpcoming(comp, today) {
+      return !!(comp.event_date && comp.event_date >= today);
+    }
+
+    function sortCompetitions(list) {
+      const today = todayIso();
+      return [...list].sort((a, b) => {
+        const aUp = isUpcoming(a, today);
+        const bUp = isUpcoming(b, today);
+        if (aUp !== bUp) return aUp ? -1 : 1;
+        const da = a.event_date || "";
+        const db = b.event_date || "";
+        if (aUp) {
+          // kvar: närmast först
+          if (da !== db) return da < db ? -1 : 1;
+        } else {
+          // passerade: nyast först
+          if (da !== db) return da > db ? -1 : 1;
+        }
+        return (a.id || 0) - (b.id || 0);
       });
-      renderCompetitions();
     }
 
-    function renderCompetitions() {
+    function findNextUpcomingId(list) {
+      const today = todayIso();
+      const upcoming = list.filter((c) => isUpcoming(c, today));
+      if (!upcoming.length) return null;
+      return upcoming[0].id;
+    }
+
+    function applyFilters(opts = {}) {
+      const scrollToNext = opts.scrollToNext === true;
+      const q = (document.getElementById("search-filter")?.value || "").trim().toLowerCase();
+      filteredCompetitions = sortCompetitions(
+        competitions.filter((comp) => {
+          if (activeSeries && comp.series !== activeSeries) return false;
+          if (q && !(comp.name || "").toLowerCase().includes(q)) return false;
+          return true;
+        })
+      );
+      renderCompetitions({ scrollToNext });
+    }
+
+    function renderCompetitions(opts = {}) {
       const tbody = document.getElementById("competitions-table-body");
       const countEl = document.getElementById("result-count");
       tbody.innerHTML = "";
 
+      const today = todayIso();
+      const upcomingCount = filteredCompetitions.filter((c) => isUpcoming(c, today)).length;
+      const nextId = findNextUpcomingId(filteredCompetitions);
+
       if (countEl) {
-        countEl.textContent = `${filteredCompetitions.length} tävling${filteredCompetitions.length === 1 ? "" : "ar"}`;
+        const total = filteredCompetitions.length;
+        countEl.textContent =
+          upcomingCount > 0
+            ? `${upcomingCount} kvar · ${total} totalt`
+            : `${total} tävling${total === 1 ? "" : "ar"}`;
       }
 
       if (!filteredCompetitions.length) {
@@ -714,15 +806,45 @@
         return;
       }
 
+      let sawUpcoming = false;
+      let sawPast = false;
+
       filteredCompetitions.forEach((comp) => {
+        const upcoming = isUpcoming(comp, today);
+
+        if (upcoming && !sawUpcoming) {
+          sawUpcoming = true;
+          const label = document.createElement("tr");
+          label.className = "cm-section-label";
+          label.innerHTML = `<td colspan="11"><span>Kommande</span></td>`;
+          tbody.appendChild(label);
+        }
+        if (!upcoming && !sawPast) {
+          sawPast = true;
+          const label = document.createElement("tr");
+          label.className = "cm-section-label";
+          label.innerHTML = `<td colspan="11"><span>Passerade</span></td>`;
+          tbody.appendChild(label);
+        }
+
         const row = document.createElement("tr");
+        const isNext = upcoming && comp.id === nextId;
+        row.dataset.compId = String(comp.id);
+        row.className = [
+          upcoming ? "cm-row--upcoming" : "cm-row--past",
+          isNext ? "cm-row--next" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+
         const coast = comp.coast_250 || "—";
         const mult = comp.point_multiplier != null ? `${comp.point_multiplier}×` : "—";
         const race = toTimeInputValue(comp.start_time) || "—";
         const quali = toTimeInputValue(comp.quali_start_time) || "—";
+        const nextPill = isNext ? `<span class="cm-pill-next">Nästa</span>` : "";
         row.innerHTML = `
           <td class="cm-id">${comp.id}</td>
-          <td><span class="cm-name">${escapeHtml(comp.name || "")}</span></td>
+          <td><span class="cm-name">${escapeHtml(comp.name || "")}</span>${nextPill}</td>
           <td class="cm-mono">${formatDateSv(comp.event_date)}</td>
           <td><span class="${seriesBadgeClass(comp.series)}">${escapeHtml(comp.series || "")}</span></td>
           <td>${escapeHtml(coast)}</td>
@@ -740,6 +862,15 @@
         `;
         tbody.appendChild(row);
       });
+
+      if (opts.scrollToNext && nextId != null) {
+        requestAnimationFrame(() => {
+          const el = tbody.querySelector(`tr[data-comp-id="${nextId}"]`);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        });
+      }
     }
 
     function escapeHtml(str) {
