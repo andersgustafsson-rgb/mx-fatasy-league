@@ -1,326 +1,470 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Användarhantering</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Användare — Admin · MX Fantasy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --au-line: rgba(148, 163, 184, 0.16);
+      --au-text: #e2e8f0;
+      --au-muted: #94a3b8;
+      --au-accent: #22d3ee;
+      --au-panel: rgba(15, 23, 42, 0.72);
+    }
+    * { box-sizing: border-box; }
+    body.au {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Barlow", system-ui, sans-serif;
+      color: var(--au-text);
+      background:
+        radial-gradient(ellipse 70% 45% at 10% -10%, rgba(34, 211, 238, 0.12), transparent 55%),
+        radial-gradient(ellipse 50% 40% at 100% 0%, rgba(251, 191, 36, 0.07), transparent 50%),
+        linear-gradient(165deg, #020617 0%, #0f172a 50%, #020617 100%);
+      background-attachment: fixed;
+    }
+    .au-wrap { max-width: 1280px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+    .au-back {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      color: var(--au-muted); text-decoration: none; font-size: 0.9rem; margin-bottom: 0.75rem;
+    }
+    .au-back:hover { color: var(--au-accent); }
+    .au-top {
+      display: flex; flex-wrap: wrap; align-items: flex-end;
+      justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem;
+    }
+    .au-eyebrow {
+      margin: 0 0 0.25rem; font-size: 0.75rem; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--au-muted);
+    }
+    .au-title {
+      margin: 0; font-family: "Barlow Condensed", sans-serif; font-weight: 800;
+      font-size: clamp(1.75rem, 4vw, 2.35rem); letter-spacing: 0.02em; line-height: 1; color: #f8fafc;
+    }
+    .au-sub { margin: 0.4rem 0 0; color: var(--au-muted); font-size: 0.95rem; }
+    .au-stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.65rem; margin-bottom: 1rem;
+    }
+    .au-stat {
+      border: 1px solid var(--au-line); border-radius: 0.75rem;
+      background: var(--au-panel); padding: 0.85rem 1rem;
+    }
+    .au-stat__val {
+      font-family: "Barlow Condensed", sans-serif; font-size: 1.75rem; font-weight: 800;
+      line-height: 1; color: #f8fafc; letter-spacing: 0.02em;
+    }
+    .au-stat__lbl {
+      margin-top: 0.35rem; font-size: 0.75rem; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--au-muted);
+    }
+    .au-stat--accent .au-stat__val { color: #a5f3fc; }
+    .au-toolbar {
+      display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center;
+      justify-content: space-between; margin-bottom: 0.85rem;
+    }
+    .au-search {
+      flex: 1 1 220px; max-width: 320px; min-width: min(100%, 180px);
+      background: #020617; border: 1px solid var(--au-line); border-radius: 0.55rem;
+      color: #f1f5f9; padding: 0.5rem 0.75rem; font: inherit; font-size: 0.9rem;
+    }
+    .au-search:focus { outline: none; border-color: rgba(34, 211, 238, 0.55); }
+    .au-meta { color: var(--au-muted); font-size: 0.85rem; }
+    .au-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .au-chip {
+      appearance: none; border: 1px solid var(--au-line); background: transparent;
+      color: var(--au-muted); border-radius: 999px; padding: 0.35rem 0.75rem;
+      font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    }
+    .au-chip:hover { color: #e2e8f0; border-color: rgba(148, 163, 184, 0.35); }
+    .au-chip.is-active {
+      background: rgba(34, 211, 238, 0.12);
+      border-color: rgba(34, 211, 238, 0.45);
+      color: #a5f3fc;
+    }
+    .au-panel {
+      border: 1px solid var(--au-line); border-radius: 0.85rem;
+      background: var(--au-panel); overflow: hidden;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+    }
+    .au-table-wrap { overflow-x: auto; }
+    table.au-table {
+      width: 100%; border-collapse: collapse; min-width: 960px;
+    }
+    .au-table th {
+      position: sticky; top: 0; z-index: 1;
+      text-align: left; font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;
+      background: #0b1220; border-bottom: 1px solid var(--au-line);
+      padding: 0.75rem 0.85rem; white-space: nowrap;
+    }
+    .au-table th.au-sticky, .au-table td.au-sticky {
+      position: sticky; right: 0; z-index: 2;
+      box-shadow: -8px 0 12px -8px rgba(0, 0, 0, 0.45);
+    }
+    .au-table th.au-sticky { background: #0b1220; z-index: 3; }
+    .au-table td {
+      padding: 0.7rem 0.85rem; border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+      font-size: 0.9rem; vertical-align: middle; background: transparent;
+    }
+    .au-table td.au-sticky { background: #0f172a; }
+    .au-table tbody tr { transition: background 0.12s; }
+    .au-table tbody tr:hover { background: rgba(34, 211, 238, 0.04); }
+    .au-table tbody tr:hover td.au-sticky { background: #132033; }
+    .au-table tbody tr.au-row--recent {
+      background: linear-gradient(90deg, rgba(34, 211, 238, 0.1), rgba(34, 211, 238, 0.03) 50%, transparent);
+      box-shadow: inset 3px 0 0 #22d3ee;
+    }
+    .au-table tbody tr.au-row--recent td.au-sticky { background: #102033; }
+    .au-table tbody tr.au-row--optout { opacity: 0.85; }
+    .au-id { color: #64748b; font-variant-numeric: tabular-nums; font-size: 0.8rem; }
+    .au-name { font-weight: 600; color: #f1f5f9; }
+    .au-muted { color: #94a3b8; }
+    .au-mono { font-variant-numeric: tabular-nums; color: #cbd5e1; }
+    .au-email {
+      display: block; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      color: #cbd5e1; font-size: 0.85rem;
+    }
+    .au-badge {
+      display: inline-flex; align-items: center; padding: 0.12rem 0.45rem;
+      border-radius: 999px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+    }
+    .au-badge--admin { background: rgba(248, 113, 113, 0.16); color: #fca5a5; }
+    .au-badge--user { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
+    .au-badge--mail-on { background: rgba(34, 197, 94, 0.14); color: #86efac; }
+    .au-badge--mail-off { background: rgba(251, 191, 36, 0.14); color: #fcd34d; }
+    .au-badge--new { background: rgba(34, 211, 238, 0.18); color: #a5f3fc; margin-left: 0.4rem; }
+    .au-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .au-btn {
+      appearance: none; border: 1px solid var(--au-line); background: transparent;
+      color: var(--au-text); border-radius: 0.45rem; padding: 0.3rem 0.55rem;
+      font: inherit; font-size: 0.75rem; font-weight: 600; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .au-btn:hover { border-color: rgba(34, 211, 238, 0.4); background: rgba(34, 211, 238, 0.08); }
+    .au-btn--edit { color: #67e8f9; border-color: rgba(34, 211, 238, 0.3); }
+    .au-btn--mail { color: #fcd34d; border-color: rgba(251, 191, 36, 0.3); }
+    .au-btn--mail-on { color: #86efac; border-color: rgba(34, 197, 94, 0.3); }
+    .au-btn--admin { color: #93c5fd; border-color: rgba(96, 165, 250, 0.3); }
+    .au-btn--admin-off { color: #fca5a5; border-color: rgba(248, 113, 113, 0.3); }
+    .au-btn--danger { color: #fca5a5; border-color: rgba(248, 113, 113, 0.35); }
+    .au-btn--danger:hover { background: rgba(127, 29, 29, 0.35); }
+    .au-empty { padding: 2.5rem 1rem; text-align: center; color: var(--au-muted); }
+    #toast {
+      position: fixed; right: 1rem; bottom: 1rem; z-index: 60;
+      max-width: min(420px, calc(100vw - 2rem));
+      padding: 0.85rem 1rem; border-radius: 0.65rem;
+      border: 1px solid var(--au-line); background: #0f172a;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35); font-size: 0.9rem;
+      transform: translateY(120%); transition: transform 0.25s ease; color: #e2e8f0;
+    }
+    #toast.is-visible { transform: translateY(0); }
+    #toast.is-ok { border-color: rgba(34, 197, 94, 0.4); color: #bbf7d0; }
+    #toast.is-err { border-color: rgba(248, 113, 113, 0.45); color: #fecaca; }
+    tr.au-hidden { display: none; }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-[1500px] mx-auto px-4 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <a href="/" class="text-2xl font-bold text-blue-600">🏁 MX Fantasy</a>
-                    <span class="text-gray-500">|</span>
-                    <h1 class="text-xl font-semibold">👥 Användarhantering</h1>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <a href="/admin" class="text-blue-600 hover:underline">← Tillbaka till Admin</a>
-                    <a href="/" class="text-blue-600 hover:underline">← Tillbaka till App</a>
-                </div>
-            </div>
-        </div>
-    </header>
+<body class="au">
+  <div class="au-wrap">
+    <a class="au-back" href="/admin">← Admin</a>
 
-    <!-- Main Content -->
-    <main class="max-w-[1500px] mx-auto px-4 py-6">
-        <!-- Stats -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 class="text-lg font-semibold mb-4">📊 Statistik</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-blue-50 p-4 rounded-lg">
-                    <div class="text-2xl font-bold text-blue-600">{{ users|length }}</div>
-                    <div class="text-sm text-gray-600">Totalt användare</div>
-                </div>
-                <div class="bg-green-50 p-4 rounded-lg">
-                    <div class="text-2xl font-bold text-green-600">{{ users|selectattr('is_admin')|list|length }}</div>
-                    <div class="text-sm text-gray-600">Admin användare</div>
-                </div>
-                <div class="bg-orange-50 p-4 rounded-lg">
-                    <div class="text-2xl font-bold text-orange-600">{{ users|rejectattr('is_admin')|list|length }}</div>
-                    <div class="text-sm text-gray-600">Vanliga användare</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Users Table -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div class="p-4 sm:p-6 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
-                <h2 class="text-lg font-semibold">👥 Alla Användare</h2>
-                <p class="text-xs text-gray-500">Scrolla horisontellt om det behövs — åtgärderna är fast till höger.</p>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Användarnamn</th>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visningsnamn</th>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">E-post</th>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mail</th>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typ</th>
-                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skapad</th>
-                            <th class="sticky right-0 z-20 bg-gray-50 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.15)] min-w-[17rem]">Åtgärder</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        {% for user in users %}
-                        <tr class="hover:bg-gray-50 {% if user.email_opt_out %}bg-amber-50/60{% endif %}">
-                            <td class="px-3 py-3 whitespace-nowrap text-gray-900">{{ user.id }}</td>
-                            <td class="px-3 py-3 whitespace-nowrap">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="font-medium text-gray-900" id="username-{{ user.id }}">{{ user.username }}</span>
-                                    <button 
-                                        class="edit-username-btn text-blue-600 hover:text-blue-800 text-xs"
-                                        data-user-id="{{ user.id }}"
-                                        data-username="{{ user.username }}"
-                                        title="Ändra användarnamn"
-                                    >
-                                        ✏️
-                                    </button>
-                                </div>
-                            </td>
-                            <td class="px-3 py-3 whitespace-nowrap text-gray-900">
-                                {{ user.display_name or '-' }}
-                            </td>
-                            <td class="px-3 py-3 text-gray-700 max-w-[14rem]">
-                                <span class="block truncate" title="{{ user.email or '' }}">{{ user.email or '—' }}</span>
-                            </td>
-                            <td class="px-3 py-3 whitespace-nowrap">
-                                {% if user.email_opt_out %}
-                                    <span class="px-2 py-0.5 text-xs bg-amber-100 text-amber-900 rounded-full">Avreg.</span>
-                                {% else %}
-                                    <span class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">På</span>
-                                {% endif %}
-                            </td>
-                            <td class="px-3 py-3 whitespace-nowrap">
-                                {% if user.is_admin %}
-                                    <span class="px-2 py-0.5 text-xs bg-red-100 text-red-800 rounded-full">Admin</span>
-                                {% else %}
-                                    <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-800 rounded-full">User</span>
-                                {% endif %}
-                            </td>
-                            <td class="px-3 py-3 whitespace-nowrap text-gray-500">
-                                {% if user.created_at %}
-                                    {{ user.created_at[:10] }}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-                            <td class="sticky right-0 z-10 px-3 py-3 whitespace-nowrap shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.12)] {% if user.email_opt_out %}bg-amber-50{% else %}bg-white{% endif %} group-hover:bg-gray-50">
-                                <div class="flex items-center gap-1.5">
-                                    <button
-                                        type="button"
-                                        class="toggle-email-opt-out-btn px-2.5 py-1 text-xs rounded-md font-medium transition-colors {% if user.email_opt_out %}bg-green-100 text-green-800 hover:bg-green-200{% else %}bg-amber-100 text-amber-900 hover:bg-amber-200{% endif %}"
-                                        data-user-id="{{ user.id }}"
-                                        data-username="{{ user.username }}"
-                                        data-email-opt-out="{{ user.email_opt_out|lower }}"
-                                        title="Picks-påminnelser och nyhetsmail"
-                                    >
-                                        {% if user.email_opt_out %}
-                                            Aktivera mail
-                                        {% else %}
-                                            Unsubscribe
-                                        {% endif %}
-                                    </button>
-
-                                    <button 
-                                        class="toggle-admin-btn px-2.5 py-1 text-xs rounded-md font-medium transition-colors {% if user.is_admin %}bg-red-100 text-red-700 hover:bg-red-200{% else %}bg-blue-100 text-blue-700 hover:bg-blue-200{% endif %}"
-                                        data-user-id="{{ user.id }}"
-                                        data-username="{{ user.username }}"
-                                        data-is-admin="{{ user.is_admin|lower }}"
-                                        title="{% if user.is_admin %}Ta bort admin{% else %}Gör admin{% endif %}"
-                                    >
-                                        {% if user.is_admin %}
-                                            − Admin
-                                        {% else %}
-                                            + Admin
-                                        {% endif %}
-                                    </button>
-                                    
-                                    {% if not user.is_admin %}
-                                    <button 
-                                        class="delete-user-btn px-2.5 py-1 text-xs rounded-md font-medium bg-red-50 text-red-700 hover:bg-red-100"
-                                        data-user-id="{{ user.id }}"
-                                        data-username="{{ user.username }}"
-                                        title="Ta bort användare"
-                                    >
-                                        Ta bort
-                                    </button>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </main>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50">
-        <div class="flex items-center space-x-2">
-            <span>✅</span>
-            <span id="toast-message">Användare borttagen!</span>
-        </div>
+    <div class="au-top">
+      <div>
+        <p class="au-eyebrow">MX Fantasy · Admin</p>
+        <h1 class="au-title">Användare</h1>
+        <p class="au-sub">Senast registrerade överst · mail, admin och konton</p>
+      </div>
     </div>
 
-    <script>
-        // Toggle email opt-out (unsubscribe)
-        document.addEventListener('click', async function(e) {
-            if (e.target.classList.contains('toggle-email-opt-out-btn')) {
-                const userId = e.target.getAttribute('data-user-id');
-                const username = e.target.getAttribute('data-username');
-                const optedOut = e.target.getAttribute('data-email-opt-out') === 'true';
-                const action = optedOut
-                    ? `aktivera picks/nyhetsmail igen för "${username}"`
-                    : `avregistrera "${username}" från picks/nyhetsmail`;
+    {% set admin_n = users|selectattr('is_admin')|list|length %}
+    {% set opt_out_n = users|selectattr('email_opt_out')|list|length %}
+    <div class="au-stats">
+      <div class="au-stat">
+        <div class="au-stat__val">{{ users|length }}</div>
+        <div class="au-stat__lbl">Totalt</div>
+      </div>
+      <div class="au-stat au-stat--accent">
+        <div class="au-stat__val">{{ recent_count|default(0) }}</div>
+        <div class="au-stat__lbl">Nya (7 dagar)</div>
+      </div>
+      <div class="au-stat">
+        <div class="au-stat__val">{{ admin_n }}</div>
+        <div class="au-stat__lbl">Admins</div>
+      </div>
+      <div class="au-stat">
+        <div class="au-stat__val">{{ opt_out_n }}</div>
+        <div class="au-stat__lbl">Avreg. mail</div>
+      </div>
+    </div>
 
-                if (!confirm(`Vill du ${action}?`)) return;
+    <div class="au-toolbar">
+      <div class="au-chips" role="tablist" aria-label="Filter">
+        <button type="button" class="au-chip is-active" data-filter="all" onclick="setUserFilter(this)">Alla</button>
+        <button type="button" class="au-chip" data-filter="recent" onclick="setUserFilter(this)">Nya</button>
+        <button type="button" class="au-chip" data-filter="admin" onclick="setUserFilter(this)">Admins</button>
+        <button type="button" class="au-chip" data-filter="optout" onclick="setUserFilter(this)">Avreg.</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.65rem;align-items:center;">
+        <input id="userSearch" class="au-search" type="search" placeholder="Sök namn, e-post…" oninput="applyUserFilters()" autocomplete="off">
+        <span class="au-meta" id="userCount">{{ users|length }} användare</span>
+      </div>
+    </div>
 
-                try {
-                    const response = await fetch(`/admin/toggle_email_opt_out/${userId}`, {
-                        method: 'POST'
-                    });
-                    const result = await response.json();
-                    if (response.ok) {
-                        showToast(result.message || 'Uppdaterat!');
-                        setTimeout(() => location.reload(), 600);
-                    } else {
-                        showToast(result.error || 'Ett fel uppstod', 'error');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    showToast('Ett fel uppstod', 'error');
-                }
-            }
-        });
+    <div class="au-panel">
+      <div class="au-table-wrap">
+        <table class="au-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Användarnamn</th>
+              <th>Visningsnamn</th>
+              <th>E-post</th>
+              <th>Mail</th>
+              <th>Typ</th>
+              <th>Registrerad</th>
+              <th class="au-sticky">Åtgärder</th>
+            </tr>
+          </thead>
+          <tbody id="users-body">
+            {% for user in users %}
+            <tr
+              class="{% if user.is_recent %}au-row--recent{% endif %}{% if user.email_opt_out %} au-row--optout{% endif %}"
+              data-username="{{ user.username|lower }}"
+              data-display="{{ (user.display_name or '')|lower }}"
+              data-email="{{ (user.email or '')|lower }}"
+              data-admin="{{ '1' if user.is_admin else '0' }}"
+              data-optout="{{ '1' if user.email_opt_out else '0' }}"
+              data-recent="{{ '1' if user.is_recent else '0' }}"
+            >
+              <td class="au-id">{{ user.id }}</td>
+              <td>
+                <span class="au-name" id="username-{{ user.id }}">{{ user.username }}</span>
+                {% if user.is_recent %}<span class="au-badge au-badge--new">Ny</span>{% endif %}
+                <button
+                  type="button"
+                  class="edit-username-btn au-btn au-btn--edit"
+                  style="margin-left:0.35rem"
+                  data-user-id="{{ user.id }}"
+                  data-username="{{ user.username }}"
+                  title="Ändra användarnamn"
+                >Byt namn</button>
+              </td>
+              <td class="au-muted">{{ user.display_name or '—' }}</td>
+              <td>
+                <span class="au-email" title="{{ user.email or '' }}">{{ user.email or '—' }}</span>
+              </td>
+              <td>
+                {% if user.email_opt_out %}
+                  <span class="au-badge au-badge--mail-off">Avreg.</span>
+                {% else %}
+                  <span class="au-badge au-badge--mail-on">På</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if user.is_admin %}
+                  <span class="au-badge au-badge--admin">Admin</span>
+                {% else %}
+                  <span class="au-badge au-badge--user">User</span>
+                {% endif %}
+              </td>
+              <td class="au-mono">
+                {% if user.created_at %}
+                  {{ user.created_at[:10] }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td class="au-sticky">
+                <div class="au-actions">
+                  <button
+                    type="button"
+                    class="toggle-email-opt-out-btn au-btn {% if user.email_opt_out %}au-btn--mail-on{% else %}au-btn--mail{% endif %}"
+                    data-user-id="{{ user.id }}"
+                    data-username="{{ user.username }}"
+                    data-email-opt-out="{{ user.email_opt_out|lower }}"
+                    title="Picks-påminnelser och nyhetsmail"
+                  >
+                    {% if user.email_opt_out %}Aktivera mail{% else %}Unsubscribe{% endif %}
+                  </button>
 
-        // Toggle admin functionality
-        document.addEventListener('click', async function(e) {
-            if (e.target.classList.contains('toggle-admin-btn')) {
-                const userId = e.target.getAttribute('data-user-id');
-                const username = e.target.getAttribute('data-username');
-                const isAdmin = e.target.getAttribute('data-is-admin') === 'true';
-                
-                const action = isAdmin ? 'ta bort admin-behörighet från' : 'ge admin-behörighet till';
-                const confirmMessage = `Är du säker på att du vill ${action} "${username}"?`;
-                
-                if (confirm(confirmMessage)) {
-                    try {
-                        const response = await fetch(`/admin/toggle_admin/${userId}`, {
-                            method: 'POST'
-                        });
-                        
-                        const result = await response.json();
-                        
-                        if (response.ok) {
-                            // Reload the page to show updated status
-                            location.reload();
-                        } else {
-                            showToast(result.error || 'Ett fel uppstod', 'error');
-                        }
-                    } catch (error) {
-                        console.error('Error:', error);
-                        showToast('Ett fel uppstod', 'error');
-                    }
-                }
-            }
-        });
+                  <button
+                    type="button"
+                    class="toggle-admin-btn au-btn {% if user.is_admin %}au-btn--admin-off{% else %}au-btn--admin{% endif %}"
+                    data-user-id="{{ user.id }}"
+                    data-username="{{ user.username }}"
+                    data-is-admin="{{ user.is_admin|lower }}"
+                    title="{% if user.is_admin %}Ta bort admin{% else %}Gör admin{% endif %}"
+                  >
+                    {% if user.is_admin %}− Admin{% else %}+ Admin{% endif %}
+                  </button>
 
-        // Edit username functionality
-        document.addEventListener('click', async function(e) {
-            if (e.target.classList.contains('edit-username-btn')) {
-                const userId = e.target.getAttribute('data-user-id');
-                const currentUsername = e.target.getAttribute('data-username');
-                
-                const newUsername = prompt(`Ange nytt användarnamn för "${currentUsername}":`, currentUsername);
-                
-                if (newUsername && newUsername.trim() && newUsername.trim() !== currentUsername) {
-                    try {
-                        const response = await fetch(`/admin/update_username/${userId}`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ username: newUsername.trim() })
-                        });
-                        
-                        const result = await response.json();
-                        
-                        if (response.ok) {
-                            // Update username in the UI
-                            document.getElementById(`username-${userId}`).textContent = newUsername.trim();
-                            e.target.setAttribute('data-username', newUsername.trim());
-                            showToast(result.message || 'Användarnamn uppdaterat!');
-                            // Reload page to ensure all references are updated
-                            setTimeout(() => location.reload(), 1000);
-                        } else {
-                            showToast(result.error || 'Ett fel uppstod', 'error');
-                        }
-                    } catch (error) {
-                        console.error('Error:', error);
-                        showToast('Ett fel uppstod', 'error');
-                    }
-                }
-            }
-        });
+                  {% if not user.is_admin %}
+                  <button
+                    type="button"
+                    class="delete-user-btn au-btn au-btn--danger"
+                    data-user-id="{{ user.id }}"
+                    data-username="{{ user.username }}"
+                    title="Ta bort användare"
+                  >Ta bort</button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8"><div class="au-empty">Inga användare.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-        // Delete user functionality
-        document.addEventListener('click', async function(e) {
-            if (e.target.classList.contains('delete-user-btn')) {
-                const userId = e.target.getAttribute('data-user-id');
-                const username = e.target.getAttribute('data-username');
-                
-                if (confirm(`Är du säker på att du vill ta bort användaren "${username}"? Detta kan inte ångras!`)) {
-                    try {
-                        const response = await fetch(`/admin/delete_user/${userId}`, {
-                            method: 'DELETE'
-                        });
-                        
-                        const result = await response.json();
-                        
-                        if (response.ok) {
-                            // Remove row from table
-                            e.target.closest('tr').remove();
-                            showToast(`Användare "${username}" borttagen!`);
-                        } else {
-                            showToast(result.error || 'Ett fel uppstod', 'error');
-                        }
-                    } catch (error) {
-                        console.error('Error:', error);
-                        showToast('Ett fel uppstod', 'error');
-                    }
-                }
-            }
-        });
+  <div id="toast"><span id="toast-message"></span></div>
 
-        // Show toast notification
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toast-message');
-            
-            toastMessage.textContent = message;
-            
-            // Set color based on type
-            toast.className = `fixed top-4 right-4 text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50 ${
-                type === 'success' ? 'bg-green-500' : 'bg-red-500'
-            }`;
-            
-            // Show toast
-            setTimeout(() => {
-                toast.classList.remove('translate-x-full');
-            }, 100);
-            
-            // Hide toast after 3 seconds
-            setTimeout(() => {
-                toast.classList.add('translate-x-full');
-            }, 3000);
+  <script>
+    let activeFilter = "all";
+
+    function setUserFilter(btn) {
+      activeFilter = btn.getAttribute("data-filter") || "all";
+      document.querySelectorAll(".au-chip").forEach((el) => {
+        el.classList.toggle("is-active", el === btn);
+      });
+      applyUserFilters();
+    }
+
+    function applyUserFilters() {
+      const q = (document.getElementById("userSearch")?.value || "").trim().toLowerCase();
+      const rows = document.querySelectorAll("#users-body tr[data-username]");
+      let visible = 0;
+      rows.forEach((row) => {
+        const matchFilter =
+          activeFilter === "all" ||
+          (activeFilter === "recent" && row.dataset.recent === "1") ||
+          (activeFilter === "admin" && row.dataset.admin === "1") ||
+          (activeFilter === "optout" && row.dataset.optout === "1");
+        const hay = `${row.dataset.username} ${row.dataset.display} ${row.dataset.email}`;
+        const matchSearch = !q || hay.includes(q);
+        const show = matchFilter && matchSearch;
+        row.classList.toggle("au-hidden", !show);
+        if (show) visible += 1;
+      });
+      const countEl = document.getElementById("userCount");
+      if (countEl) {
+        countEl.textContent = `${visible} användare`;
+      }
+    }
+
+    document.addEventListener("click", async function (e) {
+      const optBtn = e.target.closest(".toggle-email-opt-out-btn");
+      if (optBtn) {
+        const userId = optBtn.getAttribute("data-user-id");
+        const username = optBtn.getAttribute("data-username");
+        const optedOut = optBtn.getAttribute("data-email-opt-out") === "true";
+        const action = optedOut
+          ? `aktivera picks/nyhetsmail igen för "${username}"`
+          : `avregistrera "${username}" från picks/nyhetsmail`;
+        if (!confirm(`Vill du ${action}?`)) return;
+        try {
+          const response = await fetch(`/admin/toggle_email_opt_out/${userId}`, { method: "POST" });
+          const result = await response.json();
+          if (response.ok) {
+            showToast(result.message || "Uppdaterat!");
+            setTimeout(() => location.reload(), 600);
+          } else {
+            showToast(result.error || "Ett fel uppstod", "error");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          showToast("Ett fel uppstod", "error");
         }
-    </script>
+        return;
+      }
+
+      const adminBtn = e.target.closest(".toggle-admin-btn");
+      if (adminBtn) {
+        const userId = adminBtn.getAttribute("data-user-id");
+        const username = adminBtn.getAttribute("data-username");
+        const isAdmin = adminBtn.getAttribute("data-is-admin") === "true";
+        const action = isAdmin ? "ta bort admin-behörighet från" : "ge admin-behörighet till";
+        if (!confirm(`Är du säker på att du vill ${action} "${username}"?`)) return;
+        try {
+          const response = await fetch(`/admin/toggle_admin/${userId}`, { method: "POST" });
+          const result = await response.json();
+          if (response.ok) {
+            location.reload();
+          } else {
+            showToast(result.error || "Ett fel uppstod", "error");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          showToast("Ett fel uppstod", "error");
+        }
+        return;
+      }
+
+      const editBtn = e.target.closest(".edit-username-btn");
+      if (editBtn) {
+        const userId = editBtn.getAttribute("data-user-id");
+        const currentUsername = editBtn.getAttribute("data-username");
+        const newUsername = prompt(`Ange nytt användarnamn för "${currentUsername}":`, currentUsername);
+        if (newUsername && newUsername.trim() && newUsername.trim() !== currentUsername) {
+          try {
+            const response = await fetch(`/admin/update_username/${userId}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username: newUsername.trim() }),
+            });
+            const result = await response.json();
+            if (response.ok) {
+              document.getElementById(`username-${userId}`).textContent = newUsername.trim();
+              editBtn.setAttribute("data-username", newUsername.trim());
+              showToast(result.message || "Användarnamn uppdaterat!");
+              setTimeout(() => location.reload(), 1000);
+            } else {
+              showToast(result.error || "Ett fel uppstod", "error");
+            }
+          } catch (error) {
+            console.error("Error:", error);
+            showToast("Ett fel uppstod", "error");
+          }
+        }
+        return;
+      }
+
+      const delBtn = e.target.closest(".delete-user-btn");
+      if (delBtn) {
+        const userId = delBtn.getAttribute("data-user-id");
+        const username = delBtn.getAttribute("data-username");
+        if (!confirm(`Är du säker på att du vill ta bort användaren "${username}"? Detta kan inte ångras!`)) return;
+        try {
+          const response = await fetch(`/admin/delete_user/${userId}`, { method: "DELETE" });
+          const result = await response.json();
+          if (response.ok) {
+            delBtn.closest("tr").remove();
+            showToast(`Användare "${username}" borttagen!`);
+            applyUserFilters();
+          } else {
+            showToast(result.error || "Ett fel uppstod", "error");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          showToast("Ett fel uppstod", "error");
+        }
+      }
+    });
+
+    function showToast(message, type = "success") {
+      const toast = document.getElementById("toast");
+      const toastMessage = document.getElementById("toast-message");
+      toastMessage.textContent = message;
+      toast.className = `is-visible ${type === "success" ? "is-ok" : "is-err"}`;
+      setTimeout(() => {
+        toast.classList.remove("is-visible");
+      }, 3000);
+    }
+  </script>
 </body>
 </html>

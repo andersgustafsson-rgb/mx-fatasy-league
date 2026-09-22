@@ -29642,8 +29642,13 @@ def admin_users():
         return jsonify({"error": "admin_only"}), 403
     
     try:
-        users = User.query.all()
+        from datetime import datetime, timedelta
+
+        users = User.query.order_by(User.id.desc()).all()
         user_list = []
+        now = datetime.utcnow()
+        week_ago = now - timedelta(days=7)
+        recent_count = 0
         
         for user in users:
             # Check if user has is_admin attribute, fallback to old method
@@ -29656,6 +29661,11 @@ def admin_users():
                     is_admin = user.username == 'test'
             except Exception:
                 is_admin = user.username == 'test'
+
+            created_at = getattr(user, "created_at", None)
+            is_recent = bool(created_at and created_at >= week_ago)
+            if is_recent:
+                recent_count += 1
             
             user_list.append({
                 'id': user.id,
@@ -29663,11 +29673,23 @@ def admin_users():
                 'display_name': getattr(user, 'display_name', None),
                 'email': getattr(user, 'email', None),
                 'email_opt_out': bool(getattr(user, 'email_opt_out', False)),
-                'created_at': user.created_at.isoformat() if hasattr(user, 'created_at') and user.created_at else None,
-                'is_admin': is_admin
+                'created_at': created_at.isoformat() if created_at else None,
+                'is_admin': is_admin,
+                'is_recent': is_recent,
             })
+
+        # Newest registrations first (created_at, then id)
+        def _sort_key(u):
+            ca = u.get("created_at") or ""
+            return (ca, u.get("id") or 0)
+
+        user_list.sort(key=_sort_key, reverse=True)
         
-        return render_template("admin_users.html", users=user_list)
+        return render_template(
+            "admin_users.html",
+            users=user_list,
+            recent_count=recent_count,
+        )
         
     except Exception as e:
         print(f"Error loading users: {e}")
