@@ -232,6 +232,21 @@
       border-color: rgba(103, 232, 249, 0.25);
       color: #67e8f9;
     }
+    .sp-badge--cancelled {
+      background: rgba(120, 53, 15, 0.4);
+      border-color: rgba(251, 191, 36, 0.4);
+      color: #fde68a;
+    }
+    .sp-row--cancelled td {
+      opacity: 0.72;
+    }
+    .sp-row--cancelled .sp-race-name,
+    .sp-row--cancelled .sp-race-date,
+    .sp-row--cancelled .sp-race-venue {
+      text-decoration: line-through;
+      text-decoration-thickness: 1.5px;
+      color: #94a3b8;
+    }
     .sp-link-btn {
       display: inline-flex;
       align-items: center;
@@ -596,19 +611,22 @@
             {% for comp in competitions %}
             {% set has_results = competition_results[comp.id]|length > 0 %}
             {% set user_has_picks = user_picks_status[comp.id].has_picks %}
-            <tr>
-              <td class="whitespace-nowrap">
+            {% set cancelled = comp.is_cancelled %}
+            <tr class="{% if cancelled %}sp-row--cancelled{% endif %}">
+              <td class="whitespace-nowrap sp-race-date">
                 {% if comp.event_date %}
                   {{ comp.event_date.strftime('%d %b %Y') }}
                 {% else %}
                   <span class="text-amber-300 font-semibold">TBA</span>
                 {% endif %}
               </td>
-              <td class="font-semibold text-slate-100">{{ comp.name }}</td>
-              <td class="text-slate-400">{{ competition_venues.get(comp.id, '—') }}</td>
+              <td class="font-semibold text-slate-100 sp-race-name">{{ comp.name }}</td>
+              <td class="text-slate-400 sp-race-venue">{{ competition_venues.get(comp.id, '—') }}</td>
               <td>
                 <div class="flex flex-wrap gap-1.5">
-                  {% if has_results %}
+                  {% if cancelled %}
+                    <span class="sp-badge sp-badge--cancelled">Cancelled</span>
+                  {% elif has_results %}
                     <span class="sp-badge sp-badge--done">Avslutad</span>
                   {% elif not comp.event_date %}
                     <span class="sp-badge sp-badge--tba">Datum TBA</span>
@@ -621,13 +639,15 @@
                   {% else %}
                     <span class="sp-badge sp-badge--open">Kommande</span>
                   {% endif %}
-                  {% if user_has_picks and not has_results %}
+                  {% if user_has_picks and not has_results and not cancelled %}
                     <span class="sp-badge sp-badge--picks">Picks klara</span>
                   {% endif %}
                 </div>
               </td>
               <td class="text-center">
-                {% if active_race_id and comp.id == active_race_id %}
+                {% if cancelled %}
+                  <span class="text-xs text-amber-400/80">—</span>
+                {% elif active_race_id and comp.id == active_race_id %}
                   {% if picks_locked_status[comp.id] %}
                     <span class="sp-badge sp-badge--locked">Picks låsta</span>
                   {% else %}

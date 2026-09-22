@@ -375,6 +375,11 @@
       color: #fde68a;
       border: 1px solid rgba(251, 191, 36, 0.35);
     }
+    .cm-name--struck {
+      text-decoration: line-through;
+      text-decoration-thickness: 1.5px;
+      color: #94a3b8;
+    }
 
     .cm-row-actions {
       display: flex;
@@ -870,7 +875,7 @@
           sawCancelled = true;
           const label = document.createElement("tr");
           label.className = "cm-section-label";
-          label.innerHTML = `<td colspan="11"><span>Inställda</span></td>`;
+          label.innerHTML = `<td colspan="11"><span>Cancelled</span></td>`;
           tbody.appendChild(label);
         }
         if (!upcoming && !cancelled && !sawPast) {
@@ -896,13 +901,13 @@
         const race = toTimeInputValue(comp.start_time) || "—";
         const quali = toTimeInputValue(comp.quali_start_time) || "—";
         const nextPill = isNext ? `<span class="cm-pill-next">Nästa</span>` : "";
-        const cancelPill = cancelled ? `<span class="cm-pill-cancelled">Inställd</span>` : "";
+        const cancelPill = cancelled ? `<span class="cm-pill-cancelled">Cancelled</span>` : "";
         const cancelBtn = cancelled
-          ? `<button type="button" class="cm-btn cm-btn--sm" onclick="setCompetitionCancelled(${comp.id}, false)">Återställ</button>`
-          : `<button type="button" class="cm-btn cm-btn--sm cm-btn--warn" onclick="setCompetitionCancelled(${comp.id}, true)">Ställ in</button>`;
+          ? `<button type="button" class="cm-btn cm-btn--sm" onclick="setCompetitionCancelled(${comp.id}, false)" title="Återställ så tävlingen syns igen">Återställ</button>`
+          : `<button type="button" class="cm-btn cm-btn--sm cm-btn--warn" onclick="setCompetitionCancelled(${comp.id}, true)" title="Cancel event — syns kvar i schemat som Cancelled">Cancel</button>`;
         row.innerHTML = `
           <td class="cm-id">${comp.id}</td>
-          <td><span class="cm-name">${escapeHtml(comp.name || "")}</span>${nextPill}${cancelPill}</td>
+          <td><span class="cm-name${cancelled ? " cm-name--cancelled" : ""}">${escapeHtml(comp.name || "")}</span>${nextPill}${cancelPill}</td>
           <td class="cm-mono">${formatDateSv(comp.event_date)}</td>
           <td><span class="${seriesBadgeClass(comp.series)}">${escapeHtml(comp.series || "")}</span></td>
           <td>${escapeHtml(coast)}</td>
@@ -1136,8 +1141,8 @@
 
     async function setCompetitionCancelled(id, cancelled) {
       const msg = cancelled
-        ? "Ställa in den här tävlingen? Den döljs från picks och kommande (data behålls)."
-        : "Återställa tävlingen så den syns igen?";
+        ? "Cancel den här tävlingen? Den syns kvar i schemat som Cancelled, men döljs från picks."
+        : "Återställa tävlingen så den syns igen som kommande?";
       if (!confirm(msg)) return;
       try {
         const response = await fetch(`/api/competitions/${id}/cancel`, {

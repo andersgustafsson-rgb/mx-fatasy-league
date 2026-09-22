@@ -11033,9 +11033,19 @@ def series_page(series_id):
                 next_race = _next_competition_for_picks(series=series_code, require_open=False)
         if not next_race:
             current_date = get_today()
-            next_race = Competition.query.filter_by(series_id=series_id).filter(
-                Competition.event_date >= current_date
-            ).order_by(Competition.event_date).first()
+            next_race = next(
+                (
+                    c
+                    for c in (
+                        Competition.query.filter_by(series_id=series_id)
+                        .filter(Competition.event_date >= current_date)
+                        .order_by(Competition.event_date)
+                        .all()
+                    )
+                    if not getattr(c, "is_cancelled", False)
+                ),
+                None,
+            )
 
         picks_open = bool(next_race and not is_picks_locked(next_race))
         if next_race and comp_ids:

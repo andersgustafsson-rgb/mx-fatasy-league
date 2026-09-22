@@ -1019,7 +1019,7 @@ def cancel_competition(competition_id: int):
 				_main._SERIES_STATUS_CACHE = None
 		except Exception:
 			pass
-		label = 'inställd' if cancelled else 'återställd'
+		label = 'cancelled' if cancelled else 'återställd'
 		return jsonify({
 			'success': True,
 			'is_cancelled': cancelled,
