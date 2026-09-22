@@ -296,7 +296,14 @@ def index():
     today = get_today()
 
     competitions = Competition.query.order_by(Competition.event_date).all()
-    upcoming_race = next((c for c in competitions if c.event_date and c.event_date >= today), None)
+    upcoming_race = next(
+        (
+            c
+            for c in competitions
+            if c.event_date and c.event_date >= today and not getattr(c, "is_cancelled", False)
+        ),
+        None,
+    )
     my_team = SeasonTeam.query.filter_by(user_id=uid).first()
 
     team_riders = []
@@ -324,7 +331,11 @@ def index():
         "index.html",
         username=session["username"],
         upcoming_race=upcoming_race,
-        upcoming_races=[c for c in competitions if c.event_date and c.event_date >= today],
+        upcoming_races=[
+            c
+            for c in competitions
+            if c.event_date and c.event_date >= today and not getattr(c, "is_cancelled", False)
+        ],
         my_team=my_team,
         team_riders=team_riders,
     )

@@ -192,7 +192,7 @@
             <div>
                 <p class="ap-eyebrow">MX Fantasy</p>
                 <h1 class="ap-title">Admin</h1>
-                <p class="ap-sub">Resultat, picks, förare, användare och verktyg</p>
+                <p class="ap-sub">SMX, WSX, picks, förare, användare och verktyg</p>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
                 <a href="/" class="ap-btn ap-btn--ghost">Startsida</a>
@@ -221,7 +221,7 @@
 
         <!-- Navigation Tabs -->
         <div class="admin-tab-bar" role="tablist" aria-label="Admin-sektioner">
-            <button type="button" onclick="showSection('race-results', this)" class="tab-btn active">Resultat</button>
+            <button type="button" onclick="showSection('race-results', this)" class="tab-btn active">SMX</button>
             <button type="button" onclick="showSection('wsx-results', this)" class="tab-btn">WSX</button>
             <a href="/admin/mxon" class="tab-btn">MXoN</a>
             <button type="button" onclick="showSection('picks-management', this)" class="tab-btn">Picks</button>
@@ -235,8 +235,8 @@
         <!-- Race Results Section -->
         <div id="race-results" class="section-panel active">
             <div class="section-card rounded-lg p-6 mb-6">
-                <h2 class="text-2xl font-bold text-cyan-400 mb-4">Tävlingsresultat (SX / MX / SMX)</h2>
-                <p class="text-gray-400 text-sm mb-3">AMA-serier. WSX har egen flik: <button type="button" onclick="showSection('wsx-results')" class="text-cyan-400 underline">WSX Resultat</button>.</p>
+                <h2 class="text-2xl font-bold text-cyan-400 mb-4">SMX / AMA-resultat (SX · MX · SMX)</h2>
+                <p class="text-gray-400 text-sm mb-3">AMA-serier. WSX har egen flik: <button type="button" onclick="showSection('wsx-results')" class="text-cyan-400 underline">WSX</button>.</p>
                 <div class="admin-flow">
                     <span><strong>1.</strong> Importera från Racer&nbsp;X</span>
                     <span><strong>2.</strong> Sätt holeshot</span>
@@ -500,7 +500,7 @@
                 <h2 class="text-2xl font-bold text-cyan-400 mb-4">WSX Resultat</h2>
                 <p class="text-gray-400 text-sm mb-3">
                     Tippa-only (ingen säsongsteam / wildcard). AMA ligger under
-                    <button type="button" onclick="showSection('race-results')" class="text-cyan-400 underline">Tävlingsresultat</button>.
+                    <button type="button" onclick="showSection('race-results')" class="text-cyan-400 underline">SMX</button>.
                 </p>
                 <div class="mb-4 flex flex-wrap items-center gap-3">
                     <a href="/admin/seed_wsx_2026"
@@ -816,7 +816,7 @@
             <div class="section-card rounded-lg p-6 mb-6">
                 <h2 class="text-2xl font-bold text-cyan-400 mb-4">🎯 Picks &amp; poäng</h2>
                 <p class="text-gray-400 text-sm mb-6 p-3 bg-gray-800/80 rounded-lg border border-gray-700">
-                    <strong class="text-gray-200">Efter race:</strong> 1) Resultat importerade under <button type="button" onclick="showSection('race-results')" class="text-cyan-400 underline">Tävlingsresultat</button>
+                    <strong class="text-gray-200">Efter race:</strong> 1) Resultat importerade under <button type="button" onclick="showSection('race-results')" class="text-cyan-400 underline">SMX</button>
                     → 2) Kolla statistik → 3) <strong>Räkna om poäng</strong> när resultat stämmer.
                 </p>
 
@@ -1105,7 +1105,7 @@
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold text-white mb-3">👥 Förare</h3>
                     <div class="bg-gray-800 rounded-lg p-4">
-                        <p class="text-gray-300 mb-3">Lägg till och redigera förare (250/450), sök, SMX-nummer och MX-klassbyte. Resultat importeras under <strong>Tävlingsresultat</strong>.</p>
+                        <p class="text-gray-300 mb-3">Lägg till och redigera förare (250/450), sök, SMX-nummer och MX-klassbyte. Resultat importeras under <strong>SMX</strong>.</p>
                         <a href="/rider_management" class="btn-primary px-4 py-2 rounded-lg inline-block">
                             👥 Hantera förare
                         </a>

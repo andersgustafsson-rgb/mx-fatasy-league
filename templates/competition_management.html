@@ -126,6 +126,14 @@
       background: rgba(127, 29, 29, 0.35);
       border-color: rgba(248, 113, 113, 0.55);
     }
+    .cm-btn--warn {
+      color: #fcd34d;
+      border-color: rgba(251, 191, 36, 0.4);
+    }
+    .cm-btn--warn:hover {
+      background: rgba(120, 53, 15, 0.35);
+      border-color: rgba(251, 191, 36, 0.6);
+    }
     .cm-btn--sm {
       padding: 0.35rem 0.65rem;
       font-size: 0.8rem;
@@ -273,6 +281,13 @@
     .cm-table tbody tr.cm-row--next .cm-name {
       color: #ecfeff;
     }
+    .cm-table tbody tr.cm-row--cancelled {
+      opacity: 0.72;
+      background: rgba(251, 191, 36, 0.06);
+    }
+    .cm-table tbody tr.cm-row--cancelled:hover {
+      opacity: 0.9;
+    }
     .cm-pill-next {
       display: inline-flex;
       align-items: center;
@@ -340,9 +355,30 @@
     .cm-badge--wsx { background: rgba(34, 211, 238, 0.14); color: #67e8f9; }
     .cm-badge--mxon { background: rgba(167, 139, 250, 0.16); color: #c4b5fd; }
     .cm-badge--muted { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
+    .cm-badge--cancelled {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fde68a;
+      min-width: auto;
+      letter-spacing: 0.06em;
+    }
+    .cm-pill-cancelled {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 0.45rem;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: rgba(251, 191, 36, 0.18);
+      color: #fde68a;
+      border: 1px solid rgba(251, 191, 36, 0.35);
+    }
 
     .cm-row-actions {
       display: flex;
+      flex-wrap: wrap;
       gap: 0.35rem;
     }
 
@@ -487,7 +523,7 @@
       <div>
         <p class="cm-eyebrow">MX Fantasy · Admin</p>
         <h1 class="cm-title">Tävlingar</h1>
-        <p class="cm-sub">Schema, tidszon, race start och quali-lås för SX · MX · SMX · WSX</p>
+        <p class="cm-sub">Schema, tidszon, race start, quali-lås och ställ in event · SX · MX · SMX · WSX</p>
       </div>
       <div class="cm-actions">
         <button type="button" class="cm-btn cm-btn--ghost" onclick="loadCompetitions()">Uppdatera</button>
@@ -741,23 +777,32 @@
       return `${y}-${m}-${day}`;
     }
 
+    function isCancelled(comp) {
+      return !!comp.is_cancelled;
+    }
+
     function isUpcoming(comp, today) {
+      if (isCancelled(comp)) return false;
       return !!(comp.event_date && comp.event_date >= today);
     }
 
     function sortCompetitions(list) {
       const today = todayIso();
       return [...list].sort((a, b) => {
+        const aCan = isCancelled(a);
+        const bCan = isCancelled(b);
         const aUp = isUpcoming(a, today);
         const bUp = isUpcoming(b, today);
-        if (aUp !== bUp) return aUp ? -1 : 1;
+        // Kommande → Inställda → Passerade
+        const rank = (up, can) => (up ? 0 : can ? 1 : 2);
+        const ra = rank(aUp, aCan);
+        const rb = rank(bUp, bCan);
+        if (ra !== rb) return ra - rb;
         const da = a.event_date || "";
         const db = b.event_date || "";
         if (aUp) {
-          // kvar: närmast först
           if (da !== db) return da < db ? -1 : 1;
         } else {
-          // passerade: nyast först
           if (da !== db) return da > db ? -1 : 1;
         }
         return (a.id || 0) - (b.id || 0);
@@ -807,9 +852,11 @@
       }
 
       let sawUpcoming = false;
+      let sawCancelled = false;
       let sawPast = false;
 
       filteredCompetitions.forEach((comp) => {
+        const cancelled = isCancelled(comp);
         const upcoming = isUpcoming(comp, today);
 
         if (upcoming && !sawUpcoming) {
@@ -819,7 +866,14 @@
           label.innerHTML = `<td colspan="11"><span>Kommande</span></td>`;
           tbody.appendChild(label);
         }
-        if (!upcoming && !sawPast) {
+        if (cancelled && !sawCancelled) {
+          sawCancelled = true;
+          const label = document.createElement("tr");
+          label.className = "cm-section-label";
+          label.innerHTML = `<td colspan="11"><span>Inställda</span></td>`;
+          tbody.appendChild(label);
+        }
+        if (!upcoming && !cancelled && !sawPast) {
           sawPast = true;
           const label = document.createElement("tr");
           label.className = "cm-section-label";
@@ -831,7 +885,7 @@
         const isNext = upcoming && comp.id === nextId;
         row.dataset.compId = String(comp.id);
         row.className = [
-          upcoming ? "cm-row--upcoming" : "cm-row--past",
+          cancelled ? "cm-row--cancelled" : upcoming ? "cm-row--upcoming" : "cm-row--past",
           isNext ? "cm-row--next" : "",
         ]
           .filter(Boolean)
@@ -842,9 +896,13 @@
         const race = toTimeInputValue(comp.start_time) || "—";
         const quali = toTimeInputValue(comp.quali_start_time) || "—";
         const nextPill = isNext ? `<span class="cm-pill-next">Nästa</span>` : "";
+        const cancelPill = cancelled ? `<span class="cm-pill-cancelled">Inställd</span>` : "";
+        const cancelBtn = cancelled
+          ? `<button type="button" class="cm-btn cm-btn--sm" onclick="setCompetitionCancelled(${comp.id}, false)">Återställ</button>`
+          : `<button type="button" class="cm-btn cm-btn--sm cm-btn--warn" onclick="setCompetitionCancelled(${comp.id}, true)">Ställ in</button>`;
         row.innerHTML = `
           <td class="cm-id">${comp.id}</td>
-          <td><span class="cm-name">${escapeHtml(comp.name || "")}</span>${nextPill}</td>
+          <td><span class="cm-name">${escapeHtml(comp.name || "")}</span>${nextPill}${cancelPill}</td>
           <td class="cm-mono">${formatDateSv(comp.event_date)}</td>
           <td><span class="${seriesBadgeClass(comp.series)}">${escapeHtml(comp.series || "")}</span></td>
           <td>${escapeHtml(coast)}</td>
@@ -856,6 +914,7 @@
           <td>
             <div class="cm-row-actions">
               <button type="button" class="cm-btn cm-btn--sm" onclick="editCompetition(${comp.id})">Redigera</button>
+              ${cancelBtn}
               <button type="button" class="cm-btn cm-btn--sm cm-btn--danger" onclick="deleteCompetition(${comp.id})">Ta bort</button>
             </div>
           </td>
@@ -1072,6 +1131,29 @@
       } catch (error) {
         console.error("Error:", error);
         showStatus("Fel vid borttagning: " + error.message, "error");
+      }
+    }
+
+    async function setCompetitionCancelled(id, cancelled) {
+      const msg = cancelled
+        ? "Ställa in den här tävlingen? Den döljs från picks och kommande (data behålls)."
+        : "Återställa tävlingen så den syns igen?";
+      if (!confirm(msg)) return;
+      try {
+        const response = await fetch(`/api/competitions/${id}/cancel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cancelled: !!cancelled }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || "Fel vid uppdatering");
+        }
+        showStatus(result.message || (cancelled ? "Tävling inställd" : "Tävling återställd"), "success");
+        loadCompetitions();
+      } catch (error) {
+        console.error("Error:", error);
+        showStatus("Fel: " + error.message, "error");
       }
     }
 

@@ -61,6 +61,8 @@ class Competition(db.Model):
     series_id = db.Column(db.Integer, db.ForeignKey('series.id'), nullable=True)
     phase = db.Column(db.String(20), nullable=True)
     is_qualifying = db.Column(db.Boolean, default=False)
+    # Soft-cancel (t.ex. inställt GP) — döljs från upcoming/picks utan att radera data
+    is_cancelled = db.Column(db.Boolean, default=False, nullable=False)
     series_ref = db.relationship('Series', backref='competitions', lazy=True)
     _start_time_column_exists = None
     _quali_start_time_column_exists = None

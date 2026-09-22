@@ -88,9 +88,9 @@ def build_invite_card_data(ref: str | None = None, *, prefer_series: str | None 
                 Competition.event_date >= today,
             )
             .order_by(Competition.event_date.asc())
-            .first()
+            .all()
         )
-        comp = upcoming_wsx
+        comp = next((c for c in upcoming_wsx if not getattr(c, "is_cancelled", False)), None)
     if comp is None:
         comp = _next_open_picks_competition()
 

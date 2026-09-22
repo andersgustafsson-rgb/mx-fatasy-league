@@ -61,6 +61,28 @@ def _ensure_quali_start_time_column() -> None:
 			print(f"ensure quali_start_time: {e}")
 
 
+def _ensure_is_cancelled_column() -> None:
+	"""Add competitions.is_cancelled if missing (Postgres + SQLite)."""
+	try:
+		db.session.execute(db.text("SELECT is_cancelled FROM competitions LIMIT 1"))
+		return
+	except Exception:
+		db.session.rollback()
+	try:
+		db.session.execute(
+			db.text(
+				"ALTER TABLE competitions ADD COLUMN is_cancelled BOOLEAN DEFAULT FALSE NOT NULL"
+			)
+		)
+		db.session.commit()
+		print("Added competitions.is_cancelled")
+	except Exception as e:
+		db.session.rollback()
+		if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+			return
+		print(f"ensure is_cancelled: {e}")
+
+
 def _parse_hhmm(value):
 	if value is None or value == "":
 		return None
@@ -827,6 +849,7 @@ def list_competitions():
 		return jsonify({'error': 'Unauthorized'}), 401
 	try:
 		_ensure_quali_start_time_column()
+		_ensure_is_cancelled_column()
 		# Detect presence of optional start_time column
 		try:
 			db.session.execute(db.text("SELECT start_time FROM competitions LIMIT 1"))
@@ -851,6 +874,7 @@ def list_competitions():
 				'point_multiplier': comp.point_multiplier,
 				'is_triple_crown': comp.is_triple_crown,
 				'timezone': comp.timezone,
+				'is_cancelled': bool(getattr(comp, 'is_cancelled', False)),
 			}
 			if has_start_time and hasattr(comp, 'start_time'):
 				comp_data['start_time'] = comp.start_time.isoformat() if comp.start_time else None
@@ -875,6 +899,7 @@ def create_competition():
 	data = request.get_json()
 	try:
 		_ensure_quali_start_time_column()
+		_ensure_is_cancelled_column()
 		# Normalize coast_250: accept both "both" and "showdown", store as "showdown"
 		coast_250 = data.get('coast_250')
 		if coast_250 == 'both':
@@ -920,6 +945,7 @@ def update_competition(competition_id: int):
 	data = request.get_json()
 	try:
 		_ensure_quali_start_time_column()
+		_ensure_is_cancelled_column()
 		comp.name = data['name']
 		comp.event_date = datetime.strptime(data['event_date'], '%Y-%m-%d').date() if data.get('event_date') else None
 		comp.series = data.get('series', comp.series)
@@ -965,6 +991,40 @@ def update_competition(competition_id: int):
 		db.session.expire(comp)
 		
 		return jsonify({'success': True})
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/competitions/<int:competition_id>/cancel', methods=['POST'])
+def cancel_competition(competition_id: int):
+	"""Soft-cancel or restore an event (e.g. cancelled GP). Keeps picks/data."""
+	if not is_admin_user():
+		return jsonify({'error': 'Unauthorized'}), 401
+	_ensure_is_cancelled_column()
+	comp = Competition.query.get_or_404(competition_id)
+	data = request.get_json(silent=True) or {}
+	cancelled = data.get('cancelled', True)
+	if isinstance(cancelled, str):
+		cancelled = cancelled.strip().lower() in ('1', 'true', 'yes')
+	else:
+		cancelled = bool(cancelled)
+	try:
+		comp.is_cancelled = cancelled
+		db.session.commit()
+		try:
+			# Drop homepage series-status cache so cancelled races disappear promptly
+			import main as _main
+			if hasattr(_main, '_SERIES_STATUS_CACHE'):
+				_main._SERIES_STATUS_CACHE = None
+		except Exception:
+			pass
+		label = 'inställd' if cancelled else 'återställd'
+		return jsonify({
+			'success': True,
+			'is_cancelled': cancelled,
+			'message': f'{comp.name} är {label}',
+		})
 	except Exception as e:
 		db.session.rollback()
 		return jsonify({'error': str(e)}), 500

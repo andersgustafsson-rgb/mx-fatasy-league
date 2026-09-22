@@ -1208,6 +1208,8 @@ def _next_competition_for_picks(
     if series:
         q = q.filter(Competition.series == series)
     for comp in q.order_by(Competition.event_date.asc()).all():
+        if getattr(comp, "is_cancelled", False):
+            continue
         if comp.event_date and comp.event_date < today:
             continue
         if CompetitionResult.query.filter_by(competition_id=comp.id).first():
@@ -1234,6 +1236,8 @@ def _next_competition_for_pick_reminders() -> Competition | None:
     )
     usable: list[Competition] = []
     for comp in comps:
+        if getattr(comp, "is_cancelled", False):
+            continue
         if CompetitionResult.query.filter_by(competition_id=comp.id).first():
             continue
         usable.append(comp)
@@ -4055,6 +4059,8 @@ def _upcoming_competitions_without_results() -> dict[str, list[Competition]]:
     )
     grouped: dict[str, list[Competition]] = defaultdict(list)
     for comp in comps:
+        if getattr(comp, "is_cancelled", False):
+            continue
         if comp.id in result_comp_ids:
             continue
         code = (comp.series or "").strip()
@@ -4127,11 +4133,18 @@ def build_series_status_list() -> list[dict]:
             if not next_race:
                 next_race = _pick_next_competition(candidates, require_open=False)
         if not next_race:
-            next_race = (
-                Competition.query.filter_by(series_id=s.id)
-                .filter(Competition.event_date >= current_date)
-                .order_by(Competition.event_date)
-                .first()
+            next_race = next(
+                (
+                    c
+                    for c in (
+                        Competition.query.filter_by(series_id=s.id)
+                        .filter(Competition.event_date >= current_date)
+                        .order_by(Competition.event_date)
+                        .all()
+                    )
+                    if not getattr(c, "is_cancelled", False)
+                ),
+                None,
             )
 
         # Playable/active for UI: not past end_date, and either inside the window
@@ -4916,7 +4929,10 @@ def _index_impl():
         view_picks_race=view_picks_race,
         can_view_other_picks=can_view_other_picks,
         upcoming_race_bg_url=upcoming_race_bg_url,
-        upcoming_races=[c for c in competitions if c.event_date and c.event_date >= today],
+        upcoming_races=[
+            c for c in competitions
+            if c.event_date and c.event_date >= today and not getattr(c, "is_cancelled", False)
+        ],
         my_team=my_team if is_logged_in else None,
         team_riders=team_riders if is_logged_in else [],
         current_picks_450=current_picks_450 if is_logged_in else None,
@@ -5763,6 +5779,8 @@ def _upcoming_competitions(limit: int = 4) -> list[dict]:
     )
     cards = []
     for comp in upcoming:
+        if getattr(comp, "is_cancelled", False):
+            continue
         if comp.id in ids_with_results:
             continue
         cards.append({
@@ -26312,6 +26330,8 @@ def view_user_profile(user_id):
             
             upcoming_race = None
             for comp in all_upcoming:
+                if getattr(comp, "is_cancelled", False):
+                    continue
                 # Check if this competition has results (is completed)
                 has_results = CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
                 if not has_results:
@@ -27586,6 +27606,24 @@ def init_database():
             except Exception as e:
                 print(f"Warning: Could not migrate timezone column: {e}")
                 # Continue anyway, the column will be added when creating new competitions
+
+            # Soft-cancel flag for competitions (e.g. cancelled WSX British GP)
+            try:
+                db.session.execute(db.text("SELECT is_cancelled FROM competitions LIMIT 1"))
+            except Exception:
+                db.session.rollback()
+                try:
+                    print("Adding is_cancelled column to competitions table...")
+                    db.session.execute(
+                        db.text(
+                            "ALTER TABLE competitions ADD COLUMN is_cancelled BOOLEAN DEFAULT FALSE NOT NULL"
+                        )
+                    )
+                    db.session.commit()
+                    print("is_cancelled column added successfully")
+                except Exception as cancel_err:
+                    db.session.rollback()
+                    print(f"Warning: Could not migrate is_cancelled column: {cancel_err}")
 
             # Snapshot rider class on CompetitionResult rows so class switches don't rewrite history
             try:
@@ -30508,6 +30546,8 @@ def race_countdown():
             
             next_race_obj = None
             for comp in all_upcoming:
+                if getattr(comp, "is_cancelled", False):
+                    continue
                 # Check if this competition has results (is completed)
                 has_results = CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
                 if not has_results:
@@ -31266,8 +31306,9 @@ def set_active_race_next():
             Competition.query
             .filter(Competition.event_date >= today)
             .order_by(Competition.event_date.asc())
-            .first()
+            .all()
         )
+        comp = next((c for c in comp if not getattr(c, "is_cancelled", False)), None)
         if not comp:
             return jsonify({"error": "No upcoming competitions"}), 404
         # Reuse logic by redirecting to set_active_race
