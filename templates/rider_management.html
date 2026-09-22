@@ -3,66 +3,226 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rider Management - MX Fantasy League</title>
+    <title>Förare — Admin · MX Fantasy</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --rm-bg: #020617;
+            --rm-panel: rgba(15, 23, 42, 0.72);
+            --rm-line: rgba(148, 163, 184, 0.16);
+            --rm-text: #e2e8f0;
+            --rm-muted: #94a3b8;
+            --rm-accent: #22d3ee;
+        }
+        * { box-sizing: border-box; }
+        body.rm {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Barlow", system-ui, sans-serif;
+            color: var(--rm-text);
+            background:
+                radial-gradient(ellipse 70% 45% at 10% -10%, rgba(34, 211, 238, 0.12), transparent 55%),
+                radial-gradient(ellipse 50% 40% at 100% 0%, rgba(251, 191, 36, 0.07), transparent 50%),
+                linear-gradient(165deg, #020617 0%, #0f172a 50%, #020617 100%);
+            background-attachment: fixed;
+        }
+        .rm-wrap { max-width: 1280px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+        .rm-back {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            color: var(--rm-muted); text-decoration: none; font-size: 0.9rem; margin-bottom: 0.75rem;
+        }
+        .rm-back:hover { color: var(--rm-accent); }
+        .rm-top {
+            display: flex; flex-wrap: wrap; align-items: flex-end;
+            justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem;
+        }
+        .rm-eyebrow {
+            margin: 0 0 0.25rem; font-size: 0.75rem; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--rm-muted);
+        }
+        .rm-title {
+            margin: 0; font-family: "Barlow Condensed", sans-serif; font-weight: 800;
+            font-size: clamp(1.75rem, 4vw, 2.35rem); letter-spacing: 0.02em; line-height: 1; color: #f8fafc;
+        }
+        .rm-sub { margin: 0.4rem 0 0; color: var(--rm-muted); font-size: 0.95rem; }
+        .rm-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+        .rm-btn {
+            appearance: none; border: 1px solid var(--rm-line); background: rgba(15, 23, 42, 0.85);
+            color: var(--rm-text); border-radius: 0.55rem; padding: 0.55rem 0.9rem;
+            font: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+            transition: border-color 0.15s, background 0.15s, color 0.15s;
+        }
+        .rm-btn:hover { border-color: rgba(34, 211, 238, 0.45); background: rgba(30, 41, 59, 0.95); }
+        .rm-btn--primary {
+            background: linear-gradient(135deg, #22d3ee, #06b6d4); border-color: transparent; color: #0f172a;
+        }
+        .rm-btn--primary:hover { background: linear-gradient(135deg, #67e8f9, #22d3ee); color: #0f172a; }
+        .rm-btn--ghost { background: transparent; }
+        .rm-search-bar {
+            display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;
+            margin-bottom: 1rem; padding: 0.85rem 1rem;
+            border: 1px solid var(--rm-line); border-radius: 0.85rem; background: var(--rm-panel);
+        }
+        .rm-search-bar input[type="search"], .rm-search-bar input[type="text"] {
+            flex: 1 1 220px; min-width: min(100%, 200px);
+            background: #020617; border: 1px solid var(--rm-line); border-radius: 0.5rem;
+            color: #f1f5f9; padding: 0.55rem 0.75rem; font: inherit; font-size: 0.95rem;
+        }
+        .rm-search-bar input:focus { outline: none; border-color: rgba(34, 211, 238, 0.55); }
+        #searchResults {
+            width: 100%; margin-top: 0.35rem;
+            border-top: 1px solid var(--rm-line); padding-top: 0.65rem;
+        }
+        #searchResultsList { display: flex; flex-direction: column; gap: 0.35rem; }
+        .rm-tools {
+            margin-bottom: 1rem; border: 1px solid var(--rm-line); border-radius: 0.75rem;
+            background: rgba(15, 23, 42, 0.55); overflow: hidden;
+        }
+        .rm-tools > summary {
+            cursor: pointer; list-style: none; padding: 0.75rem 1rem; color: var(--rm-muted);
+            font-size: 0.85rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+            user-select: none;
+        }
+        .rm-tools > summary::-webkit-details-marker { display: none; }
+        .rm-tools[open] > summary { border-bottom: 1px solid var(--rm-line); color: #cbd5e1; }
+        .rm-tools-body { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+        .rm-panel {
+            border: 1px solid var(--rm-line); border-radius: 0.85rem;
+            background: var(--rm-panel); padding: 1rem; margin: 0;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.2);
+        }
+        .rm-panel h3 {
+            margin: 0 0 0.5rem; font-family: "Barlow Condensed", sans-serif;
+            font-size: 1.2rem; font-weight: 700; letter-spacing: 0.02em; color: #f1f5f9;
+        }
+        .rm-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.85rem; }
+        .tab-button {
+            appearance: none; border: 1px solid var(--rm-line); background: transparent;
+            color: var(--rm-muted); border-radius: 999px; padding: 0.4rem 0.85rem;
+            font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+        }
+        .tab-button:hover { color: #e2e8f0; border-color: rgba(148, 163, 184, 0.35); }
+        .tab-button.active {
+            background: rgba(34, 211, 238, 0.12);
+            border-color: rgba(34, 211, 238, 0.45);
+            color: #a5f3fc;
+            box-shadow: none;
+        }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .tab-button.active { 
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            border-color: #22d3ee;
-            color: #22d3ee;
-            box-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+        .rm-list {
+            border: 1px solid var(--rm-line); border-radius: 0.85rem;
+            background: rgba(15, 23, 42, 0.72); overflow: hidden;
+            box-shadow: 0 18px 40px rgba(0,0,0,0.25);
+        }
+        .rm-list-head {
+            padding: 0.85rem 1rem; border-bottom: 1px solid var(--rm-line);
+            background: #0b1220;
+        }
+        .rm-list-head h2 {
+            margin: 0; font-family: "Barlow Condensed", sans-serif;
+            font-size: 1.35rem; font-weight: 700; color: #f8fafc; letter-spacing: 0.02em;
+        }
+        .rm-list-body { padding: 1rem; }
+        .rm-form-box {
+            margin-bottom: 1rem; padding: 0.9rem 1rem;
+            border: 1px solid var(--rm-line); border-radius: 0.65rem; background: rgba(2, 6, 23, 0.45);
+        }
+        .rm-form-box h3 {
+            margin: 0 0 0.75rem; font-size: 0.8rem; font-weight: 700;
+            letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;
+        }
+        .rm-table-wrap { overflow-x: auto; border: 1px solid var(--rm-line); border-radius: 0.65rem; }
+        .rm-list thead tr, .rm-list th {
+            background: #0b1220 !important;
+            border-bottom: 1px solid var(--rm-line) !important;
+            color: #94a3b8 !important;
+            font-size: 0.7rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            text-shadow: none !important;
+            box-shadow: none !important;
+        }
+        .rm-list th, .rm-list td { padding: 0.7rem 0.85rem !important; }
+        .rm-list tbody tr { border-bottom: 1px solid rgba(148, 163, 184, 0.08); transition: background 0.12s; }
+        .rm-list tbody tr:hover { background: rgba(34, 211, 238, 0.04); }
+        .rm-list tbody tr.rm-hit {
+            background: linear-gradient(90deg, rgba(34, 211, 238, 0.16), rgba(34, 211, 238, 0.04) 55%, transparent);
+            box-shadow: inset 3px 0 0 #22d3ee;
+        }
+        .rm-list .rider-name { font-weight: 600; color: #f1f5f9; }
+        .rm-list .rider-number, .rm-list .rider-price, .rm-list .rider-bike {
+            font-variant-numeric: tabular-nums; color: #cbd5e1;
+        }
+        .rm-list button.bg-blue-600 {
+            background: transparent !important; color: #a5f3fc !important;
+            border: 1px solid rgba(34, 211, 238, 0.35); border-radius: 0.45rem; font-weight: 600;
+        }
+        .rm-list button.bg-blue-600:hover { background: rgba(34, 211, 238, 0.1) !important; }
+        .rm-list button.bg-red-600 {
+            background: transparent !important; color: #fca5a5 !important;
+            border: 1px solid rgba(248, 113, 113, 0.35); border-radius: 0.45rem; font-weight: 600;
+        }
+        .rm-list button.bg-red-600:hover { background: rgba(127, 29, 29, 0.35) !important; }
+        .rm-tools .border-2 { border-width: 1px !important; border-color: var(--rm-line) !important; }
+        .rm-tools .bg-white { background: transparent !important; box-shadow: none !important; }
+        #edit-modal {
+            background: rgba(2, 6, 23, 0.72) !important;
+            backdrop-filter: blur(6px);
+        }
+        #edit-modal > div > div {
+            background: linear-gradient(180deg, #111827 0%, #0f172a 100%) !important;
+            border: 1px solid var(--rm-line) !important;
+            border-radius: 0.9rem !important;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.45) !important;
+        }
+        #edit-modal h3 {
+            font-family: "Barlow Condensed", sans-serif;
+            font-size: 1.35rem; font-weight: 700; color: #f8fafc !important;
+            text-shadow: none !important;
+        }
+        .rm-note { color: var(--rm-muted); font-size: 0.85rem; margin: 0 0 1rem; }
+        .rm-note a { color: #67e8f9; }
+        details.rm-legacy {
+            margin-bottom: 1rem; border: 1px solid var(--rm-line); border-radius: 0.75rem;
+            background: rgba(15, 23, 42, 0.45);
+        }
+        details.rm-legacy > summary {
+            cursor: pointer; padding: 0.75rem 1rem; color: var(--rm-muted);
+            font-size: 0.85rem; font-weight: 600;
         }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
-    <div class="container mx-auto p-4 sm:p-6">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center space-x-4">
-                <a href="/" class="text-2xl font-bold text-cyan-400 hover:text-cyan-300 transition-colors">🏁 MX Fantasy</a>
-                <span class="text-cyan-400">|</span>
-                <h1 class="text-2xl font-bold text-cyan-400">👥 Rider Management</h1>
+<body class="rm">
+    <div class="rm-wrap">
+        <a class="rm-back" href="/admin">← Admin</a>
+        <div class="rm-top">
+            <div>
+                <p class="rm-eyebrow">MX Fantasy · Admin</p>
+                <h1 class="rm-title">Förare</h1>
+                <p class="rm-sub">Entry list, bilder, bio, klassbyte och roster för 250 · 450 · WSX</p>
             </div>
-            <div class="flex items-center space-x-4">
-                <a href="/admin" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded transition-colors">← Tillbaka till Admin</a>
-            </div>
-        </div>
-
-        <!-- Search Function -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">🔍 Sök Förare</h3>
-            <div class="flex flex-col sm:flex-row gap-3">
-                <input 
-                    type="text" 
-                    id="riderSearch" 
-                    placeholder="Sök efter namn, nummer, team eller pris..." 
-                    class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                    oninput="searchRiders()"
-                >
-                <button 
-                    onclick="searchRiders()" 
-                    class="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded-lg transition-colors"
-                >
-                    Sök
-                </button>
-                <button 
-                    onclick="clearSearch()" 
-                    class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                    Rensa
-                </button>
-            </div>
-            <div id="searchResults" class="mt-4 hidden">
-                <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">Sökresultat:</h4>
-                <div id="searchResultsList" class="space-y-2"></div>
+            <div class="rm-actions">
+                <a href="/" class="rm-btn rm-btn--ghost" style="text-decoration:none;">Startsida</a>
             </div>
         </div>
 
+        <div class="rm-search-bar">
+            <input type="search" id="riderSearch" placeholder="Sök namn, nummer, team eller pris…" oninput="searchRiders()" autocomplete="off">
+            <button type="button" class="rm-btn rm-btn--primary" onclick="searchRiders()">Sök</button>
+            <button type="button" class="rm-btn" onclick="clearSearch()">Rensa</button>
+            <div id="searchResults" class="hidden" style="width:100%">
+                <div id="searchResultsList"></div>
+            </div>
+        </div>
+        <details class="rm-tools">
+            <summary>Verktyg — entry list, bilder, bio, nummer &amp; klassbyte</summary>
+            <div class="rm-tools-body">
         <!-- Snabbklistra Provisional Entry List -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-cyan-500">
-            <h3 class="text-lg font-semibold text-cyan-400 mb-2">📋 Snabbklistra Entry List</h3>
+        <div class="rm-panel">
+            <h3 class="text-lg font-semibold text-cyan-400 mb-2">Snabbklistra Entry List</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Klistra in <strong>Provisional Entry List</strong> från supercross.com.
                 Lägg till <strong>nya</strong> förare och/eller <strong>uppdatera startnummer</strong> för befintliga — utan att ersätta hela listan.
@@ -179,8 +339,8 @@
         </div>
 
         <!-- RacerX bilder: fyll på saknade -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-sky-500">
-            <h3 class="text-lg font-semibold text-sky-400 mb-2">🖼️ RacerX-bilder (fyll på saknade)</h3>
+        <div class="rm-panel">
+            <h3 class="text-lg font-semibold text-sky-400 mb-2">RacerX-bilder (saknade)</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
                 Matchar mot <code>data/racerx_riders_2026.csv</code>. Inget uppdateras utan att du kryssar i och sparar.
             </p>
@@ -227,8 +387,8 @@
         </div>
 
         <!-- RacerX bio: batch import -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-emerald-500">
-            <h3 class="text-lg font-semibold text-emerald-400 mb-2">📖 RacerX-bio (batch)</h3>
+        <div class="rm-panel">
+            <h3 class="text-lg font-semibold text-emerald-400 mb-2">RacerX-bio (batch)</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
                 Hämtar biografi och meriter från racerxonline.com för förare som saknar bio.
                 Körs i batch om 20 (~1–2 min per körning: RacerX-sida per förare + kort paus).
@@ -250,8 +410,8 @@
         </div>
 
         <!-- Bulk Update Rider Numbers -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-yellow-400">
-            <h3 class="text-lg font-semibold text-yellow-400 mb-3">🔄 Bulk Uppdatera Förarenummer (SMX)</h3>
+        <div class="rm-panel">
+            <h3 class="text-lg font-semibold text-yellow-400 mb-3">Bulk uppdatera förarenummer (SMX)</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Uppdaterar alla SMX-förares nummer enligt den nya listan. Konflikter hanteras automatiskt med temporära nummer.
             </p>
@@ -266,8 +426,8 @@
         </div>
 
         <!-- MX klassbyte: gratis säsongsteam-byte + nytt 450-nummer -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-emerald-500">
-            <h3 class="text-lg font-semibold text-emerald-400 mb-2">↕️ MX-klassbyte (säsongsteam)</h3>
+        <div class="rm-panel">
+            <h3 class="text-lg font-semibold text-emerald-400 mb-2">MX-klassbyte (säsongsteam)</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Koppla rätt förarrader när någon byter klass (250 ↔ 450), sätt <strong>nytt startnummer i målklassen</strong>, och aktivera gratis byte för spelare som fortfarande har den gamla versionen på säsongsteamet.
             </p>
@@ -299,12 +459,12 @@
             <div id="cp-status" class="hidden text-sm"></div>
         </div>
 
+            </div>
+        </details>
+
         <!-- Legacy verktyg (gömda) — resultat hanteras i Admin → Tävlingsresultat -->
-        <details class="mb-6 rounded-lg border border-gray-500/60 bg-gray-800/50">
-            <summary class="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-gray-400 hover:text-gray-200">
-                ⚙️ Avancerat (legacy) — entry list, CSV-resultat, bilder
-                <span class="ml-2 font-normal text-gray-500">sällan behövs</span>
-            </summary>
+        <details class="rm-legacy">
+            <summary>Avancerat (legacy) — entry list, CSV-resultat, bilder · sällan behövs</summary>
             <div class="space-y-6 border-t border-gray-600/50 p-4">
 
         <!-- Entry List Import Section -->
@@ -559,30 +719,25 @@
             </div>
         </details>
 
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Veckoresultat och bulk-import: <a href="/admin" class="text-cyan-500 hover:text-cyan-400 underline">Admin → Tävlingsresultat</a>.
+        <p class="rm-note">
+            Veckoresultat och bulk-import: <a href="/admin">Admin → Tävlingsresultat</a>.
         </p>
 
         <!-- Tab Navigation -->
-        <div class="flex flex-wrap gap-2 mb-6">
-            <button class="tab-button active px-4 py-2 rounded border-2 border-gray-600 bg-gray-800 text-white transition-all" data-tab="250">
-                250cc
-            </button>
-            <button class="tab-button px-4 py-2 rounded border-2 border-gray-600 bg-gray-800 text-white transition-all" data-tab="450">
-                450cc
-            </button>
+        <div class="rm-chips" role="tablist" aria-label="Klass">
+            <button type="button" class="tab-button active" data-tab="250">250cc</button>
+            <button type="button" class="tab-button" data-tab="450">450cc</button>
+            <button type="button" class="tab-button" data-tab="wsx">WSX</button>
         </div>
 
         <!-- 250cc Tab -->
         <div id="250" class="tab-content active">
-            <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
-                <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
-                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏍️ 250cc Riders</h2>
-                </div>
-                <div class="p-4 bg-gray-900">
+            <div class="rm-list">
+                <div class="rm-list-head"><h2>250cc</h2></div>
+                <div class="rm-list-body">
                     <!-- Add New Rider Form -->
-                    <div class="mb-6 p-4 bg-gray-800 rounded border border-cyan-400" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
-                        <h3 class="text-lg font-semibold text-cyan-400 mb-4">➕ Lägg till ny förare</h3>
+                    <div class="rm-form-box">
+                        <h3>Lägg till förare</h3>
                         <form id="add-rider-form-250" class="grid grid-cols-1 md:grid-cols-6 gap-4">
                             <input type="hidden" name="class_name" value="250cc">
                             <div>
@@ -634,7 +789,7 @@
                     </div>
 
                     <!-- Riders Table -->
-                    <div class="overflow-x-auto">
+                    <div class="rm-table-wrap">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="bg-gray-800 border-b border-cyan-400">
@@ -685,14 +840,12 @@
 
         <!-- 450cc Tab -->
         <div id="450" class="tab-content">
-            <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
-                <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
-                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏍️ 450cc Riders</h2>
-                </div>
-                <div class="p-4 bg-gray-900">
+            <div class="rm-list">
+                <div class="rm-list-head"><h2>450cc</h2></div>
+                <div class="rm-list-body">
                     <!-- Add New Rider Form -->
-                    <div class="mb-6 p-4 bg-gray-800 rounded border border-cyan-400" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
-                        <h3 class="text-lg font-semibold text-cyan-400 mb-4">➕ Lägg till ny förare</h3>
+                    <div class="rm-form-box">
+                        <h3>Lägg till förare</h3>
                         <form id="add-rider-form-450" class="grid grid-cols-1 md:grid-cols-5 gap-4">
                             <input type="hidden" name="class_name" value="450cc">
                             <input type="hidden" name="coast_250" value="">
@@ -737,7 +890,7 @@
                     </div>
 
                     <!-- Riders Table -->
-                    <div class="overflow-x-auto">
+                    <div class="rm-table-wrap">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="bg-gray-800 border-b border-cyan-400">
@@ -776,10 +929,12 @@
             </div>
         </div>
 
-        <!-- WSX Tab (simple add form) -->
-        <div class="mt-8">
-            <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(14, 165, 233, 0.8);">🏁 WSX Riders</h2>
-            <div class="bg-gray-800/60 rounded-lg p-4 mt-4 border border-cyan-400">
+        <div id="wsx" class="tab-content">
+            <div class="rm-list">
+                <div class="rm-list-head"><h2>WSX</h2></div>
+                <div class="rm-list-body">
+            <div class="rm-form-box">
+                <h3>Lägg till förare</h3>
                 <form id="add-wsx-rider-form" class="grid grid-cols-1 md:grid-cols-6 gap-3">
                     <div>
                         <label class="block text-sm text-gray-300 mb-1">Nummer</label>
@@ -805,16 +960,13 @@
                         <input name="price" type="number" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" placeholder="100000" required>
                     </div>
                     <div class="md:col-span-6 flex items-end">
-                        <button type="button" onclick="addWsxRider()" class="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold rounded">Lägg till WSX‑förare</button>
+                        <button type="button" onclick="addWsxRider()" class="rm-btn rm-btn--primary">Lägg till WSX-förare</button>
                     </div>
                 </form>
                 <p class="text-xs text-gray-400 mt-2">WSX‑förare märks även med series_participation='wsx' automatiskt.</p>
             </div>
 
-            <!-- WSX list -->
-            <div class="bg-gray-800/40 rounded-lg p-4 mt-4 border border-gray-700">
-                <h3 class="text-lg font-semibold text-white mb-3">WSX Förare</h3>
-                <div class="overflow-x-auto">
+            <div class="rm-table-wrap">
                     <table class="min-w-full text-sm text-gray-200">
                         <thead class="text-gray-400">
                             <tr>
@@ -829,24 +981,24 @@
                         <tbody>
                             {% for rider in riders_wsx %}
                             {% if rider.class_name == 'wsx_sx1' %}
-                            <tr class="border-t border-gray-700/60">
-                                <td class="px-2 py-1">{{ rider.rider_number }}</td>
-                                <td class="px-2 py-1">{{ rider.name }}</td>
+                            <tr class="rider-item border-t border-gray-700/60">
+                                <td class="rider-number px-2 py-1">{{ rider.rider_number }}</td>
+                                <td class="rider-name px-2 py-1">{{ rider.name }}</td>
                                 <td class="px-2 py-1">wsx_sx1</td>
-                                <td class="px-2 py-1">{{ rider.bike_brand }}</td>
-                                <td class="px-2 py-1">{{ rider.price }}</td>
+                                <td class="rider-bike px-2 py-1">{{ rider.bike_brand }}</td>
+                                <td class="rider-price px-2 py-1">{{ rider.price }}</td>
                                 <td class="px-2 py-1 space-x-2">
                                     <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', 'wsx_sx1', '', {{ rider.price }})" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded">Redigera</button>
                                     <button onclick="deleteRider({{ rider.id }})" class="px-2 py-1 bg-red-600 hover:bg-red-500 rounded">Ta bort</button>
                                 </td>
                             </tr>
                             {% elif rider.class_name == 'wsx_sx2' %}
-                            <tr class="border-t border-gray-700/60">
-                                <td class="px-2 py-1">{{ rider.rider_number }}</td>
-                                <td class="px-2 py-1">{{ rider.name }}</td>
+                            <tr class="rider-item border-t border-gray-700/60">
+                                <td class="rider-number px-2 py-1">{{ rider.rider_number }}</td>
+                                <td class="rider-name px-2 py-1">{{ rider.name }}</td>
                                 <td class="px-2 py-1">wsx_sx2</td>
-                                <td class="px-2 py-1">{{ rider.bike_brand }}</td>
-                                <td class="px-2 py-1">{{ rider.price }}</td>
+                                <td class="rider-bike px-2 py-1">{{ rider.bike_brand }}</td>
+                                <td class="rider-price px-2 py-1">{{ rider.price }}</td>
                                 <td class="px-2 py-1 space-x-2">
                                     <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', 'wsx_sx2', '', {{ rider.price }})" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded">Redigera</button>
                                     <button onclick="deleteRider({{ rider.id }})" class="px-2 py-1 bg-red-600 hover:bg-red-500 rounded">Ta bort</button>
@@ -856,9 +1008,7 @@
                             {% endfor %}
                         </tbody>
                     </table>
-                </div>
             </div>
-        </div>
 
         <script>
         async function addWsxRider() {
@@ -882,6 +1032,10 @@
             }
         }
         </script>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Edit Modal -->
@@ -1058,7 +1212,13 @@
             
             if (!searchTerm) {
                 resultsDiv.classList.add('hidden');
+                clearRiderHits();
                 return;
+            }
+            const firstHit = highlightRiderRows(searchTerm);
+            if (firstHit) {
+                switchToTabForRow(firstHit);
+                requestAnimationFrame(() => firstHit.scrollIntoView({ behavior: 'smooth', block: 'center' }));
             }
             
             // Get all riders from both tabs
@@ -1149,6 +1309,37 @@
             resultsDiv.classList.remove('hidden');
         }
         
+
+        function clearRiderHits() {
+            document.querySelectorAll('tr.rider-item.rm-hit').forEach((el) => el.classList.remove('rm-hit'));
+        }
+
+        function highlightRiderRows(searchTerm) {
+            clearRiderHits();
+            if (!searchTerm) return null;
+            let first = null;
+            document.querySelectorAll('tr.rider-item').forEach((row) => {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    row.classList.add('rm-hit');
+                    if (!first) first = row;
+                }
+            });
+            return first;
+        }
+
+        function switchToTabForRow(row) {
+            if (!row) return;
+            const pane = row.closest('.tab-content');
+            if (!pane || !pane.id) return;
+            document.querySelectorAll('.tab-button').forEach((b) => {
+                b.classList.toggle('active', b.dataset.tab === pane.id);
+            });
+            document.querySelectorAll('.tab-content').forEach((c) => {
+                c.classList.toggle('active', c.id === pane.id);
+            });
+        }
+
         function clearSearch() {
             document.getElementById('riderSearch').value = '';
             document.getElementById('searchResults').classList.add('hidden');
