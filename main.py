@@ -7392,13 +7392,13 @@ def build_power_ranking_payload(target: Competition) -> dict:
     elif len(past) == 1:
         method = (
             f"Form från {past[0].name} · picks till {target.name} "
-            f"({'låsta' if picks_locked else 'pågående'}, {int(crowd_users)} spelare)"
+            f"({'låsta' if picks_locked else 'pågående'})"
         )
         form_scope_label = f"form: {past[0].name}"
     else:
         method = (
             f"Form från {len(past)} senaste race · picks till {target.name} "
-            f"({'låsta' if picks_locked else 'pågående'}, {int(crowd_users)} spelare)"
+            f"({'låsta' if picks_locked else 'pågående'})"
         )
         form_scope_label = f"{len(past)} senaste race"
 

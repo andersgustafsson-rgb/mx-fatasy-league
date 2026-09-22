@@ -6129,9 +6129,8 @@
           : 'Nya power rankings';
       }
       const scopeLabel = data.form_scope_label ? String(data.form_scope_label) : '';
-      const crowdN = data.crowd_users != null ? `${data.crowd_users} spelares picks` : '';
       const lockedLbl = data.crowd_picks_locked ? 'låsta' : 'öppna';
-      sub.textContent = [c.name, c.series, scopeLabel, crowdN ? `picks ${lockedLbl} (${crowdN})` : '']
+      sub.textContent = [c.name, c.series, scopeLabel, `picks ${lockedLbl}`]
         .filter(Boolean).join(' · ');
       let html = '';
       const label450 = data.label_450 || '450cc';
