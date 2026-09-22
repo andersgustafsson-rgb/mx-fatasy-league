@@ -37,6 +37,44 @@ def is_admin_user() -> bool:
 	# Fallback to old method for backward compatibility
 	return bool(username == "test")
 
+
+def _ensure_quali_start_time_column() -> None:
+	"""Add competitions.quali_start_time if missing (Postgres + SQLite)."""
+	try:
+		db.session.execute(db.text("SELECT quali_start_time FROM competitions LIMIT 1"))
+		Competition._quali_start_time_column_exists = True
+		return
+	except Exception:
+		db.session.rollback()
+	try:
+		db.session.execute(
+			db.text("ALTER TABLE competitions ADD COLUMN quali_start_time TIME")
+		)
+		db.session.commit()
+		Competition._quali_start_time_column_exists = True
+		print("Added competitions.quali_start_time")
+	except Exception as e:
+		db.session.rollback()
+		if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+			Competition._quali_start_time_column_exists = True
+		else:
+			print(f"ensure quali_start_time: {e}")
+
+
+def _parse_hhmm(value):
+	if value is None or value == "":
+		return None
+	time_str = str(value).strip()
+	if not time_str:
+		return None
+	try:
+		if len(time_str.split(":")) == 2:
+			return datetime.strptime(time_str, "%H:%M").time()
+		return datetime.strptime(time_str, "%H:%M:%S").time()
+	except ValueError:
+		return None
+
+
 bp = Blueprint('api', __name__, url_prefix='/api')
 
 
@@ -788,12 +826,14 @@ def list_competitions():
 	if not is_admin_user():
 		return jsonify({'error': 'Unauthorized'}), 401
 	try:
+		_ensure_quali_start_time_column()
 		# Detect presence of optional start_time column
 		try:
 			db.session.execute(db.text("SELECT start_time FROM competitions LIMIT 1"))
 			has_start_time = True
 		except Exception:
 			has_start_time = False
+		has_quali = Competition.has_quali_start_time_column()
 		competitions = Competition.query.order_by(Competition.event_date).all()
 		result = []
 		for comp in competitions:
@@ -816,6 +856,11 @@ def list_competitions():
 				comp_data['start_time'] = comp.start_time.isoformat() if comp.start_time else None
 			else:
 				comp_data['start_time'] = None
+			if has_quali:
+				qst = comp.quali_start_time
+				comp_data['quali_start_time'] = qst.isoformat() if qst else None
+			else:
+				comp_data['quali_start_time'] = None
 			result.append(comp_data)
 		return jsonify(result)
 	except Exception as e:
@@ -829,6 +874,7 @@ def create_competition():
 		return jsonify({'error': 'Unauthorized'}), 401
 	data = request.get_json()
 	try:
+		_ensure_quali_start_time_column()
 		# Normalize coast_250: accept both "both" and "showdown", store as "showdown"
 		coast_250 = data.get('coast_250')
 		if coast_250 == 'both':
@@ -850,14 +896,15 @@ def create_competition():
 			'is_triple_crown': is_triple_crown,
 			'timezone': data.get('timezone')
 		}
-		if hasattr(Competition, 'start_time') and data.get('start_time'):
-			try:
-				time_str = data['start_time']
-				competition_data['start_time'] = datetime.strptime(time_str, '%H:%M').time() if len(time_str.split(':')) == 2 else datetime.strptime(time_str, '%H:%M:%S').time()
-			except ValueError:
-				competition_data['start_time'] = None
+		start_time_obj = _parse_hhmm(data.get('start_time'))
+		quali_time_obj = _parse_hhmm(data.get('quali_start_time'))
 		competition = Competition(**competition_data)
 		db.session.add(competition)
+		db.session.flush()
+		if start_time_obj is not None:
+			competition.start_time = start_time_obj
+		if quali_time_obj is not None:
+			competition.quali_start_time = quali_time_obj
 		db.session.commit()
 		return jsonify({'success': True, 'id': competition.id})
 	except Exception as e:
@@ -872,6 +919,7 @@ def update_competition(competition_id: int):
 	comp = Competition.query.get_or_404(competition_id)
 	data = request.get_json()
 	try:
+		_ensure_quali_start_time_column()
 		comp.name = data['name']
 		comp.event_date = datetime.strptime(data['event_date'], '%Y-%m-%d').date() if data.get('event_date') else None
 		comp.series = data.get('series', comp.series)
@@ -895,23 +943,21 @@ def update_competition(competition_id: int):
 		comp.timezone = data.get('timezone')
 		
 		# Update start_time using direct SQL to ensure it's committed properly
-		if hasattr(Competition, 'start_time') and data.get('start_time') is not None:
-			try:
-				time_str = data['start_time']
-				start_time_obj = datetime.strptime(time_str, '%H:%M').time() if len(time_str.split(':')) == 2 else datetime.strptime(time_str, '%H:%M:%S').time()
-				# Use direct SQL update to ensure it's committed
-				from sqlalchemy import text
-				db.session.execute(
-					text("UPDATE competitions SET start_time = :start_time WHERE id = :id"),
-					{'start_time': start_time_obj, 'id': comp.id}
-				)
-			except ValueError:
-				# Set to NULL if invalid time
-				from sqlalchemy import text
-				db.session.execute(
-					text("UPDATE competitions SET start_time = NULL WHERE id = :id"),
-					{'id': comp.id}
-				)
+		if 'start_time' in data:
+			start_time_obj = _parse_hhmm(data.get('start_time'))
+			from sqlalchemy import text
+			db.session.execute(
+				text("UPDATE competitions SET start_time = :start_time WHERE id = :id"),
+				{'start_time': start_time_obj, 'id': comp.id}
+			)
+
+		if 'quali_start_time' in data:
+			quali_time_obj = _parse_hhmm(data.get('quali_start_time'))
+			from sqlalchemy import text
+			db.session.execute(
+				text("UPDATE competitions SET quali_start_time = :quali_start_time WHERE id = :id"),
+				{'quali_start_time': quali_time_obj, 'id': comp.id}
+			)
 		
 		db.session.commit()
 		

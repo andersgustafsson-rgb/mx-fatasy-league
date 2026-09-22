@@ -79,7 +79,8 @@
                             <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Point Multiplier</th>
                             <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Triple Crown</th>
                             <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Tidszon</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Start Tid</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Race Start</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Quali / Lås</th>
                             <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Åtgärder</th>
                         </tr>
                     </thead>
@@ -159,16 +160,29 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Race Start Tid (i vald tidszon ovan)</label>
-                        <input type="time" id="competition-start-time" value="20:00" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
-                        <p class="text-xs text-gray-400 mt-1">Tid när racet startar i vald tidszon (default: 8:00 PM)</p>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Race start (gate drop)</label>
+                        <input type="time" id="competition-start-time" value="20:00" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600" onchange="updateDeadline()">
+                        <p class="text-xs text-gray-400 mt-1">Nedräkning / racestart i vald tidszon</p>
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Quali-start (picks låses)</label>
+                        <input type="time" id="competition-quali-start-time" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600" onchange="updateDeadline()">
+                        <p class="text-xs text-gray-400 mt-1">Tom = 2 h före race (eller SMX-standard). Absolut tid — inte −2 h.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-2">Aktuell tid (vald tidszon)</label>
                         <div id="current-time-display" class="w-full bg-gray-600 text-white px-3 py-2 rounded-lg border border-gray-600 text-sm">
                             Laddar...
                         </div>
-                        <p class="text-xs text-gray-400 mt-1">Uppdateras automatiskt</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Förhandsvisning deadline</label>
+                        <div id="deadline-display" class="w-full bg-gray-600 text-white px-3 py-2 rounded-lg border border-gray-600 text-sm">
+                            —
+                        </div>
                     </div>
                 </div>
                 
@@ -194,6 +208,13 @@
     <script>
         let competitions = [];
         let filteredCompetitions = [];
+
+        function toTimeInputValue(raw) {
+            if (!raw) return '';
+            const s = String(raw);
+            if (s.includes('T')) return s.split('T')[1].substring(0, 5);
+            return s.substring(0, 5);
+        }
 
         // Load competitions on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -251,7 +272,8 @@
                     <td class="px-4 py-3 text-sm">${comp.point_multiplier}x</td>
                     <td class="px-4 py-3 text-sm">${comp.is_triple_crown ? '🏆' : '-'}</td>
                     <td class="px-4 py-3 text-sm">${comp.timezone || '-'}</td>
-                    <td class="px-4 py-3 text-sm">${comp.start_time || '-'}</td>
+                    <td class="px-4 py-3 text-sm">${toTimeInputValue(comp.start_time) || '-'}</td>
+                    <td class="px-4 py-3 text-sm">${toTimeInputValue(comp.quali_start_time) || '-'}</td>
                     <td class="px-4 py-3 text-sm">
                         <button onclick="editCompetition(${comp.id})" class="text-blue-400 hover:text-blue-300 mr-2">✏️</button>
                         <button onclick="deleteCompetition(${comp.id})" class="text-red-400 hover:text-red-300">🗑️</button>
@@ -295,33 +317,49 @@
         function updateDeadline() {
             const deadlineDisplay = document.getElementById('deadline-display');
             const startTimeInput = document.getElementById('competition-start-time');
+            const qualiTimeInput = document.getElementById('competition-quali-start-time');
             const dateInput = document.getElementById('competition-date');
             const timezoneSelect = document.getElementById('competition-timezone');
             
             if (!deadlineDisplay || !startTimeInput || !timezoneSelect) return;
             
             const startTime = startTimeInput.value;
+            const qualiTime = qualiTimeInput ? qualiTimeInput.value : '';
             const eventDate = dateInput ? dateInput.value : null;
             const timezone = timezoneSelect.value || 'America/Los_Angeles';
+            const timezoneAbbr = timezone.split('/').pop().replace('_', ' ');
             
-            if (!startTime) {
-                deadlineDisplay.textContent = 'Välj starttid';
+            if (!startTime && !qualiTime) {
+                deadlineDisplay.textContent = 'Välj tider';
+                return;
+            }
+
+            const formatDate = (iso) => {
+                if (!iso) return '';
+                const dateObj = new Date(iso + 'T00:00:00');
+                return dateObj.toLocaleDateString('sv-SE', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            };
+
+            if (qualiTime) {
+                const dateStr = formatDate(eventDate);
+                deadlineDisplay.textContent = dateStr
+                    ? `Lås vid quali ${dateStr} kl ${qualiTime} (${timezoneAbbr})`
+                    : `Lås vid quali kl ${qualiTime} (${timezoneAbbr})`;
                 return;
             }
             
             try {
-                // Parse start time (HH:MM format)
                 const [hours, minutes] = startTime.split(':').map(Number);
-                
-                // Create deadline time (2 hours before)
                 let deadlineHours = hours - 2;
                 let deadlineMinutes = minutes;
                 let deadlineDate = eventDate;
                 
-                // Handle day rollback if deadline is before midnight
                 if (deadlineHours < 0) {
                     deadlineHours += 24;
-                    // If we have a date, subtract one day
                     if (deadlineDate) {
                         const dateObj = new Date(deadlineDate + 'T00:00:00');
                         dateObj.setDate(dateObj.getDate() - 1);
@@ -329,31 +367,16 @@
                     }
                 }
                 
-                // Format deadline time
                 const deadlineTimeStr = `${String(deadlineHours).padStart(2, '0')}:${String(deadlineMinutes).padStart(2, '0')}`;
-                
-                // Format date for display if available
-                let dateStr = '';
-                if (deadlineDate) {
-                    const dateObj = new Date(deadlineDate + 'T00:00:00');
-                    dateStr = dateObj.toLocaleDateString('sv-SE', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                    });
-                }
-                
-                // Get timezone abbreviation
-                const timezoneAbbr = timezone.split('/').pop().replace('_', ' ');
+                const dateStr = formatDate(deadlineDate);
                 
                 if (dateStr) {
-                    deadlineDisplay.innerHTML = `<span class="text-yellow-300 font-bold">${deadlineTimeStr}</span> <span class="text-yellow-400">${dateStr}</span> <span class="text-yellow-200">(${timezoneAbbr})</span>`;
+                    deadlineDisplay.textContent = `Lås 2 h före race: ${dateStr} kl ${deadlineTimeStr} (${timezoneAbbr})`;
                 } else {
-                    deadlineDisplay.innerHTML = `<span class="text-yellow-300 font-bold">${deadlineTimeStr}</span> <span class="text-yellow-200">(${timezoneAbbr})</span>`;
+                    deadlineDisplay.textContent = `Lås 2 h före race: ${deadlineTimeStr} (${timezoneAbbr})`;
                 }
             } catch (error) {
-                deadlineDisplay.textContent = 'Fel vid beräkning';
-                console.error('Error calculating deadline:', error);
+                deadlineDisplay.textContent = 'Kunde inte beräkna deadline';
             }
         }
 
@@ -361,7 +384,8 @@
             document.getElementById('modal-title').textContent = 'Lägg till tävling';
             document.getElementById('competition-form').reset();
             document.getElementById('competition-id').value = '';
-            document.getElementById('competition-start-time').value = '20:00'; // Set default start time
+            document.getElementById('competition-start-time').value = '20:00';
+            document.getElementById('competition-quali-start-time').value = '';
             document.getElementById('competition-modal').classList.remove('hidden');
             updateCurrentTime();
             updateDeadline();
@@ -390,14 +414,8 @@
             // Handle is_triple_crown - convert integer to boolean
             document.getElementById('competition-triple-crown').checked = Boolean(comp.is_triple_crown);
             
-            // Handle start time if it exists
-            if (comp.start_time) {
-                // Extract time part if it's a full datetime string
-                const timeStr = comp.start_time.includes('T') ? comp.start_time.split('T')[1].substring(0, 5) : comp.start_time;
-                document.getElementById('competition-start-time').value = timeStr;
-            } else {
-                document.getElementById('competition-start-time').value = '20:00';
-            }
+            document.getElementById('competition-start-time').value = toTimeInputValue(comp.start_time) || '20:00';
+            document.getElementById('competition-quali-start-time').value = toTimeInputValue(comp.quali_start_time);
             
             document.getElementById('competition-modal').classList.remove('hidden');
             updateCurrentTime();
@@ -426,7 +444,8 @@
                 point_multiplier: parseFloat(document.getElementById('competition-multiplier').value),
                 is_triple_crown: document.getElementById('competition-triple-crown').checked ? 1 : 0,  // Convert boolean to integer
                 timezone: document.getElementById('competition-timezone').value,
-                start_time: document.getElementById('competition-start-time').value || null
+                start_time: document.getElementById('competition-start-time').value || null,
+                quali_start_time: document.getElementById('competition-quali-start-time').value || null
             };
 
             try {

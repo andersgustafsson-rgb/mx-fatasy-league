@@ -68,8 +68,8 @@ SMX_RACE_META: dict[str, dict[str, Any]] = {
         "venue": "Thunder Ridge Nature Arena",
         "city": "Ridgedale, MO",
         "timezone": "America/Chicago",
-        "start_time": (18, 0),
-        "first_quali": (11, 0),  # Saturday FanFest / qualifying day start
+        "start_time": (18, 0),  # Gate Drop — Peacock 01:00 CEST = 18:00 CT
+        "first_quali": (12, 0),  # Race Day Live / Qualifying — Peacock 19:00 CEST = 12:00 CT
         "gate_label": "18:00 CT",
     },
 }

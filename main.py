@@ -30175,7 +30175,8 @@ def _competition_race_schedule(comp) -> dict:
     start_time is interpreted in competition.timezone (banens lokala tidszon).
 
     Default: picks lock 2h before start_time (gate/race).
-    SMX: if first_quali is set in SMX_RACE_META, lock at that local time instead
+    If quali_start_time is set on the competition (admin), lock at that local time.
+    Else SMX: if first_quali is set in SMX_RACE_META, lock at that local time
     (qualifying reveals pace — same idea as MXoN locking vs Saturday kval).
     """
     from datetime import date, datetime, time as time_type, timedelta
@@ -30241,43 +30242,50 @@ def _competition_race_schedule(comp) -> dict:
     deadline_datetime_utc = race_datetime_utc - timedelta(hours=2)
     deadline_aware = None
 
-    # SMX: lock when first qualifying starts (not 2h before gate drop).
-    try:
-        from trackmap_utils import get_smx_race_meta
+    def _apply_absolute_local_deadline(hh: int, mm: int) -> None:
+        nonlocal deadline_local_naive, deadline_datetime_utc, deadline_aware
+        deadline_local_naive = datetime.combine(event_date, time_type(int(hh), int(mm)))
+        try:
+            from zoneinfo import ZoneInfo
 
-        smx_meta = get_smx_race_meta(getattr(comp, "name", "") or "")
-        fq = (smx_meta or {}).get("first_quali")
-        if fq and len(fq) >= 2:
-            deadline_local_naive = datetime.combine(
-                event_date, time_type(int(fq[0]), int(fq[1]))
+            deadline_aware = deadline_local_naive.replace(tzinfo=ZoneInfo(timezone_val))
+            deadline_datetime_utc = deadline_aware.astimezone(ZoneInfo("UTC")).replace(
+                tzinfo=None
             )
+        except Exception:
             try:
-                from zoneinfo import ZoneInfo
+                import pytz
 
-                deadline_aware = deadline_local_naive.replace(tzinfo=ZoneInfo(timezone_val))
-                deadline_datetime_utc = deadline_aware.astimezone(ZoneInfo("UTC")).replace(
+                deadline_aware = pytz.timezone(timezone_val).localize(deadline_local_naive)
+                deadline_datetime_utc = deadline_aware.astimezone(pytz.UTC).replace(
                     tzinfo=None
                 )
             except Exception:
-                try:
-                    import pytz
+                month = event_date.month
+                summer = month in (3, 4, 5, 6, 7, 8, 9, 10)
+                offsets = {
+                    "America/Los_Angeles": -7 if summer else -8,
+                    "America/Chicago": -5 if summer else -6,
+                    "America/New_York": -4 if summer else -5,
+                }
+                utc_offset = offsets.get(timezone_val, -7)
+                deadline_datetime_utc = deadline_local_naive - timedelta(hours=utc_offset)
 
-                    deadline_aware = pytz.timezone(timezone_val).localize(deadline_local_naive)
-                    deadline_datetime_utc = deadline_aware.astimezone(pytz.UTC).replace(
-                        tzinfo=None
-                    )
-                except Exception:
-                    month = event_date.month
-                    summer = month in (3, 4, 5, 6, 7, 8, 9, 10)
-                    offsets = {
-                        "America/Los_Angeles": -7 if summer else -8,
-                        "America/Chicago": -5 if summer else -6,
-                        "America/New_York": -4 if summer else -5,
-                    }
-                    utc_offset = offsets.get(timezone_val, -7)
-                    deadline_datetime_utc = deadline_local_naive - timedelta(hours=utc_offset)
+    # 1) Admin-set quali lock time on the competition row
+    try:
+        qst = getattr(comp, "quali_start_time", None)
+        if qst is not None:
+            _apply_absolute_local_deadline(qst.hour, qst.minute)
+        else:
+            # 2) SMX meta fallback (hardcoded playoff schedules)
+            from trackmap_utils import get_smx_race_meta
+
+            smx_meta = get_smx_race_meta(getattr(comp, "name", "") or "")
+            fq = (smx_meta or {}).get("first_quali")
+            if fq and len(fq) >= 2:
+                _apply_absolute_local_deadline(int(fq[0]), int(fq[1]))
     except Exception as exc:
-        print(f"WARNING SMX first_quali deadline override: {exc}")
+        print(f"WARNING quali/first_quali deadline override: {exc}")
 
     tz_label = _tz_display_label(timezone_val)
     m = _SV_MONTHS[event_date.month]

@@ -63,6 +63,8 @@ class Competition(db.Model):
     is_qualifying = db.Column(db.Boolean, default=False)
     series_ref = db.relationship('Series', backref='competitions', lazy=True)
     _start_time_column_exists = None
+    _quali_start_time_column_exists = None
+
     @classmethod
     def has_start_time_column(cls):
         if cls._start_time_column_exists is None:
@@ -72,48 +74,93 @@ class Competition(db.Model):
             except Exception:
                 cls._start_time_column_exists = False
         return cls._start_time_column_exists
+
+    @classmethod
+    def has_quali_start_time_column(cls):
+        if cls._quali_start_time_column_exists is None:
+            try:
+                db.session.execute(db.text("SELECT quali_start_time FROM competitions LIMIT 1"))
+                cls._quali_start_time_column_exists = True
+            except Exception:
+                cls._quali_start_time_column_exists = False
+        return cls._quali_start_time_column_exists
+
+    @staticmethod
+    def _parse_time_column(raw):
+        if not raw:
+            return None
+        from datetime import time
+        if isinstance(raw, time):
+            return raw
+        if isinstance(raw, str):
+            s = raw.strip()
+            if s and ":" in s:
+                parts = s.split(":")
+                return time(
+                    int(parts[0]),
+                    int(parts[1]),
+                    int(parts[2]) if len(parts) > 2 else 0,
+                )
+        return None
+
+    @staticmethod
+    def _bind_time_column(value):
+        from datetime import time as _time
+        if isinstance(value, _time):
+            return value.strftime("%H:%M:%S")
+        if value is None:
+            return None
+        return str(value).strip() or None
+
     @property
     def start_time(self):
         if not self.has_start_time_column():
             return None
         try:
             result = db.session.execute(
-                db.text("SELECT start_time FROM competitions WHERE id = :id"), 
-                {'id': self.id}
+                db.text("SELECT start_time FROM competitions WHERE id = :id"),
+                {"id": self.id},
             ).fetchone()
-            if result and result[0]:
-                from datetime import time
-                raw = result[0]
-                if isinstance(raw, time):
-                    return raw
-                if isinstance(raw, str):
-                    s = raw.strip()
-                    if s and ':' in s:
-                        parts = s.split(':')
-                        return time(
-                            int(parts[0]),
-                            int(parts[1]),
-                            int(parts[2]) if len(parts) > 2 else 0,
-                        )
-            return None
+            return self._parse_time_column(result[0] if result else None)
         except Exception:
             return None
+
     @start_time.setter
     def start_time(self, value):
         if not self.has_start_time_column():
             return
         try:
-            from datetime import time as _time
-
-            if isinstance(value, _time):
-                bound = value.strftime("%H:%M:%S")
-            elif value is None:
-                bound = None
-            else:
-                bound = str(value).strip() or None
             db.session.execute(
                 db.text("UPDATE competitions SET start_time = :start_time WHERE id = :id"),
-                {"start_time": bound, "id": self.id},
+                {"start_time": self._bind_time_column(value), "id": self.id},
+            )
+        except Exception:
+            pass
+
+    @property
+    def quali_start_time(self):
+        """Local clock when picks lock (first quali). None → use default / SMX meta."""
+        if not self.has_quali_start_time_column():
+            return None
+        try:
+            result = db.session.execute(
+                db.text("SELECT quali_start_time FROM competitions WHERE id = :id"),
+                {"id": self.id},
+            ).fetchone()
+            return self._parse_time_column(result[0] if result else None)
+        except Exception:
+            return None
+
+    @quali_start_time.setter
+    def quali_start_time(self, value):
+        if not self.has_quali_start_time_column():
+            return
+        try:
+            db.session.execute(
+                db.text(
+                    "UPDATE competitions SET quali_start_time = :quali_start_time WHERE id = :id"
+                ),
+                {"quali_start_time": self._bind_time_column(value), "id": self.id},
             )
         except Exception:
             pass
