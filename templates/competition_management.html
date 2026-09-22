@@ -1,624 +1,1015 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Competition Management - MX Fantasy League</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .neon-text {
-            text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff;
-        }
-        .cyberpunk-button {
-            background: linear-gradient(45deg, #00ffff, #0080ff);
-            color: black;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-        .cyberpunk-button:hover {
-            background: linear-gradient(45deg, #00cccc, #0066cc);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tävlingar — Admin · MX Fantasy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cm-bg: #020617;
+      --cm-panel: #0f172a;
+      --cm-panel-2: #111827;
+      --cm-line: rgba(148, 163, 184, 0.16);
+      --cm-text: #e2e8f0;
+      --cm-muted: #94a3b8;
+      --cm-accent: #22d3ee;
+      --cm-accent-2: #fbbf24;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Barlow", system-ui, sans-serif;
+      color: var(--cm-text);
+      background:
+        radial-gradient(ellipse 70% 45% at 10% -10%, rgba(34, 211, 238, 0.12), transparent 55%),
+        radial-gradient(ellipse 50% 40% at 100% 0%, rgba(251, 191, 36, 0.07), transparent 50%),
+        linear-gradient(165deg, #020617 0%, #0f172a 50%, #020617 100%);
+      background-attachment: fixed;
+    }
+
+    .cm-wrap {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 1.25rem 1rem 3rem;
+    }
+
+    .cm-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .cm-eyebrow {
+      margin: 0 0 0.25rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--cm-muted);
+    }
+
+    .cm-title {
+      margin: 0;
+      font-family: "Barlow Condensed", sans-serif;
+      font-weight: 800;
+      font-size: clamp(1.75rem, 4vw, 2.35rem);
+      letter-spacing: 0.02em;
+      line-height: 1;
+      color: #f8fafc;
+    }
+
+    .cm-sub {
+      margin: 0.4rem 0 0;
+      color: var(--cm-muted);
+      font-size: 0.95rem;
+    }
+
+    .cm-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      color: var(--cm-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      margin-bottom: 0.75rem;
+    }
+    .cm-back:hover { color: var(--cm-accent); }
+
+    .cm-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .cm-btn {
+      appearance: none;
+      border: 1px solid var(--cm-line);
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--cm-text);
+      border-radius: 0.55rem;
+      padding: 0.55rem 0.9rem;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .cm-btn:hover {
+      border-color: rgba(34, 211, 238, 0.45);
+      background: rgba(30, 41, 59, 0.95);
+    }
+    .cm-btn--primary {
+      background: linear-gradient(135deg, #22d3ee, #06b6d4);
+      border-color: transparent;
+      color: #0f172a;
+    }
+    .cm-btn--primary:hover {
+      background: linear-gradient(135deg, #67e8f9, #22d3ee);
+      color: #0f172a;
+    }
+    .cm-btn--ghost {
+      background: transparent;
+    }
+    .cm-btn--danger {
+      color: #fca5a5;
+      border-color: rgba(248, 113, 113, 0.35);
+    }
+    .cm-btn--danger:hover {
+      background: rgba(127, 29, 29, 0.35);
+      border-color: rgba(248, 113, 113, 0.55);
+    }
+    .cm-btn--sm {
+      padding: 0.35rem 0.65rem;
+      font-size: 0.8rem;
+    }
+
+    .cm-tools {
+      margin-bottom: 1rem;
+      border: 1px solid var(--cm-line);
+      border-radius: 0.75rem;
+      background: rgba(15, 23, 42, 0.55);
+      overflow: hidden;
+    }
+    .cm-tools summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 0.75rem 1rem;
+      color: var(--cm-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      user-select: none;
+    }
+    .cm-tools summary::-webkit-details-marker { display: none; }
+    .cm-tools[open] summary { border-bottom: 1px solid var(--cm-line); color: #cbd5e1; }
+    .cm-tools-body {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0.85rem 1rem 1rem;
+    }
+
+    .cm-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.85rem;
+    }
+
+    .cm-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .cm-chip {
+      appearance: none;
+      border: 1px solid var(--cm-line);
+      background: transparent;
+      color: var(--cm-muted);
+      border-radius: 999px;
+      padding: 0.35rem 0.75rem;
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .cm-chip:hover { color: #e2e8f0; border-color: rgba(148, 163, 184, 0.35); }
+    .cm-chip.is-active {
+      background: rgba(34, 211, 238, 0.12);
+      border-color: rgba(34, 211, 238, 0.45);
+      color: #a5f3fc;
+    }
+
+    .cm-search {
+      min-width: min(100%, 220px);
+      flex: 1 1 180px;
+      max-width: 280px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--cm-line);
+      border-radius: 0.55rem;
+      color: var(--cm-text);
+      padding: 0.5rem 0.75rem;
+      font: inherit;
+      font-size: 0.9rem;
+    }
+    .cm-search:focus {
+      outline: none;
+      border-color: rgba(34, 211, 238, 0.55);
+    }
+
+    .cm-meta {
+      color: var(--cm-muted);
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    .cm-panel {
+      border: 1px solid var(--cm-line);
+      border-radius: 0.85rem;
+      background: rgba(15, 23, 42, 0.72);
+      overflow: hidden;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    .cm-table-wrap { overflow-x: auto; }
+
+    table.cm-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }
+    .cm-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      text-align: left;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      background: #0b1220;
+      border-bottom: 1px solid var(--cm-line);
+      padding: 0.75rem 0.85rem;
+      white-space: nowrap;
+    }
+    .cm-table td {
+      padding: 0.7rem 0.85rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+      font-size: 0.9rem;
+      vertical-align: middle;
+    }
+    .cm-table tbody tr {
+      transition: background 0.12s;
+    }
+    .cm-table tbody tr:hover {
+      background: rgba(34, 211, 238, 0.04);
+    }
+
+    .cm-name {
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+    .cm-id {
+      color: #64748b;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.8rem;
+    }
+    .cm-mono {
+      font-variant-numeric: tabular-nums;
+      color: #cbd5e1;
+    }
+    .cm-tz {
+      color: #94a3b8;
+      font-size: 0.8rem;
+      max-width: 9.5rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cm-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2.6rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 0.35rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .cm-badge--sx { background: rgba(239, 68, 68, 0.18); color: #fca5a5; }
+    .cm-badge--mx { background: rgba(34, 197, 94, 0.16); color: #86efac; }
+    .cm-badge--smx { background: rgba(251, 191, 36, 0.16); color: #fcd34d; }
+    .cm-badge--wsx { background: rgba(34, 211, 238, 0.14); color: #67e8f9; }
+    .cm-badge--mxon { background: rgba(167, 139, 250, 0.16); color: #c4b5fd; }
+    .cm-badge--muted { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
+
+    .cm-row-actions {
+      display: flex;
+      gap: 0.35rem;
+    }
+
+    .cm-status {
+      position: fixed;
+      right: 1rem;
+      bottom: 1rem;
+      z-index: 60;
+      max-width: min(420px, calc(100vw - 2rem));
+      padding: 0.85rem 1rem;
+      border-radius: 0.65rem;
+      border: 1px solid var(--cm-line);
+      background: #0f172a;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      font-size: 0.9rem;
+    }
+    .cm-status--ok { border-color: rgba(34, 197, 94, 0.4); color: #bbf7d0; }
+    .cm-status--err { border-color: rgba(248, 113, 113, 0.45); color: #fecaca; }
+    .cm-status.hidden { display: none; }
+
+    .cm-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(2, 6, 23, 0.72);
+      backdrop-filter: blur(6px);
+    }
+    .cm-modal.hidden { display: none; }
+    .cm-modal-card {
+      width: min(640px, 100%);
+      max-height: min(92vh, 900px);
+      overflow: auto;
+      background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+      border: 1px solid var(--cm-line);
+      border-radius: 0.9rem;
+      padding: 1.15rem 1.2rem 1.25rem;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+    }
+    .cm-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .cm-modal-head h3 {
+      margin: 0;
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .cm-close {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0.15rem 0.4rem;
+    }
+    .cm-close:hover { color: #fff; }
+
+    .cm-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.85rem;
+      margin-bottom: 0.85rem;
+    }
+    @media (min-width: 640px) {
+      .cm-grid--2 { grid-template-columns: 1fr 1fr; }
+    }
+
+    .cm-label {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    .cm-hint {
+      margin: 0.3rem 0 0;
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+    .cm-field {
+      width: 100%;
+      background: #020617;
+      border: 1px solid var(--cm-line);
+      border-radius: 0.5rem;
+      color: #f1f5f9;
+      padding: 0.55rem 0.7rem;
+      font: inherit;
+      font-size: 0.95rem;
+    }
+    .cm-field:focus {
+      outline: none;
+      border-color: rgba(34, 211, 238, 0.55);
+    }
+    .cm-readonly {
+      background: #0b1220;
+      border: 1px solid var(--cm-line);
+      border-radius: 0.5rem;
+      color: #cbd5e1;
+      padding: 0.55rem 0.7rem;
+      font-size: 0.85rem;
+    }
+    .cm-check {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #cbd5e1;
+      font-size: 0.9rem;
+      margin: 0.25rem 0 1rem;
+    }
+    .cm-modal-foot {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      padding-top: 0.25rem;
+    }
+
+    .cm-empty {
+      padding: 2.5rem 1rem;
+      text-align: center;
+      color: var(--cm-muted);
+    }
+  </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-        <!-- Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-cyan-400 neon-text mb-4">🏁 Competition Management</h1>
-            <p class="text-gray-300">Centraliserad hantering av alla tävlingar (SX, MX, SMX)</p>
+<body>
+  <div class="cm-wrap">
+    <a class="cm-back" href="/admin">← Admin</a>
+
+    <div class="cm-top">
+      <div>
+        <p class="cm-eyebrow">MX Fantasy · Admin</p>
+        <h1 class="cm-title">Tävlingar</h1>
+        <p class="cm-sub">Schema, tidszon, race start och quali-lås för SX · MX · SMX · WSX</p>
+      </div>
+      <div class="cm-actions">
+        <button type="button" class="cm-btn cm-btn--ghost" onclick="loadCompetitions()">Uppdatera</button>
+        <button type="button" class="cm-btn cm-btn--primary" onclick="showAddCompetitionModal()">Ny tävling</button>
+      </div>
+    </div>
+
+    <details class="cm-tools">
+      <summary>Verktyg &amp; underhåll</summary>
+      <div class="cm-tools-body">
+        <button type="button" class="cm-btn cm-btn--sm" onclick="exportCompetitions()">Exportera JSON</button>
+        <button type="button" class="cm-btn cm-btn--sm" onclick="migrateStartTime()">Migrera start_time</button>
+        <button type="button" class="cm-btn cm-btn--sm" onclick="updateSeasonsTo2026()">Uppdatera till 2026</button>
+        <button type="button" class="cm-btn cm-btn--sm cm-btn--danger" onclick="updateToOfficial2026()">Officiellt 2026-schema</button>
+      </div>
+    </details>
+
+    <div class="cm-toolbar">
+      <div class="cm-chips" id="series-chips" role="tablist" aria-label="Filtrera serie">
+        <button type="button" class="cm-chip is-active" data-series="" onclick="setSeriesFilter(this)">Alla</button>
+        <button type="button" class="cm-chip" data-series="SX" onclick="setSeriesFilter(this)">SX</button>
+        <button type="button" class="cm-chip" data-series="MX" onclick="setSeriesFilter(this)">MX</button>
+        <button type="button" class="cm-chip" data-series="SMX" onclick="setSeriesFilter(this)">SMX</button>
+        <button type="button" class="cm-chip" data-series="WSX" onclick="setSeriesFilter(this)">WSX</button>
+        <button type="button" class="cm-chip" data-series="MXON" onclick="setSeriesFilter(this)">MXON</button>
+      </div>
+      <div class="cm-actions" style="flex: 1; justify-content: flex-end;">
+        <input id="search-filter" class="cm-search" type="search" placeholder="Sök namn…" oninput="applyFilters()" autocomplete="off">
+        <span class="cm-meta" id="result-count">0 tävlingar</span>
+      </div>
+    </div>
+
+    <!-- kept for JS compatibility -->
+    <select id="series-filter" class="hidden" onchange="filterBySeries()" hidden>
+      <option value="">Alla serier</option>
+      <option value="SX">SX</option>
+      <option value="MX">MX</option>
+      <option value="SMX">SMX</option>
+      <option value="WSX">WSX</option>
+      <option value="MXON">MXON</option>
+    </select>
+
+    <div class="cm-panel">
+      <div class="cm-table-wrap">
+        <table class="cm-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Namn</th>
+              <th>Datum</th>
+              <th>Serie</th>
+              <th>Coast</th>
+              <th>Mult</th>
+              <th>TC</th>
+              <th>Tidszon</th>
+              <th>Race</th>
+              <th>Quali</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="competitions-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="status-message" class="cm-status hidden"></div>
+  </div>
+
+  <div id="competition-modal" class="cm-modal hidden" onclick="if (event.target === this) closeModal()">
+    <div class="cm-modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="cm-modal-head">
+        <h3 id="modal-title">Lägg till tävling</h3>
+        <button type="button" class="cm-close" onclick="closeModal()" aria-label="Stäng">&times;</button>
+      </div>
+
+      <form id="competition-form" onsubmit="saveCompetition(event)">
+        <input type="hidden" id="competition-id" value="">
+
+        <div class="cm-grid cm-grid--2">
+          <div>
+            <label class="cm-label" for="competition-name">Namn *</label>
+            <input type="text" id="competition-name" required class="cm-field">
+          </div>
+          <div>
+            <label class="cm-label" for="competition-date">Datum *</label>
+            <input type="date" id="competition-date" required class="cm-field" onchange="updateDeadline()">
+          </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-            <button onclick="showAddCompetitionModal()" class="cyberpunk-button px-6 py-3 rounded-lg text-center">
-                ➕ Lägg till tävling
-            </button>
-            <button onclick="loadCompetitions()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-center">
-                🔄 Uppdatera lista
-            </button>
-            <button onclick="migrateStartTime()" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg text-center">
-                🔧 Migrera start_time
-            </button>
-            <button onclick="updateSeasonsTo2026()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-center">
-                📅 Uppdatera till 2026
-            </button>
-            <button onclick="updateToOfficial2026()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-center">
-                🏁 Officiell 2026 Schema
-            </button>
-            <button onclick="exportCompetitions()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg text-center">
-                📤 Exportera data
-            </button>
-        </div>
-
-        <!-- Series Filter -->
-        <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-300 mb-2">Filtrera efter serie:</label>
-            <select id="series-filter" onchange="filterBySeries()" class="bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-600">
-                <option value="">Alla serier</option>
-                <option value="SX">Supercross (SX)</option>
-                <option value="MX">Motocross (MX)</option>
-                <option value="SMX">SuperMotocross (SMX)</option>
-                <option value="WSX">WSX</option>
-                <option value="MXON">MXON</option>
+        <div class="cm-grid cm-grid--2">
+          <div>
+            <label class="cm-label" for="competition-series">Serie *</label>
+            <select id="competition-series" required class="cm-field">
+              <option value="">Välj serie</option>
+              <option value="SX">Supercross (SX)</option>
+              <option value="MX">Motocross (MX)</option>
+              <option value="SMX">SuperMotocross (SMX)</option>
+              <option value="WSX">WSX</option>
+              <option value="MXON">MXON</option>
             </select>
+          </div>
+          <div>
+            <label class="cm-label" for="competition-coast">250cc Coast</label>
+            <select id="competition-coast" class="cm-field">
+              <option value="">—</option>
+              <option value="west">West</option>
+              <option value="east">East</option>
+              <option value="both">Both (Showdown)</option>
+            </select>
+          </div>
         </div>
 
-        <!-- Competitions Table -->
-        <div class="bg-gray-800 rounded-lg overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-700">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">ID</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Namn</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Datum</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Serie</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">250cc Coast</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Point Multiplier</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Triple Crown</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Tidszon</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Race Start</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Quali / Lås</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Åtgärder</th>
-                        </tr>
-                    </thead>
-                    <tbody id="competitions-table-body" class="divide-y divide-gray-700">
-                        <!-- Competitions will be loaded here -->
-                    </tbody>
-                </table>
-            </div>
+        <div class="cm-grid cm-grid--2">
+          <div>
+            <label class="cm-label" for="competition-multiplier">Point multiplier</label>
+            <input type="number" id="competition-multiplier" step="0.1" min="0.1" max="3.0" value="1.0" class="cm-field">
+          </div>
+          <div>
+            <label class="cm-label" for="competition-timezone">Tidszon</label>
+            <select id="competition-timezone" onchange="updateCurrentTime()" class="cm-field">
+              <option value="America/New_York">Eastern Time (US)</option>
+              <option value="America/Detroit">Eastern — Michigan</option>
+              <option value="America/Chicago">Central Time</option>
+              <option value="America/Denver">Mountain Time</option>
+              <option value="America/Los_Angeles">Pacific Time</option>
+              <option value="Europe/Stockholm">Stockholm</option>
+            </select>
+          </div>
         </div>
 
-        <!-- Status Message -->
-        <div id="status-message" class="mt-4 p-4 rounded-lg hidden"></div>
+        <div class="cm-grid cm-grid--2">
+          <div>
+            <label class="cm-label" for="competition-start-time">Race start (gate drop)</label>
+            <input type="time" id="competition-start-time" value="20:00" class="cm-field" onchange="updateDeadline()">
+            <p class="cm-hint">Nedräkning / racestart i vald tidszon</p>
+          </div>
+          <div>
+            <label class="cm-label" for="competition-quali-start-time">Quali-start (picks låses)</label>
+            <input type="time" id="competition-quali-start-time" class="cm-field" onchange="updateDeadline()">
+            <p class="cm-hint">Tom = 2 h före race (eller SMX-standard)</p>
+          </div>
+        </div>
+
+        <div class="cm-grid cm-grid--2">
+          <div>
+            <label class="cm-label">Aktuell tid (vald zon)</label>
+            <div id="current-time-display" class="cm-readonly">Laddar…</div>
+          </div>
+          <div>
+            <label class="cm-label">Deadline-förhandsvisning</label>
+            <div id="deadline-display" class="cm-readonly">—</div>
+          </div>
+        </div>
+
+        <label class="cm-check">
+          <input type="checkbox" id="competition-triple-crown">
+          Triple Crown
+        </label>
+
+        <div class="cm-modal-foot">
+          <button type="button" class="cm-btn" onclick="closeModal()">Avbryt</button>
+          <button type="submit" class="cm-btn cm-btn--primary">Spara</button>
+        </div>
+      </form>
     </div>
+  </div>
 
-    <!-- Add/Edit Competition Modal -->
-    <div id="competition-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h3 id="modal-title" class="text-xl font-bold text-cyan-400">Lägg till tävling</h3>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+  <script>
+    let competitions = [];
+    let filteredCompetitions = [];
+    let activeSeries = "";
+
+    function toTimeInputValue(raw) {
+      if (!raw) return "";
+      const s = String(raw);
+      if (s.includes("T")) return s.split("T")[1].substring(0, 5);
+      return s.substring(0, 5);
+    }
+
+    function seriesBadgeClass(series) {
+      const s = (series || "").toUpperCase();
+      if (s === "SX") return "cm-badge cm-badge--sx";
+      if (s === "MX") return "cm-badge cm-badge--mx";
+      if (s === "SMX") return "cm-badge cm-badge--smx";
+      if (s === "WSX") return "cm-badge cm-badge--wsx";
+      if (s === "MXON") return "cm-badge cm-badge--mxon";
+      return "cm-badge cm-badge--muted";
+    }
+
+    function shortTz(tz) {
+      if (!tz) return "—";
+      const map = {
+        "America/Los_Angeles": "PT",
+        "America/Denver": "MT",
+        "America/Chicago": "CT",
+        "America/New_York": "ET",
+        "America/Detroit": "ET-MI",
+        "Europe/Stockholm": "SE",
+      };
+      return map[tz] || tz.split("/").pop().replace(/_/g, " ");
+    }
+
+    function formatDateSv(iso) {
+      if (!iso) return "—";
+      try {
+        const d = new Date(iso + "T00:00:00");
+        return d.toLocaleDateString("sv-SE", { year: "numeric", month: "short", day: "numeric" });
+      } catch {
+        return iso;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      loadCompetitions();
+      updateCurrentTime();
+      setInterval(updateCurrentTime, 60000);
+    });
+
+    async function loadCompetitions() {
+      try {
+        const response = await fetch("/api/competitions/list");
+        if (!response.ok) throw new Error("Kunde inte hämta tävlingar");
+        competitions = await response.json();
+        applyFilters();
+        showStatus("Listan uppdaterad", "success");
+      } catch (error) {
+        console.error("Error:", error);
+        showStatus("Fel vid laddning: " + error.message, "error");
+      }
+    }
+
+    function setSeriesFilter(btn) {
+      activeSeries = btn.getAttribute("data-series") || "";
+      document.getElementById("series-filter").value = activeSeries;
+      document.querySelectorAll("#series-chips .cm-chip").forEach((el) => {
+        el.classList.toggle("is-active", el === btn);
+      });
+      applyFilters();
+    }
+
+    function filterBySeries() {
+      activeSeries = document.getElementById("series-filter").value || "";
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const q = (document.getElementById("search-filter")?.value || "").trim().toLowerCase();
+      filteredCompetitions = competitions.filter((comp) => {
+        if (activeSeries && comp.series !== activeSeries) return false;
+        if (q && !(comp.name || "").toLowerCase().includes(q)) return false;
+        return true;
+      });
+      renderCompetitions();
+    }
+
+    function renderCompetitions() {
+      const tbody = document.getElementById("competitions-table-body");
+      const countEl = document.getElementById("result-count");
+      tbody.innerHTML = "";
+
+      if (countEl) {
+        countEl.textContent = `${filteredCompetitions.length} tävling${filteredCompetitions.length === 1 ? "" : "ar"}`;
+      }
+
+      if (!filteredCompetitions.length) {
+        tbody.innerHTML = `<tr><td colspan="11"><div class="cm-empty">Inga tävlingar matchar filtret.</div></td></tr>`;
+        return;
+      }
+
+      filteredCompetitions.forEach((comp) => {
+        const row = document.createElement("tr");
+        const coast = comp.coast_250 || "—";
+        const mult = comp.point_multiplier != null ? `${comp.point_multiplier}×` : "—";
+        const race = toTimeInputValue(comp.start_time) || "—";
+        const quali = toTimeInputValue(comp.quali_start_time) || "—";
+        row.innerHTML = `
+          <td class="cm-id">${comp.id}</td>
+          <td><span class="cm-name">${escapeHtml(comp.name || "")}</span></td>
+          <td class="cm-mono">${formatDateSv(comp.event_date)}</td>
+          <td><span class="${seriesBadgeClass(comp.series)}">${escapeHtml(comp.series || "")}</span></td>
+          <td>${escapeHtml(coast)}</td>
+          <td class="cm-mono">${escapeHtml(String(mult))}</td>
+          <td>${comp.is_triple_crown ? '<span class="cm-badge cm-badge--smx">TC</span>' : '<span style="color:#475569">—</span>'}</td>
+          <td><span class="cm-tz" title="${escapeHtml(comp.timezone || "")}">${escapeHtml(shortTz(comp.timezone))}</span></td>
+          <td class="cm-mono">${escapeHtml(race)}</td>
+          <td class="cm-mono">${escapeHtml(quali)}</td>
+          <td>
+            <div class="cm-row-actions">
+              <button type="button" class="cm-btn cm-btn--sm" onclick="editCompetition(${comp.id})">Redigera</button>
+              <button type="button" class="cm-btn cm-btn--sm cm-btn--danger" onclick="deleteCompetition(${comp.id})">Ta bort</button>
             </div>
-            
-            <form id="competition-form" onsubmit="saveCompetition(event)">
-                <input type="hidden" id="competition-id" value="">
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Namn *</label>
-                        <input type="text" id="competition-name" required class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Datum *</label>
-                        <input type="date" id="competition-date" required class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Serie *</label>
-                        <select id="competition-series" required class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
-                            <option value="">Välj serie</option>
-                            <option value="SX">Supercross (SX)</option>
-                            <option value="MX">Motocross (MX)</option>
-                            <option value="SMX">SuperMotocross (SMX)</option>
-                            <option value="WSX">WSX</option>
-                            <option value="MXON">MXON</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">250cc Coast</label>
-                        <select id="competition-coast" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
-                            <option value="">Välj coast</option>
-                            <option value="west">West</option>
-                            <option value="east">East</option>
-                            <option value="both">Both (Showdown)</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Point Multiplier</label>
-                        <input type="number" id="competition-multiplier" step="0.1" min="0.1" max="3.0" value="1.0" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Tidszon</label>
-                        <select id="competition-timezone" onchange="updateCurrentTime()" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
-                            <option value="America/New_York">Eastern Time (US)</option>
-                            <option value="America/Detroit">Eastern Time — Michigan</option>
-                            <option value="America/Chicago">Central Time</option>
-                            <option value="America/Denver">Mountain Time</option>
-                            <option value="America/Los_Angeles">Pacific Time</option>
-                            <option value="Europe/Stockholm">Stockholm</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Race start (gate drop)</label>
-                        <input type="time" id="competition-start-time" value="20:00" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600" onchange="updateDeadline()">
-                        <p class="text-xs text-gray-400 mt-1">Nedräkning / racestart i vald tidszon</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Quali-start (picks låses)</label>
-                        <input type="time" id="competition-quali-start-time" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600" onchange="updateDeadline()">
-                        <p class="text-xs text-gray-400 mt-1">Tom = 2 h före race (eller SMX-standard). Absolut tid — inte −2 h.</p>
-                    </div>
-                </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Aktuell tid (vald tidszon)</label>
-                        <div id="current-time-display" class="w-full bg-gray-600 text-white px-3 py-2 rounded-lg border border-gray-600 text-sm">
-                            Laddar...
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Förhandsvisning deadline</label>
-                        <div id="deadline-display" class="w-full bg-gray-600 text-white px-3 py-2 rounded-lg border border-gray-600 text-sm">
-                            —
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mb-4">
-                    <label class="flex items-center">
-                        <input type="checkbox" id="competition-triple-crown" class="mr-2">
-                        <span class="text-sm text-gray-300">Triple Crown</span>
-                    </label>
-                </div>
-                
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="closeModal()" class="bg-gray-600 hover:bg-gray-500 text-white px-6 py-2 rounded-lg">
-                        Avbryt
-                    </button>
-                    <button type="submit" class="cyberpunk-button px-6 py-2 rounded-lg">
-                        Spara
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
 
-    <script>
-        let competitions = [];
-        let filteredCompetitions = [];
+    function updateCurrentTime() {
+      const timezoneSelect = document.getElementById("competition-timezone");
+      const currentTimeDisplay = document.getElementById("current-time-display");
+      if (!timezoneSelect || !currentTimeDisplay) return;
 
-        function toTimeInputValue(raw) {
-            if (!raw) return '';
-            const s = String(raw);
-            if (s.includes('T')) return s.split('T')[1].substring(0, 5);
-            return s.substring(0, 5);
-        }
-
-        // Load competitions on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadCompetitions();
-            updateCurrentTime();
-            // Update time every minute
-            setInterval(updateCurrentTime, 60000);
+      const timezone = timezoneSelect.value || "America/Los_Angeles";
+      try {
+        const timeString = new Date().toLocaleString("sv-SE", {
+          timeZone: timezone,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
         });
+        currentTimeDisplay.textContent = `${timeString} · ${shortTz(timezone)}`;
+      } catch {
+        currentTimeDisplay.textContent = "Kunde inte ladda tid";
+      }
+      updateDeadline();
+    }
 
-        async function loadCompetitions() {
-            try {
-                const response = await fetch('/api/competitions/list');
-                if (!response.ok) throw new Error('Kunde inte hämta tävlingar');
-                
-                competitions = await response.json();
-                filteredCompetitions = [...competitions];
-                renderCompetitions();
-                showStatus('Tävlingar laddade!', 'success');
-            } catch (error) {
-                console.error('Error:', error);
-                showStatus('Fel vid laddning av tävlingar: ' + error.message, 'error');
-            }
+    function updateDeadline() {
+      const deadlineDisplay = document.getElementById("deadline-display");
+      const startTimeInput = document.getElementById("competition-start-time");
+      const qualiTimeInput = document.getElementById("competition-quali-start-time");
+      const dateInput = document.getElementById("competition-date");
+      const timezoneSelect = document.getElementById("competition-timezone");
+      if (!deadlineDisplay || !startTimeInput || !timezoneSelect) return;
+
+      const startTime = startTimeInput.value;
+      const qualiTime = qualiTimeInput ? qualiTimeInput.value : "";
+      const eventDate = dateInput ? dateInput.value : null;
+      const timezoneAbbr = shortTz(timezoneSelect.value || "America/Los_Angeles");
+
+      if (!startTime && !qualiTime) {
+        deadlineDisplay.textContent = "Välj tider";
+        return;
+      }
+
+      const formatDate = (iso) => {
+        if (!iso) return "";
+        const dateObj = new Date(iso + "T00:00:00");
+        return dateObj.toLocaleDateString("sv-SE", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      };
+
+      if (qualiTime) {
+        const dateStr = formatDate(eventDate);
+        deadlineDisplay.textContent = dateStr
+          ? `Lås vid quali ${dateStr} kl ${qualiTime} (${timezoneAbbr})`
+          : `Lås vid quali kl ${qualiTime} (${timezoneAbbr})`;
+        return;
+      }
+
+      try {
+        const [hours, minutes] = startTime.split(":").map(Number);
+        let deadlineHours = hours - 2;
+        let deadlineMinutes = minutes;
+        let deadlineDate = eventDate;
+        if (deadlineHours < 0) {
+          deadlineHours += 24;
+          if (deadlineDate) {
+            const dateObj = new Date(deadlineDate + "T00:00:00");
+            dateObj.setDate(dateObj.getDate() - 1);
+            deadlineDate = dateObj.toISOString().split("T")[0];
+          }
         }
+        const deadlineTimeStr = `${String(deadlineHours).padStart(2, "0")}:${String(deadlineMinutes).padStart(2, "0")}`;
+        const dateStr = formatDate(deadlineDate);
+        deadlineDisplay.textContent = dateStr
+          ? `Lås 2 h före race: ${dateStr} kl ${deadlineTimeStr} (${timezoneAbbr})`
+          : `Lås 2 h före race: ${deadlineTimeStr} (${timezoneAbbr})`;
+      } catch {
+        deadlineDisplay.textContent = "Kunde inte beräkna deadline";
+      }
+    }
 
-        function filterBySeries() {
-            const series = document.getElementById('series-filter').value;
-            if (series === '') {
-                filteredCompetitions = [...competitions];
-            } else {
-                filteredCompetitions = competitions.filter(comp => comp.series === series);
-            }
-            renderCompetitions();
+    function showAddCompetitionModal() {
+      document.getElementById("modal-title").textContent = "Ny tävling";
+      document.getElementById("competition-form").reset();
+      document.getElementById("competition-id").value = "";
+      document.getElementById("competition-start-time").value = "20:00";
+      document.getElementById("competition-quali-start-time").value = "";
+      document.getElementById("competition-modal").classList.remove("hidden");
+      updateCurrentTime();
+      updateDeadline();
+    }
+
+    function editCompetition(id) {
+      const comp = competitions.find((c) => c.id === id);
+      if (!comp) return;
+
+      document.getElementById("modal-title").textContent = "Redigera tävling";
+      document.getElementById("competition-id").value = comp.id;
+      document.getElementById("competition-name").value = comp.name;
+      document.getElementById("competition-date").value = comp.event_date;
+      document.getElementById("competition-series").value = comp.series;
+
+      let coastValue = comp.coast_250 || "";
+      if (coastValue === "showdown") coastValue = "both";
+      document.getElementById("competition-coast").value = coastValue;
+      document.getElementById("competition-multiplier").value = comp.point_multiplier;
+      document.getElementById("competition-timezone").value = comp.timezone || "America/New_York";
+      document.getElementById("competition-triple-crown").checked = Boolean(comp.is_triple_crown);
+      document.getElementById("competition-start-time").value = toTimeInputValue(comp.start_time) || "20:00";
+      document.getElementById("competition-quali-start-time").value = toTimeInputValue(comp.quali_start_time);
+      document.getElementById("competition-modal").classList.remove("hidden");
+      updateCurrentTime();
+      updateDeadline();
+    }
+
+    function closeModal() {
+      document.getElementById("competition-modal").classList.add("hidden");
+    }
+
+    async function saveCompetition(event) {
+      event.preventDefault();
+      let coastValue = document.getElementById("competition-coast").value || null;
+      if (coastValue === "both") coastValue = "showdown";
+
+      const formData = {
+        id: document.getElementById("competition-id").value || null,
+        name: document.getElementById("competition-name").value,
+        event_date: document.getElementById("competition-date").value,
+        series: document.getElementById("competition-series").value,
+        coast_250: coastValue,
+        point_multiplier: parseFloat(document.getElementById("competition-multiplier").value),
+        is_triple_crown: document.getElementById("competition-triple-crown").checked ? 1 : 0,
+        timezone: document.getElementById("competition-timezone").value,
+        start_time: document.getElementById("competition-start-time").value || null,
+        quali_start_time: document.getElementById("competition-quali-start-time").value || null,
+      };
+
+      try {
+        const url = formData.id ? `/api/competitions/update/${formData.id}` : "/api/competitions/create";
+        const method = formData.id ? "PUT" : "POST";
+        const response = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Fel vid sparande");
         }
+        const result = await response.json();
+        showStatus(result.message || "Tävling sparad", "success");
+        closeModal();
+        loadCompetitions();
+      } catch (error) {
+        console.error("Error:", error);
+        showStatus("Fel vid sparande: " + error.message, "error");
+      }
+    }
 
-        function renderCompetitions() {
-            const tbody = document.getElementById('competitions-table-body');
-            tbody.innerHTML = '';
-
-            filteredCompetitions.forEach(comp => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-700';
-                row.innerHTML = `
-                    <td class="px-4 py-3 text-sm">${comp.id}</td>
-                    <td class="px-4 py-3 text-sm font-medium">${comp.name}</td>
-                    <td class="px-4 py-3 text-sm">${comp.event_date}</td>
-                    <td class="px-4 py-3 text-sm">
-                        <span class="px-2 py-1 rounded text-xs font-medium ${
-                            comp.series === 'SX' ? 'bg-red-600' : 
-                            comp.series === 'MX' ? 'bg-green-600' : 
-                            comp.series === 'SMX' ? 'bg-purple-600' :
-                            'bg-cyan-600'
-                        }">${comp.series}</span>
-                    </td>
-                    <td class="px-4 py-3 text-sm">${comp.coast_250 || '-'}</td>
-                    <td class="px-4 py-3 text-sm">${comp.point_multiplier}x</td>
-                    <td class="px-4 py-3 text-sm">${comp.is_triple_crown ? '🏆' : '-'}</td>
-                    <td class="px-4 py-3 text-sm">${comp.timezone || '-'}</td>
-                    <td class="px-4 py-3 text-sm">${toTimeInputValue(comp.start_time) || '-'}</td>
-                    <td class="px-4 py-3 text-sm">${toTimeInputValue(comp.quali_start_time) || '-'}</td>
-                    <td class="px-4 py-3 text-sm">
-                        <button onclick="editCompetition(${comp.id})" class="text-blue-400 hover:text-blue-300 mr-2">✏️</button>
-                        <button onclick="deleteCompetition(${comp.id})" class="text-red-400 hover:text-red-300">🗑️</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
+    async function deleteCompetition(id) {
+      if (!confirm("Ta bort den här tävlingen?")) return;
+      try {
+        const response = await fetch(`/api/competitions/delete/${id}`, { method: "DELETE" });
+        if (!response.ok) {
+          const error = await response.json();
+          if (error.error && error.error.includes("picks eller resultat")) {
+            if (confirm("Tävlingen har picks eller resultat. Ta bort allt?")) {
+              const forceResponse = await fetch(`/api/competitions/delete/${id}?force=true`, {
+                method: "DELETE",
+              });
+              if (!forceResponse.ok) {
+                const forceError = await forceResponse.json();
+                throw new Error(forceError.error || "Fel vid force-borttagning");
+              }
+              const forceResult = await forceResponse.json();
+              showStatus(forceResult.message || "Tävling och data borttagen", "success");
+              loadCompetitions();
+              return;
+            }
+            return;
+          }
+          throw new Error(error.error || "Fel vid borttagning");
         }
+        const result = await response.json();
+        showStatus(result.message || "Tävling borttagen", "success");
+        loadCompetitions();
+      } catch (error) {
+        console.error("Error:", error);
+        showStatus("Fel vid borttagning: " + error.message, "error");
+      }
+    }
 
-        function updateCurrentTime() {
-            const timezoneSelect = document.getElementById('competition-timezone');
-            const currentTimeDisplay = document.getElementById('current-time-display');
-            
-            if (!timezoneSelect || !currentTimeDisplay) return;
-            
-            const timezone = timezoneSelect.value || 'America/Los_Angeles';
-            
-            try {
-                const now = new Date();
-                const timeString = now.toLocaleString('sv-SE', {
-                    timeZone: timezone,
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
-                });
-                
-                const timezoneName = timezone.split('/').pop().replace('_', ' ');
-                currentTimeDisplay.textContent = `${timeString} (${timezoneName})`;
-            } catch (error) {
-                currentTimeDisplay.textContent = 'Kunde inte ladda tid';
-            }
-            
-            // Also update deadline when timezone changes
-            updateDeadline();
+    async function migrateStartTime() {
+      if (!confirm("Lägg till start_time-kolumn och sätt default 20:00 för tomma?")) return;
+      try {
+        const response = await fetch("/api/competitions/migrate_start_time", { method: "POST" });
+        const result = await response.json();
+        if (response.ok) {
+          showStatus(result.message, "success");
+          setTimeout(() => loadCompetitions(), 800);
+        } else {
+          showStatus("Fel: " + result.error, "error");
         }
-        
-        function updateDeadline() {
-            const deadlineDisplay = document.getElementById('deadline-display');
-            const startTimeInput = document.getElementById('competition-start-time');
-            const qualiTimeInput = document.getElementById('competition-quali-start-time');
-            const dateInput = document.getElementById('competition-date');
-            const timezoneSelect = document.getElementById('competition-timezone');
-            
-            if (!deadlineDisplay || !startTimeInput || !timezoneSelect) return;
-            
-            const startTime = startTimeInput.value;
-            const qualiTime = qualiTimeInput ? qualiTimeInput.value : '';
-            const eventDate = dateInput ? dateInput.value : null;
-            const timezone = timezoneSelect.value || 'America/Los_Angeles';
-            const timezoneAbbr = timezone.split('/').pop().replace('_', ' ');
-            
-            if (!startTime && !qualiTime) {
-                deadlineDisplay.textContent = 'Välj tider';
-                return;
-            }
+      } catch (error) {
+        showStatus("Fel vid migration: " + error.message, "error");
+      }
+    }
 
-            const formatDate = (iso) => {
-                if (!iso) return '';
-                const dateObj = new Date(iso + 'T00:00:00');
-                return dateObj.toLocaleDateString('sv-SE', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                });
-            };
-
-            if (qualiTime) {
-                const dateStr = formatDate(eventDate);
-                deadlineDisplay.textContent = dateStr
-                    ? `Lås vid quali ${dateStr} kl ${qualiTime} (${timezoneAbbr})`
-                    : `Lås vid quali kl ${qualiTime} (${timezoneAbbr})`;
-                return;
-            }
-            
-            try {
-                const [hours, minutes] = startTime.split(':').map(Number);
-                let deadlineHours = hours - 2;
-                let deadlineMinutes = minutes;
-                let deadlineDate = eventDate;
-                
-                if (deadlineHours < 0) {
-                    deadlineHours += 24;
-                    if (deadlineDate) {
-                        const dateObj = new Date(deadlineDate + 'T00:00:00');
-                        dateObj.setDate(dateObj.getDate() - 1);
-                        deadlineDate = dateObj.toISOString().split('T')[0];
-                    }
-                }
-                
-                const deadlineTimeStr = `${String(deadlineHours).padStart(2, '0')}:${String(deadlineMinutes).padStart(2, '0')}`;
-                const dateStr = formatDate(deadlineDate);
-                
-                if (dateStr) {
-                    deadlineDisplay.textContent = `Lås 2 h före race: ${dateStr} kl ${deadlineTimeStr} (${timezoneAbbr})`;
-                } else {
-                    deadlineDisplay.textContent = `Lås 2 h före race: ${deadlineTimeStr} (${timezoneAbbr})`;
-                }
-            } catch (error) {
-                deadlineDisplay.textContent = 'Kunde inte beräkna deadline';
-            }
+    async function updateSeasonsTo2026() {
+      if (!confirm("Uppdatera alla 2025-säsonger till 2026? Kan inte ångras.")) return;
+      try {
+        const response = await fetch("/api/competitions/update_seasons_to_2026", { method: "POST" });
+        const result = await response.json();
+        if (response.ok) {
+          showStatus(result.message, "success");
+          setTimeout(() => loadCompetitions(), 800);
+        } else {
+          showStatus("Fel: " + result.error, "error");
         }
+      } catch (error) {
+        showStatus("Fel: " + error.message, "error");
+      }
+    }
 
-        function showAddCompetitionModal() {
-            document.getElementById('modal-title').textContent = 'Lägg till tävling';
-            document.getElementById('competition-form').reset();
-            document.getElementById('competition-id').value = '';
-            document.getElementById('competition-start-time').value = '20:00';
-            document.getElementById('competition-quali-start-time').value = '';
-            document.getElementById('competition-modal').classList.remove('hidden');
-            updateCurrentTime();
-            updateDeadline();
+    async function updateToOfficial2026() {
+      if (!confirm("Byt till officiellt 2026-schema? Befintliga tävlingar kan påverkas tungt.")) return;
+      try {
+        const response = await fetch("/api/competitions/update_to_official_2026", { method: "POST" });
+        const result = await response.json();
+        if (response.ok) {
+          showStatus(result.message, "success");
+          setTimeout(() => loadCompetitions(), 800);
+        } else {
+          showStatus("Fel: " + result.error, "error");
         }
+      } catch (error) {
+        showStatus("Fel: " + error.message, "error");
+      }
+    }
 
-        function editCompetition(id) {
-            const comp = competitions.find(c => c.id === id);
-            if (!comp) return;
+    function exportCompetitions() {
+      const dataStr = JSON.stringify(competitions, null, 2);
+      const dataBlob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "competitions.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
 
-            document.getElementById('modal-title').textContent = 'Redigera tävling';
-            document.getElementById('competition-id').value = comp.id;
-            document.getElementById('competition-name').value = comp.name;
-            document.getElementById('competition-date').value = comp.event_date;
-            document.getElementById('competition-series').value = comp.series;
-            
-            // Handle coast_250 - normalize "showdown" to "both" for the form
-            let coastValue = comp.coast_250 || '';
-            if (coastValue === 'showdown') {
-                coastValue = 'both';
-            }
-            document.getElementById('competition-coast').value = coastValue;
-            
-            document.getElementById('competition-multiplier').value = comp.point_multiplier;
-            document.getElementById('competition-timezone').value = comp.timezone || 'America/New_York';
-            
-            // Handle is_triple_crown - convert integer to boolean
-            document.getElementById('competition-triple-crown').checked = Boolean(comp.is_triple_crown);
-            
-            document.getElementById('competition-start-time').value = toTimeInputValue(comp.start_time) || '20:00';
-            document.getElementById('competition-quali-start-time').value = toTimeInputValue(comp.quali_start_time);
-            
-            document.getElementById('competition-modal').classList.remove('hidden');
-            updateCurrentTime();
-            updateDeadline();
-        }
-
-        function closeModal() {
-            document.getElementById('competition-modal').classList.add('hidden');
-        }
-
-        async function saveCompetition(event) {
-            event.preventDefault();
-            
-            // Get coast value and normalize "both" to "showdown" for database consistency
-            let coastValue = document.getElementById('competition-coast').value || null;
-            if (coastValue === 'both') {
-                coastValue = 'showdown';  // Normalize to "showdown" for database
-            }
-            
-            const formData = {
-                id: document.getElementById('competition-id').value || null,
-                name: document.getElementById('competition-name').value,
-                event_date: document.getElementById('competition-date').value,
-                series: document.getElementById('competition-series').value,
-                coast_250: coastValue,
-                point_multiplier: parseFloat(document.getElementById('competition-multiplier').value),
-                is_triple_crown: document.getElementById('competition-triple-crown').checked ? 1 : 0,  // Convert boolean to integer
-                timezone: document.getElementById('competition-timezone').value,
-                start_time: document.getElementById('competition-start-time').value || null,
-                quali_start_time: document.getElementById('competition-quali-start-time').value || null
-            };
-
-            try {
-                const url = formData.id ? `/api/competitions/update/${formData.id}` : '/api/competitions/create';
-                const method = formData.id ? 'PUT' : 'POST';
-                
-                const response = await fetch(url, {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData)
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Fel vid sparande');
-                }
-
-                const result = await response.json();
-                showStatus(result.message || 'Tävling sparad!', 'success');
-                closeModal();
-                loadCompetitions();
-            } catch (error) {
-                console.error('Error:', error);
-                showStatus('Fel vid sparande: ' + error.message, 'error');
-            }
-        }
-
-        async function deleteCompetition(id) {
-            if (!confirm('Är du säker på att du vill ta bort denna tävling?')) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/competitions/delete/${id}`, {
-                    method: 'DELETE'
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    
-                    // If error is about picks/results, offer force delete
-                    if (error.error && error.error.includes('picks eller resultat')) {
-                        if (confirm('Tävlingen har picks eller resultat. Vill du ta bort allt (picks, resultat och tävling)?')) {
-                            const forceResponse = await fetch(`/api/competitions/delete/${id}?force=true`, {
-                                method: 'DELETE'
-                            });
-                            
-                            if (!forceResponse.ok) {
-                                const forceError = await forceResponse.json();
-                                throw new Error(forceError.error || 'Fel vid force borttagning');
-                            }
-                            
-                            const forceResult = await forceResponse.json();
-                            showStatus(forceResult.message || 'Tävling och all data borttagen!', 'success');
-                            loadCompetitions();
-                            return;
-                        } else {
-                            return; // User cancelled
-                        }
-                    }
-                    
-                    throw new Error(error.error || 'Fel vid borttagning');
-                }
-
-                const result = await response.json();
-                showStatus(result.message || 'Tävling borttagen!', 'success');
-                loadCompetitions();
-            } catch (error) {
-                console.error('Error:', error);
-                showStatus('Fel vid borttagning: ' + error.message, 'error');
-            }
-        }
-
-        async function migrateStartTime() {
-            if (!confirm('Lägg till start_time kolumn i databasen och sätt default 8:00 PM för alla tävlingar?')) {
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/competitions/migrate_start_time', {
-                    method: 'POST'
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    showStatus(result.message, 'success');
-                    // Reload competitions after migration
-                    setTimeout(() => loadCompetitions(), 1000);
-                } else {
-                    showStatus('Fel: ' + result.error, 'error');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showStatus('Fel vid migration: ' + error.message, 'error');
-            }
-        }
-
-        async function updateSeasonsTo2026() {
-            if (!confirm('Uppdatera alla 2025 säsonger och tävlingar till 2026? Detta kan inte ångras!')) {
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/competitions/update_seasons_to_2026', {
-                    method: 'POST'
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    showStatus(result.message, 'success');
-                    // Reload competitions after update
-                    setTimeout(() => loadCompetitions(), 1000);
-                } else {
-                    showStatus('Fel: ' + result.error, 'error');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showStatus('Fel vid uppdatering: ' + error.message, 'error');
-            }
-        }
-
-        async function updateToOfficial2026() {
-            if (!confirm('Uppdatera alla tävlingar till officiell 2026 SMX schema? Detta tar bort alla befintliga tävlingar och skapar nya!')) {
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/competitions/update_to_official_2026', {
-                    method: 'POST'
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    showStatus(result.message, 'success');
-                    // Reload competitions after update
-                    setTimeout(() => loadCompetitions(), 1000);
-                } else {
-                    showStatus('Fel: ' + result.error, 'error');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showStatus('Fel vid uppdatering: ' + error.message, 'error');
-            }
-        }
-
-        function exportCompetitions() {
-            const dataStr = JSON.stringify(competitions, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'competitions.json';
-            link.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function showStatus(message, type) {
-            const statusDiv = document.getElementById('status-message');
-            statusDiv.textContent = message;
-            statusDiv.className = `mt-4 p-4 rounded-lg ${
-                type === 'success' ? 'bg-green-600' : 'bg-red-600'
-            } text-white`;
-            statusDiv.classList.remove('hidden');
-            
-            setTimeout(() => {
-                statusDiv.classList.add('hidden');
-            }, 3000);
-        }
-    </script>
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById("status-message");
+      statusDiv.textContent = message;
+      statusDiv.className = `cm-status ${type === "success" ? "cm-status--ok" : "cm-status--err"}`;
+      statusDiv.classList.remove("hidden");
+      setTimeout(() => statusDiv.classList.add("hidden"), 3200);
+    }
+  </script>
 </body>
 </html>
