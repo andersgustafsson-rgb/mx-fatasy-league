@@ -874,7 +874,8 @@ function signature(settings, langPack) {
   }
   const parts = [];
   if (cleanStr(settings.senderName)) parts.push(cleanStr(settings.senderName));
-  if (cleanStr(settings.companyName)) parts.push(cleanStr(settings.companyName));
+  const company = subjectCompanyPrefix(settings.companyName);
+  if (company) parts.push(company);
   if (!parts.length) return langPack.mail.signatureEmpty;
   return langPack.mail.signature(parts);
 }
