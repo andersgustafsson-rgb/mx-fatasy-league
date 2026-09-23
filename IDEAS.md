@@ -17,7 +17,15 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 | 7 | **SMX trackmaps / venues** | Delvis gjort | Kartor + posters från playoffs-sidan i `static/trackmaps/smx/` (Columbus, Carson, Ridgedale). Kopplade via `trackmap_utils`. |
 | 8 | **Städa / strukturera kodbasen** | ⏸️ Efter SMX-final (~26 sep) | **Beslut 13 aug:** ingen stor uppdelning under säsongen — för hög risk när spelet är live. Efter SMX: börja strukturera så AI/arbete blir enklare & billigare. Se plan nedan. |
 | 9 | **Social login (Google först)** | ✅ Kod klart — väntar på Google Cloud + Render env | OAuth i `/auth/google*`, `User.google_sub`, snygg login/register + Pit Pass-knapp. **Du:** skapa OAuth Web client, sätt `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` på Render, redeploy. Microsoft/Facebook senare om det behövs. |
-| 10 | **Admin mobilanpassad** | 📋 Efter SMX-final (~26 sep) | Du sköter mer från mobilen. Picks-statistik har fått första pass (aktuell tävling, kort layout) — resten av admin (import, holeshot, tabeller) behöver samma behandling: scroll-flikar, kort istället för tabeller, touch-vänliga knappar. |
+
+---
+
+## Nästa säsong (idéer)
+
+| # | Idé | Status | Kommentar |
+|---|-----|--------|-----------|
+| 1 | **MXGP (FIM Motocross World Championship)** | 🚧 Scaffold (admin) | Tippa-only scaffold live: homepage UC-kort, admin test-GP, MXGP+MX2 topp 6 + holeshot Race 1 + kvalvinnare (ingen WC). Publik tippa låst tills `MXGP_PUBLIC_PLAY`. Scoring/RacerX-import kvar. |
+| 2 | **Svenska SM (motocross)** | 💡 Idé | Nationellt SM — intressant för svensk målgrupp. Scope/klasser/kalender TBD. Bollades 17 sep 2026. |
 
 ---
 
@@ -50,6 +58,7 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 - [x] **Keep-alive** — GitHub Action `keepalive.yml` + `scripts/cron_keepalive.py` (Render Cron i `render.yaml`).
 - [ ] **Tidrapport: spara på server** — idag mest webbläsare/PNG; tidigare bollades serverlagring + historik (större grej, bara om du behöver det).
 - [x] **Admin raceday-flöde (AMA/WSX)** — import + holeshot i centrum, manuell/OUT under Avancerat. 18 aug 2026.
+- [x] **Admin mobilanpassad** — sticky flikar, touch-knappar, hub-kort, svep-hint på tabeller; även Competition/Rider Manager. 23 sep 2026.
 - [x] **SMX Combined efter Ironman** — officiell overlay synkad till supermotocross.com (820/638 …); topp 20 seed + 21–30 LCQ. Nästa säsong: live sum utan manuell lista. 30 aug 2026.
 
 ---

@@ -867,8 +867,9 @@
     {% endif %}
 
     {% set _is_wsx_hdr = competition.series == 'WSX' %}
-    {% set _class_450_hdr = 'SX1' if _is_wsx_hdr else '450cc' %}
-    {% set _class_250_hdr = 'SX2' if _is_wsx_hdr else '250cc' %}
+    {% set _is_mxgp_hdr = (competition.series or '')|upper == 'MXGP' %}
+    {% set _class_450_hdr = 'SX1' if _is_wsx_hdr else ('MXGP' if _is_mxgp_hdr else '450cc') %}
+    {% set _class_250_hdr = 'SX2' if _is_wsx_hdr else ('MX2' if _is_mxgp_hdr else '250cc') %}
     {% set _trackmap_urls = trackmap_urls | default([]) %}
     {% set _good_to_know = picks_good_to_know | default([]) %}
     {% set _is_mx = is_mx_race | default(competition.series == 'MX') %}
@@ -894,10 +895,24 @@
     {% if not actual_results %}
     {% set outset = out_ids | default([]) %}
     {% set is_wsx = competition.series == 'WSX' %}
-    {% set class_450_label = 'SX1' if is_wsx else '450cc' %}
-    {% set class_250_label = 'SX2' if is_wsx else '250cc' %}
-    {% set class_450_data = 'wsx_sx1' if is_wsx else '450cc' %}
-    {% set class_250_data = 'wsx_sx2' if is_wsx else '250cc' %}
+    {% set is_mxgp = (competition.series or '')|upper == 'MXGP' %}
+    {% set skips_wildcard = is_wsx or is_mxgp %}
+    {% if is_wsx %}
+    {% set class_450_label = 'SX1' %}
+    {% set class_250_label = 'SX2' %}
+    {% set class_450_data = 'wsx_sx1' %}
+    {% set class_250_data = 'wsx_sx2' %}
+    {% elif is_mxgp %}
+    {% set class_450_label = 'MXGP' %}
+    {% set class_250_label = 'MX2' %}
+    {% set class_450_data = 'mxgp' %}
+    {% set class_250_data = 'mx2' %}
+    {% else %}
+    {% set class_450_label = '450cc' %}
+    {% set class_250_label = '250cc' %}
+    {% set class_450_data = '450cc' %}
+    {% set class_250_data = '250cc' %}
+    {% endif %}
     {% set initial_wiz_step = initial_wizard_step | default(1) %}
     
     <!-- Picks Status Indicator (full bredd ovanför) -->
@@ -924,8 +939,8 @@
     </div>
     
     {% if out_ids %}
-    {% set _out_label_450 = 'SX1' if competition.series == 'WSX' else '450cc' %}
-    {% set _out_label_250 = 'SX2' if competition.series == 'WSX' else '250cc' %}
+    {% set _out_label_450 = 'SX1' if competition.series == 'WSX' else ('MXGP' if (competition.series or '')|upper == 'MXGP' else '450cc') %}
+    {% set _out_label_250 = 'SX2' if competition.series == 'WSX' else ('MX2' if (competition.series or '')|upper == 'MXGP' else '250cc') %}
     <details class="race-picks-out-details mb-3">
       <summary>
         {{ out_ids|length }} <span data-i18n="picks.out_riders" data-i18n-sv="förare är OUT för detta race (syns inte i listorna)" data-i18n-en="riders are OUT for this race (hidden from lists)">förare är OUT för detta race (syns inte i listorna)</span>
@@ -955,7 +970,7 @@
     </details>
     {% endif %}
 
-    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2"{% if competition.series == 'WSX' %} data-i18n="picks.guess_title_wsx"{% else %} data-i18n="picks.guess_title"{% endif %}>{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
+    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2"{% if competition.series == 'WSX' or (competition.series or '')|upper == 'MXGP' %} data-i18n="picks.guess_title_wsx"{% else %} data-i18n="picks.guess_title"{% endif %}>{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% elif (competition.series or '')|upper == 'MXGP' %}Gissa topp 6, Holeshot & Kvalvinnare{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
     {% if competition.series == 'SMX' %}
     <p class="mb-4 text-sm text-slate-300 bg-slate-900/70 border border-slate-600/50 rounded-lg px-3 py-2">
       Startlista = SMX Combined <strong class="text-white">topp 30</strong>:
@@ -1076,8 +1091,8 @@
         <h2 data-i18n-sv="Översikt — dina val" data-i18n-en="Overview — your picks">Översikt — dina val</h2>
         <p data-i18n-sv="Inlämnat! Dina val är registrerade. Redigera om du vill ändra innan deadline." data-i18n-en="Submitted! Your picks are registered. Edit if you want to change them before the deadline.">Inlämnat! Dina val är registrerade. Redigera om du vill ändra innan deadline.</p>
         {% else %}
-        <h2><span data-i18n="picks.step3">Steg 3</span> — Holeshot{% if competition.series != 'WSX' %} & Wildcard{% endif %}</h2>
-        <p>{% if competition.series == 'WSX' %}Vem tar första kurvan i SX1 och SX2?{% else %}Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.{% endif %}</p>
+        <h2><span data-i18n="picks.step3">Steg 3</span> — Holeshot{% if is_mxgp %} & Kvalvinnare{% elif not is_wsx %} & Wildcard{% endif %}</h2>
+        <p>{% if is_wsx %}Vem tar första kurvan i SX1 och SX2?{% elif is_mxgp %}Holeshot Race 1 + tippa lördagens kvalvinnare i MXGP och MX2.{% else %}Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.{% endif %}</p>
         {% endif %}
       </div>
     </header>
@@ -1127,7 +1142,46 @@
       </select>
     </div>
 
-    {% if competition.series != 'WSX' %}
+    {% if is_mxgp %}
+    <div class="wildcard-panel mt-4 sm:mt-5" id="qualifying-panel">
+      <h3 class="wildcard-panel__title">Kvalvinnare (lördag)</h3>
+      <p class="wildcard-panel__hint">Tippa vem som vinner qualifying race i varje klass.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3">
+        <div>
+          <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">MXGP:</label>
+          <div class="rider-selector" data-class="qualifying-mxgp">
+            <div class="rider-selector-input" onclick="toggleRiderSelector('qualifying-mxgp', 0)">
+              <span class="selected-rider">-- välj förare --</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="rider-selector-dropdown" style="display: none;">
+              <div class="search-box">
+                <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('qualifying-mxgp', 0, this.value)">
+              </div>
+              <div class="rider-list"></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">MX2:</label>
+          <div class="rider-selector" data-class="qualifying-mx2">
+            <div class="rider-selector-input" onclick="toggleRiderSelector('qualifying-mx2', 0)">
+              <span class="selected-rider">-- välj förare --</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="rider-selector-dropdown" style="display: none;">
+              <div class="search-box">
+                <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('qualifying-mx2', 0, this.value)">
+              </div>
+              <div class="rider-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <select id="qualifying-mxgp" name="qualifying_mxgp" style="display: none;"><option value="">-- välj förare --</option></select>
+      <select id="qualifying-mx2" name="qualifying_mx2" style="display: none;"><option value="">-- välj förare --</option></select>
+    </div>
+    {% elif not skips_wildcard %}
     <div class="wildcard-panel mt-4 sm:mt-5">
       <h3 class="wildcard-panel__title">Wildcard</h3>
       <p class="wildcard-panel__hint">Slumpa plats 10–20, välj sedan en 450-förare (inte OUT, inte redan i topp 6).</p>
@@ -1199,8 +1253,9 @@
       {% include 'includes/race_prep_panel.html' %}
     {% endif %}
     {% set is_wsx = competition.series == 'WSX' %}
-    {% set class_450_label = 'SX1' if is_wsx else '450cc' %}
-    {% set class_250_label = 'SX2' if is_wsx else '250cc' %}
+    {% set is_mxgp = (competition.series or '')|upper == 'MXGP' %}
+    {% set class_450_label = 'SX1' if is_wsx else ('MXGP' if is_mxgp else '450cc') %}
+    {% set class_250_label = 'SX2' if is_wsx else ('MX2' if is_mxgp else '250cc') %}
     <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2">Resultat vs Dina Val</h2>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
       <div>
@@ -1218,7 +1273,7 @@
       <div id="holeshot-results" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"></div>
     </div>
 
-    {% if competition.series != 'WSX' %}
+    {% if competition.series != 'WSX' and (competition.series or '')|upper != 'MXGP' %}
     <div class="mt-4 sm:mt-6">
       <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">Wildcard Resultat</h3>
       <div id="wildcard-result" class="p-3 sm:p-4 bg-purple-900/40 border border-purple-500 rounded"></div>
@@ -1234,7 +1289,15 @@
   const competitionName = {{ competition.name|tojson }};
   const competitionSeries = {{ competition.series|tojson }};
   const isWSXSeries = competitionSeries === 'WSX';
+  const isMXGPSeries = String(competitionSeries || '').toUpperCase() === 'MXGP';
   const isSMXSeries = competitionSeries === 'SMX';
+  const skipsWildcard = isWSXSeries || isMXGPSeries;
+  const tippaClass450 = isWSXSeries ? 'wsx_sx1' : (isMXGPSeries ? 'mxgp' : '450cc');
+  const tippaClass250 = isWSXSeries ? 'wsx_sx2' : (isMXGPSeries ? 'mx2' : '250cc');
+  const tippaClasses = [tippaClass450, tippaClass250];
+  const tippaLabel450 = isWSXSeries ? 'SX1' : (isMXGPSeries ? 'MXGP' : '450cc');
+  const tippaLabel250 = isWSXSeries ? 'SX2' : (isMXGPSeries ? 'MX2' : '250cc');
+  const tippaRequiredCount = isMXGPSeries ? 16 : (tippaRequiredCount);
   const actualResults = {{ actual_results|tojson }};
   const holeshotResults = {{ holeshot_results|tojson }};
   const allRiders = {{ (riders_450_json + riders_250_json) | tojson }};
@@ -1258,8 +1321,8 @@
   function hiddenPickSelectName(riderClass, position) {
     const pos = Number(position);
     if (Number.isNaN(pos) || pos < 1 || pos > 6) return null;
-    if (riderClass === '450cc' || riderClass === 'wsx_sx1') return `pick_450_${pos}`;
-    if (riderClass === '250cc' || riderClass === 'wsx_sx2') return `pick_250_${pos}`;
+    if (riderClass === tippaClass450 || riderClass === '450cc' || riderClass === 'wsx_sx1' || riderClass === 'mxgp') return `pick_450_${pos}`;
+    if (riderClass === tippaClass250 || riderClass === '250cc' || riderClass === 'wsx_sx2' || riderClass === 'mx2') return `pick_250_${pos}`;
     return null;
   }
   window.hiddenPickSelectName = hiddenPickSelectName;
@@ -1295,7 +1358,7 @@
 
   function getWildcardBlockedIds() {
     // Wildcard är 450cc — får inte vara OUT eller redan vald i topp 6 450
-    const top6Class = isWSXSeries ? 'wsx_sx1' : '450cc';
+    const top6Class = tippaClass450;
     return new Set(getSelectedTop6Ids(top6Class).map(String));
   }
 
@@ -1311,7 +1374,7 @@
   }
 
   function clearWildcardIfInvalid() {
-    if (isWSXSeries) return;
+    if (skipsWildcard) return;
     const hiddenSelect = document.getElementById('wildcard-pick');
     const rid = hiddenSelect?.value;
     if (!rid) return;
@@ -1404,21 +1467,36 @@
 
   function pickColumn450List() {
     return sortTippaRiders(
-      allRiders.filter((r) => r.class === '450cc' || r.class === 'wsx_sx1')
+      allRiders.filter((r) => r.class === tippaClass450 || r.class === '450cc' || r.class === 'wsx_sx1' || r.class === 'mxgp')
     );
   }
 
   function pickColumn250List() {
     return sortTippaRiders(
-      allRiders.filter((r) => r.class === '250cc' || r.class === 'wsx_sx2')
+      allRiders.filter((r) => r.class === tippaClass250 || r.class === '250cc' || r.class === 'wsx_sx2' || r.class === 'mx2')
     );
   }
 
   function ridersForDropdownDataClass(dc) {
-    if (dc === '450cc' || dc === 'wsx_sx1' || dc === 'holeshot-450' || dc === 'wildcard-pick') {
+    if (
+      dc === tippaClass450 ||
+      dc === '450cc' ||
+      dc === 'wsx_sx1' ||
+      dc === 'mxgp' ||
+      dc === 'holeshot-450' ||
+      dc === 'wildcard-pick' ||
+      dc === 'qualifying-mxgp'
+    ) {
       return pickColumn450List();
     }
-    if (dc === '250cc' || dc === 'wsx_sx2' || dc === 'holeshot-250') {
+    if (
+      dc === tippaClass250 ||
+      dc === '250cc' ||
+      dc === 'wsx_sx2' ||
+      dc === 'mx2' ||
+      dc === 'holeshot-250' ||
+      dc === 'qualifying-mx2'
+    ) {
       return pickColumn250List();
     }
     return [];
@@ -1492,6 +1570,10 @@
         selectHoleshotRider('450', rider.id, label);
       } else if (dataClass === 'holeshot-250') {
         selectHoleshotRider('250', rider.id, label);
+      } else if (dataClass === 'qualifying-mxgp') {
+        selectQualifyingRider('mxgp', rider.id, label);
+      } else if (dataClass === 'qualifying-mx2') {
+        selectQualifyingRider('mx2', rider.id, label);
       } else {
         selectRider(dataClass, position, rider.id, label);
       }
@@ -1630,11 +1712,11 @@
       ensureSelectValue(hidden, rid, label);
     };
 
-    const topClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+    const topClasses = tippaClasses;
     topClasses.forEach(restoreTop6);
     restoreBonus('holeshot-450', 'holeshot-450');
     restoreBonus('holeshot-250', 'holeshot-250');
-    if (!isWSXSeries) restoreBonus('wildcard-pick', 'wildcard-pick');
+    if (!skipsWildcard) restoreBonus('wildcard-pick', 'wildcard-pick');
     topClasses.forEach((cls) => {
       removeDuplicateTop6Selections(cls);
       updateRiderSelectors(cls);
@@ -1659,10 +1741,14 @@
       selector.dataset.selectedRiderId = String(rid);
     };
     mapHidden('holeshot-450', 'holeshot-450');
+    if (isMXGPSeries) {
+      mapHidden('qualifying-mxgp', 'qualifying-mxgp');
+      mapHidden('qualifying-mx2', 'qualifying-mx2');
+    }
     mapHidden('holeshot-250', 'holeshot-250');
     mapHidden('wildcard-pick', 'wildcard-pick');
 
-    const topClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+    const topClasses = tippaClasses;
     topClasses.forEach((cls) => {
       for (let i = 1; i <= 6; i++) {
         const selector = document.querySelector(`.rider-selector[data-class="${cls}"][data-position="${i}"]`);
@@ -1693,6 +1779,10 @@
     }
     fillSelectFromRiders(document.getElementById('holeshot-450'), l450, emptyRiderLabel());
     fillSelectFromRiders(document.getElementById('holeshot-250'), l250, emptyRiderLabel());
+    if (isMXGPSeries) {
+      fillSelectFromRiders(document.getElementById('qualifying-mxgp'), l450, emptyRiderLabel());
+      fillSelectFromRiders(document.getElementById('qualifying-mx2'), l250, emptyRiderLabel());
+    }
     fillSelectFromRiders(
       document.getElementById('wildcard-pick'),
       l450.filter((r) => !isOutRiderId(r.id)),
@@ -1712,11 +1802,13 @@
       racePicks: {},
       holeshotPicks: {},
       wildcardPick: null,
-      wildcardPosition: null
+      wildcardPosition: null,
+      qualifyingMxgp: null,
+      qualifyingMx2: null
     };
 
     // Save race picks (450cc/wsx_sx1 and 250cc/wsx_sx2)
-    const riderClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+    const riderClasses = tippaClasses;
     riderClasses.forEach(riderClass => {
       picks.racePicks[riderClass] = {};
       for (let i = 1; i <= 6; i++) {
@@ -1757,8 +1849,26 @@
       }
     });
 
-    // Save wildcard pick (only for non-WSX series)
-    if (!isWSXSeries) {
+    if (isMXGPSeries) {
+      ['mxgp', 'mx2'].forEach((key) => {
+        const dataClass = key === 'mx2' ? 'qualifying-mx2' : 'qualifying-mxgp';
+        const selector = document.querySelector(`.rider-selector[data-class="${dataClass}"]`);
+        if (!selector) return;
+        const currentText = (selector.querySelector('.selected-rider')?.textContent || '').trim();
+        if (!isEmptyRiderText(currentText)) {
+          const riderOption = selector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
+          const rid = selector.dataset.selectedRiderId || riderOption?.dataset?.riderId;
+          if (rid) {
+            const payload = { riderId: String(rid), riderName: currentText };
+            if (key === 'mx2') picks.qualifyingMx2 = payload;
+            else picks.qualifyingMxgp = payload;
+          }
+        }
+      });
+    }
+
+    // Save wildcard pick (only for series with wildcard)
+    if (!skipsWildcard) {
       const wildcardSelector = document.querySelector(`.rider-selector[data-class="wildcard-pick"]`);
       if (wildcardSelector) {
         const selectedRiderSpan = wildcardSelector.querySelector('.selected-rider');
@@ -1817,7 +1927,7 @@
       };
 
       // Load race picks
-      const riderClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+      const riderClasses = tippaClasses;
       riderClasses.forEach(riderClass => {
         if (picks.racePicks && picks.racePicks[riderClass]) {
           Object.keys(picks.racePicks[riderClass]).forEach(position => {
@@ -1887,8 +1997,29 @@
         } catch (e) {}
       }
 
-      // Load wildcard pick (only for non-WSX series)
-      if (!isWSXSeries && picks.wildcardPick) {
+      // Load MXGP qualifying winners from draft
+      if (isMXGPSeries) {
+        for (const [key, dataClass, hiddenId] of [
+          [picks.qualifyingMxgp, 'qualifying-mxgp', 'qualifying-mxgp'],
+          [picks.qualifyingMx2, 'qualifying-mx2', 'qualifying-mx2'],
+        ]) {
+          if (!key) continue;
+          const selector = document.querySelector(`.rider-selector[data-class="${dataClass}"]`);
+          if (selector) {
+            const selectedRiderSpan = selector.querySelector('.selected-rider');
+            if (selectedRiderSpan) {
+              selectedRiderSpan.textContent = key.riderName;
+              selectedRiderSpan.removeAttribute('data-i18n');
+            }
+            selector.dataset.selectedRiderId = String(key.riderId);
+          }
+          const hiddenSelect = document.getElementById(hiddenId);
+          if (hiddenSelect) hiddenSelect.value = key.riderId;
+        }
+      }
+
+      // Load wildcard pick (only for series with wildcard)
+      if (!skipsWildcard && picks.wildcardPick) {
         const pick = picks.wildcardPick;
         const selector = document.querySelector(`.rider-selector[data-class="wildcard-pick"]`);
         if (selector && pick) {
@@ -1907,7 +2038,7 @@
       clearWildcardIfInvalid();
 
       // Load wildcard position (only for non-WSX series)
-      if (!isWSXSeries && picks.wildcardPosition) {
+      if (!skipsWildcard && picks.wildcardPosition) {
         const wildcardPosEl = document.getElementById('wildcard-position');
         const wildcardLabelEl = document.getElementById('wildcard-position-label');
         const wildcardHub = document.getElementById('wildcard-wheel-hub');
@@ -1925,7 +2056,7 @@
       // Wizard step resolved in initAfterDraftLoad (respects complete picks → step 3)
 
       // Update rider selectors to hide selected riders
-      const riderClassesForUpdate = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+      const riderClassesForUpdate = tippaClasses;
       riderClassesForUpdate.forEach(cls => {
         removeDuplicateTop6Selections(cls);
         updateRiderSelectors(cls);
@@ -2180,7 +2311,7 @@
     updateRiderSelectors(riderClass);
 
     // Om topp 6 450 ändras: rensa ogiltig wildcard och uppdatera listan
-    if (!isWSXSeries && (riderClass === '450cc' || riderClass === 'wsx_sx1')) {
+    if (!skipsWildcard && (riderClass === tippaClass450 || riderClass === '450cc' || riderClass === 'wsx_sx1' || riderClass === 'mxgp')) {
       clearWildcardIfInvalid();
       filterRiders('wildcard-pick', 0, '');
     }
@@ -2259,6 +2390,31 @@
   });
 
   // Handle wildcard rider selection
+
+  function selectQualifyingRider(classKey, riderId, riderName) {
+    const dataClass = classKey === 'mx2' ? 'qualifying-mx2' : 'qualifying-mxgp';
+    const hiddenId = classKey === 'mx2' ? 'qualifying-mx2' : 'qualifying-mxgp';
+    const selector = document.querySelector(`.rider-selector[data-class="${dataClass}"]`);
+    if (selector) {
+      const span = selector.querySelector('.selected-rider');
+      if (span) {
+        span.textContent = riderName;
+        span.removeAttribute('data-i18n');
+      }
+      selector.dataset.selectedRiderId = String(riderId);
+      const dropdown = selector.querySelector('.rider-selector-dropdown');
+      if (dropdown) {
+        dropdown.style.display = 'none';
+        selector.classList.remove('open');
+      }
+    }
+    ensureSelectValue(document.getElementById(hiddenId), riderId, riderName);
+    savePicksToStorage();
+    if (window.PicksWizard && window.PicksWizard.refresh) window.PicksWizard.refresh();
+    window._picksDirtySinceLoad = true;
+    if (typeof window.updateSaveButtonVisibility === 'function') window.updateSaveButtonVisibility();
+  }
+
   function selectWildcardRider(riderId, riderName) {
     if (isOutRiderId(riderId)) {
       alert('Den föraren är OUT för detta race.');
@@ -2361,7 +2517,7 @@
     
     // Update rider selectors to show all options again
     updateRiderSelectors(riderClass);
-    if (!isWSXSeries && (riderClass === '450cc' || riderClass === 'wsx_sx1')) {
+    if (!skipsWildcard && (riderClass === tippaClass450 || riderClass === '450cc' || riderClass === 'wsx_sx1' || riderClass === 'mxgp')) {
       clearWildcardIfInvalid();
       filterRiders('wildcard-pick', 0, '');
     }
@@ -2824,13 +2980,15 @@ function handleImageError(img) {
 function isMyPicksComplete(myPicks) {
   if (!myPicks) return false;
   const hasTop6 = myPicks.top6_picks && myPicks.top6_picks.length > 0;
-  const holeshot450 = myPicks.holeshot_picks?.['450cc'] || myPicks.holeshot_picks?.['wsx_sx1'];
-  const holeshot250 = myPicks.holeshot_picks?.['250cc'] || myPicks.holeshot_picks?.['wsx_sx2'];
+  const holeshot450 = myPicks.holeshot_picks?.['450cc'] || myPicks.holeshot_picks?.['wsx_sx1'] || myPicks.holeshot_picks?.['mxgp'];
+  const holeshot250 = myPicks.holeshot_picks?.['250cc'] || myPicks.holeshot_picks?.['wsx_sx2'] || myPicks.holeshot_picks?.['mx2'];
   const hasHoleshot = Boolean(holeshot450 || holeshot250);
-  const hasWildcardPick = myPicks.wildcard_pick && !isWSXSeries;
+  const hasWildcardPick = myPicks.wildcard_pick && !skipsWildcard;
+  const qm = myPicks.qualifying_picks || {};
+  const qualCount = isMXGPSeries ? ((qm.mxgp ? 1 : 0) + (qm.mx2 ? 1 : 0)) : 0;
   const holeshotCount = (holeshot450 ? 1 : 0) + (holeshot250 ? 1 : 0);
-  const totalPicks = (myPicks.top6_picks?.length || 0) + holeshotCount + (hasWildcardPick ? 1 : 0);
-  const totalRequired = isWSXSeries ? 14 : 15;
+  const totalPicks = (myPicks.top6_picks?.length || 0) + holeshotCount + (hasWildcardPick ? 1 : 0) + qualCount;
+  const totalRequired = tippaRequiredCount;
   return totalPicks >= totalRequired;
 }
 
@@ -2849,7 +3007,7 @@ function ensureWizardDropdownsReady() {
   initializePreviewImages();
   if (typeof syncUiFromHiddenSelects === 'function') syncUiFromHiddenSelects();
   if (typeof syncHiddenSelectsFromUi === 'function') syncHiddenSelectsFromUi();
-  const riderClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+  const riderClasses = tippaClasses;
   riderClasses.forEach((cls) => {
     if (typeof removeDuplicateTop6Selections === 'function') removeDuplicateTop6Selections(cls);
     updateRiderSelectors(cls);
@@ -2868,26 +3026,28 @@ function updatePicksStatus(myPicks) {
   
   const hasTop6Picks = myPicks.top6_picks && myPicks.top6_picks.length > 0;
   // Check for holeshot picks - backend may return '450cc'/'250cc' or 'wsx_sx1'/'wsx_sx2'
-  const holeshot450 = myPicks.holeshot_picks?.['450cc'] || myPicks.holeshot_picks?.['wsx_sx1'];
-  const holeshot250 = myPicks.holeshot_picks?.['250cc'] || myPicks.holeshot_picks?.['wsx_sx2'];
+  const holeshot450 = myPicks.holeshot_picks?.['450cc'] || myPicks.holeshot_picks?.['wsx_sx1'] || myPicks.holeshot_picks?.['mxgp'];
+  const holeshot250 = myPicks.holeshot_picks?.['250cc'] || myPicks.holeshot_picks?.['wsx_sx2'] || myPicks.holeshot_picks?.['mx2'];
   const hasHoleshotPicks = myPicks.holeshot_picks && (holeshot450 || holeshot250);
-  const hasWildcardPick = myPicks.wildcard_pick && !isWSXSeries; // Wildcard not for WSX
+  const hasWildcardPick = myPicks.wildcard_pick && !skipsWildcard;
+  const qmStatus = myPicks.qualifying_picks || {};
+  const qualCountStatus = isMXGPSeries ? ((qmStatus.mxgp ? 1 : 0) + (qmStatus.mx2 ? 1 : 0)) : 0;
   
-  // Count picks: top6_picks is array of all picks (12 total: 6 for 450cc/wsx_sx1 + 6 for 250cc/wsx_sx2)
-  // For holeshot: count 2 if both 450cc and 250cc are picked, 1 if only one
   const holeshotCount = myPicks.holeshot_picks ? 
     ((holeshot450 ? 1 : 0) + (holeshot250 ? 1 : 0)) : 0;
   
-  const totalPicks = (myPicks.top6_picks?.length || 0) + holeshotCount + (hasWildcardPick ? 1 : 0);
+  const totalPicks = (myPicks.top6_picks?.length || 0) + holeshotCount + (hasWildcardPick ? 1 : 0) + qualCountStatus;
   
   // Required picks: 12 top picks (6+6) + 2 holeshots + (0 for WSX, 1 wildcard for others) = 14 for WSX, 15 for others
-  const totalRequired = isWSXSeries ? 14 : 15;
+  const totalRequired = tippaRequiredCount;
   
   const _en = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
   if (totalPicks === 0) {
     statusIcon.innerHTML = mxIcon('note', { className: 'mx-icon--xl' });
     statusTitle.textContent = _en ? 'No picks made yet' : 'Inga val gjorda än';
-    statusMessage.textContent = isWSXSeries
+    statusMessage.textContent = isMXGPSeries
+      ? (_en ? 'Make your top 6, holeshot and qualifying picks' : 'Gör dina val för topp 6, holeshot och kvalvinnare')
+      : isWSXSeries
       ? (_en ? 'Make your top 6 and holeshot picks' : 'Gör dina val för topp 6 och holeshot')
       : (_en ? 'Make your top 6, holeshot and wildcard picks' : 'Gör dina val för topp 6, holeshot och wildcard');
     statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-yellow-400 bg-yellow-900/30';
@@ -2943,12 +3103,22 @@ function resetBonusPicksUI() {
   if (hs250Sel) hs250Sel.textContent = emptyRiderLabel();
   if (hs450SelEl) delete hs450SelEl.dataset.selectedRiderId;
   if (hs250SelEl) delete hs250SelEl.dataset.selectedRiderId;
+  if (isMXGPSeries) {
+    for (const dc of ['qualifying-mxgp', 'qualifying-mx2']) {
+      const sel = document.querySelector(`.rider-selector[data-class="${dc}"]`);
+      const span = sel?.querySelector('.selected-rider');
+      if (span) span.textContent = emptyRiderLabel();
+      if (sel) delete sel.dataset.selectedRiderId;
+      const hid = document.getElementById(dc);
+      if (hid) hid.value = '';
+    }
+  }
   const hs450Hidden = document.getElementById('holeshot-450');
   const hs250Hidden = document.getElementById('holeshot-250');
   if (hs450Hidden) hs450Hidden.value = '';
   if (hs250Hidden) hs250Hidden.value = '';
 
-  if (!isWSXSeries) {
+  if (!skipsWildcard) {
     const wcSelEl = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
     const wcSel = wcSelEl?.querySelector('.selected-rider');
     if (wcSel) wcSel.textContent = '-- välj 450cc förare --';
@@ -2963,7 +3133,7 @@ function resetBonusPicksUI() {
 }
 
 async function clearBonusPicks() {
-  if (!confirm('Rensa holeshot' + (isWSXSeries ? '' : ' och wildcard-förare') + '?\n\nDina topp 6-val behålls' + (isWSXSeries ? '.' : ' och wildcard-platsen (10–20) behålls.') + '\n\nDu kan välja nya och spara igen.')) {
+  if (!confirm('Rensa holeshot' + (isMXGPSeries ? ' och kvalvinnare' : (skipsWildcard ? '' : ' och wildcard-förare')) + '?\n\nDina topp 6-val behålls' + (skipsWildcard ? '.' : ' och wildcard-platsen (10–20) behålls.') + '\n\nDu kan välja nya och spara igen.')) {
     return;
   }
 
@@ -3078,8 +3248,8 @@ function onPickChange(cls, pos, riderId = null) {
     const hsContainer = document.getElementById("holeshot-results");
     if (hsContainer) {
       // Use correct class names based on series
-      const holeshotClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
-      const holeshotLabels = isWSXSeries ? ['SX1', 'SX2'] : ['450cc', '250cc'];
+      const holeshotClasses = tippaClasses;
+      const holeshotLabels = isWSXSeries ? ['SX1', 'SX2'] : (isMXGPSeries ? ['MXGP', 'MX2'] : ['450cc', '250cc']);
       
       hsContainer.innerHTML = holeshotClasses
         .map((cls, index) => {
@@ -3139,13 +3309,13 @@ function onPickChange(cls, pos, riderId = null) {
       const clearBtn = selector.querySelector('.clear-selection');
       if (clearBtn) clearBtn.style.display = 'block';
 
-      const hiddenSelectClass = (p.class === 'wsx_sx1' || p.class === '450cc') ? '450' : '250';
+      const hiddenSelectClass = (p.class === tippaClass450 || p.class === 'wsx_sx1' || p.class === '450cc' || p.class === 'mxgp') ? '450' : '250';
       const hiddenSelect = document.querySelector(`select[name="pick_${hiddenSelectClass}_${p.predicted_position}"]`);
       ensureSelectValue(hiddenSelect, p.rider_id, riderText);
       selector.dataset.selectedRiderId = String(p.rider_id);
 
       if (loadPortraits) {
-        const imgId = (p.class === 'wsx_sx1' || p.class === '450cc' || p.class.startsWith("450"))
+        const imgId = (p.class === tippaClass450 || p.class === 'wsx_sx1' || p.class === '450cc' || p.class === 'mxgp' || (p.class || '').startsWith("450"))
           ? `prev-450-${p.predicted_position}`
           : `prev-250-${p.predicted_position}`;
         const img = document.getElementById(imgId);
@@ -3153,14 +3323,11 @@ function onPickChange(cls, pos, riderId = null) {
       }
     });
 
-    const isWSX = competitionSeries === 'WSX';
-    const class450 = isWSX ? 'wsx_sx1' : '450cc';
-    const class250 = isWSX ? 'wsx_sx2' : '250cc';
-    updateRiderSelectors(class450);
-    updateRiderSelectors(class250);
+    updateRiderSelectors(tippaClass450);
+    updateRiderSelectors(tippaClass250);
 
-    const holeshot450Id = myPicks.holeshot_picks?.["450cc"] || myPicks.holeshot_picks?.["wsx_sx1"];
-    const holeshot250Id = myPicks.holeshot_picks?.["250cc"] || myPicks.holeshot_picks?.["wsx_sx2"];
+    const holeshot450Id = myPicks.holeshot_picks?.["450cc"] || myPicks.holeshot_picks?.["wsx_sx1"] || myPicks.holeshot_picks?.["mxgp"];
+    const holeshot250Id = myPicks.holeshot_picks?.["250cc"] || myPicks.holeshot_picks?.["wsx_sx2"] || myPicks.holeshot_picks?.["mx2"];
 
     if (holeshot450Id) {
       const selector = document.querySelector('.rider-selector[data-class="holeshot-450"]');
@@ -3196,6 +3363,38 @@ function onPickChange(cls, pos, riderId = null) {
       }
     }
 
+
+    const qualMxgpId = myPicks.qualifying_picks?.mxgp || myPicks.qualifying_mxgp?.rider_id;
+    const qualMx2Id = myPicks.qualifying_picks?.mx2 || myPicks.qualifying_mx2?.rider_id;
+    if (qualMxgpId) {
+      const selector = document.querySelector('.rider-selector[data-class="qualifying-mxgp"]');
+      const rider = allRiders.find(r => Number(r.id) === Number(qualMxgpId));
+      const label = rider ? `#${rider.rider_number} ${rider.name} (${rider.bike_brand})` : String(qualMxgpId);
+      ensureSelectValue(document.getElementById("qualifying-mxgp"), qualMxgpId, label);
+      if (selector) {
+        const selectedRiderSpan = selector.querySelector('.selected-rider');
+        if (selectedRiderSpan) {
+          selectedRiderSpan.textContent = label;
+          selectedRiderSpan.removeAttribute('data-i18n');
+        }
+        selector.dataset.selectedRiderId = String(qualMxgpId);
+      }
+    }
+    if (qualMx2Id) {
+      const selector = document.querySelector('.rider-selector[data-class="qualifying-mx2"]');
+      const rider = allRiders.find(r => Number(r.id) === Number(qualMx2Id));
+      const label = rider ? `#${rider.rider_number} ${rider.name} (${rider.bike_brand})` : String(qualMx2Id);
+      ensureSelectValue(document.getElementById("qualifying-mx2"), qualMx2Id, label);
+      if (selector) {
+        const selectedRiderSpan = selector.querySelector('.selected-rider');
+        if (selectedRiderSpan) {
+          selectedRiderSpan.textContent = label;
+          selectedRiderSpan.removeAttribute('data-i18n');
+        }
+        selector.dataset.selectedRiderId = String(qualMx2Id);
+      }
+    }
+
     if (myPicks.wildcard_pick) {
       const riderId = myPicks.wildcard_pick;
       const selector = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
@@ -3214,7 +3413,7 @@ function onPickChange(cls, pos, riderId = null) {
       }
     }
 
-    if (!isWSXSeries) {
+    if (!skipsWildcard) {
       const btn = document.getElementById("wildcard-roll-btn");
       const posVal = myPicks.wildcard_pos;
       if (btn) {
@@ -3390,8 +3589,8 @@ function onPickChange(cls, pos, riderId = null) {
       const usersPicks = Array.isArray(raw) ? raw : (raw.users || []);
       const crowd = (!Array.isArray(raw) && raw.crowd) ? raw.crowd : null;
 
-      const classLabel450 = isWSXSeries ? 'SX1' : '450cc';
-      const classLabel250 = isWSXSeries ? 'SX2' : '250cc';
+      const classLabel450 = tippaLabel450;
+      const classLabel250 = tippaLabel250;
 
       function renderCrowdBlock(c) {
         if (!c || (!c.n_lineups && !(c.holeshot_450 || []).length && !(c.holeshot_250 || []).length && !(c.wildcard_top || []).length)) return '';
@@ -3422,7 +3621,7 @@ function onPickChange(cls, pos, riderId = null) {
           if (h250) inner += `<span class="text-white bg-white/5 px-2 py-1 rounded">${classLabel250}: ${h250.short} ${h250.pct}%</span>`;
           inner += '</div></div>';
         }
-        if (!isWSXSeries && (c.wildcard_top || []).length) {
+        if (!skipsWildcard && (c.wildcard_top || []).length) {
           const w = c.wildcard_top[0];
           inner += `<div class="mt-3 rounded-xl bg-gray-900/60 p-3 border border-purple-500/20"><p class="text-purple-300 text-[10px] font-bold uppercase mb-1">Wildcard</p><p class="text-white text-sm">Plats ${w.position}: ${w.short} ${w.pct}%</p></div>`;
         }
@@ -3486,7 +3685,7 @@ function onPickChange(cls, pos, riderId = null) {
                     </div>
                   </div>
                 ` : ''}
-                ${user.wildcard && !isWSXSeries ? `
+                ${user.wildcard && !skipsWildcard ? `
                   <div class="mt-3 pt-3 border-t border-white/10">
                     <h5 class="text-xs font-bold text-purple-300 uppercase mb-1">Wildcard</h5>
                     <span class="text-white text-sm">Plats ${user.wildcard.position}: #${user.wildcard.rider_number} ${user.wildcard.rider_name}</span>
@@ -3577,14 +3776,14 @@ function onPickChange(cls, pos, riderId = null) {
     // Se till att dolda fält matchar det som syns (t.ex. efter snabböversikt / Ändra holeshot)
     if (typeof syncHiddenSelectsFromUi === 'function') syncHiddenSelectsFromUi();
 
-    const riderClassesCheck = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+    const riderClassesCheck = tippaClasses;
     riderClassesCheck.forEach((cls) => removeDuplicateTop6Selections(cls));
 
     // Get race picks from rider-selector elements
     const picks = [];
     
     // Get 450cc/wsx_sx1 picks
-    const class450 = isWSXSeries ? 'wsx_sx1' : '450cc';
+    const class450 = tippaClass450;
     for (let i = 1; i <= 6; i++) {
       const selector = document.querySelector(`.rider-selector[data-class="${class450}"][data-position="${i}"]`);
       if (selector) {
@@ -3600,7 +3799,7 @@ function onPickChange(cls, pos, riderId = null) {
     }
     
     // Get 250cc/wsx_sx2 picks
-    const class250 = isWSXSeries ? 'wsx_sx2' : '250cc';
+    const class250 = tippaClass250;
     for (let i = 1; i <= 6; i++) {
       const selector = document.querySelector(`.rider-selector[data-class="${class250}"][data-position="${i}"]`);
       if (selector) {
@@ -3631,13 +3830,13 @@ function onPickChange(cls, pos, riderId = null) {
     
     
     if (picks450.length !== 6) {
-      const classLabel = isWSXSeries ? 'SX1' : '450cc';
+      const classLabel = tippaLabel450;
       alert(`Du måste välja exakt 6 förare för ${classLabel} (Top 6).`);
       return;
     }
     
     if (picks250.length !== 6) {
-      const classLabel = isWSXSeries ? 'SX2' : '250cc';
+      const classLabel = tippaLabel250;
       alert(`Du måste välja exakt 6 förare för ${classLabel} (Top 6).`);
       return;
     }
@@ -3657,7 +3856,7 @@ function onPickChange(cls, pos, riderId = null) {
     }
 
     // Validera wildcard (krävs för alla serier UTAN WSX)
-    if (!isWSXSeries) {
+    if (!skipsWildcard) {
       const wildcardPick = document.getElementById("wildcard-pick")?.value;
       const wildcardPos = document.getElementById("wildcard-position")?.value;
       
@@ -3689,8 +3888,19 @@ function onPickChange(cls, pos, riderId = null) {
         return;
       }
     }
+    if (isMXGPSeries) {
+      for (const [qid, label] of [
+        [document.getElementById("qualifying-mxgp")?.value, "kval MXGP"],
+        [document.getElementById("qualifying-mx2")?.value, "kval MX2"],
+      ]) {
+        if (qid && OUT_IDS.includes(Number(qid))) {
+          alert(`${outName(qid)} (${label}) är OUT. Välj en annan.`);
+          return;
+        }
+      }
+    }
 
-    if (!isWSXSeries) {
+    if (!skipsWildcard) {
       const wildcardPick = document.getElementById("wildcard-pick")?.value;
       if (wildcardPick && isOutRiderId(wildcardPick)) {
         alert(`${outName(wildcardPick)} (wildcard) är OUT. Välj en annan.`);
@@ -3707,8 +3917,10 @@ function onPickChange(cls, pos, riderId = null) {
       picks: picks,
       holeshot_450: document.getElementById("holeshot-450")?.value,
       holeshot_250: document.getElementById("holeshot-250")?.value,
-      wildcard_pick: isWSXSeries ? null : (document.getElementById("wildcard-pick")?.value || null),
-      wildcard_pos: isWSXSeries ? null : (document.getElementById("wildcard-position")?.value || null),
+      wildcard_pick: skipsWildcard ? null : (document.getElementById("wildcard-pick")?.value || null),
+      wildcard_pos: skipsWildcard ? null : (document.getElementById("wildcard-position")?.value || null),
+      qualifying_mxgp: isMXGPSeries ? (document.getElementById("qualifying-mxgp")?.value || null) : null,
+      qualifying_mx2: isMXGPSeries ? (document.getElementById("qualifying-mx2")?.value || null) : null,
       };
 
 
@@ -3778,8 +3990,8 @@ function onPickChange(cls, pos, riderId = null) {
       }
 
       // 1) Nollställ alla topp-6 selectors (450/250 eller WSX-klasser)
-      const class450 = isWSXSeries ? 'wsx_sx1' : '450cc';
-      const class250 = isWSXSeries ? 'wsx_sx2' : '250cc';
+      const class450 = tippaClass450;
+      const class250 = tippaClass250;
       for (let i = 1; i <= 6; i++) {
         const sel450 = document.querySelector(`.rider-selector[data-class="${class450}"][data-position="${i}"]`);
         const sel250 = document.querySelector(`.rider-selector[data-class="${class250}"][data-position="${i}"]`);
@@ -3821,7 +4033,7 @@ function onPickChange(cls, pos, riderId = null) {
       localStorage.removeItem(`race_picks_wizard_step_${competitionId}`);
 
       // 6) Återställ wildcard-platsen (användaren ska inte behöva slå om)
-      if (!isWSXSeries && savedWcPos) {
+      if (!skipsWildcard && savedWcPos) {
         if (wcPosEl) wcPosEl.value = savedWcPos;
         if (wcLabelEl) wcLabelEl.textContent = savedWcLabel || ("Plats " + savedWcPos);
         if (typeof window.syncWildcardRollLockedState === 'function') {
@@ -3851,7 +4063,7 @@ function onPickChange(cls, pos, riderId = null) {
     }
   }
 
-  ["holeshot-450", "holeshot-250", "wildcard-pick"].forEach((id) => {
+  ["holeshot-450", "holeshot-250", "wildcard-pick", "qualifying-mxgp", "qualifying-mx2"].forEach((id) => {
   const sel = document.getElementById(id);
   if (!sel) return;
   sel.addEventListener("change", () => {
@@ -3888,8 +4100,8 @@ function onPickChange(cls, pos, riderId = null) {
       };
       
       // Get race picks
-      const class450 = isWSXSeries ? 'wsx_sx1' : '450cc';
-      const class250 = isWSXSeries ? 'wsx_sx2' : '250cc';
+      const class450 = tippaClass450;
+      const class250 = tippaClass250;
       
       for (let i = 1; i <= 6; i++) {
         const selector450 = document.querySelector(`.rider-selector[data-class="${class450}"][data-position="${i}"]`);
@@ -4020,7 +4232,7 @@ function onPickChange(cls, pos, riderId = null) {
         else if (mq.addListener) mq.addListener(syncPrepFold);
       }
 
-      const riderClassesForInit = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+      const riderClassesForInit = tippaClasses;
       const quickOverview =
         isMyPicksComplete(initialMyPicks) && Number(initialWizardStep) === 3;
 
@@ -4037,9 +4249,11 @@ function onPickChange(cls, pos, riderId = null) {
       const serverPicksComplete = isMyPicksComplete(initialMyPicks);
       const serverPickCount =
         (initialMyPicks?.top6_picks?.length || 0) +
-        (initialMyPicks?.holeshot_picks?.['450cc'] || initialMyPicks?.holeshot_picks?.['wsx_sx1'] ? 1 : 0) +
-        (initialMyPicks?.holeshot_picks?.['250cc'] || initialMyPicks?.holeshot_picks?.['wsx_sx2'] ? 1 : 0) +
-        (initialMyPicks?.wildcard_pick && !isWSXSeries ? 1 : 0);
+        (initialMyPicks?.holeshot_picks?.['450cc'] || initialMyPicks?.holeshot_picks?.['wsx_sx1'] || initialMyPicks?.holeshot_picks?.['mxgp'] ? 1 : 0) +
+        (initialMyPicks?.holeshot_picks?.['250cc'] || initialMyPicks?.holeshot_picks?.['wsx_sx2'] || initialMyPicks?.holeshot_picks?.['mx2'] ? 1 : 0) +
+        (initialMyPicks?.wildcard_pick && !skipsWildcard ? 1 : 0) +
+        (isMXGPSeries && initialMyPicks?.qualifying_picks?.mxgp ? 1 : 0) +
+        (isMXGPSeries && initialMyPicks?.qualifying_picks?.mx2 ? 1 : 0);
       let hasLocalDraft = Boolean(localStorage.getItem(`race_picks_${competitionId}`));
 
       // Server is source of truth: drop stale drafts when picks are done OR server has none
@@ -4063,10 +4277,12 @@ function onPickChange(cls, pos, riderId = null) {
         window.PicksWizard.init({
           competitionId,
           isWSX: isWSXSeries,
-          class450: ps.class_450 || (isWSXSeries ? 'wsx_sx1' : '450cc'),
-          class250: ps.class_250 || (isWSXSeries ? 'wsx_sx2' : '250cc'),
-          label450: isWSXSeries ? 'SX1' : '450cc',
-          label250: isWSXSeries ? 'SX2' : '250cc',
+          isMXGP: isMXGPSeries,
+          skipsWildcard: skipsWildcard,
+          class450: ps.class_450 || tippaClass450,
+          class250: ps.class_250 || tippaClass250,
+          label450: tippaLabel450,
+          label250: tippaLabel250,
           suggestions: ps,
           startStep: initialWizardStep,
           picksComplete: serverPicksComplete,

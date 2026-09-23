@@ -442,6 +442,7 @@
         <div class="admin-tab-bar" role="tablist" aria-label="Admin-sektioner">
             <button type="button" onclick="showSection('race-results', this)" class="tab-btn active">SMX</button>
             <button type="button" onclick="showSection('wsx-results', this)" class="tab-btn">WSX</button>
+            <button type="button" onclick="showSection('mxgp-scaffold', this)" class="tab-btn">MXGP</button>
             <a href="/admin/mxon" class="tab-btn">MXoN</a>
             <button type="button" onclick="showSection('picks-management', this)" class="tab-btn">Picks</button>
             <button type="button" onclick="showSection('rider-competition-management', this)" class="tab-btn">Förare &amp; tävlingar</button>
@@ -712,6 +713,29 @@
                     </div>
                 </details>
 
+            </div>
+        </div>
+
+        <!-- MXGP scaffold (admin test) -->
+        <div id="mxgp-scaffold" class="section-panel hidden">
+            <div class="section-card rounded-lg p-6 mb-6">
+                <div class="ap-hub-head">
+                    <h2>MXGP</h2>
+                    <p>Under construction mot 2027. Admin kan testa tippa nu (ingen wildcard — kvalvinnare lördag).</p>
+                </div>
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <a href="/admin/seed_mxgp"
+                       class="ap-btn ap-btn--primary"
+                       title="Skapar 2027-serie, 2026-kalender/roster och Admin Test GP">
+                        Seed MXGP scaffold
+                    </a>
+                    <span class="text-xs text-gray-500">Idempotent — roster + Admin Test GP.</span>
+                </div>
+                <ul class="text-sm text-gray-300 space-y-2 list-disc list-inside">
+                    <li>Tippa: topp 6 MXGP + topp 6 MX2 + holeshot Race 1 + kvalvinnare (per klass).</li>
+                    <li>Publik tippa låst tills <code class="text-cyan-300">MXGP_PUBLIC_PLAY</code> i <code class="text-cyan-300">mxgp_fantasy.py</code>.</li>
+                    <li>Scoring och RacerX-import kommer senare.</li>
+                </ul>
             </div>
         </div>
 

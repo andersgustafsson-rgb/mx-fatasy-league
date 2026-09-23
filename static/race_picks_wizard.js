@@ -280,7 +280,7 @@
         );
         return false;
       }
-      if (!cfg.isWSX) {
+      if (!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP)) {
         const pos = String($('wildcard-position')?.value || '').trim();
         if (!pos) {
           alert('Slumpa wildcard-plats (10–20) innan du går vidare.');
@@ -288,6 +288,12 @@
         }
         if (!getWildcardRider()) {
           alert('Välj wildcard-förare innan du går vidare.');
+          return false;
+        }
+      }
+      if (cfg.isMXGP) {
+        if (!$('qualifying-mxgp')?.value || !$('qualifying-mx2')?.value) {
+          alert('Tippa kvalvinnare i MXGP och MX2 innan du går vidare.');
           return false;
         }
       }
@@ -431,7 +437,7 @@
     };
     mapOne('holeshot-450', 'holeshot-450');
     mapOne('holeshot-250', 'holeshot-250');
-    if (!cfg.isWSX) {
+    if (!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP)) {
       mapOne('wildcard-pick', 'wildcard-pick');
     }
   }
@@ -837,6 +843,28 @@
     </div>`;
   }
 
+  function getQualifyingRider(classKey) {
+    const hidden = $(classKey === 'mx2' ? 'qualifying-mx2' : 'qualifying-mxgp');
+    let rid = hidden?.value ? Number(hidden.value) : null;
+    const dataClass = classKey === 'mx2' ? 'qualifying-mx2' : 'qualifying-mxgp';
+    const sel = document.querySelector(`.rider-selector[data-class="${dataClass}"]`);
+    if (!rid) rid = getSelectorRiderId(sel);
+    return riderById(rid) || riderFromSelectorLabel(sel);
+  }
+
+  function extraQualifyingHtml(classKey, label) {
+    const rider = getQualifyingRider(classKey);
+    const empty = !rider;
+    return `<div class="wizard-summary-extra wizard-summary-extra--holeshot${empty ? ' wizard-summary-extra--empty' : ''}">
+      <span class="wizard-summary-extra__icon">${mxIcon('flag')}</span>
+      ${rider ? portraitHtml(rider) : '<div class="wizard-summary-portrait"></div>'}
+      <div class="wizard-summary-extra__body">
+        <div class="wizard-summary-extra__label">Kval ${escapeHtml(label)}</div>
+        <div class="wizard-summary-extra__name">${rider ? `#${rider.rider_number} ${escapeHtml(rider.name)}` : (isEn() ? 'Not selected' : 'Ej vald')}</div>
+      </div>
+    </div>`;
+  }
+
   function extraHoleshotHtml(classType, label) {
     const rider = getHoleshotRider(classType);
     const empty = !rider;
@@ -854,10 +882,13 @@
     if (countFilledSlots(cfg.class450) < 6) return false;
     if (countFilledSlots(cfg.class250) < 6) return false;
     if (!getHoleshotRider('450') || !getHoleshotRider('250')) return false;
-    if (!cfg.isWSX) {
+    if (!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP)) {
       const pos = $('wildcard-position')?.value;
       if (!pos) return false;
       if (!getWildcardRider()) return false;
+    }
+    if (cfg.isMXGP) {
+      if (!$('qualifying-mxgp')?.value || !$('qualifying-mx2')?.value) return false;
     }
     return true;
   }
@@ -915,7 +946,7 @@
       } else {
         h2.innerHTML =
           '<span data-i18n="picks.step3">Steg 3</span> — Holeshot' +
-          (cfg.isWSX ? '' : ' & Wildcard');
+          (cfg.isMXGP ? ' & Kvalvinnare' : ((cfg.skipsWildcard || cfg.isWSX) ? '' : ' & Wildcard'));
       }
     }
 
@@ -943,12 +974,12 @@
             : 'Ändra din topp 6, fortsätt sedan till nästa klass.';
         } else if (currentStep === 2) {
           heroP.textContent = isEn()
-            ? 'Adjust your top 6, then continue to holeshot' + (cfg.isWSX ? '.' : ' & wildcard.')
-            : 'Justera din topp 6, fortsätt sedan till holeshot' + (cfg.isWSX ? '.' : ' & wildcard.');
+            ? 'Adjust your top 6, then continue to holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? '.' : ' & wildcard.')
+            : 'Justera din topp 6, fortsätt sedan till holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? '.' : ' & wildcard.');
         } else {
           heroP.textContent = isEn()
-            ? 'Adjust holeshot' + (cfg.isWSX ? ', then save.' : ' & wildcard, then save.')
-            : 'Justera holeshot' + (cfg.isWSX ? ', spara sedan.' : ' & wildcard, spara sedan.');
+            ? 'Adjust holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? ', then save.' : ' & wildcard, then save.')
+            : 'Justera holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? ', spara sedan.' : ' & wildcard, spara sedan.');
         }
       } else {
         heroP.textContent = cfg.isWSX
@@ -972,13 +1003,18 @@
     const bannerText = complete
       ? `${mxIcon('check-circle', { className: 'mx-icon--ok' })} ${tPick('picks.all_done', 'Alla val klara!')}`
       : `${mxIcon('clipboard')} ` + (isEn()
-          ? ('Your lineup so far — fill in holeshot' + (cfg.isWSX ? '' : ' & wildcard') + ' below')
-          : ('Din lineup hittills — fyll i holeshot' + (cfg.isWSX ? '' : ' & wildcard') + ' nedan'));
+          ? ('Your lineup so far — fill in holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? '' : ' & wildcard') + ' below')
+          : ('Din lineup hittills — fyll i holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? '' : ' & wildcard') + ' nedan'));
 
     let extras = extraHoleshotHtml('450', cfg.label450);
     extras += extraHoleshotHtml('250', cfg.label250);
 
-    if (!cfg.isWSX) {
+    if (cfg.isMXGP) {
+      extras += extraQualifyingHtml('mxgp', 'MXGP');
+      extras += extraQualifyingHtml('mx2', 'MX2');
+    }
+
+    if (!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP)) {
       const wcRider = getWildcardRider();
       const wcPos = $('wildcard-position')?.value || '';
       extras += `<div class="wizard-summary-extra wizard-summary-extra--wildcard${!wcRider && !wcPos ? ' wizard-summary-extra--empty' : ''}">
@@ -1032,8 +1068,8 @@
       hydrateSummaryPortraits(el);
     } else if (isEditWalkback && currentStep === 3) {
       const hint = isEn()
-        ? 'Almost done — save your picks when holeshot' + (cfg.isWSX ? ' looks right.' : ' & wildcard look right.')
-        : 'Nästan klart — spara dina val när holeshot' + (cfg.isWSX ? ' stämmer.' : ' & wildcard stämmer.');
+        ? 'Almost done — save your picks when holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? ' looks right.' : ' & wildcard look right.')
+        : 'Nästan klart — spara dina val när holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? ' stämmer.' : ' & wildcard stämmer.');
       el.innerHTML = `<div class="wizard-edit-hint">${mxIcon('edit')} ${hint}</div>`;
     } else if (isEditWalkback) {
       el.innerHTML = '';
@@ -1054,7 +1090,7 @@
           const panel = document.createElement('details');
           panel.className = 'wizard-adjust-panel';
           panel.innerHTML =
-            '<summary>' + (isEn() ? 'Adjust holeshot' : 'Justera holeshot') + (cfg.isWSX ? '' : ' & wildcard') + '</summary>';
+            '<summary>' + (isEn() ? 'Adjust holeshot' : 'Justera holeshot') + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? '' : ' & wildcard') + '</summary>';
           while (forms.firstChild) {
             panel.appendChild(forms.firstChild);
           }
@@ -1069,7 +1105,7 @@
           const panel = document.createElement('details');
           panel.className = 'wizard-adjust-panel';
           panel.innerHTML =
-            '<summary>' + (isEn() ? 'Adjust holeshot' : 'Justera holeshot') + (cfg.isWSX ? '' : ' & wildcard') + '</summary>';
+            '<summary>' + (isEn() ? 'Adjust holeshot' : 'Justera holeshot') + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? '' : ' & wildcard') + '</summary>';
           while (forms.firstChild) {
             panel.appendChild(forms.firstChild);
           }

@@ -463,6 +463,26 @@ class WildcardPick(db.Model):
     rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"))
     position = db.Column(db.Integer)
 
+
+class QualifyingPick(db.Model):
+    """MXGP Saturday qualifying race winner tip (one rider per class)."""
+    __tablename__ = "qualifying_picks"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"), nullable=False, index=True)
+    rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"), nullable=False)
+    class_name = db.Column("class", db.String(10), nullable=False)
+
+
+class QualifyingResult(db.Model):
+    """Official MXGP/MX2 qualifying race winner (Saturday)."""
+    __tablename__ = "qualifying_results"
+    id = db.Column(db.Integer, primary_key=True)
+    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"), nullable=False, index=True)
+    rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"), nullable=False)
+    class_name = db.Column("class", db.String(10), nullable=False)
+
+
 class CompetitionImage(db.Model):
     __tablename__ = "competition_images"
     id = db.Column(db.Integer, primary_key=True)

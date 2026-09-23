@@ -946,7 +946,15 @@
       background-color: #1a2744;
       min-height: 180px;
     }
+    .bg-mxgp {
+      background-image: linear-gradient(145deg, #0f172a 0%, #1e3a5f 45%, #0c4a6e 100%);
+      background-size: cover;
+      background-position: center;
+      min-height: 180px;
+      background-repeat: no-repeat;
+    }
     .home-series-card.bg-mxon:hover,
+    .home-series-card.bg-mxgp:hover,
     .home-series-card.bg-wsx:hover,
     .home-series-card.bg-supercross:hover,
     .home-series-card.bg-motocross:hover,
@@ -4019,6 +4027,7 @@
     function seriesNameToCode(name) {
       const n = String(name || '').toLowerCase();
       if (n.includes('mxon') || n === 'mxon') return 'MXON';
+      if (n.includes('mxgp')) return 'MXGP';
       if (n.includes('wsx')) return 'WSX';
       if (n.includes('supercross')) return 'SX';
       if (n.includes('smx')) return 'SMX';
@@ -4027,7 +4036,7 @@
     }
 
     function isTippaOnlyHomeSeries(code) {
-      return code === 'WSX' || code === 'MXON';
+      return code === 'WSX' || code === 'MXON' || code === 'MXGP';
     }
 
     function seriesNextRaceSortKey(serie) {
@@ -4040,7 +4049,7 @@
     }
 
     function sortSeriesByNextRace(seriesList) {
-      const order = { SX: 1, MX: 2, SMX: 3, WSX: 4, MXON: 5 };
+      const order = { SX: 1, MX: 2, SMX: 3, WSX: 4, MXON: 5, MXGP: 6 };
       return [...(Array.isArray(seriesList) ? seriesList : [])].sort((a, b) => {
         const ka = seriesNextRaceSortKey(a);
         const kb = seriesNextRaceSortKey(b);
@@ -5870,8 +5879,14 @@
           let buttonClass = '';
           let buttonText = '';
           let isClickable = false;
-          
-          if (isActive) {
+
+          if (serie.under_construction) {
+            statusText = isEn ? 'Under construction · 2027' : 'Under construction · 2027';
+            statusColor = 'text-amber-300';
+            buttonClass = 'bg-amber-600 hover:bg-amber-700';
+            buttonText = isEn ? 'Preview schedule' : 'Förhandsgranska schema';
+            isClickable = true;
+          } else if (isActive) {
             if (daysFromNextRace != null && daysFromNextRace > 0) {
               statusText = isEn
                 ? `Active · next race in ${daysFromNextRace} day${daysFromNextRace !== 1 ? 's' : ''}`
@@ -5931,6 +5946,8 @@
             backgroundClass = 'bg-smx';
           } else if (nameLower.includes('wsx') || codeLower === 'wsx') {
             backgroundClass = 'bg-wsx';
+          } else if (nameLower.includes('mxgp') || codeLower === 'mxgp') {
+            backgroundClass = 'bg-mxgp';
           } else if (nameLower.includes('motocross') || codeLower === 'mx') {
             backgroundClass = 'bg-motocross';
           }
@@ -5959,6 +5976,7 @@
             <div class="home-series-card__scrim"></div>
             <div class="relative z-10 text-center">
               <h3 class="home-series-card__title">${serie.name === 'MXON' ? 'MXoN' : serie.name}</h3>
+              ${serie.under_construction ? `<p class="text-xs font-semibold uppercase tracking-wide text-amber-200 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Coming 2027' : 'Kommer 2027'}</p>` : ''}
               <p class="text-sm ${statusColor} mb-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${statusText}</p>
               ${nextRace ? `<p class="text-xs text-gray-200 mb-3" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Next' : 'Nästa'}: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
               <div class="text-xs text-gray-300 mt-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)" data-series-hint>${hintText}</div>

@@ -31,7 +31,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, MxonCompetitionOut, BarnivaSchemaWorkspace, BarnivaSchemaWorkspaceVersion, rider_query_for_list_ui
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, QualifyingPick, QualifyingResult, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, MxonCompetitionOut, BarnivaSchemaWorkspace, BarnivaSchemaWorkspaceVersion, rider_query_for_list_ui
 
 _INDEX_SCHEMA_CHECKED = False
 _RIDER_IMAGE_COLUMN_CHECKED = False
@@ -156,6 +156,16 @@ def _build_picks_snapshot_payload(user_id: int, competition_id: int) -> dict:
 
     wc = WildcardPick.query.filter_by(user_id=user_id, competition_id=competition_id).first()
 
+    quals = QualifyingPick.query.filter_by(
+        user_id=user_id, competition_id=competition_id
+    ).all()
+    qual_by_class = {}
+    for q in quals:
+        cls = (q.class_name or "").strip()
+        prev = qual_by_class.get(cls)
+        if prev is None or int(q.id or 0) > int(prev.id or 0):
+            qual_by_class[cls] = q
+
     payload = {
         "user_id": int(user_id),
         "competition_id": int(competition_id),
@@ -167,6 +177,11 @@ def _build_picks_snapshot_payload(user_id: int, competition_id: int) -> dict:
         "holeshot_picks": {cls: int(h.rider_id) for cls, h in holo_by_class.items() if h.rider_id is not None},
         "wildcard_pick": (int(wc.rider_id) if wc and wc.rider_id is not None else None),
         "wildcard_pos": (int(wc.position) if wc and wc.position is not None else None),
+        "qualifying_picks": {
+            cls: int(q.rider_id)
+            for cls, q in qual_by_class.items()
+            if q.rider_id is not None
+        },
     }
     return payload
 
@@ -200,6 +215,14 @@ def ensure_picks_snapshots_for_competition(competition_id: int, source: str = "a
         uid
         for (uid,) in db.session.query(WildcardPick.user_id)
         .filter(WildcardPick.competition_id == competition_id)
+        .distinct()
+        .all()
+        if uid is not None
+    )
+    user_ids.update(
+        uid
+        for (uid,) in db.session.query(QualifyingPick.user_id)
+        .filter(QualifyingPick.competition_id == competition_id)
         .distinct()
         .all()
         if uid is not None
@@ -1273,7 +1296,7 @@ def _home_primary_competition(*, require_open: bool = False) -> Competition | No
 
 
 # Tippa-only series (no season team; excluded from AMA fantasy totals)
-TIPPA_ONLY_SERIES = frozenset({"WSX", "MXON"})
+TIPPA_ONLY_SERIES = frozenset({"WSX", "MXON", "MXGP"})
 
 
 def is_tippa_only_series(series: str | None) -> bool:
@@ -2692,6 +2715,22 @@ def admin_seed_wsx():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/admin/seed_mxgp", methods=["GET", "POST"])
+def admin_seed_mxgp():
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    try:
+        from mxgp_fantasy import ensure_mxgp_scaffold
+
+        global _SERIES_STATUS_CACHE
+        info = ensure_mxgp_scaffold()
+        _SERIES_STATUS_CACHE = None
+        return jsonify({"message": "MXGP scaffold seeded/verified", **info})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/admin/seed_wsx_2026", methods=["GET", "POST"])
 def admin_seed_wsx_2026():
     if not is_admin_user():
@@ -4093,13 +4132,21 @@ def build_series_status_list() -> list[dict]:
     current_date = get_today()
     all_series = Series.query.filter(
         or_(
-            Series.year == 2026,
+            Series.year.in_((2026, 2027)),
             and_(Series.year == 2025, Series.end_date != None, Series.end_date >= current_date),
         )
     ).all()
 
-    # SX/MX first on homepage; WSX/MXON selectable but not default focus
-    series_order = {"Supercross": 1, "Motocross": 2, "SMX Finals": 3, "WSX": 4, "MXON": 5, "MXoN": 5}
+    # SX/MX first on homepage; tippa-only cards after
+    series_order = {
+        "Supercross": 1,
+        "Motocross": 2,
+        "SMX Finals": 3,
+        "WSX": 4,
+        "MXON": 5,
+        "MXoN": 5,
+        "MXGP": 6,
+    }
     all_series.sort(key=lambda s: series_order.get(s.name, 999))
 
     simulation_active = False
@@ -4125,6 +4172,8 @@ def build_series_status_list() -> list[dict]:
             series_code = "WSX"
         elif s.name in ("MXON", "MXoN"):
             series_code = "MXON"
+        elif s.name == "MXGP":
+            series_code = "MXGP"
 
         next_race = None
         if series_code:
@@ -4147,9 +4196,31 @@ def build_series_status_list() -> list[dict]:
                 None,
             )
 
+        under_construction = False
+        if series_code == "MXGP":
+            try:
+                from mxgp_fantasy import (
+                    ADMIN_TEST_GP_NAME,
+                    mxgp_public_play_enabled,
+                )
+
+                under_construction = not mxgp_public_play_enabled()
+                if under_construction:
+                    test_gp = (
+                        Competition.query.filter_by(
+                            name=ADMIN_TEST_GP_NAME, series="MXGP"
+                        ).first()
+                    )
+                    if test_gp and not getattr(test_gp, "is_cancelled", False):
+                        next_race = test_gp
+            except Exception:
+                under_construction = True
+
         # Playable/active for UI: not past end_date, and either inside the window
         # or already has an upcoming race (so preseason tippa works — e.g. WSX before R01).
-        if not simulation_active:
+        if under_construction:
+            is_currently_active = True
+        elif not simulation_active:
             if s.end_date and current_date > s.end_date:
                 is_currently_active = False
             elif next_race is not None:
@@ -4177,6 +4248,7 @@ def build_series_status_list() -> list[dict]:
                 "name": s.name,
                 "series_code": series_code,
                 "is_active": is_currently_active,
+                "under_construction": under_construction,
                 "start_date": s.start_date.isoformat() if s.start_date else None,
                 "end_date": s.end_date.isoformat() if s.end_date else None,
                 "days_until_start": days_until_start,
@@ -11132,11 +11204,23 @@ def _build_pick_suggestions_for_user(
 
     series = (getattr(comp, "series", None) or "").strip()
     is_wsx = series == "WSX"
-    class_450 = "wsx_sx1" if is_wsx else "450cc"
-    class_250 = "wsx_sx2" if is_wsx else "250cc"
+    is_mxgp = series.upper() == "MXGP"
+    if is_wsx:
+        class_450, class_250 = "wsx_sx1", "wsx_sx2"
+    elif is_mxgp:
+        class_450, class_250 = "mxgp", "mx2"
+    else:
+        class_450, class_250 = "450cc", "250cc"
     blocked = set(int(x) for x in (out_ids or []))
     # WSX tippa: never suggest off-roster leftovers (Roczen/Tomac from 2025 seeds)
     allowed_ids: set[int] | None = _wsx_official_roster_ids() if is_wsx else None
+    if is_mxgp:
+        try:
+            from mxgp_fantasy import mxgp_official_roster_ids
+
+            allowed_ids = mxgp_official_roster_ids()
+        except Exception:
+            allowed_ids = None
 
     series_q = Competition.query.filter(Competition.series == series)
     # Prefer same season (series_id) so WSX 2025 picks don't leak into 2026 chips
@@ -11477,6 +11561,22 @@ def race_picks_page(competition_id):
 
     if (getattr(comp, "series", None) or "").upper() == "MXON":
         return redirect(url_for("mxon_picks_page", competition_id=comp.id))
+
+    if (getattr(comp, "series", None) or "").upper() == "MXGP":
+        try:
+            from mxgp_fantasy import mxgp_user_can_play
+
+            if not mxgp_user_can_play(is_admin=is_admin_user()):
+                flash(
+                    "MXGP är under construction — tippa öppnar till 2027-säsongen. "
+                    "Admin kan testa redan nu.",
+                    "info",
+                )
+                return redirect(url_for("index"))
+        except Exception:
+            if not is_admin_user():
+                flash("MXGP är under construction.", "info")
+                return redirect(url_for("index"))
     
     
     # Use the unified picks lock check function
@@ -11499,6 +11599,7 @@ def race_picks_page(competition_id):
 
     # 2) Bygg listor per serie
     is_wsx = (getattr(comp, 'series', None) == 'WSX')
+    is_mxgp = (getattr(comp, 'series', None) or '').upper() == 'MXGP'
 
     if is_wsx:
         # WSX använder egna klasser och separata förare
@@ -11527,6 +11628,21 @@ def race_picks_page(competition_id):
             mapped = tippa_by_name.get((orphan.name or "").strip().lower())
             if mapped:
                 out_ids.add(mapped)
+    elif is_mxgp:
+        from mxgp_fantasy import CLASS_MX2, CLASS_MXGP, mxgp_roster_query
+
+        riders_450 = (
+            mxgp_roster_query()
+            .filter(Rider.class_name == CLASS_MXGP)
+            .order_by(Rider.rider_number)
+            .all()
+        )
+        riders_250 = (
+            mxgp_roster_query()
+            .filter(Rider.class_name == CLASS_MX2)
+            .order_by(Rider.rider_number)
+            .all()
+        )
     else:
         # SX/MX/SMX – befintlig logik
         riders_450 = (
@@ -11638,7 +11754,11 @@ def race_picks_page(competition_id):
     _by_json_id = {r["id"]: r for r in riders_450_json + riders_250_json}
 
     # Only OUT riders in this series' classes (hide WSX twins on SMX/SX/MX etc.)
-    allowed_out_classes = ("wsx_sx1", "wsx_sx2") if is_wsx else ("450cc", "250cc")
+    allowed_out_classes = (
+        ("wsx_sx1", "wsx_sx2")
+        if is_wsx
+        else (("mxgp", "mx2") if is_mxgp else ("450cc", "250cc"))
+    )
     if out_ids:
         class_by_id = {
             int(rid): (cls or "")
@@ -11672,8 +11792,8 @@ def race_picks_page(competition_id):
             }
         )
 
-    _out_top = ("wsx_sx1", "450cc")
-    _out_bot = ("wsx_sx2", "250cc")
+    _out_top = ("wsx_sx1", "450cc", "mxgp")
+    _out_bot = ("wsx_sx2", "250cc", "mx2")
     out_riders_450 = [r for r in out_riders_mini if (r.get("class") or "") in _out_top]
     out_riders_250 = [r for r in out_riders_mini if (r.get("class") or "") in _out_bot]
     out_riders_450.sort(key=lambda r: (r.get("rider_number") is None, r.get("rider_number") or 0, r.get("name") or ""))
@@ -11746,9 +11866,14 @@ def race_picks_page(competition_id):
         try:
             initial_my_picks = _my_picks_api_dict(user_id, comp)
             initial_picks_status = _picks_status_summary(
-                initial_my_picks, is_wsx=is_wsx, picks_locked=picks_locked
+                initial_my_picks,
+                is_wsx=is_wsx,
+                is_mxgp=is_mxgp,
+                picks_locked=picks_locked,
             )
-            initial_wizard_step = _initial_wizard_step(initial_my_picks, is_wsx=is_wsx)
+            initial_wizard_step = _initial_wizard_step(
+                initial_my_picks, is_wsx=is_wsx, is_mxgp=is_mxgp
+            )
         except Exception:
             app.logger.exception(
                 "race_picks initial_my_picks failed for competition_id=%s", competition_id
@@ -19521,7 +19646,9 @@ def _my_picks_api_dict(user_id: int, comp: Competition) -> dict:
     import json
 
     competition_id = int(comp.id)
-    is_wsx = (getattr(comp, "series", None) or "") == "WSX"
+    series_u = (getattr(comp, "series", None) or "").strip().upper()
+    is_wsx = series_u == "WSX"
+    is_mxgp = series_u == "MXGP"
     picks_locked = is_picks_locked(comp)
 
     snap = None
@@ -19534,17 +19661,35 @@ def _my_picks_api_dict(user_id: int, comp: Competition) -> dict:
         holos_map = payload.get("holeshot_picks", {}) or {}
         wc_rider = payload.get("wildcard_pick")
         wc_pos = payload.get("wildcard_pos")
+        qual_map = payload.get("qualifying_picks", {}) or {}
     else:
         payload = _build_picks_snapshot_payload(user_id, competition_id)
         picks = payload["race_picks"]
         holos_map = payload["holeshot_picks"]
         wc_rider = payload["wildcard_pick"]
         wc_pos = payload["wildcard_pos"]
+        qual_map = payload.get("qualifying_picks") or {}
 
     rider_ids = [int(p["rider_id"]) for p in picks if p.get("rider_id") is not None]
-    hs450_id = next((rid for cls, rid in holos_map.items() if cls in ("450cc", "wsx_sx1")), None)
-    hs250_id = next((rid for cls, rid in holos_map.items() if cls in ("250cc", "wsx_sx2")), None)
-    for extra_id in (hs450_id, hs250_id, wc_rider):
+    hs450_id = next(
+        (
+            rid
+            for cls, rid in holos_map.items()
+            if cls in ("450cc", "wsx_sx1", "mxgp")
+        ),
+        None,
+    )
+    hs250_id = next(
+        (
+            rid
+            for cls, rid in holos_map.items()
+            if cls in ("250cc", "wsx_sx2", "mx2")
+        ),
+        None,
+    )
+    qual_mxgp_id = qual_map.get("mxgp")
+    qual_mx2_id = qual_map.get("mx2")
+    for extra_id in (hs450_id, hs250_id, wc_rider, qual_mxgp_id, qual_mx2_id):
         if extra_id is not None:
             try:
                 rider_ids.append(int(extra_id))
@@ -19603,48 +19748,68 @@ def _my_picks_api_dict(user_id: int, comp: Competition) -> dict:
     if wc_payload is not None and wc_pos is not None:
         wc_payload = {**wc_payload, "position": wc_pos}
 
+    hs_extra = {}
+    if is_wsx:
+        hs_extra = {
+            "wsx_sx1": holos_map.get("wsx_sx1") or hs450_id,
+            "wsx_sx2": holos_map.get("wsx_sx2") or hs250_id,
+        }
+    elif is_mxgp:
+        hs_extra = {
+            "mxgp": holos_map.get("mxgp") or hs450_id,
+            "mx2": holos_map.get("mx2") or hs250_id,
+        }
+
     return {
         "top6_picks": top6_picks,
         "holeshot_picks": {
             "450cc": hs450_id,
             "250cc": hs250_id,
-            **(
-                {
-                    "wsx_sx1": holos_map.get("wsx_sx1") or hs450_id,
-                    "wsx_sx2": holos_map.get("wsx_sx2") or hs250_id,
-                }
-                if is_wsx
-                else {}
-            ),
+            **hs_extra,
         },
         "holeshot_450": hs450,
         "holeshot_250": hs250,
         "wildcard_pick": wc_rider,
         "wildcard_pos": wc_pos,
         "wildcard": wc_payload,
+        "qualifying_picks": {
+            "mxgp": int(qual_mxgp_id) if qual_mxgp_id is not None else None,
+            "mx2": int(qual_mx2_id) if qual_mx2_id is not None else None,
+        },
+        "qualifying_mxgp": _pick_rider_payload(qual_mxgp_id),
+        "qualifying_mx2": _pick_rider_payload(qual_mx2_id),
         "is_wsx": is_wsx,
+        "is_mxgp": is_mxgp,
         "competition_id": competition_id,
         "series": getattr(comp, "series", None),
         "snapshot_used": bool(snap),
     }
 
 
-def _initial_wizard_step(my_picks: dict, *, is_wsx: bool) -> int:
+_TOP450_CLASSES = frozenset({"450cc", "wsx_sx1", "mxgp"})
+_TOP250_CLASSES = frozenset({"250cc", "wsx_sx2", "mx2"})
+
+
+def _initial_wizard_step(my_picks: dict, *, is_wsx: bool, is_mxgp: bool = False) -> int:
     """Which wizard step to open on first paint.
 
     Incomplete picks always start at step 1 (forward flow).
     Complete picks open step 3 (overview). Holeshot-first is edit-only in JS.
     """
     top6 = my_picks.get("top6_picks") or []
-    n450 = sum(1 for p in top6 if (p.get("class") or "") in ("450cc", "wsx_sx1"))
-    n250 = sum(1 for p in top6 if (p.get("class") or "") in ("250cc", "wsx_sx2"))
+    n450 = sum(1 for p in top6 if (p.get("class") or "") in _TOP450_CLASSES)
+    n250 = sum(1 for p in top6 if (p.get("class") or "") in _TOP250_CLASSES)
     hs = my_picks.get("holeshot_picks") or {}
-    hs450 = bool(hs.get("450cc") or hs.get("wsx_sx1"))
-    hs250 = bool(hs.get("250cc") or hs.get("wsx_sx2"))
+    hs450 = bool(hs.get("450cc") or hs.get("wsx_sx1") or hs.get("mxgp"))
+    hs250 = bool(hs.get("250cc") or hs.get("wsx_sx2") or hs.get("mx2"))
     wc_ok = True
-    if not is_wsx:
+    if not is_wsx and not is_mxgp:
         wc_ok = bool(my_picks.get("wildcard_pick")) and my_picks.get("wildcard_pos") is not None
-    if n450 >= 6 and n250 >= 6 and hs450 and hs250 and wc_ok:
+    qual_ok = True
+    if is_mxgp:
+        qm = my_picks.get("qualifying_picks") or {}
+        qual_ok = bool(qm.get("mxgp")) and bool(qm.get("mx2"))
+    if n450 >= 6 and n250 >= 6 and hs450 and hs250 and wc_ok and qual_ok:
         return 3
     return 1
 
@@ -19666,20 +19831,33 @@ def _user_picks_status_code(user_id: int | None, comp: Competition | None) -> st
             if n > 0 or c > 0:
                 return "partial_picks"
             return "no_picks"
-        is_wsx = (getattr(comp, "series", None) or "") == "WSX"
+        series_u = (getattr(comp, "series", None) or "").strip().upper()
+        is_wsx = series_u == "WSX"
+        is_mxgp = series_u == "MXGP"
         my = _my_picks_api_dict(int(user_id), comp)
         top6 = my.get("top6_picks") or []
-        n450 = sum(1 for p in top6 if (p.get("class") or "") in ("450cc", "wsx_sx1"))
-        n250 = sum(1 for p in top6 if (p.get("class") or "") in ("250cc", "wsx_sx2"))
+        n450 = sum(1 for p in top6 if (p.get("class") or "") in _TOP450_CLASSES)
+        n250 = sum(1 for p in top6 if (p.get("class") or "") in _TOP250_CLASSES)
         hs = my.get("holeshot_picks") or {}
-        hs450 = bool(hs.get("450cc") or hs.get("wsx_sx1"))
-        hs250 = bool(hs.get("250cc") or hs.get("wsx_sx2"))
+        hs450 = bool(hs.get("450cc") or hs.get("wsx_sx1") or hs.get("mxgp"))
+        hs250 = bool(hs.get("250cc") or hs.get("wsx_sx2") or hs.get("mx2"))
         wc_ok = True
-        if not is_wsx:
+        if not is_wsx and not is_mxgp:
             wc_ok = bool(my.get("wildcard_pick")) and my.get("wildcard_pos") is not None
-        if n450 == 6 and n250 == 6 and hs450 and hs250 and wc_ok:
+        qual_ok = True
+        qm = my.get("qualifying_picks") or {}
+        if is_mxgp:
+            qual_ok = bool(qm.get("mxgp")) and bool(qm.get("mx2"))
+        if n450 == 6 and n250 == 6 and hs450 and hs250 and wc_ok and qual_ok:
             return "has_picks"
-        if n450 or n250 or hs450 or hs250 or (not is_wsx and my.get("wildcard_pick")):
+        if (
+            n450
+            or n250
+            or hs450
+            or hs250
+            or (not is_wsx and not is_mxgp and my.get("wildcard_pick"))
+            or (is_mxgp and (qm.get("mxgp") or qm.get("mx2")))
+        ):
             return "partial_picks"
         return "no_picks"
     except Exception as e:
@@ -19687,26 +19865,34 @@ def _user_picks_status_code(user_id: int | None, comp: Competition | None) -> st
         return "no_picks"
 
 
-def _picks_status_summary(my_picks: dict, *, is_wsx: bool, picks_locked: bool) -> dict:
+def _picks_status_summary(
+    my_picks: dict, *, is_wsx: bool, picks_locked: bool, is_mxgp: bool = False
+) -> dict:
     """UI strings for picks status banner (mirrors updatePicksStatus in race_picks.html)."""
     top6 = my_picks.get("top6_picks") or []
     hs = my_picks.get("holeshot_picks") or {}
-    holeshot450 = hs.get("450cc") or hs.get("wsx_sx1")
-    holeshot250 = hs.get("250cc") or hs.get("wsx_sx2")
-    has_wc = bool(my_picks.get("wildcard_pick")) and not is_wsx
+    holeshot450 = hs.get("450cc") or hs.get("wsx_sx1") or hs.get("mxgp")
+    holeshot250 = hs.get("250cc") or hs.get("wsx_sx2") or hs.get("mx2")
+    has_wc = bool(my_picks.get("wildcard_pick")) and not is_wsx and not is_mxgp
+    qm = my_picks.get("qualifying_picks") or {}
+    qual_count = (1 if qm.get("mxgp") else 0) + (1 if qm.get("mx2") else 0) if is_mxgp else 0
     holeshot_count = (1 if holeshot450 else 0) + (1 if holeshot250 else 0)
-    total = len(top6) + holeshot_count + (1 if has_wc else 0)
-    required = 14 if is_wsx else 15
+    total = len(top6) + holeshot_count + (1 if has_wc else 0) + qual_count
+    if is_mxgp:
+        required = 16
+        empty_msg = "Gör dina val för topp 6, holeshot och kvalvinnare"
+    elif is_wsx:
+        required = 14
+        empty_msg = "Gör dina val för topp 6 och holeshot"
+    else:
+        required = 15
+        empty_msg = "Gör dina val för topp 6, holeshot och wildcard"
 
     if total == 0:
         return {
             "icon": "📝",
             "title": "Inga val gjorda än",
-            "message": (
-                "Gör dina val för topp 6 och holeshot"
-                if is_wsx
-                else "Gör dina val för topp 6, holeshot och wildcard"
-            ),
+            "message": empty_msg,
             "container_class": (
                 "mb-4 p-4 rounded-lg border-2 border-dashed border-yellow-400 bg-yellow-900/30"
             ),
@@ -20230,29 +20416,41 @@ def save_picks():
     comp = Competition.query.get(comp_id)
     if not comp:
         return jsonify({"error": "competition_not_found"}), 404
-    
-    
+
+    series_u = (getattr(comp, "series", None) or "").strip().upper()
+    if series_u == "MXGP":
+        try:
+            from mxgp_fantasy import mxgp_user_can_play
+
+            if not mxgp_user_can_play(is_admin=is_admin_user()):
+                return jsonify({
+                    "error": "MXGP är under construction — tippa öppnar till 2027."
+                }), 403
+        except Exception:
+            if not is_admin_user():
+                return jsonify({"error": "MXGP är under construction."}), 403
+
     # Use the unified picks lock check function
     picks_locked = is_picks_locked(comp)
-    
+
     # If picks are locked, reject the save
     if picks_locked:
         return jsonify({"error": "Picks är låsta! Du kan inte längre ändra dina val."}), 403
 
     # 2) Hämta OUT‑förare för detta race (viktigt)
     out_ids = set(
-    rid
-    for (rid,) in db.session.query(CompetitionRiderStatus.rider_id)
-    .filter(
-        CompetitionRiderStatus.competition_id == comp.id,
-        CompetitionRiderStatus.status == "OUT",
+        rid
+        for (rid,) in db.session.query(CompetitionRiderStatus.rider_id)
+        .filter(
+            CompetitionRiderStatus.competition_id == comp.id,
+            CompetitionRiderStatus.status == "OUT",
+        )
+        .all()
     )
-    .all()
-)
 
     # 3) Validera att inga dubletter finns i picks
     picks = data.get("picks", [])
-    
+
     new_rider_ids = [int(p.get("rider_id")) for p in picks if p.get("rider_id")]
     if len(new_rider_ids) != len(set(new_rider_ids)):
         return jsonify({"error": "Du kan inte välja samma förare flera gånger"}), 400
@@ -20261,17 +20459,27 @@ def save_picks():
     # --- VALIDERA ALLT FÖRST (inga raderingar) så att vi inte tömmer användarens picks vid valideringsfel ---
     wc_pick = data.get("wildcard_pick")
     wc_pos = data.get("wildcard_pos")
-    if comp.series == "WSX":
+    skips_wildcard = series_u in ("WSX", "MXGP")
+    if skips_wildcard:
         wc_pick = None
         wc_pos = None
+        if series_u == "WSX":
+            try:
+                prune_off_roster_wsx_picks(int(comp.id))
+            except Exception:
+                db.session.rollback()
+
+    wsx_allowed_ids = _wsx_official_roster_ids() if series_u == "WSX" else set()
+    mxgp_allowed_ids: set[int] = set()
+    if series_u == "MXGP":
         try:
-            prune_off_roster_wsx_picks(int(comp.id))
+            from mxgp_fantasy import mxgp_official_roster_ids
+
+            mxgp_allowed_ids = mxgp_official_roster_ids()
         except Exception:
-            db.session.rollback()
-    
-    wsx_allowed_ids = _wsx_official_roster_ids() if comp.series == "WSX" else set()
+            mxgp_allowed_ids = set()
     smx_allowed_ids: set[int] = set()
-    if (getattr(comp, "series", None) or "").strip().upper() == "SMX":
+    if series_u == "SMX":
         try:
             sync_smx_playoff_entry_list(comp)
             # refresh OUT after sync
@@ -20306,9 +20514,13 @@ def save_picks():
             return jsonify({
                 "error": f"{rider.name} är inte med på entry list för detta race — välj om"
             }), 400
-        if comp.series == "WSX" and int(rider.id) not in wsx_allowed_ids:
+        if series_u == "WSX" and int(rider.id) not in wsx_allowed_ids:
             return jsonify({
                 "error": f"{rider.name} är inte med i WSX 2026-rostern — välj om dina picks"
+            }), 400
+        if series_u == "MXGP" and mxgp_allowed_ids and int(rider.id) not in mxgp_allowed_ids:
+            return jsonify({
+                "error": f"{rider.name} är inte med i MXGP-rostern — välj om dina picks"
             }), 400
 
         # Rider-id-unikitet redan kontrollerad ovan (set-jämförelse).
@@ -20317,9 +20529,13 @@ def save_picks():
         if rider.class_name == "250cc" and comp.coast_250 in ("east", "west"):
             if rider.coast_250 not in (comp.coast_250, "both"):
                 return jsonify({"error": "250-förare matchar inte denna coast"}), 400
-        if rider.class_name == "450cc" or p.get("class") == "450cc":
+        if rider.class_name in ("450cc", "wsx_sx1", "mxgp") or p.get("class") in (
+            "450cc",
+            "wsx_sx1",
+            "mxgp",
+        ):
             riders_450_ids.append(rid)
-    
+
     if wc_pick and wc_pos:
         try:
             wc_pick_i = int(wc_pick)
@@ -20332,49 +20548,80 @@ def save_picks():
                 return jsonify({"error": "Du kan inte välja samma förare för wildcard som i top 6"}), 400
         except Exception:
             return jsonify({"error": "Ogiltig wildcard-val"}), 400
-    
+
+    hs_label_450 = "MXGP" if series_u == "MXGP" else ("SX1" if series_u == "WSX" else "450cc")
+    hs_label_250 = "MX2" if series_u == "MXGP" else ("SX2" if series_u == "WSX" else "250cc")
+
     hs450 = data.get("holeshot_450")
     if not hs450:
-        return jsonify({"error": "Du måste välja en holeshot-förare för 450cc/SX1"}), 400
+        return jsonify({"error": f"Du måste välja en holeshot-förare för {hs_label_450}"}), 400
     try:
         rid = int(hs450)
         if rid in out_ids:
             hs_rider = Rider.query.get(rid)
             hs_name = hs_rider.name if hs_rider else "Holeshot-föraren"
             return jsonify({"error": f"{hs_name} är OUT för detta race — välj om"}), 400
-        if comp.series == "WSX" and rid not in wsx_allowed_ids:
+        if series_u == "WSX" and rid not in wsx_allowed_ids:
             return jsonify({"error": "Holeshot SX1 måste vara en 2026-rosterförare"}), 400
+        if series_u == "MXGP" and mxgp_allowed_ids and rid not in mxgp_allowed_ids:
+            return jsonify({"error": "Holeshot MXGP måste vara en rosterförare"}), 400
     except Exception:
-        return jsonify({"error": "Ogiltig holeshot-förare för 450cc/SX1"}), 400
-    
+        return jsonify({"error": f"Ogiltig holeshot-förare för {hs_label_450}"}), 400
+
     hs250 = data.get("holeshot_250")
     if not hs250:
-        return jsonify({"error": "Du måste välja en holeshot-förare för 250cc/SX2"}), 400
+        return jsonify({"error": f"Du måste välja en holeshot-förare för {hs_label_250}"}), 400
     try:
         rid = int(hs250)
         rider = Rider.query.get(rid)
         if rider and rider.id in out_ids:
             return jsonify({"error": f"{rider.name} är OUT för detta race — välj om"}), 400
-        if comp.series == "WSX" and rid not in wsx_allowed_ids:
+        if series_u == "WSX" and rid not in wsx_allowed_ids:
             return jsonify({"error": "Holeshot SX2 måste vara en 2026-rosterförare"}), 400
+        if series_u == "MXGP" and mxgp_allowed_ids and rid not in mxgp_allowed_ids:
+            return jsonify({"error": "Holeshot MX2 måste vara en rosterförare"}), 400
         if rider and comp.coast_250 in ("east", "west"):
             if rider.coast_250 not in (comp.coast_250, "both"):
                 return jsonify({"error": "250-holeshot matchar inte denna coast"}), 400
     except Exception:
-        return jsonify({"error": "Ogiltig holeshot-förare för 250cc/SX2"}), 400
-    
-    if comp.series != "WSX":
+        return jsonify({"error": f"Ogiltig holeshot-förare för {hs_label_250}"}), 400
+
+    if not skips_wildcard:
         if not wc_pick:
             return jsonify({"error": "Du måste välja en wildcard-förare"}), 400
         if not wc_pos or str(wc_pos).strip() == "":
             return jsonify({"error": "Du måste välja en wildcard-position (rulla tärningen)"}), 400
-    
+
+    qual_mxgp = data.get("qualifying_mxgp") or data.get("qualifying_450")
+    qual_mx2 = data.get("qualifying_mx2") or data.get("qualifying_250")
+    if series_u == "MXGP":
+        if not qual_mxgp:
+            return jsonify({"error": "Du måste tippa kvalvinnare i MXGP"}), 400
+        if not qual_mx2:
+            return jsonify({"error": "Du måste tippa kvalvinnare i MX2"}), 400
+        for qid, qlabel in ((qual_mxgp, "MXGP"), (qual_mx2, "MX2")):
+            try:
+                qrid = int(qid)
+            except Exception:
+                return jsonify({"error": f"Ogiltig kvalvinnare för {qlabel}"}), 400
+            if qrid in out_ids:
+                qr = Rider.query.get(qrid)
+                return jsonify({
+                    "error": f"{(qr.name if qr else 'Föraren')} (kval {qlabel}) är OUT — välj om"
+                }), 400
+            if mxgp_allowed_ids and qrid not in mxgp_allowed_ids:
+                return jsonify({"error": f"Kvalvinnare {qlabel} måste vara rosterförare"}), 400
+
     # 4) All validering klar – nu radera och spara (en commit så inget delvis tillstånd)
     deleted_picks = RacePick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
     deleted_holeshots = HoleshotPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
     deleted_wildcards = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
-    print(f"DEBUG: Deleted {deleted_picks} old picks, {deleted_holeshots} old holeshots, {deleted_wildcards} old wildcards")
-    
+    deleted_quals = QualifyingPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
+    print(
+        f"DEBUG: Deleted {deleted_picks} old picks, {deleted_holeshots} old holeshots, "
+        f"{deleted_wildcards} old wildcards, {deleted_quals} old qualifying"
+    )
+
     saved_picks = 0
     for p in picks:
         try:
@@ -20395,9 +20642,13 @@ def save_picks():
         )
         saved_picks += 1
         print(f"DEBUG: Added pick - {rider.name} at position {pos}")
-    
-    hs_class_450 = "wsx_sx1" if comp.series == "WSX" else "450cc"
-    hs_class_250 = "wsx_sx2" if comp.series == "WSX" else "250cc"
+
+    if series_u == "WSX":
+        hs_class_450, hs_class_250 = "wsx_sx1", "wsx_sx2"
+    elif series_u == "MXGP":
+        hs_class_450, hs_class_250 = "mxgp", "mx2"
+    else:
+        hs_class_450, hs_class_250 = "450cc", "250cc"
     rid = int(hs450)
     db.session.add(
         HoleshotPick(
@@ -20416,8 +20667,8 @@ def save_picks():
             class_name=hs_class_250,
         )
     )
-    
-    if comp.series != "WSX" and wc_pick and wc_pos:
+
+    if not skips_wildcard and wc_pick and wc_pos:
         wc_pick_i = int(wc_pick)
         wc_pos_i = int(wc_pos)
         existing_wc = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).first()
@@ -20427,9 +20678,26 @@ def save_picks():
         existing_wc.rider_id = wc_pick_i
         existing_wc.position = wc_pos_i
 
+    if series_u == "MXGP" and qual_mxgp and qual_mx2:
+        db.session.add(
+            QualifyingPick(
+                user_id=uid,
+                competition_id=comp_id,
+                rider_id=int(qual_mxgp),
+                class_name="mxgp",
+            )
+        )
+        db.session.add(
+            QualifyingPick(
+                user_id=uid,
+                competition_id=comp_id,
+                rider_id=int(qual_mx2),
+                class_name="mx2",
+            )
+        )
+
     db.session.commit()
     return jsonify({"message": "Picks sparade"}), 200
-
 
 @app.post("/clear_my_picks/<int:competition_id>")
 def clear_my_picks(competition_id: int):
@@ -20452,6 +20720,7 @@ def clear_my_picks(competition_id: int):
 
     deleted_race = RacePick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
     deleted_holo = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
+    deleted_qual = QualifyingPick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
     wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
     if wc:
         wc.rider_id = None
@@ -20461,7 +20730,8 @@ def clear_my_picks(competition_id: int):
 
     print(
         f"DEBUG: clear_my_picks – user_id={uid}, competition_id={competition_id}, "
-        f"deleted race={deleted_race}, holeshot={deleted_holo}, wildcard_rider_cleared={bool(wc)}"
+        f"deleted race={deleted_race}, holeshot={deleted_holo}, qualifying={deleted_qual}, "
+        f"wildcard_rider_cleared={bool(wc)}"
     )
 
     return jsonify({"message": "Alla dina val för denna tävling har rensats."}), 200
@@ -20484,6 +20754,7 @@ def clear_my_bonus_picks(competition_id: int):
 
     uid = session["user_id"]
     deleted_holo = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
+    deleted_qual = QualifyingPick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
     wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
     if wc:
         wc.rider_id = None
@@ -20492,12 +20763,13 @@ def clear_my_bonus_picks(competition_id: int):
 
     print(
         f"DEBUG: clear_my_bonus_picks – user_id={uid}, competition_id={competition_id}, "
-        f"deleted holeshot={deleted_holo}, wildcard_rider_cleared={bool(wc)}"
+        f"deleted holeshot={deleted_holo}, qualifying={deleted_qual}, wildcard_rider_cleared={bool(wc)}"
     )
 
     return jsonify({
-        "message": "Holeshot och wildcard-förare rensade. Topp 6 och wildcard-plats behölls.",
+        "message": "Holeshot och bonusval rensade. Topp 6 behölls.",
         "deleted_holeshot": deleted_holo,
+        "deleted_qualifying": deleted_qual,
         "wildcard_position_kept": bool(wc and wc.position is not None),
     }), 200
 
@@ -27553,6 +27825,13 @@ def init_database():
                     _SERIES_STATUS_CACHE = None
                 except Exception as seed_err:
                     print(f"Warning: MXON 2026 seed failed: {seed_err}")
+                try:
+                    from mxgp_fantasy import ensure_mxgp_scaffold
+
+                    ensure_mxgp_scaffold()
+                    _SERIES_STATUS_CACHE = None
+                except Exception as seed_err:
+                    print(f"Warning: MXGP scaffold seed failed: {seed_err}")
             except Exception as e:
                 print(f"Warning: Could not create tables (they may already exist): {e}")
             
