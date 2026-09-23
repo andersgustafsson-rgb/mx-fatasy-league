@@ -128,15 +128,137 @@
         .ap-visit strong { color: #f8fafc; font-variant-numeric: tabular-nums; }
         .ap-visit .ap-visit-label { color: #67e8f9; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.72rem; }
 
-        /* Keep existing picks-stats mobile helpers */
+        /* Mobile / touch */
         @media (max-width: 640px) {
-            .ap-wrap { padding-left: 0.75rem; padding-right: 0.75rem; }
+            body {
+                background-attachment: scroll;
+            }
+            .ap-wrap {
+                padding: 0.85rem 0.7rem 5.5rem;
+            }
+            .ap-top {
+                gap: 0.65rem;
+                margin-bottom: 0.85rem;
+            }
+            .ap-sub { font-size: 0.85rem; }
+            .ap-visit {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.65rem;
+                padding: 0.75rem 0.85rem;
+                font-size: 0.82rem;
+            }
+            .ap-visit > div:last-child {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.4rem;
+            }
+            .ap-visit > div:last-child .ap-btn {
+                justify-content: center;
+                min-height: 44px;
+            }
+
+            /* Sticky horizontal tabs */
             .admin-tab-bar {
-                flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
-                scrollbar-width: none; padding-bottom: 0.25rem;
+                position: sticky;
+                top: 0;
+                z-index: 40;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                margin: 0 -0.7rem 0.85rem;
+                padding: 0.45rem 0.7rem;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+                backdrop-filter: blur(10px);
+                background: rgba(2, 6, 23, 0.92);
+                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
             }
             .admin-tab-bar::-webkit-scrollbar { display: none; }
-            .admin-tab-bar .tab-btn { flex-shrink: 0; white-space: nowrap; }
+            .admin-tab-bar .tab-btn {
+                flex-shrink: 0;
+                white-space: nowrap;
+                min-height: 40px;
+                padding: 0.5rem 0.9rem;
+                font-size: 0.82rem;
+            }
+
+            .section-card {
+                padding: 1rem 0.85rem !important;
+                border-radius: 0.75rem;
+                margin-bottom: 1rem;
+            }
+            .ap-hub-head { margin-bottom: 0.85rem; }
+            .ap-hub-head p { font-size: 0.88rem; }
+            .ap-hub-card {
+                padding: 1rem;
+                gap: 0.7rem;
+            }
+            .ap-hub-card__title { font-size: 1.3rem; }
+            .ap-hub-card__actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .ap-hub-card__actions .ap-btn,
+            .ap-hub-card__actions .ap-btn--primary,
+            .ap-hub-card__actions .btn-primary,
+            .ap-hub-card__actions .btn-warning,
+            .ap-hub-card__actions .btn-danger {
+                width: 100%;
+                justify-content: center;
+                min-height: 44px;
+            }
+
+            .admin-flow {
+                flex-direction: column;
+                gap: 0.4rem;
+                padding: 0.7rem 0.8rem;
+                font-size: 0.85rem;
+                margin-bottom: 1rem;
+            }
+
+            .ap-btn, .btn-primary, .btn-warning, .btn-danger {
+                min-height: 44px;
+            }
+            .ap-btn--sm {
+                min-height: 40px;
+                padding: 0.45rem 0.75rem;
+            }
+
+            /* Avoid iOS zoom on focus */
+            input[type="text"],
+            input[type="url"],
+            input[type="email"],
+            input[type="search"],
+            input[type="number"],
+            input[type="password"],
+            input[type="date"],
+            input[type="time"],
+            select,
+            textarea {
+                font-size: 16px !important;
+                max-width: 100%;
+            }
+
+            /* Wide tables: hint + scroll */
+            .overflow-x-auto {
+                margin-left: -0.15rem;
+                margin-right: -0.15rem;
+                padding-bottom: 0.25rem;
+                -webkit-overflow-scrolling: touch;
+            }
+            .overflow-x-auto::before {
+                content: "← svep →";
+                display: block;
+                font-size: 0.68rem;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: #64748b;
+                margin-bottom: 0.35rem;
+            }
+
             .picks-stats-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
             .picks-stats-stat-grid > :last-child { grid-column: 1 / -1; }
             .picks-stats-stat-grid .text-3xl { font-size: 1.65rem; }
@@ -147,6 +269,12 @@
             .picks-stats-complete-list li {
                 background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(51, 65, 85, 0.8);
                 border-radius: 0.5rem; padding: 0.5rem 0.65rem;
+            }
+
+            /* Modals safer on small screens */
+            .fixed.inset-0 > div {
+                margin: 0.75rem;
+                max-width: calc(100vw - 1.5rem) !important;
             }
         }
         @media (min-width: 641px) {

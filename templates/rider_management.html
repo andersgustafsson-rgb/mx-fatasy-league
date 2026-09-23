@@ -209,6 +209,83 @@
             cursor: pointer; padding: 0.75rem 1rem; color: var(--rm-muted);
             font-size: 0.85rem; font-weight: 600;
         }
+
+        @media (max-width: 640px) {
+            body.rm { background-attachment: scroll; }
+            .rm-wrap { padding: 0.85rem 0.7rem 2.5rem; }
+            .rm-top { gap: 0.65rem; margin-bottom: 0.85rem; }
+            .rm-sub { font-size: 0.85rem; }
+            .rm-actions {
+                width: 100%;
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 0.45rem;
+            }
+            .rm-actions .rm-btn {
+                width: 100%;
+                justify-content: center;
+                min-height: 44px;
+            }
+            .rm-search-bar {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 0.75rem;
+            }
+            .rm-search-bar input[type="search"],
+            .rm-search-bar input[type="text"] {
+                flex: 1 1 auto;
+                min-width: 0;
+                width: 100%;
+                font-size: 16px;
+                min-height: 44px;
+            }
+            .rm-chips {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                padding-bottom: 0.15rem;
+            }
+            .rm-chips::-webkit-scrollbar { display: none; }
+            .tab-button {
+                flex-shrink: 0;
+                min-height: 40px;
+            }
+            .rm-list-body { padding: 0.75rem; }
+            .rm-form-box { padding: 0.75rem; }
+            .rm-table-wrap {
+                margin: 0 -0.1rem;
+                -webkit-overflow-scrolling: touch;
+            }
+            .rm-table-wrap::before {
+                content: "← svep tabellen →";
+                display: block;
+                font-size: 0.68rem;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: #64748b;
+                padding: 0.35rem 0.65rem 0.15rem;
+            }
+            .rm-list th, .rm-list td { padding: 0.55rem 0.55rem !important; }
+            .rm-list button {
+                min-height: 36px;
+                padding: 0.35rem 0.55rem !important;
+                font-size: 0.8rem !important;
+            }
+            input, select, textarea { font-size: 16px !important; }
+            #edit-modal { padding: 0.5rem; align-items: flex-end; }
+            #edit-modal > div {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+            }
+            #edit-modal > div > div {
+                max-width: 100% !important;
+                width: 100% !important;
+                max-height: 92vh !important;
+                border-radius: 0.85rem 0.85rem 0.35rem 0.35rem !important;
+            }
+        }
     </style>
 </head>
 <body class="rm">
