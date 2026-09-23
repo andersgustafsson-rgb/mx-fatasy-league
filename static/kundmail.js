@@ -913,10 +913,30 @@ function mailIntro(ctx) {
   return `${g}\n\n`;
 }
 
+/** Företagsnamn i ämnet — inte Zendesk-/ordernummer som råkat sparats i fältet. */
+function subjectCompanyPrefix(raw) {
+  let company = cleanStr(raw)
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .trim();
+  if (!company) return "";
+  // T.ex. "1144716", "#1144716", "ZD-1144716"
+  if (/^(?:#|zd[-:]?)?\d{4,}$/i.test(company)) return "";
+  // Bara siffror + skiljetecken (t.ex. "1144 716" eller "1144716.")
+  if (/^[\d\s#.\-/]+$/.test(company) && /\d{4,}/.test(company)) return "";
+  // Leading ticket id pasted in: "1144716 — Motoaction…"
+  const strippedLead = company.replace(/^(?:#|zd[-:]?)?\d{5,}\s*[—–\-|:]\s*/i, "").trim();
+  if (strippedLead !== company) {
+    company = strippedLead;
+    if (!company) return "";
+    if (/^(?:#|zd[-:]?)?\d{4,}$/i.test(company)) return "";
+  }
+  return company;
+}
+
 function buildSubject(ctx) {
   const pack = MAIL_I18N[ctx.lang] || MAIL_I18N.sv;
   const status = pack.subjectStatus[ctx.templateId] || pack.subjectStatus.default;
-  const company = cleanStr(ctx.settings?.companyName);
+  const company = subjectCompanyPrefix(ctx.settings?.companyName);
   const order = cleanStr(ctx.orderNumber);
   const parts = [];
   if (company) parts.push(company);
@@ -2004,7 +2024,7 @@ function generate(opts = {}) {
   const signatureText = String(els.signatureProfileText?.value ?? activeSignature?.text ?? "").trim();
 
   const settings = {
-    companyName: cleanStr(els.companyName?.value),
+    companyName: subjectCompanyPrefix(els.companyName?.value),
     customSignature: signatureText,
     senderName: signatureSenderName(els.signatureProfileName?.value || activeSignature?.name),
     activeSignatureId: activeSignature?.id || "",
@@ -2012,6 +2032,9 @@ function generate(opts = {}) {
     language: currentMailLang(),
   };
   saveSettings(settings);
+  if (els.companyName && els.companyName.value !== settings.companyName) {
+    els.companyName.value = settings.companyName;
+  }
 
   const mail = buildMail({
     templateId: getSelectedTemplate().id,
@@ -2517,6 +2540,11 @@ function init() {
   els.validation = $("validation");
 
   const settings = loadSettings();
+  // Rensa gamla Zendesk-/ordernummer som sparats som "företagsnamn"
+  if (settings.companyName && !subjectCompanyPrefix(settings.companyName)) {
+    settings.companyName = "";
+    saveSettings(settings);
+  }
   els.companyName.value = settings.companyName || "";
   els.tone.value = settings.tone;
   els.language.value = settings.language || "sv";
