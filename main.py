@@ -4161,6 +4161,10 @@ def build_series_status_list() -> list[dict]:
     series_data: list[dict] = []
 
     for s in all_series:
+        # One MXGP homepage card only (2027 UC). Keep 2026 series in DB for calendar/admin.
+        if s.name == "MXGP" and int(getattr(s, "year", 0) or 0) != 2027:
+            continue
+
         series_code = None
         if s.name == "Supercross":
             series_code = "SX"
