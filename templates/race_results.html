@@ -963,14 +963,11 @@
     }
 
     function prettyClass(series, className) {
-      if (series === "WSX") {
-        if (className === "wsx_sx1") return "SX1";
-        if (className === "wsx_sx2") return "SX2";
-        if (className === "mxgp") return "MXGP";
-        if (className === "mx2") return "MX2";
-        return className || "";
-      }
-      return className;
+      if (className === "wsx_sx1") return "SX1";
+      if (className === "wsx_sx2") return "SX2";
+      if (className === "mxgp") return "MXGP";
+      if (className === "mx2") return "MX2";
+      return className || "";
     }
 
     function renderRiderSearch() {
