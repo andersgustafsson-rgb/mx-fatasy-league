@@ -66,7 +66,12 @@ def _format_deadline_countdown(delta: timedelta) -> str:
     return f"{minutes}m"
 
 
-def build_invite_card_data(ref: str | None = None, *, prefer_series: str | None = None) -> dict[str, Any]:
+def build_invite_card_data(
+    ref: str | None = None,
+    *,
+    prefer_series: str | None = None,
+    competition_id: int | None = None,
+) -> dict[str, Any]:
     """Aggregate race + inviter context for invite card rendering."""
     from main import _competition_race_schedule, _next_open_picks_competition, get_current_time, get_today
     from models import Competition
@@ -79,7 +84,12 @@ def build_invite_card_data(ref: str | None = None, *, prefer_series: str | None 
 
     prefer = (prefer_series or "").strip().upper() or None
     comp = None
-    if prefer == "WSX":
+    if competition_id:
+        try:
+            comp = Competition.query.get(int(competition_id))
+        except (TypeError, ValueError):
+            comp = None
+    if comp is None and prefer == "WSX":
         today = get_today()
         upcoming_wsx = (
             Competition.query.filter(
@@ -91,6 +101,18 @@ def build_invite_card_data(ref: str | None = None, *, prefer_series: str | None 
             .all()
         )
         comp = next((c for c in upcoming_wsx if not getattr(c, "is_cancelled", False)), None)
+    if comp is None and prefer and prefer not in ("WSX",):
+        today = get_today()
+        upcoming = (
+            Competition.query.filter(
+                Competition.series == prefer,
+                Competition.event_date.isnot(None),
+                Competition.event_date >= today,
+            )
+            .order_by(Competition.event_date.asc())
+            .all()
+        )
+        comp = next((c for c in upcoming if not getattr(c, "is_cancelled", False)), None)
     if comp is None:
         comp = _next_open_picks_competition()
 
