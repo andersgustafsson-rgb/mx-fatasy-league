@@ -1297,7 +1297,8 @@
   const tippaClasses = [tippaClass450, tippaClass250];
   const tippaLabel450 = isWSXSeries ? 'SX1' : (isMXGPSeries ? 'MXGP' : '450cc');
   const tippaLabel250 = isWSXSeries ? 'SX2' : (isMXGPSeries ? 'MX2' : '250cc');
-  const tippaRequiredCount = isMXGPSeries ? 16 : (tippaRequiredCount);
+  // 12 topp6 + 2 HS + (WSX: 0 WC | övriga: 1 WC) + (MXGP: 2 kval)
+  const tippaRequiredCount = isMXGPSeries ? 16 : (isWSXSeries ? 14 : 15);
   const actualResults = {{ actual_results|tojson }};
   const holeshotResults = {{ holeshot_results|tojson }};
   const allRiders = {{ (riders_450_json + riders_250_json) | tojson }};
