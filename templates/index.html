@@ -4047,6 +4047,16 @@
       return null;
     }
 
+    /** User-facing label on homepage series cards (DB names stay Supercross/Motocross). */
+    function homeSeriesDisplayName(serie) {
+      const code = (serie?.series_code || seriesNameToCode(serie?.name) || '').toUpperCase();
+      const raw = (serie?.name || '').trim();
+      if (code === 'SX' || raw === 'Supercross') return 'AMA Supercross';
+      if (code === 'MX' || raw === 'Motocross') return 'AMA Pro Motocross';
+      if (code === 'MXON' || raw === 'MXON' || raw === 'MXoN') return 'MXoN';
+      return raw || code;
+    }
+
     function isTippaOnlyHomeSeries(code) {
       return code === 'WSX' || code === 'MXON' || code === 'MXGP';
     }
@@ -5992,7 +6002,7 @@
           const cardContent = `
             <div class="home-series-card__scrim"></div>
             <div class="relative z-10 text-center">
-              <h3 class="home-series-card__title">${serie.name === 'MXON' ? 'MXoN' : serie.name}</h3>
+              <h3 class="home-series-card__title">${homeSeriesDisplayName(serie)}</h3>
               ${serie.under_construction ? `<p class="text-xs font-semibold uppercase tracking-wide text-amber-200 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Coming 2027' : 'Kommer 2027'}</p>` : ''}
               <p class="text-sm ${statusColor} mb-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${statusText}</p>
               ${nextRace ? `<p class="text-xs text-gray-200 mb-3" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Next' : 'Nästa'}: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}

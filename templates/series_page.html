@@ -4,7 +4,7 @@
   {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ series.name }} {{ series.year }} — MX Fantasy League</title>
+  <title>{% if series.name == 'Supercross' %}AMA Supercross{% elif series.name == 'Motocross' %}AMA Pro Motocross{% elif series.name in ('MXON', 'MXoN') %}MXoN{% else %}{{ series.name }}{% endif %} {{ series.year }} — MX Fantasy League</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
@@ -417,7 +417,7 @@
     <div class="container mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
         <a href="/" class="sp-brand">MX Fantasy</a>
-        <span class="sp-brand__sub">{% if series.name in ('MXON', 'MXoN') %}MXoN{% else %}{{ series.name }}{% endif %} {{ series.year }}</span>
+        <span class="sp-brand__sub">{% if series.name in ('MXON', 'MXoN') %}MXoN{% elif series.name == 'Supercross' %}AMA Supercross{% elif series.name == 'Motocross' %}AMA Pro Motocross{% else %}{{ series.name }}{% endif %} {{ series.year }}</span>
       </div>
       <div class="flex items-center gap-2">
         {% if session.username %}
@@ -433,7 +433,7 @@
     <!-- Season meta -->
     <section class="sp-panel">
       <div class="sp-panel__head">
-        <h2>{% if series.name in ('MXON', 'MXoN') %}MXoN{% else %}{{ series.name }}{% endif %} {{ series.year }}</h2>
+        <h2>{% if series.name in ('MXON', 'MXoN') %}MXoN{% elif series.name == 'Supercross' %}AMA Supercross{% elif series.name == 'Motocross' %}AMA Pro Motocross{% else %}{{ series.name }}{% endif %} {{ series.year }}</h2>
       </div>
       <div class="sp-panel__body">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -586,7 +586,7 @@
       <section class="sp-panel">
         <div class="sp-panel__body text-center py-8">
           <h2 class="text-lg font-bold text-slate-100 mb-1">Säsong avslutad</h2>
-          <p class="text-slate-400 text-sm">Alla races i {{ series.name }} {{ series.year }} är avslutade.</p>
+          <p class="text-slate-400 text-sm">Alla races i {% if series.name == 'Supercross' %}AMA Supercross{% elif series.name == 'Motocross' %}AMA Pro Motocross{% else %}{{ series.name }}{% endif %} {{ series.year }} är avslutade.</p>
         </div>
       </section>
     {% endif %}
