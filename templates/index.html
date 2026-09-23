@@ -947,11 +947,12 @@
       min-height: 180px;
     }
     .bg-mxgp {
-      background-image: linear-gradient(145deg, #0f172a 0%, #1e3a5f 45%, #0c4a6e 100%);
+      background-image: url('/static/trackmaps/MXGP/Uddevalla.jpg');
       background-size: cover;
       background-position: center;
-      min-height: 180px;
       background-repeat: no-repeat;
+      background-color: #0f172a;
+      min-height: 180px;
     }
     .home-series-card.bg-mxon:hover,
     .home-series-card.bg-mxgp:hover,
@@ -5965,6 +5966,8 @@
             inlineBg = 'background-image: url("/static/images/wsx_hero.jpg"); background-size: cover; background-position: center;';
           } else if (backgroundClass === 'bg-mxon') {
             inlineBg = 'background-image: url(\"/static/images/mxon/ernee_aerial.jpg\"); background-size: cover; background-position: center 40%; background-repeat: no-repeat; background-color: transparent;';
+          } else if (backgroundClass === 'bg-mxgp') {
+            inlineBg = 'background-image: url("/static/trackmaps/MXGP/Uddevalla.jpg"); background-size: cover; background-position: center; background-repeat: no-repeat;';
           }
 
           const hintText = isSelected
@@ -6025,6 +6028,14 @@
             const cs = getComputedStyle(el).backgroundImage;
             if (!cs || cs === 'none') {
               el.style.backgroundImage = 'url("/static/images/wsx_hero.jpg")';
+              el.style.backgroundSize = 'cover';
+              el.style.backgroundPosition = 'center';
+            }
+          });
+          seriesContainer.querySelectorAll('.bg-mxgp').forEach((el) => {
+            const cs = getComputedStyle(el).backgroundImage;
+            if (!cs || cs === 'none') {
+              el.style.backgroundImage = 'url("/static/trackmaps/MXGP/Uddevalla.jpg")';
               el.style.backgroundSize = 'cover';
               el.style.backgroundPosition = 'center';
             }
