@@ -1385,9 +1385,22 @@
     }
   }
 
+  function formatRiderNumber(num) {
+    if (num == null || num === '' || String(num).toLowerCase() === 'null') return '';
+    return String(num);
+  }
+  window.formatRiderNumber = formatRiderNumber;
+
+  function riderBadge(num) {
+    const n = formatRiderNumber(num);
+    return n ? `#${n}` : '';
+  }
+  window.riderBadge = riderBadge;
+
   function riderOptionLabel(r) {
     const brand = r.bike_brand || '';
-    let label = `#${r.rider_number} ${r.name} (${brand})`;
+    const badge = riderBadge(r.rider_number);
+    let label = badge ? `${badge} ${r.name} (${brand})` : `${r.name} (${brand})`;
     if (isSMXSeries && r.smx_zone === 'lcq') {
       label += ' · LCQ';
     } else if (isSMXSeries && r.smx_rank) {
@@ -1541,7 +1554,7 @@
       avatarHtml +
       '<span class="rider-info">' +
       '<span class="rider-number">#' +
-      rider.rider_number +
+      (formatRiderNumber(rider.rider_number) || '–') +
       '</span>' +
       '<span class="rider-name-row"><span class="rider-name"></span>' +
       lcqBadge +
@@ -3180,14 +3193,25 @@ function onPickChange(cls, pos, riderId = null) {
     val = sel?.value;
   }
   
-  // Determine if this is 450cc/SX1 or 250cc/SX2 (handles both regular and WSX)
-  const is450 = cls.startsWith("450") || cls === 'wsx_sx1';
+  // Determine top class (450/SX1/MXGP) vs bottom (250/SX2/MX2)
+  const is450 =
+    cls === tippaClass450 ||
+    cls.startsWith("450") ||
+    cls === 'wsx_sx1' ||
+    cls === 'mxgp';
   const imgId = is450 ? `prev-450-${pos}` : `prev-250-${pos}`;
   const img = document.getElementById(imgId);
 
   if (img) {
-    loadSelectedRiderPortrait(val, img);
-    setPreviewWildcardFlag(img, isWildcardRider(val));
+    if (!val) {
+      img.removeAttribute('src');
+      img.src = '';
+      img.style.background = 'linear-gradient(135deg, #1a1a2e, #16213e)';
+      setPreviewWildcardFlag(img, false);
+    } else {
+      loadSelectedRiderPortrait(val, img);
+      setPreviewWildcardFlag(img, isWildcardRider(val));
+    }
   }
 
   updateDropdowns(cls);
@@ -3196,8 +3220,7 @@ function onPickChange(cls, pos, riderId = null) {
   function initializePreviewImages() {
     
     // Initialize rider selectors to filter out wrong coast riders
-    updateRiderSelectors('450cc');
-    updateRiderSelectors('250cc');
+    tippaClasses.forEach((cls) => updateRiderSelectors(cls));
 }
 
   async function displayResults(myPicks) {
@@ -3302,7 +3325,7 @@ function onPickChange(cls, pos, riderId = null) {
       const selectedRiderSpan = selector.querySelector('.selected-rider');
       if (!selectedRiderSpan) return;
 
-      const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+      const riderText = riderOptionLabel(rider);
       selectedRiderSpan.textContent = riderText;
       selectedRiderSpan.removeAttribute('data-i18n');
 
@@ -3332,7 +3355,7 @@ function onPickChange(cls, pos, riderId = null) {
     if (holeshot450Id) {
       const selector = document.querySelector('.rider-selector[data-class="holeshot-450"]');
       const rider = allRiders.find(r => Number(r.id) === Number(holeshot450Id));
-      const label = rider ? `#${rider.rider_number} ${rider.name} (${rider.bike_brand})` : String(holeshot450Id);
+      const label = rider ? riderOptionLabel(rider) : String(holeshot450Id);
       ensureSelectValue(document.getElementById("holeshot-450"), holeshot450Id, label);
       if (selector) {
         if (rider) {
@@ -3349,7 +3372,7 @@ function onPickChange(cls, pos, riderId = null) {
     if (holeshot250Id) {
       const selector = document.querySelector('.rider-selector[data-class="holeshot-250"]');
       const rider = allRiders.find(r => Number(r.id) === Number(holeshot250Id));
-      const label = rider ? `#${rider.rider_number} ${rider.name} (${rider.bike_brand})` : String(holeshot250Id);
+      const label = rider ? riderOptionLabel(rider) : String(holeshot250Id);
       ensureSelectValue(document.getElementById("holeshot-250"), holeshot250Id, label);
       if (selector) {
         if (rider) {
@@ -3369,7 +3392,7 @@ function onPickChange(cls, pos, riderId = null) {
     if (qualMxgpId) {
       const selector = document.querySelector('.rider-selector[data-class="qualifying-mxgp"]');
       const rider = allRiders.find(r => Number(r.id) === Number(qualMxgpId));
-      const label = rider ? `#${rider.rider_number} ${rider.name} (${rider.bike_brand})` : String(qualMxgpId);
+      const label = rider ? riderOptionLabel(rider) : String(qualMxgpId);
       ensureSelectValue(document.getElementById("qualifying-mxgp"), qualMxgpId, label);
       if (selector) {
         const selectedRiderSpan = selector.querySelector('.selected-rider');
@@ -3383,7 +3406,7 @@ function onPickChange(cls, pos, riderId = null) {
     if (qualMx2Id) {
       const selector = document.querySelector('.rider-selector[data-class="qualifying-mx2"]');
       const rider = allRiders.find(r => Number(r.id) === Number(qualMx2Id));
-      const label = rider ? `#${rider.rider_number} ${rider.name} (${rider.bike_brand})` : String(qualMx2Id);
+      const label = rider ? riderOptionLabel(rider) : String(qualMx2Id);
       ensureSelectValue(document.getElementById("qualifying-mx2"), qualMx2Id, label);
       if (selector) {
         const selectedRiderSpan = selector.querySelector('.selected-rider');
@@ -3399,7 +3422,7 @@ function onPickChange(cls, pos, riderId = null) {
       const riderId = myPicks.wildcard_pick;
       const selector = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
       const rider = allRiders.find(r => Number(r.id) === Number(riderId));
-      const label = rider ? `#${rider.rider_number} ${rider.name} (${rider.bike_brand})` : String(riderId);
+      const label = rider ? riderOptionLabel(rider) : String(riderId);
       ensureSelectValue(document.getElementById("wildcard-pick"), riderId, label);
       if (selector) {
         if (rider) {
@@ -3824,9 +3847,8 @@ function onPickChange(cls, pos, riderId = null) {
     }
 
     // Kontrollera att exakt 6 förare är valda för varje klass
-    // For WSX, class is 'wsx_sx1'/'wsx_sx2', for others it's '450cc'/'250cc'
-    const picks450 = picks.filter(p => p.class === '450cc' || p.class === 'wsx_sx1');
-    const picks250 = picks.filter(p => p.class === '250cc' || p.class === 'wsx_sx2');
+    const picks450 = picks.filter((p) => p.class === tippaClass450);
+    const picks250 = picks.filter((p) => p.class === tippaClass250);
     
     
     if (picks450.length !== 6) {
@@ -3846,12 +3868,12 @@ function onPickChange(cls, pos, riderId = null) {
     const holeshot250 = document.getElementById("holeshot-250")?.value;
     
     if (!holeshot450) {
-      alert("Du måste välja en holeshot-förare för 450cc/SX1.");
+      alert(`Du måste välja en holeshot-förare för ${tippaLabel450}.`);
       return;
     }
     
     if (!holeshot250) {
-      alert("Du måste välja en holeshot-förare för 250cc/SX2.");
+      alert(`Du måste välja en holeshot-förare för ${tippaLabel250}.`);
       return;
     }
 
@@ -3874,7 +3896,7 @@ function onPickChange(cls, pos, riderId = null) {
     // Extra säkerhet: client-side filter bort OUT
     const outName = (rid) => {
       const r = (window.allRiders || []).find((x) => Number(x.id) === Number(rid));
-      return r ? `#${r.rider_number} ${r.name}` : `förare #${rid}`;
+      return r ? `${riderBadge(r.rider_number)} ${r.name}`.trim() : `förare #${rid}`;
     };
     for (const p of picks) {
       if (OUT_IDS.includes(Number(p.rider_id))) {

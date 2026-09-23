@@ -139,7 +139,7 @@
         data-rider-id="${r.id}" data-rider-class="${riderClass}" ${used ? 'disabled' : ''}>
         <img class="wizard-quick-chip__img" alt="" loading="eager" decoding="async"
           src="${escapeHtml(photoSrc)}" data-rider-id="${r.id}">
-        <span class="wizard-quick-chip__num">#${r.rider_number}</span>
+        <span class="wizard-quick-chip__num">${riderNumLabel(r.rider_number)}</span>
         <span>${escapeHtml(r.name)}</span>
       </button>`;
     });
@@ -189,7 +189,7 @@
     const label =
       typeof window.riderOptionLabel === 'function'
         ? window.riderOptionLabel(rider)
-        : `#${rider.rider_number} ${rider.name}`;
+        : `${riderNumLabel(rider.rider_number)} ${rider.name}`.trim();
 
     if (typeof window.selectRider === 'function') {
       window.selectRider(riderClass, nextPos, riderId, label);
@@ -212,7 +212,7 @@
       const label =
         typeof window.riderOptionLabel === 'function'
           ? window.riderOptionLabel(rider)
-          : `#${item.rider_number} ${item.name}`;
+          : `${riderNumLabel(item.rider_number)} ${item.name}`.trim();
       if (typeof window.selectRider === 'function') {
         window.selectRider(riderClass, pos, item.id, label);
       }
@@ -430,7 +430,7 @@
       const rider = riderById(Number(rid));
       if (span) {
         span.textContent = rider
-          ? `#${rider.rider_number} ${rider.name} (${rider.bike_brand || ''})`
+          ? `${riderNumLabel(rider.rider_number)} ${rider.name} (${rider.bike_brand || ''})`.trim()
           : `#${rid}`;
         span.removeAttribute('data-i18n');
       }
@@ -789,6 +789,12 @@
     return riderById(rid) || riderFromSelectorLabel(sel);
   }
 
+  function riderNumLabel(num) {
+    if (typeof window.riderBadge === 'function') return window.riderBadge(num);
+    if (num == null || num === '' || String(num).toLowerCase() === 'null') return '';
+    return `#${num}`;
+  }
+
   function portraitHtml(rider) {
     if (!rider) return '<div class="wizard-summary-portrait"></div>';
     const wc = (typeof window.isWildcardRider === 'function' && window.isWildcardRider(rider))
@@ -826,7 +832,7 @@
       <span class="wizard-summary-pos">${pos}</span>
       ${portraitHtml(rider)}
       <div class="wizard-summary-rider">
-        <span class="wizard-summary-num">#${rider.rider_number}</span>
+        <span class="wizard-summary-num">${riderNumLabel(rider.rider_number)}</span>
         <span class="wizard-summary-name">${escapeHtml(rider.name)}</span>
       </div>
     </li>`;
@@ -860,7 +866,7 @@
       ${rider ? portraitHtml(rider) : '<div class="wizard-summary-portrait"></div>'}
       <div class="wizard-summary-extra__body">
         <div class="wizard-summary-extra__label">Kval ${escapeHtml(label)}</div>
-        <div class="wizard-summary-extra__name">${rider ? `#${rider.rider_number} ${escapeHtml(rider.name)}` : (isEn() ? 'Not selected' : 'Ej vald')}</div>
+        <div class="wizard-summary-extra__name">${rider ? `${riderNumLabel(rider.rider_number)} ${escapeHtml(rider.name)}`.trim() : (isEn() ? 'Not selected' : 'Ej vald')}</div>
       </div>
     </div>`;
   }
@@ -873,7 +879,7 @@
       ${rider ? portraitHtml(rider) : '<div class="wizard-summary-portrait"></div>'}
       <div class="wizard-summary-extra__body">
         <div class="wizard-summary-extra__label">Holeshot ${escapeHtml(label)}</div>
-        <div class="wizard-summary-extra__name">${rider ? `#${rider.rider_number} ${escapeHtml(rider.name)}` : (isEn() ? 'Not selected' : 'Ej vald')}</div>
+        <div class="wizard-summary-extra__name">${rider ? `${riderNumLabel(rider.rider_number)} ${escapeHtml(rider.name)}`.trim() : (isEn() ? 'Not selected' : 'Ej vald')}</div>
       </div>
     </div>`;
   }
@@ -1023,7 +1029,7 @@
         ${wcRider ? portraitHtml(wcRider) : '<div class="wizard-summary-portrait"></div>'}
         <div class="wizard-summary-extra__body">
           <div class="wizard-summary-extra__label">${isEn() ? 'Wildcard position' : 'Wildcard plats'} ${wcPos || '—'}</div>
-          <div class="wizard-summary-extra__name">${wcRider ? `#${wcRider.rider_number} ${escapeHtml(wcRider.name)}` : (isEn() ? 'Choose 450 rider' : 'Välj 450-förare')}</div>
+          <div class="wizard-summary-extra__name">${wcRider ? `${riderNumLabel(wcRider.rider_number)} ${escapeHtml(wcRider.name)}`.trim() : (isEn() ? 'Choose 450 rider' : 'Välj 450-förare')}</div>
         </div>
       </div>`;
     }
