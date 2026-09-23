@@ -3499,10 +3499,13 @@
 
       const isWSX = homeSelectedSeries === 'WSX';
       const isMXON = homeSelectedSeries === 'MXON';
+      const isMXGP = homeSelectedSeries === 'MXGP';
       const isTippaOnly = isTippaOnlyHomeSeries(homeSelectedSeries);
       if (titleEl) {
         if (isMXON) {
           titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>MXoN Fantasy 2026</span></span>`;
+        } else if (isMXGP) {
+          titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>MXGP Fantasy 2027</span></span>`;
         } else if (isWSX) {
           titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>WSX Fantasy 2026</span></span>`;
         } else {
@@ -3515,12 +3518,16 @@
 
       try {
         let leaderboard;
-        if (isWSX || isMXON) {
-          const lbUrl = isMXON ? `/get_mxon_leaderboard?year=2026` : `/get_wsx_leaderboard?year=2026`;
+        if (isWSX || isMXON || isMXGP) {
+          const lbUrl = isMXON
+            ? `/get_mxon_leaderboard?year=2026`
+            : isMXGP
+              ? `/get_mxgp_leaderboard?year=2027`
+              : `/get_wsx_leaderboard?year=2026`;
           const res = await fetch(lbUrl);
           if (requestId !== window.seasonLeaderboardRequestId) return;
           if (!res.ok) {
-            c.innerHTML = `<p class="text-red-400 text-center">Kunde inte hämta ${isMXON ? 'MXoN' : 'WSX'}-leaderboard</p>`;
+            c.innerHTML = `<p class="text-red-400 text-center">Kunde inte hämta ${isMXON ? 'MXoN' : isMXGP ? 'MXGP' : 'WSX'}-leaderboard</p>`;
             return;
           }
           const payload = await res.json();
@@ -3557,6 +3564,8 @@
           c.innerHTML = homeLbEmpty(
             isMXON
               ? 'Inga MXoN-poäng ännu — highscoren fylls efter Ernée.'
+              : isMXGP
+              ? 'Inga MXGP-poäng ännu — highscoren fylls när tippa öppnar 2027.'
               : isWSX
               ? 'Inga WSX-poäng ännu — highscoren fylls efter Canadian GP.'
               : 'Inga poäng registrerade ännu.',
@@ -4091,7 +4100,8 @@
       try { preferred = localStorage.getItem('home_selected_series'); } catch (_) {}
       if (preferred === 'WSX' && validCodes.has('WSX')) return 'WSX';
       if (preferred === 'MXON' && validCodes.has('MXON')) return 'MXON';
-      if (preferred && preferred !== 'WSX' && preferred !== 'MXON' && validCodes.has(preferred)) return preferred;
+      if (preferred === 'MXGP' && validCodes.has('MXGP')) return 'MXGP';
+      if (preferred && preferred !== 'WSX' && preferred !== 'MXON' && preferred !== 'MXGP' && validCodes.has(preferred)) return preferred;
       return validCodes.has(nextActive) ? nextActive : 'SX';
     }
 
@@ -4846,21 +4856,22 @@
         </div>`;
     }
 
-    function renderHomePicksBoard(myPicks, { picksStatus, openHref, isWSX }) {
+    function renderHomePicksBoard(myPicks, { picksStatus, openHref, isWSX, isMXGP }) {
       const panel = document.getElementById('home-sidebar-picks-status');
       if (!panel) return;
 
       const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
       const top6Lbl = isEn ? 'top 6' : 'topp 6';
-      const label450 = isWSX ? 'SX1' : '450cc';
-      const label250 = isWSX ? 'SX2' : '250cc';
+      const label450 = isWSX ? 'SX1' : (isMXGP ? 'MXGP' : '450cc');
+      const label250 = isWSX ? 'SX2' : (isMXGP ? 'MX2' : '250cc');
       const top6 = myPicks?.top6_picks || [];
-      const picks450 = top6.filter((p) => ['450cc', 'wsx_sx1'].includes(p.class));
-      const picks250 = top6.filter((p) => ['250cc', 'wsx_sx2'].includes(p.class));
+      const picks450 = top6.filter((p) => ['450cc', 'wsx_sx1', 'mxgp'].includes(p.class));
+      const picks250 = top6.filter((p) => ['250cc', 'wsx_sx2', 'mx2'].includes(p.class));
       const byPos = (arr, pos) => arr.find((p) => Number(p.predicted_position) === pos) || null;
       const hs450 = myPicks?.holeshot_450 || null;
       const hs250 = myPicks?.holeshot_250 || null;
-      const wildcard = (!isWSX && myPicks?.wildcard) ? myPicks.wildcard : null;
+      const skipsWildcard = isWSX || isMXGP;
+      const wildcard = (!skipsWildcard && myPicks?.wildcard) ? myPicks.wildcard : null;
       const complete = picksStatus === 'has_picks';
       const partial = picksStatus === 'partial_picks';
       const hasAny = top6.length > 0 || hs450 || hs250 || wildcard;
@@ -4886,7 +4897,7 @@
       }
 
       let extras = _homeHoleshotHtml(hs450, label450) + _homeHoleshotHtml(hs250, label250);
-      if (!isWSX) {
+      if (!skipsWildcard) {
         const empty = wildcard ? '' : ' wizard-summary-extra--empty';
         const target = typeof mxIcon === 'function' ? mxIcon('target') : '';
         const portrait = wildcard
@@ -4983,6 +4994,7 @@
       const compId = data?.picks_competition_id || data?.next_race?.id;
       const seriesHint = (data?.series || data?.next_race?.series || homeSelectedSeries || '');
       const isMXON = seriesHint === 'MXON';
+      const isMXGP = seriesHint === 'MXGP';
       const openHref =
         (compId ? (isMXON ? `/mxon_picks/${compId}` : `/race_picks/${compId}`) : null) ||
         document.getElementById('real-picks-open-status')?.getAttribute('href') ||
@@ -4993,7 +5005,7 @@
       if (!compId || !window.__MX_LOGGED_IN__) {
         // Keep SSR content for guests; for logged-in without race just show empty prompt
         if (window.__MX_LOGGED_IN__) {
-          renderHomePicksBoard(null, { picksStatus: 'no_picks', openHref, isWSX: isWSX || isMXON });
+          renderHomePicksBoard(null, { picksStatus: 'no_picks', openHref, isWSX: isWSX || isMXON, isMXGP });
         }
         return;
       }
@@ -5011,7 +5023,7 @@
           renderHomeMxonPicksBoard(myPicks, { picksStatus: status, openHref });
           return;
         }
-        renderHomePicksBoard(myPicks, { picksStatus, openHref, isWSX });
+        renderHomePicksBoard(myPicks, { picksStatus, openHref, isWSX, isMXGP });
       } catch (e) {
         console.warn('refreshHomePicksBoard:', e);
         applySidebarPicksStatusFallback(picksStatus, openHref);
@@ -6155,7 +6167,9 @@
       if (titleEl) {
         titleEl.textContent = (c.series === 'WSX')
           ? 'WSX power rankings'
-          : 'Nya power rankings';
+          : (c.series === 'MXGP')
+            ? 'MXGP power rankings'
+            : 'Nya power rankings';
       }
       const scopeLabel = data.form_scope_label ? String(data.form_scope_label) : '';
       const lockedLbl = data.crowd_picks_locked ? 'låsta' : 'öppna';

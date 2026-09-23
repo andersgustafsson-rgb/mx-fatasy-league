@@ -734,10 +734,10 @@
 
     <nav class="sp-actions" aria-label="Snabbval">
       <a href="/" class="sp-action">← Startsida</a>
-      {% if series.name and 'WSX' not in series.name and 'MXON' not in series.name and 'MXoN' not in series.name %}
+      {% if series.name and 'WSX' not in series.name and 'MXON' not in series.name and 'MXoN' not in series.name and 'MXGP' not in series.name %}
       <a href="/season_team_page" class="sp-action"><span class="mx-heading-icon">{{ mx_icon('users') }}</span> Säsongsteam</a>
       {% endif %}
-      <a href="/my_scores{% if series.name and 'WSX' in series.name %}?series=WSX{% elif series.name and ('MXON' in series.name or 'MXoN' in series.name) %}?series=MXON{% endif %}" class="sp-action"><span class="mx-heading-icon">{{ mx_icon('chart') }}</span> Mina poäng</a>
+      <a href="/my_scores{% if series.name and 'WSX' in series.name %}?series=WSX{% elif series.name and ('MXON' in series.name or 'MXoN' in series.name) %}?series=MXON{% elif series.name and 'MXGP' in series.name %}?series=MXGP{% endif %}" class="sp-action"><span class="mx-heading-icon">{{ mx_icon('chart') }}</span> Mina poäng</a>
     </nav>
   </main>
 

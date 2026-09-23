@@ -1331,6 +1331,7 @@ def _normalize_countdown_series(raw: str | None) -> str | None:
         "SMX": "SMX",
         "SMXFINALS": "SMX",
         "WSX": "WSX",
+        "MXGP": "MXGP",
         "MXON": "MXON",
         "MXONATIONS": "MXON",
         "MOTOCROSSOFNATIONS": "MXON",
@@ -5428,6 +5429,134 @@ def get_mxon_leaderboard():
         return jsonify({"error": str(e), "leaderboard": []}), 500
 
 
+def _mxgp_competitions_for_year(year: int):
+    """MXGP competitions for a season year (via series_id when possible)."""
+    mxgp_series = Series.query.filter_by(name="MXGP", year=int(year)).first()
+    q = Competition.query.filter(Competition.series == "MXGP")
+    if mxgp_series:
+        q = q.filter(
+            db.or_(
+                Competition.series_id == mxgp_series.id,
+                db.and_(
+                    Competition.series_id.is_(None),
+                    Competition.event_date.isnot(None),
+                    db.extract("year", Competition.event_date) == int(year),
+                ),
+            )
+        )
+    else:
+        q = q.filter(
+            Competition.event_date.isnot(None),
+            db.extract("year", Competition.event_date) == int(year),
+        )
+    comps = q.all()
+    comps.sort(key=lambda c: (c.event_date is None, c.event_date or date.max, int(c.id)))
+    return comps
+
+
+def fantasy_mxgp_leaderboard_for_year(year: int = 2027) -> list:
+    """Fantasy tippa-highscore for one MXGP season only (never mixes with AMA)."""
+    from datetime import datetime, timedelta
+
+    today_utc = datetime.utcnow().date()
+    since = (datetime.utcnow() - timedelta(days=120)).date()
+    comps = _mxgp_competitions_for_year(int(year))
+    season_ids = [int(c.id) for c in comps]
+    if not season_ids:
+        return []
+
+    window_ids = [
+        int(c.id)
+        for c in comps
+        if c.event_date and since <= c.event_date <= today_utc
+    ]
+    recent_with_results: set[int] = set()
+    if window_ids:
+        recent_with_results = {
+            int(row[0])
+            for row in db.session.query(CompetitionResult.competition_id)
+            .filter(CompetitionResult.competition_id.in_(window_ids))
+            .distinct()
+            .all()
+        }
+
+    totals = _wsx_score_agg_for_comps(season_ids)
+    if not totals:
+        return []
+    recent = {int(x) for x in recent_with_results if int(x) in set(season_ids)}
+    recent_pts = _wsx_score_agg_for_comps(list(recent)) if recent else {}
+
+    rows = []
+    for uid, pts in totals.items():
+        recent_week = int(recent_pts.get(uid, 0))
+        baseline = max(0, int(pts) - recent_week)
+        rows.append(
+            {
+                "id": int(uid),
+                "total_points": int(pts),
+                "baseline_total": baseline,
+                "recent_week_points": recent_week,
+            }
+        )
+
+    uids = [r["id"] for r in rows]
+    users = User.query.filter(User.id.in_(uids)).all()
+    uid_map = {u.id: u for u in users}
+    teams = {
+        int(t.user_id): t.team_name
+        for t in SeasonTeam.query.filter(SeasonTeam.user_id.in_(uids)).all()
+    }
+    current = sorted(rows, key=lambda x: _leaderboard_sort_key(x, "total_points"))
+    use_baseline = bool(recent) and any(int(r.get("baseline_total") or 0) > 0 for r in rows)
+    baseline_ranking = (
+        _build_rank_map(rows, "baseline_total") if use_baseline else {}
+    )
+    out = []
+    for i, row in enumerate(current, 1):
+        uid = int(row["id"])
+        u = uid_map.get(uid)
+        dn = getattr(u, "display_name", None) or (u.username if u else "?")
+        baseline_rank = baseline_ranking.get(str(uid))
+        if use_baseline and baseline_rank is not None and baseline_rank > 0:
+            delta = i - int(baseline_rank)
+        else:
+            delta = 0
+        out.append(
+            {
+                "user_id": uid,
+                "username": u.username if u else "?",
+                "display_name": dn,
+                "team_name": teams.get(uid),
+                "rank": i,
+                "delta": delta,
+                "total_points": int(row["total_points"]),
+            }
+        )
+    return out
+
+
+@app.get("/get_mxgp_leaderboard")
+def get_mxgp_leaderboard():
+    """Standalone MXGP fantasy leaderboard (default: 2027 UC season)."""
+    try:
+        year_raw = request.args.get("year")
+        if year_raw:
+            year = int(year_raw)
+        else:
+            mxgp = (
+                Series.query.filter_by(name="MXGP", is_active=True)
+                .order_by(Series.year.desc())
+                .first()
+            )
+            year = int(mxgp.year) if mxgp and mxgp.year else 2027
+        rows = fantasy_mxgp_leaderboard_for_year(year)
+        return jsonify({"series": "MXGP", "year": year, "leaderboard": rows})
+    except Exception as e:
+        print(f"ERROR in get_mxgp_leaderboard: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e), "leaderboard": []}), 500
+
+
 @app.get("/supercross/sasong/<int:year>")
 def sx_season_recap(year: int):
     """Säsongssammanfattning: AMA-pall + fantasy-leaderboard enbart Supercross."""
@@ -6615,6 +6744,14 @@ def _riders_450_scope(
 ) -> list[Rider]:
     if series == "WSX":
         return [r for r in wsx_roster_query("wsx_sx1").all() if r.id not in out_ids]
+    if series == "MXGP":
+        from mxgp_fantasy import CLASS_MXGP, mxgp_roster_query
+
+        return [
+            r
+            for r in mxgp_roster_query().filter(Rider.class_name == CLASS_MXGP).all()
+            if r.id not in out_ids
+        ]
     q = rider_query_for_list_ui().filter(Rider.class_name == "450cc")
     riders = [r for r in q.all() if r.id not in out_ids]
     if (series or "").strip().upper() == "SMX":
@@ -6630,9 +6767,18 @@ def _riders_250_scope(
     If coast is 'both', single_list is empty and split_pair is (east_riders, west_riders).
     Otherwise single_list is filtered 250 riders for that coast.
     WSX: SX2 roster as a single list (no East/West).
+    MXGP: MX2 roster as a single list.
     """
     if series == "WSX":
         return [r for r in wsx_roster_query("wsx_sx2").all() if r.id not in out_ids], None
+    if series == "MXGP":
+        from mxgp_fantasy import CLASS_MX2, mxgp_roster_query
+
+        return [
+            r
+            for r in mxgp_roster_query().filter(Rider.class_name == CLASS_MX2).all()
+            if r.id not in out_ids
+        ], None
 
     base = [
         r
@@ -7471,8 +7617,8 @@ def build_power_ranking_payload(target: Competition) -> dict:
             competition=target,
         )
 
-    label_450 = "SX1" if series_code == "WSX" else "450cc"
-    label_250 = "SX2" if series_code == "WSX" else "250cc"
+    label_450 = "SX1" if series_code == "WSX" else ("MXGP" if series_code == "MXGP" else "450cc")
+    label_250 = "SX2" if series_code == "WSX" else ("MX2" if series_code == "MXGP" else "250cc")
 
     top_450, picks_only_450 = _rank_bucket(
         riders_450, target, past, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
@@ -10523,7 +10669,7 @@ def create_season_team():
 def _parse_my_scores_series_scope() -> tuple[str, int | None]:
     """Series scope for Mina poäng. WSX defaults to active season year (not all years)."""
     series_filter = (request.args.get("series") or "").strip().upper()
-    if series_filter not in ("WSX", "MXON", "SX", "MX", "SMX", "AMA"):
+    if series_filter not in ("WSX", "MXON", "MXGP", "SX", "MX", "SMX", "AMA"):
         series_filter = ""
     wsx_year: int | None = None
     if series_filter == "WSX":
@@ -11065,9 +11211,9 @@ def series_page(series_id):
                 for pick in race_picks_list:
                     rider = Rider.query.get(pick.rider_id)
                     if rider:
-                        if rider.class_name in ("450cc", "wsx_sx1"):
+                        if rider.class_name in ("450cc", "wsx_sx1", "mxgp"):
                             race_picks_450_count += 1
-                        elif rider.class_name in ("250cc", "wsx_sx2"):
+                        elif rider.class_name in ("250cc", "wsx_sx2", "mx2"):
                             race_picks_250_count += 1
                 
                 # Count holeshot picks by class
@@ -11075,26 +11221,52 @@ def series_page(series_id):
                 holeshot_250 = False
                 for holeshot in holeshot_picks_list:
                     rider = Rider.query.get(holeshot.rider_id)
-                    if rider:
-                        if rider.class_name in ("450cc", "wsx_sx1"):
-                            holeshot_450 = True
-                        elif rider.class_name in ("250cc", "wsx_sx2"):
-                            holeshot_250 = True
+                    cls = (getattr(holeshot, "class_name", None) or "") or (
+                        rider.class_name if rider else ""
+                    )
+                    if cls in ("450cc", "wsx_sx1", "mxgp") or (
+                        rider and rider.class_name in ("450cc", "wsx_sx1", "mxgp")
+                    ):
+                        holeshot_450 = True
+                    elif cls in ("250cc", "wsx_sx2", "mx2") or (
+                        rider and rider.class_name in ("250cc", "wsx_sx2", "mx2")
+                    ):
+                        holeshot_250 = True
                 
-                # Check if wildcard is complete (only for non-WSX series)
-                is_wsx = comp.series == "WSX"
+                # Check if wildcard is complete (only for non-tippa series)
+                series_u = (comp.series or "").upper()
+                is_tippa = series_u in TIPPA_ONLY_SERIES
                 wildcard_complete = False
-                if is_wsx:
-                    wildcard_complete = True  # Not required for WSX
+                if is_tippa:
+                    wildcard_complete = True  # Not required for WSX/MXON/MXGP
                 else:
                     wildcard_complete = wildcard_pick and wildcard_pick.rider_id and wildcard_pick.position is not None
+
+                # MXGP also needs qualifying winners (both classes)
+                qualifying_complete = True
+                if series_u == "MXGP":
+                    try:
+                        from models import QualifyingPick
+
+                        qps = QualifyingPick.query.filter_by(
+                            user_id=int(session["user_id"]), competition_id=comp.id
+                        ).all()
+                        q_classes = {(qp.class_name or "").lower() for qp in qps if qp.rider_id}
+                        qualifying_complete = "mxgp" in q_classes and "mx2" in q_classes
+                    except Exception:
+                        qualifying_complete = False
                 
-                # Required: 6 race picks for 450cc, 6 for 250cc, 2 holeshot picks, 1 wildcard (if not WSX)
+                # Required: 6 race picks for 450cc, 6 for 250cc, 2 holeshot picks, 1 wildcard (if not tippa)
                 race_picks_complete = race_picks_450_count == 6 and race_picks_250_count == 6
                 holeshot_complete = holeshot_450 and holeshot_250
                 
                 # Only mark as "has_picks" if ALL required picks are complete
-                has_picks = race_picks_complete and holeshot_complete and wildcard_complete
+                has_picks = (
+                    race_picks_complete
+                    and holeshot_complete
+                    and wildcard_complete
+                    and qualifying_complete
+                )
                 
                 user_picks_status[comp.id] = {
                     'has_picks': has_picks,
@@ -11116,6 +11288,8 @@ def series_page(series_id):
             series_code = "WSX"
         elif series.name in ("MXON", "MXoN"):
             series_code = "MXON"
+        elif series.name == "MXGP":
+            series_code = "MXGP"
 
         next_race = None
         if series_code:
@@ -16872,6 +17046,11 @@ def submit_results():
         print(f"WARNING invalidate_homepage_result_caches: {cache_exc}")
 
     flash("Resultat sparade och poäng beräknade!", "success")
+    next_section = (request.form.get("next_section") or "").strip()
+    if next_section == "wsx-results":
+        return redirect(url_for("admin_page", section="wsx-results"))
+    if next_section == "mxgp-scaffold":
+        return redirect(url_for("admin_page", section="mxgp-scaffold"))
     return redirect(url_for("admin_page"))
 
 
@@ -16886,6 +17065,8 @@ def update_holeshot():
     redirect_url = url_for("admin_page")
     if next_section == "wsx-results":
         redirect_url = url_for("admin_page", section="wsx-results")
+    elif next_section == "mxgp-scaffold":
+        redirect_url = url_for("admin_page", section="mxgp-scaffold")
 
     if not comp_id:
         flash("Du måste välja tävling.", "error")
@@ -16895,14 +17076,24 @@ def update_holeshot():
     hs_250 = request.form.get("holeshot_250", type=int)
 
     competition = Competition.query.get(comp_id)
-    is_wsx = bool(competition and (competition.series or "") == "WSX")
-    hs_class_450 = "wsx_sx1" if is_wsx else "450cc"
-    hs_class_250 = "wsx_sx2" if is_wsx else "250cc"
-    hs_aliases_450 = ["450cc", "wsx_sx1"]
-    hs_aliases_250 = ["250cc", "wsx_sx2"]
+    series_u = (getattr(competition, "series", None) or "").strip().upper() if competition else ""
+    is_wsx = series_u == "WSX"
+    is_mxgp = series_u == "MXGP"
+    if is_wsx:
+        hs_class_450, hs_class_250 = "wsx_sx1", "wsx_sx2"
+        hs_aliases_450 = ["450cc", "wsx_sx1"]
+        hs_aliases_250 = ["250cc", "wsx_sx2"]
+    elif is_mxgp:
+        hs_class_450, hs_class_250 = "mxgp", "mx2"
+        hs_aliases_450 = ["450cc", "mxgp", "wsx_sx1"]
+        hs_aliases_250 = ["250cc", "mx2", "wsx_sx2"]
+    else:
+        hs_class_450, hs_class_250 = "450cc", "250cc"
+        hs_aliases_450 = ["450cc", "wsx_sx1"]
+        hs_aliases_250 = ["250cc", "wsx_sx2"]
     
     try:
-        # Update or add primary-class holeshot (450cc / SX1)
+        # Update or add primary-class holeshot (450cc / SX1 / MXGP)
         if hs_450:
             existing_hs_450 = HoleshotResult.query.filter(
                 HoleshotResult.competition_id == comp_id,
@@ -16959,6 +17150,59 @@ def update_holeshot():
         print(f"Error updating holeshot: {e}")
         flash(f"Fel vid uppdatering av holeshot: {str(e)}", "error")
     
+    return redirect(redirect_url)
+
+
+@app.post("/admin/update_qualifying")
+def admin_update_qualifying():
+    """Set MXGP Saturday qualifying winners (mxgp + mx2) and recalc scores."""
+    if not is_admin_user():
+        return redirect(url_for("login"))
+
+    from models import QualifyingResult
+
+    comp_id = request.form.get("competition_id", type=int)
+    next_section = (request.form.get("next_section") or "mxgp-scaffold").strip()
+    redirect_url = url_for("admin_page", section=next_section or "mxgp-scaffold")
+
+    if not comp_id:
+        flash("Du måste välja tävling.", "error")
+        return redirect(redirect_url)
+
+    competition = Competition.query.get(comp_id)
+    if not competition or (competition.series or "").upper() != "MXGP":
+        flash("Kvalresultat gäller bara MXGP-tävlingar.", "error")
+        return redirect(redirect_url)
+
+    qual_mxgp = request.form.get("qualifying_mxgp", type=int)
+    qual_mx2 = request.form.get("qualifying_mx2", type=int)
+
+    try:
+        for class_name, rider_id in (("mxgp", qual_mxgp), ("mx2", qual_mx2)):
+            existing = QualifyingResult.query.filter_by(
+                competition_id=comp_id, class_name=class_name
+            ).first()
+            if rider_id:
+                if existing:
+                    existing.rider_id = rider_id
+                else:
+                    db.session.add(
+                        QualifyingResult(
+                            competition_id=comp_id,
+                            rider_id=rider_id,
+                            class_name=class_name,
+                        )
+                    )
+            elif existing:
+                db.session.delete(existing)
+        db.session.commit()
+        calculate_scores(comp_id)
+        flash("Kvalvinnare sparade och poäng omräknade!", "success")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating qualifying: {e}")
+        flash(f"Fel vid uppdatering av kval: {str(e)}", "error")
+
     return redirect(redirect_url)
 
 
@@ -19414,12 +19658,19 @@ def admin_get_out_status(competition_id):
             return jsonify({"error": "competition_not_found"}), 404
 
         is_wsx = (comp.series or "") == "WSX"
+        is_mxgp = (comp.series or "").upper() == "MXGP"
         if is_wsx:
             # Same tippa roster as race picks — no orphan/wrong-class duplicates
             riders = (
                 wsx_roster_query("wsx_sx1").order_by(Rider.rider_number.asc()).all()
                 + wsx_roster_query("wsx_sx2").order_by(Rider.rider_number.asc()).all()
             )
+        elif is_mxgp:
+            from mxgp_fantasy import mxgp_roster_query
+
+            riders = mxgp_roster_query().order_by(
+                Rider.class_name.asc(), Rider.rider_number.asc()
+            ).all()
         else:
             riders = (
                 db.session.query(Rider)
@@ -19427,7 +19678,7 @@ def admin_get_out_status(competition_id):
                 .order_by(Rider.class_name.desc(), Rider.rider_number.asc())
                 .all()
             )
-        print(f"DEBUG: Found {len(riders)} riders (wsx={is_wsx})")
+        print(f"DEBUG: Found {len(riders)} riders (wsx={is_wsx}, mxgp={is_mxgp})")
 
         # out set for this competition
         out_rows = (
@@ -19441,7 +19692,7 @@ def admin_get_out_status(competition_id):
         out_ids = {rid for (rid,) in out_rows}
 
         # Map orphan OUT rows (wrong rider_id) onto tippa roster by name
-        if is_wsx and out_ids:
+        if (is_wsx or is_mxgp) and out_ids:
             by_name = {(r.name or "").strip().lower(): r.id for r in riders}
             orphan_ids = out_ids - {r.id for r in riders}
             for oid in orphan_ids:
@@ -20927,7 +21178,9 @@ def _build_race_results_detail(
     picks_250: list[dict] = []
     other_lines: list[dict] = []
     race_points = 0
-    is_wsx = bool(comp and (getattr(comp, "series", None) or "").upper() == "WSX")
+    series_u = (getattr(comp, "series", None) or "").upper() if comp else ""
+    is_wsx = series_u == "WSX"
+    is_mxgp = series_u == "MXGP"
 
     for p in picks:
         rider = Rider.query.get(p.rider_id)
@@ -20972,9 +21225,9 @@ def _build_race_results_detail(
             "diff": int(diff),
             "hint": hint,
         }
-        if bucket_cls in ("450cc", "wsx_sx1", "sx1"):
+        if bucket_cls in ("450cc", "wsx_sx1", "sx1", "mxgp"):
             picks_450.append(row)
-        elif bucket_cls in ("250cc", "wsx_sx2", "sx2"):
+        elif bucket_cls in ("250cc", "wsx_sx2", "sx2", "mx2"):
             picks_250.append(row)
         else:
             other_lines.append(row)
@@ -21009,6 +21262,8 @@ def _build_race_results_detail(
         rider_name = rider.name if rider else f"Förare #{hp.rider_id}"
         if is_wsx:
             label = "SX1" if bucket == "450cc" else "SX2" if bucket == "250cc" else (hp.class_name or "Holeshot")
+        elif is_mxgp:
+            label = "MXGP" if bucket == "450cc" else "MX2" if bucket == "250cc" else (hp.class_name or "Holeshot")
         else:
             label = "450cc" if bucket == "450cc" else "250cc" if bucket == "250cc" else (hp.class_name or "Holeshot")
 
@@ -23336,7 +23591,7 @@ def get_competitions_for_import():
         series_filter = None
         if series_raw == "AMA":
             series_filter = "AMA"
-        elif series_raw in ("WSX", "SX", "MX", "SMX"):
+        elif series_raw in ("WSX", "SX", "MX", "SMX", "MXGP"):
             series_filter = series_raw
 
         year_raw = (request.args.get("year") or "").strip().lower()
