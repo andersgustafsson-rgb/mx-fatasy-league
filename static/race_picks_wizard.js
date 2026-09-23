@@ -364,7 +364,7 @@
     const back = $('wizard-btn-back');
     const editPicks = $('wizard-btn-edit-picks');
     const label = $('wizard-step-label');
-    const complete = isPicksFullyComplete();
+    const complete = isPicksFullyComplete() || !!cfg.picksComplete;
 
     const onCompleteOverview =
       currentStep === 3 && complete && step3ShowingSummary;
@@ -397,9 +397,11 @@
     if (label) {
       if (isEditWalkback) {
         if (currentStep === 3) {
-          label.textContent = cfg.isWSX
-            ? 'Redigera holeshot'
-            : 'Redigera holeshot & wildcard';
+          label.textContent = cfg.isMXGP
+            ? (isEn() ? 'Edit holeshot & qualifying' : 'Redigera holeshot & kval')
+            : cfg.isWSX || cfg.skipsWildcard
+            ? (isEn() ? 'Edit holeshot' : 'Redigera holeshot')
+            : (isEn() ? 'Edit holeshot & wildcard' : 'Redigera holeshot & wildcard');
         } else if (currentStep === 2) {
           label.textContent = `Redigera ${cfg.label250}`;
         } else {
@@ -861,11 +863,11 @@
   function extraQualifyingHtml(classKey, label) {
     const rider = getQualifyingRider(classKey);
     const empty = !rider;
-    return `<div class="wizard-summary-extra wizard-summary-extra--holeshot${empty ? ' wizard-summary-extra--empty' : ''}">
+    return `<div class="wizard-summary-extra wizard-summary-extra--qual${empty ? ' wizard-summary-extra--empty' : ''}">
       <span class="wizard-summary-extra__icon">${mxIcon('flag')}</span>
       ${rider ? portraitHtml(rider) : '<div class="wizard-summary-portrait"></div>'}
       <div class="wizard-summary-extra__body">
-        <div class="wizard-summary-extra__label">Kval ${escapeHtml(label)}</div>
+        <div class="wizard-summary-extra__label">${isEn() ? 'Qualifying' : 'Kval picks'} · ${escapeHtml(label)}</div>
         <div class="wizard-summary-extra__name">${rider ? `${riderNumLabel(rider.rider_number)} ${escapeHtml(rider.name)}`.trim() : (isEn() ? 'Not selected' : 'Ej vald')}</div>
       </div>
     </div>`;
@@ -946,7 +948,9 @@
       if (onOverview) {
         h2.textContent = isEn() ? 'Overview — your picks' : 'Översikt — dina val';
       } else if (isEditWalkback) {
-        h2.textContent = cfg.isWSX
+        h2.textContent = cfg.isMXGP
+          ? (isEn() ? 'Edit holeshot & qualifying' : 'Redigera holeshot & kval')
+          : cfg.isWSX || cfg.skipsWildcard
           ? (isEn() ? 'Edit holeshot' : 'Redigera holeshot')
           : (isEn() ? 'Edit holeshot & wildcard' : 'Redigera holeshot & wildcard');
       } else {
@@ -980,15 +984,19 @@
             : 'Ändra din topp 6, fortsätt sedan till nästa klass.';
         } else if (currentStep === 2) {
           heroP.textContent = isEn()
-            ? 'Adjust your top 6, then continue to holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? '.' : ' & wildcard.')
-            : 'Justera din topp 6, fortsätt sedan till holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? '.' : ' & wildcard.');
+            ? 'Adjust your top 6, then continue to holeshot' + (cfg.isMXGP ? ' & qualifying.' : ((cfg.skipsWildcard || cfg.isWSX) ? '.' : ' & wildcard.'))
+            : 'Justera din topp 6, fortsätt sedan till holeshot' + (cfg.isMXGP ? ' & kval.' : ((cfg.skipsWildcard || cfg.isWSX) ? '.' : ' & wildcard.'));
         } else {
           heroP.textContent = isEn()
-            ? 'Adjust holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? ', then save.' : ' & wildcard, then save.')
-            : 'Justera holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? ', spara sedan.' : ' & wildcard, spara sedan.');
+            ? 'Adjust holeshot' + (cfg.isMXGP ? ' & qualifying, then save.' : ((cfg.skipsWildcard || cfg.isWSX) ? ', then save.' : ' & wildcard, then save.'))
+            : 'Justera holeshot' + (cfg.isMXGP ? ' & kval, spara sedan.' : ((cfg.skipsWildcard || cfg.isWSX) ? ', spara sedan.' : ' & wildcard, spara sedan.'));
         }
       } else {
-        heroP.textContent = cfg.isWSX
+        heroP.textContent = cfg.isMXGP
+          ? (isEn()
+              ? 'Holeshot Race 1 + tip Saturday qualifying winners in MXGP and MX2.'
+              : 'Holeshot Race 1 + tippa lördagens kvalvinnare i MXGP och MX2.')
+          : cfg.isWSX
           ? (isEn() ? 'Who takes the first turn in SX1 and SX2?' : 'Vem tar första kurvan i SX1 och SX2?')
           : (isEn()
               ? 'Holeshot + spin a wildcard position (10–20) and pick a 450 rider.'
@@ -1170,6 +1178,18 @@
     if (!root) return;
 
     cfg = options || {};
+    // Infer series flags (covers stale HTML caches that omit isMXGP/skipsWildcard)
+    cfg.isMXGP = !!(
+      cfg.isMXGP ||
+      cfg.class450 === 'mxgp' ||
+      String(cfg.label450 || '').toUpperCase() === 'MXGP'
+    );
+    cfg.isWSX = !!(
+      cfg.isWSX ||
+      cfg.class450 === 'wsx_sx1' ||
+      String(cfg.label450 || '').toUpperCase() === 'SX1'
+    );
+    cfg.skipsWildcard = !!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP);
     totalSteps = 3;
 
     bindNav();

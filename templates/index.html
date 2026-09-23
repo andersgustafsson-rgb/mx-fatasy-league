@@ -4736,6 +4736,24 @@
       </div>`;
     }
 
+    function _homeQualifyingHtml(qual, label) {
+      const empty = qual ? '' : ' wizard-summary-extra--empty';
+      const portrait = qual
+        ? `<img class="wizard-summary-portrait" alt="" loading="eager" decoding="async" data-rider-id="${qual.rider_id}">`
+        : '<div class="wizard-summary-portrait"></div>';
+      const isEnQ = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+      const name = qual ? `#${_escHome(qual.rider_number)} ${_escHome(qual.rider_name)}` : (isEnQ ? 'Not selected' : 'Ej vald');
+      const flag = typeof mxIcon === 'function' ? mxIcon('flag') : '';
+      return `<div class="wizard-summary-extra wizard-summary-extra--qual${empty}">
+        <span class="wizard-summary-extra__icon">${flag}</span>
+        ${portrait}
+        <div class="wizard-summary-extra__body">
+          <div class="wizard-summary-extra__label">${isEnQ ? 'Qualifying' : 'Kval picks'} · ${_escHome(label)}</div>
+          <div class="wizard-summary-extra__name">${name}</div>
+        </div>
+      </div>`;
+    }
+
     function _homeMxonNationSlotHtml(pick, pos) {
       const podium = pick && pos <= 3 ? ` wizard-summary-slot--p${pos}` : '';
       const empty = pick ? '' : ' wizard-summary-slot--empty';
@@ -4884,9 +4902,12 @@
       const hs250 = myPicks?.holeshot_250 || null;
       const skipsWildcard = isWSX || isMXGP;
       const wildcard = (!skipsWildcard && myPicks?.wildcard) ? myPicks.wildcard : null;
+      const qm = myPicks?.qualifying_picks || {};
+      const qualMxgp = isMXGP ? (myPicks?.qualifying_mxgp || null) : null;
+      const qualMx2 = isMXGP ? (myPicks?.qualifying_mx2 || null) : null;
       const complete = picksStatus === 'has_picks';
       const partial = picksStatus === 'partial_picks';
-      const hasAny = top6.length > 0 || hs450 || hs250 || wildcard;
+      const hasAny = top6.length > 0 || hs450 || hs250 || wildcard || qualMxgp || qualMx2;
 
       if (!hasAny) {
         panel.innerHTML = `
@@ -4909,7 +4930,9 @@
       }
 
       let extras = _homeHoleshotHtml(hs450, label450) + _homeHoleshotHtml(hs250, label250);
-      if (!skipsWildcard) {
+      if (isMXGP) {
+        extras += _homeQualifyingHtml(qualMxgp, 'MXGP') + _homeQualifyingHtml(qualMx2, 'MX2');
+      } else if (!skipsWildcard) {
         const empty = wildcard ? '' : ' wizard-summary-extra--empty';
         const target = typeof mxIcon === 'function' ? mxIcon('target') : '';
         const portrait = wildcard

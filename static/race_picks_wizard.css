@@ -884,6 +884,10 @@
   grid-column: 1 / -1;
 }
 
+.wizard-summary-extra--qual {
+  border-color: rgba(251, 191, 36, 0.28);
+}
+
 .wizard-summary-extra__icon {
   font-size: 1.1rem;
   flex-shrink: 0;
@@ -912,6 +916,7 @@
 
 .wizard-summary-extra--holeshot .wizard-summary-extra__label { color: #6ee7b7; }
 .wizard-summary-extra--wildcard .wizard-summary-extra__label { color: #67e8f9; }
+.wizard-summary-extra--qual .wizard-summary-extra__label { color: #fbbf24; }
 
 .wizard-summary-extra__name {
   font-size: 0.8rem;
