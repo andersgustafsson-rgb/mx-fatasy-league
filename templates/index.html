@@ -932,11 +932,12 @@
       background-repeat: no-repeat;
     }
     .bg-wsx {
-      background-image: url('/static/images/wsx_hero.jpg');
-      background-size: cover;
-      background-position: center;
+      background-image: url('/static/images/wsx_hero.jpg') !important;
+      background-size: cover !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      background-color: #0f172a !important;
       min-height: 180px;
-      background-repeat: no-repeat;
     }
     .bg-mxon {
       background-image: url('/static/images/mxon/ernee_aerial.jpg') !important;
@@ -947,11 +948,11 @@
       min-height: 180px;
     }
     .bg-mxgp {
-      background-image: url('/static/trackmaps/MXGP/Uddevalla.jpg');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-color: #0f172a;
+      background-image: url('/static/images/mxgp_hero.jpg') !important;
+      background-size: cover !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      background-color: #0f172a !important;
       min-height: 180px;
     }
     .home-series-card.bg-mxon:hover,
@@ -960,7 +961,7 @@
     .home-series-card.bg-supercross:hover,
     .home-series-card.bg-motocross:hover,
     .home-series-card.bg-smx:hover {
-      background-color: transparent;
+      background-color: transparent !important;
     }
     
     /* Racing Logo Styling */
@@ -2034,7 +2035,8 @@
       position: relative;
       overflow: hidden;
       background-color: #222e42;
-      transition: background 0.15s;
+      /* Do not transition `background` — it wipes background-image on hover in some browsers */
+      transition: outline-color 0.15s, box-shadow 0.15s;
     }
     .home-series-card__scrim {
       position: absolute;
@@ -2051,10 +2053,10 @@
     .home-series-card--clickable {
       cursor: pointer;
       text-decoration: none;
-      transition: background 0.15s, outline-color 0.15s, box-shadow 0.15s;
+      transition: outline-color 0.15s, box-shadow 0.15s;
     }
     .home-series-card--clickable:hover {
-      background-color: #2a3850;
+      /* Keep series photo; only brighten via scrim (not background-color) */
     }
     .home-series-card--clickable:hover .home-series-card__scrim {
       background: linear-gradient(
@@ -5975,11 +5977,11 @@
           // Inline fallback so hero shows even if class fails
           let inlineBg = '';
           if (backgroundClass === 'bg-wsx') {
-            inlineBg = 'background-image: url("/static/images/wsx_hero.jpg"); background-size: cover; background-position: center;';
+            inlineBg = 'background-image: url("/static/images/wsx_hero.jpg") !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; background-color: transparent !important;';
           } else if (backgroundClass === 'bg-mxon') {
-            inlineBg = 'background-image: url(\"/static/images/mxon/ernee_aerial.jpg\"); background-size: cover; background-position: center 40%; background-repeat: no-repeat; background-color: transparent;';
+            inlineBg = 'background-image: url(\"/static/images/mxon/ernee_aerial.jpg\") !important; background-size: cover !important; background-position: center 40% !important; background-repeat: no-repeat !important; background-color: transparent !important;';
           } else if (backgroundClass === 'bg-mxgp') {
-            inlineBg = 'background-image: url("/static/trackmaps/MXGP/Uddevalla.jpg"); background-size: cover; background-position: center; background-repeat: no-repeat;';
+            inlineBg = 'background-image: url("/static/images/mxgp_hero.jpg") !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; background-color: transparent !important;';
           }
 
           const hintText = isSelected
@@ -6034,23 +6036,21 @@
             el.style.setProperty('background-size', 'cover', 'important');
             el.style.setProperty('background-position', 'center 40%', 'important');
             el.style.setProperty('background-repeat', 'no-repeat', 'important');
-            el.style.backgroundColor = 'transparent';
+            el.style.setProperty('background-color', 'transparent', 'important');
           });
           seriesContainer.querySelectorAll('.bg-wsx').forEach((el) => {
-            const cs = getComputedStyle(el).backgroundImage;
-            if (!cs || cs === 'none') {
-              el.style.backgroundImage = 'url("/static/images/wsx_hero.jpg")';
-              el.style.backgroundSize = 'cover';
-              el.style.backgroundPosition = 'center';
-            }
+            el.style.setProperty('background-image', 'url("/static/images/wsx_hero.jpg")', 'important');
+            el.style.setProperty('background-size', 'cover', 'important');
+            el.style.setProperty('background-position', 'center', 'important');
+            el.style.setProperty('background-repeat', 'no-repeat', 'important');
+            el.style.setProperty('background-color', 'transparent', 'important');
           });
           seriesContainer.querySelectorAll('.bg-mxgp').forEach((el) => {
-            const cs = getComputedStyle(el).backgroundImage;
-            if (!cs || cs === 'none') {
-              el.style.backgroundImage = 'url("/static/trackmaps/MXGP/Uddevalla.jpg")';
-              el.style.backgroundSize = 'cover';
-              el.style.backgroundPosition = 'center';
-            }
+            el.style.setProperty('background-image', 'url("/static/images/mxgp_hero.jpg")', 'important');
+            el.style.setProperty('background-size', 'cover', 'important');
+            el.style.setProperty('background-position', 'center', 'important');
+            el.style.setProperty('background-repeat', 'no-repeat', 'important');
+            el.style.setProperty('background-color', 'transparent', 'important');
           });
         } catch (bgErr) {
           console.warn('series card bg force failed', bgErr);
