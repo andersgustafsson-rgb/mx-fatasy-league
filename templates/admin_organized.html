@@ -183,6 +183,97 @@
             font-family: "Barlow Condensed", sans-serif; letter-spacing: 0.02em;
             text-shadow: none !important;
         }
+
+        .ap-hub-head { margin-bottom: 1.1rem; }
+        .ap-hub-head h2 {
+            margin: 0;
+            font-family: "Barlow Condensed", sans-serif;
+            font-weight: 800;
+            font-size: clamp(1.45rem, 3vw, 1.85rem);
+            letter-spacing: 0.02em;
+            color: #f8fafc;
+        }
+        .ap-hub-head p {
+            margin: 0.35rem 0 0;
+            color: var(--ap-muted);
+            font-size: 0.95rem;
+        }
+        .ap-hub-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.85rem;
+        }
+        @media (min-width: 720px) {
+            .ap-hub-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .ap-hub-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            padding: 1.15rem 1.2rem 1.2rem;
+            border: 1px solid var(--ap-line);
+            border-radius: 0.85rem;
+            background: rgba(2, 6, 23, 0.45);
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .ap-hub-card:hover {
+            border-color: rgba(34, 211, 238, 0.35);
+            background: rgba(15, 23, 42, 0.65);
+        }
+        .ap-hub-card__eyebrow {
+            margin: 0;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #67e8f9;
+        }
+        .ap-hub-card__title {
+            margin: 0.2rem 0 0;
+            font-family: "Barlow Condensed", sans-serif;
+            font-weight: 800;
+            font-size: 1.45rem;
+            letter-spacing: 0.02em;
+            color: #f8fafc;
+            line-height: 1.1;
+        }
+        .ap-hub-card__desc {
+            margin: 0;
+            color: var(--ap-muted);
+            font-size: 0.92rem;
+            line-height: 1.45;
+            flex: 1;
+        }
+        .ap-hub-card__actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+            margin-top: 0.25rem;
+        }
+        .ap-hub-card .ap-btn--primary {
+            padding: 0.6rem 1.05rem;
+        }
+        .ap-hub-advanced {
+            margin-top: 0.85rem;
+            border: 1px solid var(--ap-line);
+            border-radius: 0.75rem;
+            background: rgba(2, 6, 23, 0.3);
+        }
+        .ap-hub-advanced > summary {
+            cursor: pointer;
+            list-style: none;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--ap-muted);
+        }
+        .ap-hub-advanced > summary::-webkit-details-marker { display: none; }
+        .ap-hub-advanced[open] > summary {
+            color: #cbd5e1;
+            border-bottom: 1px solid var(--ap-line);
+        }
+        .ap-hub-advanced-body { padding: 0.85rem 1rem 1rem; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -1099,52 +1190,56 @@
         <!-- Rider & Competition Management Section -->
         <div id="rider-competition-management" class="section-panel hidden">
             <div class="section-card rounded-lg p-6 mb-6">
-                <h2 class="text-2xl font-bold text-cyan-400 mb-4">👥 Rider & Competition Management</h2>
-                
-                <!-- Rider Management -->
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold text-white mb-3">👥 Förare</h3>
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <p class="text-gray-300 mb-3">Lägg till och redigera förare (250/450), sök, SMX-nummer och MX-klassbyte. Resultat importeras under <strong>SMX</strong>.</p>
-                        <a href="/rider_management" class="btn-primary px-4 py-2 rounded-lg inline-block">
-                            👥 Hantera förare
-                        </a>
-                        <div class="mt-4 pt-4 border-t border-gray-700">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <button id="racerx-portraits-btn" onclick="adminImportRacerxPortraits()" class="btn-warning px-4 py-2 rounded-lg">
-                                    🖼️ Importera RacerX-porträtt (server)
-                                </button>
-                                <span id="racerx-portraits-status" class="text-sm text-gray-300"></span>
-                            </div>
-                            <p class="text-xs text-gray-400 mt-2">
-                                Sätter <code class="text-gray-200">Rider.image_url</code> till RacerX CDN-länk för förare som saknar bild (ingen base64, ingen nedladdning).
-                            </p>
-                        </div>
-                    </div>
+                <div class="ap-hub-head">
+                    <h2>Förare &amp; tävlingar</h2>
+                    <p>Roster, schema och tider — öppna verktygen du behöver.</p>
                 </div>
 
-                <!-- Competition Management -->
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold text-white mb-3">🏆 Competition Management</h3>
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <h4 class="text-lg font-semibold text-white mb-2">Create Competition</h4>
-                                <p class="text-gray-300 mb-3">Create new competitions and manage existing ones.</p>
-                                <a href="/competition_management" class="btn-primary px-4 py-2 rounded-lg">
-                                    ➕ Create Competition
-                                </a>
-                            </div>
-                            <div>
-                                <h4 class="text-lg font-semibold text-white mb-2">Manage Competitions</h4>
-                                <p class="text-gray-300 mb-3">Edit competitions, manage riders, and set results.</p>
-                                <a href="/competition_management" class="btn-primary px-4 py-2 rounded-lg">
-                                    🏆 Manage Competitions
-                                </a>
-                            </div>
+                <div class="ap-hub-grid">
+                    <article class="ap-hub-card">
+                        <div>
+                            <p class="ap-hub-card__eyebrow">Roster</p>
+                            <h3 class="ap-hub-card__title">Förare</h3>
+                        </div>
+                        <p class="ap-hub-card__desc">
+                            Lägg till och redigera förare (250/450), sök, SMX-nummer och MX-klassbyte.
+                            Resultat importeras under fliken <strong class="text-slate-200">SMX</strong>.
+                        </p>
+                        <div class="ap-hub-card__actions">
+                            <a href="/rider_management" class="ap-btn ap-btn--primary">Öppna förare</a>
+                        </div>
+                    </article>
+
+                    <article class="ap-hub-card">
+                        <div>
+                            <p class="ap-hub-card__eyebrow">Schema</p>
+                            <h3 class="ap-hub-card__title">Tävlingar</h3>
+                        </div>
+                        <p class="ap-hub-card__desc">
+                            Skapa och redigera tävlingar, tidszon, race start, quali-lås och cancel av event
+                            (SX · MX · SMX · WSX).
+                        </p>
+                        <div class="ap-hub-card__actions">
+                            <a href="/competition_management" class="ap-btn ap-btn--primary">Öppna tävlingar</a>
+                        </div>
+                    </article>
+                </div>
+
+                <details class="ap-hub-advanced">
+                    <summary>Avancerat · RacerX-porträtt</summary>
+                    <div class="ap-hub-advanced-body">
+                        <p class="text-sm text-gray-400 mb-3">
+                            Sätter <code class="text-gray-300">Rider.image_url</code> till RacerX CDN-länk för förare som saknar bild
+                            (ingen base64, ingen nedladdning).
+                        </p>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" id="racerx-portraits-btn" onclick="adminImportRacerxPortraits()" class="ap-btn ap-btn--sm">
+                                Importera porträtt
+                            </button>
+                            <span id="racerx-portraits-status" class="text-sm text-gray-400"></span>
                         </div>
                     </div>
-                </div>
+                </details>
             </div>
         </div>
 
