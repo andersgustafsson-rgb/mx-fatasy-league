@@ -121,6 +121,110 @@
     .nav-chip {
       scroll-margin-top: 5.5rem;
     }
+    .rr-picker {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    @media (min-width: 640px) {
+      .rr-picker { gap: 0.85rem; }
+    }
+    .rr-series-tabs {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 0.4rem;
+      overflow-x: auto;
+      padding-bottom: 0.15rem;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+    .rr-series-tab {
+      flex: 0 0 auto;
+      border-radius: 0.45rem;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(30, 41, 59, 0.85);
+      color: #cbd5e1;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 0.45rem 0.7rem;
+      text-decoration: none;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .rr-series-tab:hover {
+      border-color: rgba(34, 211, 238, 0.45);
+      color: #e2e8f0;
+      background: rgba(51, 65, 85, 0.95);
+    }
+    .rr-series-tab.is-active {
+      border-color: rgba(34, 211, 238, 0.75);
+      background: rgba(8, 47, 73, 0.95);
+      color: #a5f3fc;
+      box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.25);
+    }
+    .rr-race-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+      align-items: end;
+    }
+    @media (min-width: 640px) {
+      .rr-race-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.75rem;
+        align-items: end;
+      }
+    }
+    .rr-race-label {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 0.35rem;
+    }
+    .rr-race-select {
+      width: 100%;
+      appearance: none;
+      -webkit-appearance: none;
+      border-radius: 0.55rem;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background:
+        linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98))
+          padding-box,
+        linear-gradient(135deg, rgba(34, 211, 238, 0.15), transparent 55%) border-box;
+      color: #f1f5f9;
+      font-size: 0.9rem;
+      font-weight: 600;
+      line-height: 1.3;
+      padding: 0.7rem 2.4rem 0.7rem 0.9rem;
+      background-image:
+        linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat, no-repeat;
+      background-position: center, right 0.85rem center;
+      background-size: auto, 1rem;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+    }
+    .rr-race-select:focus {
+      outline: none;
+      border-color: rgba(34, 211, 238, 0.7);
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18);
+    }
+    .rr-race-select option {
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    .rr-race-meta {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      padding-bottom: 0.35rem;
+      white-space: nowrap;
+    }
     details.race-details > summary {
       cursor: pointer;
       list-style: none;
@@ -383,30 +487,54 @@
     </div>
   {% endmacro %}
 
-  {% set panel_default = latest_competition_id if latest_competition_id else (competitions[0].id if competitions else none) %}
+  {% set panel_default = latest_competition_id if latest_competition_id else (competitions[-1].id if competitions else none) %}
   {% set show_sx_standings = series_filter in ('', 'AMA', 'SX') %}
   {% set show_mx_standings = series_filter in ('', 'AMA', 'MX') %}
   {% set show_smx_standings = series_filter in ('', 'AMA', 'SMX') and championship_totals is defined and championship_totals.get('show_smx_section') %}
   {% set show_smx_playoffs = series_filter in ('', 'AMA', 'SMX') and championship_totals is defined and championship_totals.get('show_smx_playoffs_section') %}
   {% set show_wsx_standings = series_filter in ('', 'AMA', 'WSX') %}
-  {% set standings_primary = series_filter in ('SX', 'MX', 'SMX', 'WSX') %}
+  {% set standings_primary = series_filter in ('SX', 'MX', 'SMX', 'WSX', 'MXGP') %}
+  {% set competitions_newest_first = competitions|reverse|list %}
 
   <div class="mx-auto w-full max-w-[min(100%,90rem)] px-4 sm:px-8 lg:px-10 pb-16">
-    <!-- Snabbnavigering — nyaste först -->
-    <nav class="sticky top-0 z-30 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 bg-slate-900/85 backdrop-blur-md border-b border-slate-600/50 mb-6">
-      <p class="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wide">Välj tävling · nyaste först</p>
-      <div class="flex flex-nowrap sm:flex-wrap gap-2 overflow-x-auto pb-1 sm:pb-0 max-h-none">
-        {% for c in competitions|reverse %}
-          <a href="#race-{{ c.id }}"
-             data-comp-id="{{ c.id }}"
-             class="race-jump-link nav-chip shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all
-                    {% if panel_default is not none and c.id == panel_default %}ring-2 ring-cyan-400 ring-offset-2 ring-offset-slate-900{% endif %}
-                    {% if c.status == 'completed' %}bg-emerald-900/80 text-emerald-200 border border-emerald-600/50 hover:bg-emerald-800/80
-                    {% elif c.status == 'missed' %}bg-red-900/60 text-red-200 border border-red-600/40 hover:bg-red-800/60
-                    {% else %}bg-slate-700/80 text-slate-200 border border-slate-500/50 hover:bg-slate-600{% endif %}">
-            <span class="truncate max-w-[9rem] sm:max-w-[12rem]">{{ c.name }}</span>
-          </a>
-        {% endfor %}
+    <!-- Serie + race picker (ersätter pill-röran) -->
+    <nav class="sticky top-0 z-30 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 bg-slate-950/90 backdrop-blur-md border-b border-slate-600/50 mb-6" aria-label="Välj serie och tävling">
+      <div class="rr-picker max-w-[min(100%,90rem)] mx-auto">
+        <div class="rr-series-tabs" role="tablist" aria-label="Serie">
+          {% set tabs = [
+            ('', 'Alla'),
+            ('SX', 'AMA Supercross'),
+            ('MX', 'AMA Pro Motocross'),
+            ('SMX', 'SMX'),
+            ('WSX', 'WSX'),
+            ('MXGP', 'MXGP'),
+          ] %}
+          {% for code, label in tabs %}
+            <a href="{{ url_for('race_results_page', series=code) if code else url_for('race_results_page') }}"
+               class="rr-series-tab {% if series_filter == code %}is-active{% endif %}"
+               {% if series_filter == code %}aria-current="page"{% endif %}>{{ label }}</a>
+          {% endfor %}
+        </div>
+        <div class="rr-race-row">
+          <div class="min-w-0">
+            <label class="rr-race-label" for="rr-race-select">Tävling · nyaste först</label>
+            <select id="rr-race-select" class="rr-race-select" {% if not competitions %}disabled{% endif %}>
+              {% if not competitions %}
+                <option value="">Inga tävlingar i den här serien</option>
+              {% else %}
+                {% for c in competitions_newest_first %}
+                  <option value="{{ c.id }}"
+                          data-date="{{ c.event_date or '' }}"
+                          data-status="{{ c.status_text or c.status or '' }}"
+                          {% if panel_default is not none and c.id == panel_default %}selected{% endif %}>
+                    {{ c.name }}{% if c.event_date %} · {{ c.event_date }}{% endif %}
+                  </option>
+                {% endfor %}
+              {% endif %}
+            </select>
+          </div>
+          <div id="rr-race-meta" class="rr-race-meta hidden sm:block" aria-live="polite"></div>
+        </div>
       </div>
     </nav>
 
@@ -417,10 +545,15 @@
       <div class="relative p-5 sm:p-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight mb-1 drop-shadow-lg">
-            {% if series_filter == 'WSX' %}WSX race results{% elif series_filter in ('SX','MX','SMX') %}{{ series_filter }} race results{% else %}Race results{% endif %}
+            {% if series_filter == 'WSX' %}WSX race results
+            {% elif series_filter == 'SX' %}AMA Supercross results
+            {% elif series_filter == 'MX' %}AMA Pro Motocross results
+            {% elif series_filter == 'SMX' %}SMX race results
+            {% elif series_filter == 'MXGP' %}MXGP race results
+            {% else %}Race results{% endif %}
           </h1>
           <p class="text-blue-100/90 text-sm max-w-xl">
-            Senaste race med resultat visas först. Byt tävling i menyn ovan.
+            Välj serie ovan, sedan tävling i listan. Senaste med resultat öppnas först.
           </p>
         </div>
         <a href="{{ url_for('index') }}"
@@ -454,24 +587,23 @@
           {% if results.results or results.holeshots %}
             {% if comp.series == 'WSX' %}
               {% set results450 = results.results | selectattr('class_name', 'equalto', 'wsx_sx1') | list %}
+              {% set label450 = 'WSX SX1' %}
+            {% elif (comp.series or '')|upper == 'MXGP' %}
+              {% set results450 = results.results | selectattr('class_name', 'equalto', 'mxgp') | list %}
+              {% set label450 = 'MXGP' %}
             {% else %}
               {% set results450 = results.results | selectattr('class_name', 'equalto', '450cc') | list %}
+              {% set label450 = '450cc' %}
             {% endif %}
             {% if results450 %}
               <div class="mb-6 pt-4">
-                {% if comp.series == 'WSX' %}
                   <h3 class="text-base font-bold mb-3 text-slate-200 flex items-center gap-2">
-                    <span class="text-cyan-400">◆</span> WSX SX1 <span class="text-slate-500 font-normal text-sm">({{ results450|length }} i databasen)</span>
+                    <span class="text-cyan-400">◆</span> {{ label450 }} <span class="text-slate-500 font-normal text-sm">({{ results450|length }} i databasen)</span>
                   </h3>
-                {% else %}
-                  <h3 class="text-base font-bold mb-3 text-slate-200 flex items-center gap-2">
-                    <span class="text-cyan-400">◆</span> 450cc <span class="text-slate-500 font-normal text-sm">({{ results450|length }} i databasen)</span>
-                  </h3>
-                {% endif %}
                 {% if comp.series == 'WSX' %}
-                  {{ podium_row('WSX SX1', results450[:6]) }}
+                  {{ podium_row(label450, results450[:6]) }}
                 {% else %}
-                  {{ podium_row('450cc', results450[:20]) }}
+                  {{ podium_row(label450, results450[:20]) }}
                 {% endif %}
                 <details class="race-details group bg-slate-900/40 rounded-lg border border-slate-600/50">
                   <summary class="px-4 py-3 text-sm font-semibold text-cyan-300 hover:bg-slate-700/30 rounded-lg transition-colors">
@@ -547,24 +679,23 @@
 
             {% if comp.series == 'WSX' %}
               {% set results250 = results.results | selectattr('class_name', 'equalto', 'wsx_sx2') | list %}
+              {% set label250 = 'WSX SX2' %}
+            {% elif (comp.series or '')|upper == 'MXGP' %}
+              {% set results250 = results.results | selectattr('class_name', 'equalto', 'mx2') | list %}
+              {% set label250 = 'MX2' %}
             {% else %}
               {% set results250 = results.results | selectattr('class_name', 'equalto', '250cc') | list %}
+              {% set label250 = '250cc' %}
             {% endif %}
             {% if results250 %}
               <div class="mb-6">
-                {% if comp.series == 'WSX' %}
                   <h3 class="text-base font-bold mb-3 text-slate-200 flex items-center gap-2">
-                    <span class="text-orange-400">◆</span> WSX SX2 <span class="text-slate-500 font-normal text-sm">({{ results250|length }})</span>
+                    <span class="text-orange-400">◆</span> {{ label250 }} <span class="text-slate-500 font-normal text-sm">({{ results250|length }})</span>
                   </h3>
-                {% else %}
-                  <h3 class="text-base font-bold mb-3 text-slate-200 flex items-center gap-2">
-                    <span class="text-orange-400">◆</span> 250cc <span class="text-slate-500 font-normal text-sm">({{ results250|length }})</span>
-                  </h3>
-                {% endif %}
-                {{ podium_row('WSX SX2' if comp.series == 'WSX' else '250cc', results250[:6]) }}
+                {{ podium_row(label250, results250[:6] if comp.series == 'WSX' else results250[:20]) }}
                 <details class="race-details group bg-slate-900/40 rounded-lg border border-slate-600/50">
                   <summary class="px-4 py-3 text-sm font-semibold text-orange-300 hover:bg-slate-700/30 rounded-lg transition-colors">
-                    Visa full resultatlista (topp 6)
+                    Visa full resultatlista {% if comp.series == 'WSX' %}(topp 6){% else %}(topp 20){% endif %}
                   </summary>
                   <div class="overflow-x-auto rounded-lg border border-orange-600/30 mb-2">
                     <table class="w-full text-sm">
@@ -602,7 +733,13 @@
                 <h3 class="text-base font-bold mb-3 text-slate-200">{{ mx_icon('flag') }} Holeshot</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {% for holeshot in results.holeshots %}
-                    {% set display_class = 'SX1' if (comp.series == 'WSX' and holeshot.class_name == '450cc') else ('SX2' if (comp.series == 'WSX' and holeshot.class_name == '250cc') else holeshot.class_name) %}
+                    {% if comp.series == 'WSX' %}
+                      {% set display_class = 'SX1' if holeshot.class_name in ('450cc', 'wsx_sx1') else ('SX2' if holeshot.class_name in ('250cc', 'wsx_sx2') else holeshot.class_name) %}
+                    {% elif (comp.series or '')|upper == 'MXGP' %}
+                      {% set display_class = 'MXGP' if holeshot.class_name in ('450cc', 'mxgp') else ('MX2' if holeshot.class_name in ('250cc', 'mx2') else holeshot.class_name) %}
+                    {% else %}
+                      {% set display_class = holeshot.class_name %}
+                    {% endif %}
                     <div class="rounded-xl bg-gradient-to-br from-amber-900/40 to-slate-900/60 p-4 border border-amber-600/30 flex items-center gap-3">
                       <div class="shrink-0 w-11 h-11 rounded-full bg-amber-500 flex items-center justify-center text-lg shadow-lg text-slate-900">{{ mx_icon('flag', 'mx-icon--lg') }}</div>
                       <div class="shrink-0">
@@ -829,6 +966,9 @@
       if (series === "WSX") {
         if (className === "wsx_sx1") return "SX1";
         if (className === "wsx_sx2") return "SX2";
+        if (className === "mxgp") return "MXGP";
+        if (className === "mx2") return "MX2";
+        return className || "";
       }
       return className;
     }
@@ -907,14 +1047,11 @@
         panel.classList.remove('hidden');
         panel.setAttribute('aria-current', 'true');
       }
-      document.querySelectorAll('a.race-jump-link').forEach(function (a) {
-        var active = a.getAttribute('data-comp-id') === sid;
-        a.setAttribute('aria-current', active ? 'true' : 'false');
-        a.classList.toggle('ring-2', active);
-        a.classList.toggle('ring-cyan-400', active);
-        a.classList.toggle('ring-offset-2', active);
-        a.classList.toggle('ring-offset-slate-900', active);
-      });
+      var sel = document.getElementById('rr-race-select');
+      if (sel && sel.value !== sid) {
+        sel.value = sid;
+      }
+      updateRaceMeta();
       try {
         history.replaceState(null, '', '#race-' + sid);
       } catch (e) {}
@@ -924,6 +1061,20 @@
           vp.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       });
+    }
+
+    function updateRaceMeta() {
+      var sel = document.getElementById('rr-race-select');
+      var meta = document.getElementById('rr-race-meta');
+      if (!sel || !meta) return;
+      var opt = sel.options[sel.selectedIndex];
+      if (!opt || !opt.value) {
+        meta.textContent = '';
+        return;
+      }
+      var status = opt.getAttribute('data-status') || '';
+      var date = opt.getAttribute('data-date') || '';
+      meta.textContent = [status, date].filter(Boolean).join(' · ');
     }
 
     document.addEventListener("DOMContentLoaded", function () {
@@ -992,25 +1143,19 @@
       initStandingsTabs();
       initStandingsCollapse();
 
-      document.querySelectorAll('a.race-jump-link').forEach(function (a) {
-        a.addEventListener('click', function (e) {
-          e.preventDefault();
-          showRacePanel(this.getAttribute('data-comp-id'));
+      var sel = document.getElementById('rr-race-select');
+      if (sel) {
+        sel.addEventListener('change', function () {
+          if (this.value) showRacePanel(this.value);
         });
-      });
+      }
+      updateRaceMeta();
 
       var m = location.hash.match(/^#(?:race-|comp-card-)(\d+)$/);
       if (m) {
         showRacePanel(m[1]);
       } else if (defaultRaceId != null) {
-        document.querySelectorAll('a.race-jump-link').forEach(function (a) {
-          var active = a.getAttribute('data-comp-id') === String(defaultRaceId);
-          a.setAttribute('aria-current', active ? 'true' : 'false');
-          a.classList.toggle('ring-2', active);
-          a.classList.toggle('ring-cyan-400', active);
-          a.classList.toggle('ring-offset-2', active);
-          a.classList.toggle('ring-offset-slate-900', active);
-        });
+        updateRaceMeta();
       }
     });
   </script>

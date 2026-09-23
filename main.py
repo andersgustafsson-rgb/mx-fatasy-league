@@ -19338,7 +19338,7 @@ def race_results_page():
             }
 
         series_filter = (request.args.get("series") or "").strip().upper()
-        if series_filter not in ("WSX", "SX", "MX", "SMX", "AMA"):
+        if series_filter not in ("WSX", "SX", "MX", "SMX", "AMA", "MXGP", "MXON"):
             series_filter = ""
 
         competitions = Competition.query.order_by(Competition.event_date.asc()).all()
@@ -19348,8 +19348,22 @@ def race_results_page():
                 competitions = _wsx_competitions_for_year(_active_wsx_season_year())
             except Exception:
                 competitions = [c for c in competitions if (c.series or "").upper() == "WSX"]
+        elif series_filter == "MXGP":
+            try:
+                competitions = _mxgp_competitions_for_year(2027)
+                if not competitions:
+                    competitions = [
+                        c for c in Competition.query.order_by(Competition.event_date.asc()).all()
+                        if (c.series or "").upper() == "MXGP"
+                    ]
+            except Exception:
+                competitions = [c for c in competitions if (c.series or "").upper() == "MXGP"]
         elif series_filter == "AMA":
-            competitions = [c for c in competitions if (c.series or "").upper() != "WSX"]
+            competitions = [
+                c
+                for c in competitions
+                if (c.series or "").upper() not in TIPPA_ONLY_SERIES
+            ]
         elif series_filter:
             competitions = [c for c in competitions if (c.series or "").upper() == series_filter]
 
