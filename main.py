@@ -5670,17 +5670,12 @@ def api_leagues_leaderboard():
 
 
 def _user_pick_total_points(user_id: int) -> int:
-    """Total pick points (non-WSX), deduped per competition — same logic as season leaderboard."""
+    """Total pick points (AMA only), deduped per competition — same logic as season leaderboard."""
     all_scores = (
         db.session.query(CompetitionScore)
         .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
         .filter(CompetitionScore.user_id == user_id)
-        .filter(
-            db.or_(
-                Competition.series.is_(None),
-                Competition.series != "WSX",
-            )
-        )
+        .filter(ama_competition_clause())
         .all()
     )
     scores_by_comp: dict[int | None, CompetitionScore] = {}
@@ -9424,12 +9419,7 @@ def calculate_leaderboard_deltas():
                     db.session.query(CompetitionScore)
                     .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
                     .filter(CompetitionScore.user_id == user_id)
-                    .filter(
-                        db.or_(
-                            Competition.series.is_(None),
-                            Competition.series != "WSX",
-                        )
-                    )
+                    .filter(ama_competition_clause())
                     .all()
                 )
                 scores_by_comp: dict[int | None, CompetitionScore] = {}
@@ -9492,10 +9482,7 @@ def calculate_leaderboard_deltas():
         # Inga avklarade race i veckofönstret → jämför mot rank med bara äldre tävlingar (Raket/Ankare dör inte)
         previous_competitions = (
             Competition.query.filter(
-                db.or_(
-                    Competition.series.is_(None),
-                    Competition.series != "WSX",
-                ),
+                ama_competition_clause(),
                 Competition.event_date.isnot(None),
                 Competition.event_date < week_ago_date,
             )
@@ -16555,16 +16542,28 @@ def submit_results():
 
     # Check if this is a WSX competition early (needed for holeshot class labels)
     competition = Competition.query.get(comp_id)
-    is_wsx = competition and competition.series == 'WSX'
-    hs_class_450 = "wsx_sx1" if is_wsx else "450cc"
-    hs_class_250 = "wsx_sx2" if is_wsx else "250cc"
+    series_u = (getattr(competition, "series", None) or "").strip().upper() if competition else ""
+    is_wsx = series_u == "WSX"
+    is_mxgp = series_u == "MXGP"
+    if is_wsx:
+        hs_class_450, hs_class_250 = "wsx_sx1", "wsx_sx2"
+        hs_aliases_450 = ["450cc", "wsx_sx1"]
+        hs_aliases_250 = ["250cc", "wsx_sx2"]
+    elif is_mxgp:
+        hs_class_450, hs_class_250 = "mxgp", "mx2"
+        hs_aliases_450 = ["450cc", "mxgp", "wsx_sx1"]
+        hs_aliases_250 = ["250cc", "mx2", "wsx_sx2"]
+    else:
+        hs_class_450, hs_class_250 = "450cc", "250cc"
+        hs_aliases_450 = ["450cc", "wsx_sx1"]
+        hs_aliases_250 = ["250cc", "wsx_sx2"]
     
     if hs_450:
         if complement_mode:
             # Update or add holeshot
             existing_hs_450 = HoleshotResult.query.filter(
                 HoleshotResult.competition_id == comp_id,
-                HoleshotResult.class_name.in_(["450cc", "wsx_sx1"]),
+                HoleshotResult.class_name.in_(hs_aliases_450),
             ).first()
             if existing_hs_450:
                 existing_hs_450.rider_id = hs_450
@@ -16579,7 +16578,7 @@ def submit_results():
             # Update or add holeshot
             existing_hs_250 = HoleshotResult.query.filter(
                 HoleshotResult.competition_id == comp_id,
-                HoleshotResult.class_name.in_(["250cc", "wsx_sx2"]),
+                HoleshotResult.class_name.in_(hs_aliases_250),
             ).first()
             if existing_hs_250:
                 existing_hs_250.rider_id = hs_250
@@ -20850,9 +20849,9 @@ def holeshot_result_class_bucket(raw_class: str | None) -> str:
     Okända värden ger tom sträng (raden ignoreras vid uppslag).
     """
     c = (raw_class or "").strip().lower().replace(" ", "")
-    if c in ("450cc", "450", "sx450", "sx1", "wsx_sx1"):
+    if c in ("450cc", "450", "sx450", "sx1", "wsx_sx1", "mxgp"):
         return "450cc"
-    if c in ("250cc", "250", "sx250", "sx2", "wsx_sx2", "250east", "250west"):
+    if c in ("250cc", "250", "sx250", "sx2", "wsx_sx2", "250east", "250west", "mx2"):
         return "250cc"
     return ""
 
@@ -20891,13 +20890,13 @@ def holeshot_results_by_bucket(holeshots: list) -> dict[str, HoleshotResult]:
 
 def holeshot_pick_class_for_result(pick_class: str) -> str:
     """
-    HoleshotResult använder alltid class_name 450cc / 250cc.
-    Vissa picks sparades med rider.class_name (t.ex. wsx_sx1) — mappa till samma bucket som resultatraden.
+    HoleshotResult använder alltid class_name 450cc / 250cc (bucket).
+    Picks kan sparas som wsx_sx1/mxgp m.m. — mappa till samma bucket som resultatraden.
     """
     c = (pick_class or "").strip().lower().replace(" ", "")
-    if c in ("wsx_sx1", "450cc", "450", "sx450", "sx1"):
+    if c in ("wsx_sx1", "450cc", "450", "sx450", "sx1", "mxgp"):
         return "450cc"
-    if c in ("wsx_sx2", "250cc", "250", "sx250", "sx2", "250east", "250west"):
+    if c in ("wsx_sx2", "250cc", "250", "sx250", "sx2", "250east", "250west", "mx2"):
         return "250cc"
     return pick_class or ""
 
@@ -22020,8 +22019,9 @@ def calculate_scores(comp_id: int):
         if holeshot_450_correct and holeshot_250_correct:
             holeshot_points = 25
 
-        # Disable wildcard scoring for WSX competitions
-        if series_name != 'WSX':
+        series_u = (series_name or "").strip().upper()
+        # Wildcard: AMA/SMX only. WSX/MXGP tippa-only har ingen wildcard.
+        if series_u not in TIPPA_ONLY_SERIES:
             wc_pick = WildcardPick.query.filter_by(
                 user_id=user.id, competition_id=comp_id
             ).first()
@@ -22037,6 +22037,20 @@ def calculate_scores(comp_id: int):
                 )
                 if actual_wc and actual_wc.rider_id == wc_pick.rider_id:
                     wildcard_points += 15
+
+        # MXGP: qualifying winners scored into wildcard_points column (no WC on MXGP)
+        if series_u == "MXGP":
+            qual_results = {
+                (q.class_name or "").strip().lower(): q
+                for q in QualifyingResult.query.filter_by(competition_id=comp_id).all()
+            }
+            for qp in QualifyingPick.query.filter_by(
+                user_id=user.id, competition_id=comp_id
+            ).all():
+                cls = (qp.class_name or "").strip().lower()
+                actual_q = qual_results.get(cls)
+                if actual_q and actual_q.rider_id == qp.rider_id:
+                    wildcard_points += 10
 
         total_points = race_points + holeshot_points + wildcard_points
 
@@ -22618,18 +22632,11 @@ def get_user_total_points():
     
     user_id = session["user_id"]
     
-    # Calculate total points the same way as in leaderboard (excludes WSX)
-    # Join with Competition to filter out WSX series
     user_scores = (
         db.session.query(CompetitionScore)
         .join(Competition, Competition.id == CompetitionScore.competition_id)
         .filter(CompetitionScore.user_id == user_id)
-        .filter(
-            db.or_(
-                Competition.series == None,  # Include if series is null (backwards compatibility)
-                Competition.series != 'WSX'  # Exclude WSX series
-            )
-        )
+        .filter(ama_competition_clause())
         .all()
     )
     
@@ -25478,6 +25485,13 @@ def calculate_league_points(league_id, competition_id):
 def update_league_points_for_competition(competition_id):
     """Recalculate league totals after a competition is scored (avoids double-count on re-import)."""
     try:
+        comp = Competition.query.get(competition_id)
+        if comp and is_tippa_only_series(getattr(comp, "series", None)):
+            print(
+                f"ℹ️ Skipping league recalc for tippa-only competition "
+                f"{competition_id} ({comp.series})"
+            )
+            return
         _recalculate_all_league_totals()
         print(f"✅ Recalculated league points after competition {competition_id}")
     except Exception as e:
@@ -25487,16 +25501,11 @@ def update_league_points_for_competition(competition_id):
 
 
 def _recalculate_all_league_totals() -> None:
-    """Sum fair per-race league scores into League.total_points (excludes WSX)."""
+    """Sum fair per-race league scores into League.total_points (AMA only — tippa-only excluded)."""
     competitions_with_results = (
         db.session.query(Competition.id)
         .join(CompetitionScore, Competition.id == CompetitionScore.competition_id)
-        .filter(
-            db.or_(
-                Competition.series.is_(None),
-                Competition.series != "WSX",
-            )
-        )
+        .filter(ama_competition_clause())
         .distinct()
         .order_by(Competition.id.asc())
         .all()

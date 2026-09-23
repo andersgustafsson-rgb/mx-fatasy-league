@@ -119,6 +119,30 @@ MX_TRACKMAP_DIR_CANDIDATES = (
     Path("static/trackmaps/mx"),
 )
 
+# Local files under static/trackmaps/MXGP/ (venue stems; match Competition.name)
+MXGP_TRACKMAP_DIR = Path("static/trackmaps/MXGP")
+MXGP_TRACKMAP_TOKENS: dict[str, list[str]] = {
+    "MXGP of Andalucia": ["almonte"],
+    "MXGP of Argentina": ["bariloche"],
+    "MXGP of Italy": ["montevarchi"],
+    "MXGP of Sardegna": ["riola_sardo", "riolasardo"],
+    "MXGP of Trentino": ["pietramurata"],
+    "MXGP of China": ["shanghai"],
+    "MXGP of Latvia": ["kegums"],
+    "MXGP of Germany": ["teutschenthal"],
+    "MXGP of Great Britain": ["foxhills"],
+    "MXGP of Czech Republic": ["loket"],
+    "MXGP of Flanders": ["lommel"],
+    "MXGP of Sweden": ["uddevalla"],
+    "MXGP of The Netherlands": ["arnhem"],
+    "MXGP of Turkiye": ["afyon", "afyonkarahisar"],
+    "MXGP of Australia": ["darwin_hidden_valley", "darwin", "hiddenvalley"],
+    # 2026-only / confirmed venue leftovers (not on 2027 provisional calendar)
+    "MXGP of South Africa": ["johannesburg"],
+    "MXGP Admin Test GP": ["uddevalla", "lommel"],
+    # TBA / venue changed for 2027 (St Jean, Portugal TBA, Switzerland TBA) — no map yet
+}
+
 _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 
@@ -189,6 +213,14 @@ def is_smx_competition(competition) -> bool:
     return name in SMX_TRACKMAP_FILES
 
 
+def is_mxgp_competition(competition) -> bool:
+    series = (getattr(competition, "series", None) or "").strip().upper()
+    if series == "MXGP":
+        return True
+    name = (getattr(competition, "name", None) or "").strip()
+    return name in MXGP_TRACKMAP_TOKENS or name.startswith("MXGP of ")
+
+
 def resolve_smx_trackmap_urls(competition_name: str) -> List[str]:
     """Static-relative paths for SMX Playoff/Final maps (local files under trackmaps/smx/)."""
     name = (competition_name or "").strip()
@@ -198,6 +230,36 @@ def resolve_smx_trackmap_urls(competition_name: str) -> List[str]:
         if (Path("static") / rel).is_file():
             out.append(rel)
     return out
+
+
+def resolve_mxgp_trackmap_urls(competition_name: str) -> List[str]:
+    """Static-relative paths for MXGP venue maps under trackmaps/MXGP/."""
+    name = (competition_name or "").strip()
+    if not name or not MXGP_TRACKMAP_DIR.is_dir():
+        return []
+
+    tokens = list(MXGP_TRACKMAP_TOKENS.get(name) or [])
+    if not tokens:
+        # Fallback: "MXGP of Flanders" → flanders (weak) — prefer venue tokens above
+        base = name.lower().replace("mxgp of ", "").strip()
+        slug = _normalize_slug(base)
+        if slug:
+            tokens = [slug, base.replace(" ", "_")]
+
+    scored: list[tuple[str, int, str]] = []
+    rel_prefix = _rel_static_prefix(MXGP_TRACKMAP_DIR)
+    for f in MXGP_TRACKMAP_DIR.iterdir():
+        if not f.is_file() or f.suffix.lower() not in _IMAGE_EXTS:
+            continue
+        score = _score_file(f.name, tokens)
+        if score > 0:
+            scored.append((f"{rel_prefix}/{f.name}", score, f.name))
+
+    if not scored:
+        return []
+    scored.sort(key=lambda x: (-x[1], x[2]))
+    best = scored[0][1]
+    return [rel for rel, score, _ in scored if score >= best - 15]
 
 
 def is_mx_competition(competition) -> bool:
@@ -270,6 +332,10 @@ def race_background_static_url(competition) -> Optional[str]:
         return None
     name = getattr(competition, "name", None) or ""
     series = (getattr(competition, "series", None) or "").strip().upper()
+
+    if is_mxgp_competition(competition):
+        urls = resolve_mxgp_trackmap_urls(name)
+        return urls[0] if urls else None
 
     if is_mx_competition(competition):
         urls = resolve_mx_trackmap_urls(name)
@@ -414,6 +480,10 @@ def get_trackmaps_for_competition(competition) -> list:
         urls = resolve_smx_trackmap_urls(competition.name or "")
         return as_trackmap_image_objects(urls)
 
+    if is_mxgp_competition(competition):
+        urls = resolve_mxgp_trackmap_urls(competition.name or "")
+        return as_trackmap_image_objects(urls)
+
     if not is_mx_competition(competition):
         return []
 
@@ -433,6 +503,16 @@ def get_picks_good_to_know(competition) -> list[str]:
                 "250-klassen kör som en gemensam klass — ingen East/West-uppdelning under Pro Motocross.",
                 "Wildcard kan ge extra poäng om du träffar en outsider som presterar över förväntan.",
                 "Kolla vilka förare som varit starka på just den här banan tidigare.",
+                "Deadline är 2 timmar före start — spara picks i tid.",
+            ]
+        )
+        return tips
+
+    if is_mxgp_competition(competition):
+        tips.extend(
+            [
+                "MXGP: tippa topp 6 MXGP + topp 6 MX2 + holeshot Race 1 + kvalvinnare (lördag).",
+                "Ingen wildcard — fokusera på form och bana.",
                 "Deadline är 2 timmar före start — spara picks i tid.",
             ]
         )

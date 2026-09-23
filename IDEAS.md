@@ -24,7 +24,7 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 
 | # | Idé | Status | Kommentar |
 |---|-----|--------|-----------|
-| 1 | **MXGP (FIM Motocross World Championship)** | 🚧 Scaffold (admin) | Tippa-only scaffold live: homepage UC-kort, admin test-GP, MXGP+MX2 topp 6 + holeshot Race 1 + kvalvinnare (ingen WC). Publik tippa låst tills `MXGP_PUBLIC_PLAY`. Scoring/RacerX-import kvar. |
+| 1 | **MXGP (FIM Motocross World Championship)** | 🚧 Scaffold (admin) | Tippa-only: UC-kort, 2027 provisional kalender (20 GP), trackmaps i `static/trackmaps/MXGP/`, admin test-GP, MXGP+MX2 topp 6 + HS Race 1 + kval (ingen WC). Publik tippa låst tills `MXGP_PUBLIC_PLAY`. |
 | 2 | **Svenska SM (motocross)** | 💡 Idé | Nationellt SM — intressant för svensk målgrupp. Scope/klasser/kalender TBD. Bollades 17 sep 2026. |
 
 ---

@@ -59,7 +59,7 @@ _MXGP_2026_ROSTER: list[tuple[str, str, int | None, str | None, str | None]] = [
     ("Noel Zanocz", CLASS_MX2, 716, "KTM", "Van Venrooy KTM"),
 ]
 
-# Official 2026 calendar (19 GPs) — for admin/history; Sunday race day used as event_date.
+# Official 2026 calendar (19 GPs) — kept for admin/history series.
 _MXGP_2026_CALENDAR: list[tuple[str, date, str]] = [
     ("MXGP of Argentina", date(2026, 3, 8), "America/Argentina/Bariloche"),
     ("MXGP of Andalucia", date(2026, 3, 22), "Europe/Madrid"),
@@ -80,6 +80,31 @@ _MXGP_2026_CALENDAR: list[tuple[str, date, str]] = [
     ("MXGP of Turkiye", date(2026, 9, 6), "Europe/Istanbul"),
     ("MXGP of China", date(2026, 9, 13), "Asia/Shanghai"),
     ("MXGP of Australia", date(2026, 9, 20), "Australia/Darwin"),
+]
+
+# Provisional 2027 calendar (20 GPs) — FIM/Infront update 17 Sep 2026 (Ziyang added).
+# Sunday race day as event_date. Venue TBA rounds have no trackmap yet.
+_MXGP_2027_CALENDAR: list[tuple[str, date, str]] = [
+    ("MXGP of Andalucia", date(2027, 2, 28), "Europe/Madrid"),  # Almonte
+    ("MXGP of Argentina", date(2027, 3, 14), "America/Argentina/Bariloche"),
+    ("MXGP of Italy", date(2027, 3, 28), "Europe/Rome"),  # Montevarchi
+    ("MXGP of Sardegna", date(2027, 4, 4), "Europe/Rome"),  # Riola Sardo
+    ("MXGP of Spain", date(2027, 4, 18), "Europe/Madrid"),  # venue TBA
+    ("MXGP of Trentino", date(2027, 4, 25), "Europe/Rome"),  # Pietramurata
+    ("MXGP of China", date(2027, 5, 2), "Asia/Shanghai"),  # Shanghai
+    ("MXGP of Portugal", date(2027, 5, 23), "Europe/Lisbon"),  # venue TBA
+    ("MXGP of France", date(2027, 5, 30), "Europe/Paris"),  # St Jean d'Angély
+    ("MXGP of Latvia", date(2027, 6, 13), "Europe/Riga"),  # Kegums
+    ("MXGP of Germany", date(2027, 6, 20), "Europe/Berlin"),  # Teutschenthal
+    ("MXGP of Great Britain", date(2027, 6, 27), "Europe/London"),  # Foxhills
+    ("MXGP of Czech Republic", date(2027, 7, 25), "Europe/Prague"),  # Loket
+    ("MXGP of Flanders", date(2027, 8, 1), "Europe/Brussels"),  # Lommel
+    ("MXGP of Sweden", date(2027, 8, 15), "Europe/Stockholm"),  # Uddevalla
+    ("MXGP of The Netherlands", date(2027, 8, 22), "Europe/Amsterdam"),  # Arnhem
+    ("MXGP of Turkiye", date(2027, 9, 5), "Europe/Istanbul"),  # Afyonkarahisar
+    ("MXGP of Ziyang", date(2027, 9, 12), "Asia/Shanghai"),
+    ("MXGP of Australia", date(2027, 9, 19), "Australia/Darwin"),
+    ("MXGP of Switzerland", date(2027, 10, 3), "Europe/Zurich"),  # venue TBA
 ]
 
 ADMIN_TEST_GP_NAME = "MXGP Admin Test GP"
@@ -120,8 +145,8 @@ def ensure_mxgp_2027_series() -> Series:
         s = Series(
             name="MXGP",
             year=2027,
-            start_date=date(2027, 3, 1),
-            end_date=date(2027, 9, 30),
+            start_date=date(2027, 2, 28),
+            end_date=date(2027, 10, 3),
             is_active=True,
             points_system="mxgp_tippa",
         )
@@ -129,10 +154,8 @@ def ensure_mxgp_2027_series() -> Series:
         db.session.flush()
     else:
         s.is_active = True
-        if not s.start_date:
-            s.start_date = date(2027, 3, 1)
-        if not s.end_date:
-            s.end_date = date(2027, 9, 30)
+        s.start_date = date(2027, 2, 28)
+        s.end_date = date(2027, 10, 3)
     return s
 
 
@@ -153,11 +176,12 @@ def ensure_mxgp_2026_series() -> Series:
     return s
 
 
-def ensure_mxgp_2026_calendar(*, series: Series | None = None) -> dict[str, Any]:
-    series = series or ensure_mxgp_2026_series()
+def _upsert_mxgp_calendar(
+    *, series: Series, calendar: list[tuple[str, date, str]]
+) -> dict[str, Any]:
     created = updated = 0
     ids: list[int] = []
-    for name, event_date, tz in _MXGP_2026_CALENDAR:
+    for name, event_date, tz in calendar:
         comp = Competition.query.filter_by(name=name, series_id=series.id).first()
         if comp is None:
             comp = Competition(
@@ -178,6 +202,16 @@ def ensure_mxgp_2026_calendar(*, series: Series | None = None) -> dict[str, Any]
         db.session.flush()
         ids.append(int(comp.id))
     return {"created": created, "updated": updated, "competition_ids": ids}
+
+
+def ensure_mxgp_2026_calendar(*, series: Series | None = None) -> dict[str, Any]:
+    series = series or ensure_mxgp_2026_series()
+    return _upsert_mxgp_calendar(series=series, calendar=_MXGP_2026_CALENDAR)
+
+
+def ensure_mxgp_2027_calendar(*, series: Series | None = None) -> dict[str, Any]:
+    series = series or ensure_mxgp_2027_series()
+    return _upsert_mxgp_calendar(series=series, calendar=_MXGP_2027_CALENDAR)
 
 
 def ensure_mxgp_admin_test_gp(*, series_2027: Series | None = None) -> Competition:
@@ -269,11 +303,12 @@ def mxgp_official_roster_ids() -> set[int]:
 
 
 def ensure_mxgp_scaffold() -> dict[str, Any]:
-    """Idempotent bootstrap: 2027 card series, 2026 calendar+roster, admin test GP."""
+    """Idempotent bootstrap: 2027 series+calendar, 2026 history+roster, admin test GP."""
     ensure_mxgp_qualifying_tables()
     s2027 = ensure_mxgp_2027_series()
     s2026 = ensure_mxgp_2026_series()
-    cal = ensure_mxgp_2026_calendar(series=s2026)
+    cal_2027 = ensure_mxgp_2027_calendar(series=s2027)
+    cal_2026 = ensure_mxgp_2026_calendar(series=s2026)
     roster = ensure_mxgp_2026_roster()
     test_gp = ensure_mxgp_admin_test_gp(series_2027=s2027)
     db.session.commit()
@@ -283,11 +318,13 @@ def ensure_mxgp_scaffold() -> dict[str, Any]:
         "admin_test_competition_id": test_gp.id,
         "admin_test_date": test_gp.event_date.isoformat() if test_gp.event_date else None,
         "public_play": mxgp_public_play_enabled(),
-        "calendar": cal,
+        "calendar": cal_2027,
+        "calendar_2026": cal_2026,
         "roster": roster,
     }
     print(
         f"[MXGP-SEED] OK 2027={s2027.id} 2026={s2026.id} "
-        f"test_gp={test_gp.id} roster+={roster['created']}"
+        f"test_gp={test_gp.id} cal2027={len(cal_2027['competition_ids'])} "
+        f"roster+={roster['created']}"
     )
     return info
