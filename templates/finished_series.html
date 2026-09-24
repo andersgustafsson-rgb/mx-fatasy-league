@@ -78,16 +78,32 @@
       font-size: 0.9rem;
       letter-spacing: 0.06em;
       text-transform: uppercase;
+      text-decoration: none;
+      text-align: center;
       padding: 0.55rem 0.9rem;
       border-radius: 0.45rem;
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
     }
-    .fs-seg-btn:hover { color: #e2e8f0; }
+    .fs-seg-btn:hover { color: #e2e8f0; background: rgba(148, 163, 184, 0.1); }
     .fs-seg-btn.is-active {
       background: #243147;
       color: #f8fafc;
       box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.22);
+    }
+    a.fs-seg-btn.is-series {
+      color: #cbd5e1;
+    }
+    a.fs-seg-btn.is-series:hover {
+      color: #f8fafc;
+      background: #243147;
+      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.35);
+    }
+    .fs-hint {
+      margin: 0.9rem 0 0;
+      font-size: 0.9rem;
+      color: var(--fs-muted);
+      font-weight: 500;
     }
     .fs-label {
       font-size: 0.68rem;
@@ -357,95 +373,11 @@
 </head>
 {% from 'includes/mx_icon.html' import mx_icon %}
 <body>
-{% macro card_user_face(row, box) %}
-<div class="fs-face {{ box }}">
-  <div class="fs-face__ring" aria-hidden="true"></div>
-  {% set pic = row.profile_picture_url %}
-  {% if pic and pic.startswith('data:') %}
-    <img src="{{ pic }}" alt="">
-  {% elif pic and not pic.startswith('uploaded_') %}
-    <img src="{{ url_for('static', filename=pic) }}" alt="" onerror="this.remove()">
-  {% endif %}
-</div>
-{% endmacro %}
-
-{% macro series_card(data) %}
-  <article class="fs-card">
-    <div class="fs-card__head">
-      <div>
-        <h2 class="fs-card__name">{{ data.display_name or data.series.name }}</h2>
-        <p class="fs-card__year">Säsong {{ data.series.year }}</p>
-      </div>
-      <span class="fs-badge">Avslutad</span>
-    </div>
-
-    <div class="fs-stats">
-      <div class="fs-stat">
-        <span class="fs-stat__val">{{ data.total_competitions }}</span>
-        <span class="fs-stat__lbl">Tävlingar</span>
-      </div>
-      <div class="fs-stat">
-        <span class="fs-stat__val">{{ data.total_users }}</span>
-        <span class="fs-stat__lbl">Deltagare</span>
-      </div>
-      <div class="fs-stat">
-        <span class="fs-stat__val" style="font-size:0.95rem">
-          {% if data.series.start_date and data.series.end_date %}
-            {{ data.series.start_date.strftime('%d/%m') }}–{{ data.series.end_date.strftime('%d/%m') }}
-          {% else %}
-            —
-          {% endif %}
-        </span>
-        <span class="fs-stat__lbl">Period</span>
-      </div>
-    </div>
-
-    {% if data.top_10 %}
-      <div class="fs-podium-wrap">
-        <p class="fs-podium-title">Top 3</p>
-        {% set p1 = data.top_10[0] if data.top_10|length > 0 else none %}
-        {% set p2 = data.top_10[1] if data.top_10|length > 1 else none %}
-        {% set p3 = data.top_10[2] if data.top_10|length > 2 else none %}
-        <div class="fs-podium">
-          {% if p2 %}
-          <div class="fs-slot">
-            <div class="fs-name" title="{{ p2.display_name }}">{{ p2.display_name }}</div>
-            {{ card_user_face(p2, 'w-10 h-10') }}
-            <div class="fs-rank">P2</div>
-            <div class="fs-pedestal fs-pedestal--silver">{{ p2.total_points }}p</div>
-          </div>
-          {% endif %}
-          {% if p1 %}
-          <div class="fs-slot fs-slot--1">
-            <div class="fs-name" title="{{ p1.display_name }}">{{ p1.display_name }}</div>
-            <div class="scale-110">{{ card_user_face(p1, 'w-12 h-12') }}</div>
-            <div class="fs-rank">P1</div>
-            <div class="fs-pedestal fs-pedestal--gold">{{ p1.total_points }}p</div>
-          </div>
-          {% endif %}
-          {% if p3 %}
-          <div class="fs-slot">
-            <div class="fs-name" title="{{ p3.display_name }}">{{ p3.display_name }}</div>
-            {{ card_user_face(p3, 'w-10 h-10') }}
-            <div class="fs-rank">P3</div>
-            <div class="fs-pedestal fs-pedestal--bronze">{{ p3.total_points }}p</div>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-    {% endif %}
-
-    <a class="fs-cta" href="{{ url_for('finished_series_detail_page', series_id=data.series.id) }}">
-      Visa fullständig statistik
-    </a>
-  </article>
-{% endmacro %}
-
   <div class="fs-shell">
     <a class="fs-back" href="{{ url_for('index') }}">← Tillbaka till huvudsidan</a>
     <header class="mb-6">
       <h1 class="fs-title">Fantasy-arkiv</h1>
-      <p class="fs-sub">Vem vann tippa SX / MX / SMX — slutställningar per säsong</p>
+      <p class="fs-sub">Välj serie för fullständig slutställning</p>
     </header>
 
     {% if sx_season_wrap %}
@@ -504,36 +436,17 @@
              aria-labelledby="fs-year-tab-{{ year }}"
              data-year="{{ year }}"
              {% if year != default_year %}hidden{% endif %}>
-
-          {% if items|length > 1 %}
-          <div class="mb-4">
-            <p class="fs-label">Serie</p>
-            <div class="fs-seg" role="tablist" aria-label="Välj serie {{ year }}">
-              {% for data in items %}
-                <button type="button"
-                        class="fs-seg-btn{% if loop.first %} is-active{% endif %}"
-                        role="tab"
-                        id="fs-series-tab-{{ data.series.id }}"
-                        aria-selected="{{ 'true' if loop.first else 'false' }}"
-                        aria-controls="fs-series-panel-{{ data.series.id }}"
-                        data-year="{{ year }}"
-                        data-series-id="{{ data.series.id }}">{{ data.display_name or data.series.name }}</button>
-              {% endfor %}
-            </div>
+          <p class="fs-label">Serie</p>
+          <div class="fs-seg" role="list" aria-label="Öppna serie {{ year }}">
+            {% for data in items %}
+              <a class="fs-seg-btn is-series"
+                 role="listitem"
+                 href="{{ url_for('finished_series_detail_page', series_id=data.series.id) }}">
+                {{ data.display_name or data.series.name }}
+              </a>
+            {% endfor %}
           </div>
-          {% endif %}
-
-          {% for data in items %}
-            <div class="fs-series-panel"
-                 id="fs-series-panel-{{ data.series.id }}"
-                 role="tabpanel"
-                 aria-labelledby="fs-series-tab-{{ data.series.id }}"
-                 data-year="{{ year }}"
-                 data-series-id="{{ data.series.id }}"
-                 {% if not loop.first %}hidden{% endif %}>
-              {{ series_card(data) }}
-            </div>
-          {% endfor %}
+          <p class="fs-hint">Öppnar fullständig statistik (pall, leaderboard, race-för-race).</p>
         </div>
       {% endfor %}
     {% else %}
@@ -566,41 +479,16 @@
       try { history.replaceState(null, '', '#year-' + year); } catch (e) {}
     }
 
-    function setActiveSeries(year, seriesId) {
-      year = String(year);
-      seriesId = String(seriesId);
-      var panel = document.getElementById('fs-year-panel-' + year);
-      if (!panel) return;
-      panel.querySelectorAll('.fs-seg-btn[data-series-id]').forEach(function (btn) {
-        var on = btn.getAttribute('data-series-id') === seriesId;
-        btn.classList.toggle('is-active', on);
-        btn.setAttribute('aria-selected', on ? 'true' : 'false');
-      });
-      panel.querySelectorAll('.fs-series-panel').forEach(function (p) {
-        p.hidden = p.getAttribute('data-series-id') !== seriesId;
-      });
-      try { history.replaceState(null, '', '#year-' + year + '-series-' + seriesId); } catch (e) {}
-    }
-
     yearTabs.addEventListener('click', function (e) {
       var btn = e.target.closest('.fs-seg-btn');
       if (!btn || !yearTabs.contains(btn)) return;
       setActiveYear(btn.getAttribute('data-year'));
     });
 
-    document.querySelectorAll('.fs-year-panel').forEach(function (panel) {
-      panel.addEventListener('click', function (e) {
-        var btn = e.target.closest('.fs-seg-btn[data-series-id]');
-        if (!btn || !panel.contains(btn)) return;
-        setActiveSeries(btn.getAttribute('data-year'), btn.getAttribute('data-series-id'));
-      });
-    });
-
     var hash = (location.hash || '').replace(/^#/, '');
-    var m = hash.match(/^year-(\d+)(?:-series-(\d+))?$/);
+    var m = hash.match(/^year-(\d+)/);
     if (m) {
       setActiveYear(m[1]);
-      if (m[2]) setActiveSeries(m[1], m[2]);
     } else {
       var active = yearTabs.querySelector('.fs-seg-btn.is-active');
       if (active) setActiveYear(active.getAttribute('data-year'));
