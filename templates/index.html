@@ -2104,6 +2104,35 @@
       margin-bottom: 0.5rem;
       text-shadow: 0 1px 8px rgba(0, 0, 0, 0.65);
     }
+    .home-series-card__picks {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      margin: 0 auto 0.45rem;
+      padding: 0.22rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      line-height: 1.2;
+      border: 1px solid transparent;
+      text-shadow: none;
+    }
+    .home-series-card__picks--done {
+      color: #bbf7d0;
+      background: rgba(6, 78, 59, 0.75);
+      border-color: rgba(52, 211, 153, 0.45);
+    }
+    .home-series-card__picks--partial {
+      color: #fde68a;
+      background: rgba(120, 53, 15, 0.75);
+      border-color: rgba(251, 191, 36, 0.4);
+    }
+    .home-series-card__picks--need {
+      color: #fecaca;
+      background: rgba(127, 29, 29, 0.58);
+      border-color: rgba(248, 113, 113, 0.35);
+    }
     .home-race-hero #active-now-badge {
       border: 1px solid #3d4f66;
       background: #1a2436;
@@ -4035,6 +4064,46 @@
     // Homepage default stays on AMA chain (SX→MX→SMX). WSX/MXON only via series card.
     let homeSelectedSeries = null;
     var _seriesStatusCache = []; // var so language toggle (other script) can re-render cards
+    var _seriesPicksStatusCache = {};
+
+    function seriesPicksBadgeHtml(serie, seriesCode, isEn) {
+      if (!window.__MX_LOGGED_IN__) return '';
+      if (!serie || serie.under_construction || !serie.next_race) return '';
+      if (!(serie.is_active || (Number.isFinite(serie.days_until_next_race) && serie.days_until_next_race >= 0))) {
+        return '';
+      }
+      const code = (seriesCode || '').toUpperCase();
+      const info = _seriesPicksStatusCache[code];
+      if (!info || !info.status) return '';
+      const st = info.status;
+      if (st === 'has_picks') {
+        return `<p class="home-series-card__picks home-series-card__picks--done">${typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--sm mx-icon--ok' }) : '✓'} ${isEn ? 'Picks done' : 'Picks klara'}</p>`;
+      }
+      if (st === 'partial_picks') {
+        return `<p class="home-series-card__picks home-series-card__picks--partial">${typeof mxIcon === 'function' ? mxIcon('alert', { className: 'mx-icon--sm mx-icon--warn' }) : '!'} ${isEn ? 'Picks incomplete' : 'Picks ofullständiga'}</p>`;
+      }
+      if (st === 'no_picks') {
+        return `<p class="home-series-card__picks home-series-card__picks--need">${typeof mxIcon === 'function' ? mxIcon('note', { className: 'mx-icon--sm' }) : '·'} ${isEn ? 'No picks yet' : 'Inga picks än'}</p>`;
+      }
+      return '';
+    }
+
+    async function loadSeriesPicksStatus() {
+      if (!window.__MX_LOGGED_IN__) {
+        _seriesPicksStatusCache = {};
+        return;
+      }
+      try {
+        const res = await fetch('/api/my_series_picks_status');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && !data.error && typeof data === 'object') {
+          _seriesPicksStatusCache = data;
+        }
+      } catch (e) {
+        console.warn('series picks status:', e);
+      }
+    }
 
     function seriesNameToCode(name) {
       const n = String(name || '').toLowerCase();
@@ -5272,6 +5341,13 @@
       window.addEventListener('pageshow', function (e) {
         if (e.persisted || document.visibilityState === 'visible') {
           fetchRealCountdownData();
+          if (window.__MX_LOGGED_IN__) {
+            loadSeriesPicksStatus().then(() => {
+              if (_seriesStatusCache && _seriesStatusCache.length) {
+                renderSeriesSelection(_seriesStatusCache);
+              }
+            });
+          }
         }
       });
       
@@ -6021,7 +6097,7 @@
           const hintText = isSelected
             ? (isEn ? 'Selected · see schedule below' : 'Vald · se schema nedan')
             : buttonText;
-          
+          const picksBadge = seriesPicksBadgeHtml(serie, seriesCode, isEn);
           
           const cardContent = `
             <div class="home-series-card__scrim"></div>
@@ -6029,6 +6105,7 @@
               <h3 class="home-series-card__title">${homeSeriesDisplayName(serie)}</h3>
               ${serie.under_construction ? `<p class="text-xs font-semibold uppercase tracking-wide text-amber-200 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Coming 2027' : 'Kommer 2027'}</p>` : ''}
               <p class="text-sm ${statusColor} mb-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${statusText}</p>
+              ${picksBadge}
               ${nextRace ? `<p class="text-xs text-gray-200 mb-3" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Next' : 'Nästa'}: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
               <div class="text-xs text-gray-300 mt-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)" data-series-hint>${hintText}</div>
               <a href="/series/${serie.id}" class="home-series-card__open" data-series-open onclick="event.stopPropagation()">${isEn ? 'Schedule & tracks →' : 'Schema & banor →'}</a>
@@ -6102,6 +6179,7 @@
           if (homeSelectedSeries) localStorage.setItem('home_selected_series', homeSelectedSeries);
         } catch (_) {}
 
+        await loadSeriesPicksStatus();
         renderSeriesSelection(series);
         updateAmaOnlyHomeUi();
         // Countdown first so power ranking gets the right competition_id
@@ -6410,6 +6488,11 @@
         } catch (_) {}
         renderSeriesSelection(_seriesStatusCache);
         updateAmaOnlyHomeUi();
+        loadSeriesPicksStatus().then(() => {
+          if (_seriesStatusCache && _seriesStatusCache.length) {
+            renderSeriesSelection(_seriesStatusCache);
+          }
+        });
         fetchRealCountdownData().then(() => {
           fetchPowerRanking();
           fetchSeasonLeaderboard();
