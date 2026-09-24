@@ -225,6 +225,98 @@
       padding-bottom: 0.35rem;
       white-space: nowrap;
     }
+    .rr-subtabs {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.55rem;
+    }
+    .rr-subtabs-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-right: 0.15rem;
+    }
+    .rr-subtab {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      background: rgba(15, 23, 42, 0.55);
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .rr-subtab:hover {
+      color: #e2e8f0;
+      border-color: rgba(148, 163, 184, 0.5);
+    }
+    .rr-subtab.is-active {
+      color: #0f172a;
+      background: linear-gradient(180deg, #fde68a, #f59e0b);
+      border-color: rgba(245, 158, 11, 0.8);
+    }
+    .rr-finished-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 0.65rem;
+      padding-top: 0.55rem;
+      border-top: 1px solid rgba(71, 85, 105, 0.45);
+    }
+    .rr-finished-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-right: 0.1rem;
+    }
+    .rr-finished-tab {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.28rem 0.65rem;
+      border-radius: 0.45rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-decoration: none;
+      color: #94a3b8;
+      border: 1px solid rgba(100, 116, 139, 0.35);
+      background: rgba(15, 23, 42, 0.4);
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .rr-finished-tab:hover {
+      color: #e2e8f0;
+      border-color: rgba(148, 163, 184, 0.55);
+    }
+    .rr-finished-tab.is-active {
+      color: #ecfdf5;
+      border-color: rgba(52, 211, 153, 0.55);
+      background: rgba(6, 78, 59, 0.45);
+    }
+    .rr-finished-tab.tone-sx.is-active {
+      color: #ecfeff;
+      border-color: rgba(34, 211, 238, 0.55);
+      background: rgba(8, 51, 68, 0.55);
+    }
+    .rr-series-tab.tone-smx.is-active {
+      box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.5);
+    }
+    .rr-series-tab.tone-wsx.is-active {
+      box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.45);
+    }
+    .rr-series-tab.tone-mxgp.is-active {
+      box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.45);
+    }
     details.race-details > summary {
       cursor: pointer;
       list-style: none;
@@ -488,33 +580,159 @@
   {% endmacro %}
 
   {% set panel_default = latest_competition_id if latest_competition_id else (competitions[-1].id if competitions else none) %}
-  {% set show_sx_standings = series_filter in ('', 'AMA', 'SX') %}
-  {% set show_mx_standings = series_filter in ('', 'AMA', 'MX') %}
-  {% set show_smx_standings = series_filter in ('', 'AMA', 'SMX') and championship_totals is defined and championship_totals.get('show_smx_section') %}
-  {% set show_smx_playoffs = series_filter in ('', 'AMA', 'SMX') and championship_totals is defined and championship_totals.get('show_smx_playoffs_section') %}
-  {% set show_wsx_standings = series_filter in ('', 'AMA', 'WSX') %}
+  {% set show_sx_standings = series_filter in ('', 'all', 'AMA', 'SX') %}
+  {% set show_mx_standings = series_filter in ('', 'all', 'AMA', 'MX') %}
+  {% set show_smx_standings = series_filter in ('', 'all', 'AMA', 'SMX') and championship_totals is defined and championship_totals.get('show_smx_section') %}
+  {% set show_smx_playoffs = series_filter in ('', 'all', 'AMA', 'SMX') and championship_totals is defined and championship_totals.get('show_smx_playoffs_section') %}
+  {% set show_wsx_standings = series_filter in ('', 'all', 'AMA', 'WSX') %}
   {% set standings_primary = series_filter in ('SX', 'MX', 'SMX', 'WSX', 'MXGP') %}
   {% set competitions_newest_first = competitions|reverse|list %}
+  {% set series_finished = season_wrap is defined and season_wrap and season_wrap.get('finished') %}
+  {% set standings_above_races = series_finished %}
+  {% set year_filter = year_filter if year_filter is defined else none %}
+  {% set available_years = available_years if available_years is defined else [] %}
+  {% set series_groups = series_groups if series_groups is defined else {'active': [], 'finished': []} %}
+  {% set series_bucket = series_bucket if series_bucket is defined else 'active' %}
+  {% set active_series_tabs = series_groups.get('active') or [] %}
+  {% set finished_series_tabs = series_groups.get('finished') or [] %}
+
+  {% macro render_championship_totals(ct, show_sx, show_mx, show_smx, show_smx_po, show_wsx, primary, sfilter, finished) %}
+    {% if ct and ct.get('has_any') %}
+    {% set sx = ct.get('SX') or {} %}
+    {% set mx = ct.get('MX') or {} %}
+    {% set smx = ct.get('SMX') or {} %}
+    {% set smx_po = ct.get('SMX_PLAYOFFS') or {} %}
+    {% set wsx = ct.get('WSX') or {} %}
+    {% set has_scoped_standings =
+      (show_sx and (sx.get('450') or sx.get('250_east') or sx.get('250_west')))
+      or (show_mx and (mx.get('450') or mx.get('250_east') or mx.get('250_west')))
+      or show_smx
+      or show_smx_po
+      or (show_wsx and (wsx.get('sx1') or wsx.get('sx2')))
+    %}
+    {% if has_scoped_standings %}
+    <section id="championship-totals" class="mb-10 rounded-2xl border border-slate-600/45 bg-slate-800/35 overflow-hidden shadow-xl scroll-mt-28" aria-labelledby="championship-totals-heading">
+      <div class="px-4 sm:px-6 py-4 bg-gradient-to-r from-slate-900/80 to-slate-800/50 border-b border-slate-600/40">
+        <h2 id="championship-totals-heading" class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+          <span class="text-amber-400">◎</span>
+          {% if finished %}Slutställning · förare
+          {% elif sfilter == 'SMX' %}SMX-ställning · förare
+          {% elif sfilter == 'SX' %}SX-ställning · förare
+          {% elif sfilter == 'MX' %}MX-ställning · förare
+          {% elif sfilter == 'WSX' %}WSX-ställning · förare
+          {% else %}Totalställning · förarpoäng{% endif %}
+        </h2>
+        <p class="text-slate-400 text-sm mt-1 max-w-2xl">
+          {% if sfilter == 'SMX' %}
+            Officiell förarställning (inte fantasy). World Championship = seed + playoff-rundor (1× / 2× / 3×). Combined är SX+MX innan playoffs.
+          {% elif sfilter == 'SX' %}
+            Officiell förarställning (inte fantasy). AMA Supercross säsongspoäng för vald klass.
+          {% elif sfilter == 'MX' %}
+            Officiell förarställning (inte fantasy). Pro Motocross säsongspoäng (moto 1 + moto 2).
+          {% elif sfilter == 'WSX' %}
+            Officiell förarställning (inte fantasy). Aktuell WSX-säsong — äldre finns under Fantasy-arkiv.
+          {% else %}
+            Officiell förarställning (inte fantasy-topplistan). Välj klass under varje serie.
+          {% endif %}
+        </p>
+      </div>
+      <div class="p-4 sm:p-6 grid grid-cols-1 {% if not primary %}xl:grid-cols-2{% endif %} gap-5">
+        {% if show_smx_po %}
+        <div class="rounded-xl border border-indigo-700/35 bg-slate-900/25 p-4 min-w-0 {% if sfilter == 'SMX' %}xl:col-span-1{% endif %}">
+          <h3 class="text-base font-bold text-indigo-300 mb-2 border-b border-indigo-800/40 pb-2">{{ smx_po.get('label', 'SMX World Championship (Playoffs)') }}</h3>
+          {% if smx_po.get('450') or smx_po.get('250') or smx_po.get('250_east') or smx_po.get('250_west') %}
+            {{ standings_class_picker('smxpo', 'smxpo', smx_po.get('label'), smx_po.get('450'), smx_po.get('250_east'), smx_po.get('250_west'), smx_po.get('250')) }}
+          {% else %}
+            <p class="text-slate-500 text-sm py-6 text-center">Playoff-ställning visas när SMX-rundor börjar.</p>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% if show_smx %}
+        <div class="rounded-xl border border-violet-700/35 bg-slate-900/25 p-4 min-w-0">
+          <h3 class="text-base font-bold text-violet-300 mb-2 border-b border-violet-800/40 pb-2">{{ smx.get('label', 'SMX Combined (SX + MX)') }}</h3>
+          {% if smx.get('450') or smx.get('250') or smx.get('250_east') or smx.get('250_west') %}
+            {{ standings_class_picker('smx', 'smx', smx.get('label'), smx.get('450'), smx.get('250_east'), smx.get('250_west'), smx.get('250')) }}
+            {% if sfilter != 'SMX' and (smx.get('450_lcq') or smx.get('250_lcq') or smx.get('250_east_lcq') or smx.get('250_west_lcq')) %}
+            <div class="mt-5 pt-4 border-t border-violet-800/35">
+              <p class="text-sm font-semibold text-amber-200 mb-1">LCQ-zon · plats 21–30</p>
+              {{ smx_lcq_block(smx.get('450_lcq'), '450cc') }}
+              {{ smx_lcq_block(smx.get('250_lcq'), '250 Combined') }}
+              {{ smx_lcq_block(smx.get('250_east_lcq'), '250 East') }}
+              {{ smx_lcq_block(smx.get('250_west_lcq'), '250 West') }}
+            </div>
+            {% endif %}
+          {% else %}
+            <p class="text-slate-500 text-sm py-6 text-center">Inga Combined-poäng ännu.</p>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% if show_sx and (sx.get('450') or sx.get('250_east') or sx.get('250_west')) %}
+        <div class="rounded-xl border border-cyan-700/30 bg-slate-900/25 p-4 min-w-0">
+          <h3 class="text-base font-bold text-cyan-300 mb-2 border-b border-cyan-800/40 pb-2">{{ sx.get('label', 'AMA Supercross (SX)') }}</h3>
+          {{ standings_class_picker('sx', 'sx', sx.get('label'), sx.get('450'), sx.get('250_east'), sx.get('250_west')) }}
+        </div>
+        {% endif %}
+
+        {% if show_mx and (mx.get('450') or mx.get('250_east') or mx.get('250_west')) %}
+        <div class="rounded-xl border border-emerald-800/35 bg-slate-900/25 p-4 min-w-0">
+          <h3 class="text-base font-bold text-emerald-300 mb-2 border-b border-emerald-800/40 pb-2">{{ mx.get('label', 'Pro Motocross (MX)') }}</h3>
+          {{ standings_class_picker('mx', 'mx', mx.get('label'), mx.get('450'), mx.get('250_east'), mx.get('250_west')) }}
+        </div>
+        {% endif %}
+
+        {% if show_wsx and (wsx.get('sx1') or wsx.get('sx2')) %}
+        <div class="rounded-xl border border-amber-700/35 bg-slate-900/25 p-4 {% if sfilter != 'WSX' %}xl:col-span-2{% endif %} min-w-0">
+          <h3 class="text-base font-bold text-amber-200 mb-2 border-b border-amber-800/40 pb-2">{{ wsx.get('label', 'WSX') }}</h3>
+          {{ standings_wsx_picker('wsx', 'wsx', wsx.get('label'), wsx.get('sx1'), wsx.get('sx2')) }}
+        </div>
+        {% endif %}
+      </div>
+    </section>
+    {% endif %}
+    {% endif %}
+  {% endmacro %}
 
   <div class="mx-auto w-full max-w-[min(100%,90rem)] px-4 sm:px-8 lg:px-10 pb-16">
-    <!-- Serie + race picker (ersätter pill-röran) -->
+    <!-- Serie + race picker -->
     <nav class="sticky top-0 z-30 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 bg-slate-950/90 backdrop-blur-md border-b border-slate-600/50 mb-6" aria-label="Välj serie och tävling">
       <div class="rr-picker max-w-[min(100%,90rem)] mx-auto">
-        <div class="rr-series-tabs" role="tablist" aria-label="Serie">
-          {% set tabs = [
-            ('', 'Alla'),
-            ('SX', 'AMA Supercross'),
-            ('MX', 'AMA Pro Motocross'),
-            ('SMX', 'SMX'),
-            ('WSX', 'WSX'),
-            ('MXGP', 'MXGP'),
-          ] %}
-          {% for code, label in tabs %}
-            <a href="{{ url_for('race_results_page', series=code) if code else url_for('race_results_page') }}"
-               class="rr-series-tab {% if series_filter == code %}is-active{% endif %}"
-               {% if series_filter == code %}aria-current="page"{% endif %}>{{ label }}</a>
+        <p class="rr-subtabs-label mb-1.5">Aktiva serier</p>
+        <div class="rr-series-tabs" role="tablist" aria-label="Aktiva serier">
+          {% if active_series_tabs %}
+            {% for tab in active_series_tabs %}
+              <a href="{{ url_for('race_results_page', series=tab.code, year=tab.year) }}"
+                 class="rr-series-tab tone-{{ tab.tone }} {% if series_filter == tab.code and series_bucket == 'active' %}is-active{% endif %}"
+                 {% if series_filter == tab.code and series_bucket == 'active' %}aria-current="page"{% endif %}>{{ tab.label }}</a>
+            {% endfor %}
+          {% else %}
+            <span class="text-slate-500 text-sm py-1">Inga aktiva serier just nu</span>
+          {% endif %}
+        </div>
+
+        {% if finished_series_tabs %}
+        <div class="rr-finished-row" aria-label="Avslutade serier">
+          <span class="rr-finished-label">Avslutade</span>
+          {% for tab in finished_series_tabs %}
+            <a href="{{ url_for('race_results_page', series=tab.code, year=tab.year) }}"
+               class="rr-finished-tab tone-{{ tab.tone }} {% if series_filter == tab.code and series_bucket == 'finished' %}is-active{% endif %}"
+               {% if series_filter == tab.code and series_bucket == 'finished' %}aria-current="page"{% endif %}>{{ tab.label }}</a>
           {% endfor %}
         </div>
+        {% endif %}
+
+        {% if available_years and available_years|length > 1 %}
+        <div class="rr-subtabs" role="tablist" aria-label="År">
+          <span class="rr-subtabs-label">År</span>
+          {% for y in available_years %}
+            <a href="{{ url_for('race_results_page', series=series_filter, year=y) if series_filter and series_filter not in ('', 'all') else url_for('race_results_page', year=y) }}"
+               class="rr-subtab {% if year_filter == y %}is-active{% endif %}"
+               {% if year_filter == y %}aria-current="page"{% endif %}>{{ y }}</a>
+          {% endfor %}
+        </div>
+        {% endif %}
+
         <div class="rr-race-row">
           <div class="min-w-0">
             <label class="rr-race-label" for="rr-race-select">Tävling · nyaste först</label>
@@ -550,11 +768,15 @@
             {% elif series_filter == 'MX' %}AMA Pro Motocross förarresultat
             {% elif series_filter == 'SMX' %}SMX förarresultat
             {% elif series_filter == 'MXGP' %}MXGP förarresultat
-            {% else %}Förarresultat{% endif %}
+            {% else %}Förarresultat{% endif %}{% if year_filter %} · {{ year_filter }}{% endif %}
           </h1>
           <p class="text-blue-100/90 text-sm max-w-xl">
             Officiella <strong class="text-white font-semibold">förar</strong>resultat och serieledare — inte fantasy-spelarnas topplista.
-            Välj serie ovan, sedan tävling i listan. Senaste med resultat öppnas först.
+            {% if series_finished %}
+              Säsongen är avslutad — slutställning och pallen visas först, sedan enskilda race.
+            {% else %}
+              Välj serie ovan, sedan tävling i listan. Senaste med resultat öppnas först.
+            {% endif %}
           </p>
         </div>
         <a href="{{ url_for('index') }}"
@@ -563,6 +785,47 @@
         </a>
       </div>
     </div>
+
+    {% if series_finished and season_wrap %}
+    <aside class="mb-6 rounded-2xl border border-amber-500/35 bg-gradient-to-r from-amber-950/50 via-slate-900/80 to-slate-900/60 px-4 sm:px-5 py-4 shadow-lg" aria-label="Säsongsstatus">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-300/90 mb-1">
+            Avslutad {{ season_wrap.year }} · {{ season_wrap.series_label }}
+          </p>
+          {% if season_wrap.podium %}
+          <p class="text-white text-sm sm:text-base font-semibold leading-snug">
+            <span class="text-slate-400 font-medium">{{ season_wrap.class_label }}:</span>
+            {% for p in season_wrap.podium %}
+              {% if p.rank == 1 %}<span class="text-amber-300">Champion {{ p.rider_name }}</span>{% if p.points is not none %} <span class="text-slate-400 font-normal">({{ p.points }}p)</span>{% endif %}
+              {% elif p.rank == 2 %} · <span class="text-slate-200">#2 {{ p.rider_name }}</span>
+              {% elif p.rank == 3 %} · <span class="text-slate-300">#3 {{ p.rider_name }}</span>
+              {% endif %}
+            {% endfor %}
+          </p>
+          {% endif %}
+          {% if season_wrap.class_champs %}
+          <p class="text-slate-400 text-xs sm:text-sm mt-1">
+            {% for c in season_wrap.class_champs %}
+              {{ c.class_label }}: <span class="text-slate-200">{{ c.rider_name }}</span>{% if not loop.last %} · {% endif %}
+            {% endfor %}
+          </p>
+          {% endif %}
+        </div>
+        <a href="#championship-totals"
+           class="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-400/40 bg-amber-500/15 hover:bg-amber-500/25 text-amber-100 font-bold text-sm px-4 py-2.5 transition-colors">
+          Visa hela förartabellen ↓
+        </a>
+      </div>
+    </aside>
+    {% endif %}
+
+    {% if standings_above_races %}
+      {{ render_championship_totals(
+           championship_totals if championship_totals is defined else none,
+           show_sx_standings, show_mx_standings, show_smx_standings, show_smx_playoffs,
+           show_wsx_standings, standings_primary, series_filter, series_finished) }}
+    {% endif %}
 
     <div id="race-results-viewport" class="min-h-[12rem] mb-8">
       {% for comp in competitions %}
@@ -836,99 +1099,11 @@
       </div>
     </section>
 
-    {% if championship_totals is defined and championship_totals.get('has_any') %}
-    {% set sx = championship_totals.get('SX') or {} %}
-    {% set mx = championship_totals.get('MX') or {} %}
-    {% set smx = championship_totals.get('SMX') or {} %}
-    {% set smx_po = championship_totals.get('SMX_PLAYOFFS') or {} %}
-    {% set wsx = championship_totals.get('WSX') or {} %}
-    {% set has_scoped_standings =
-      (show_sx_standings and (sx.get('450') or sx.get('250_east') or sx.get('250_west')))
-      or (show_mx_standings and (mx.get('450') or mx.get('250_east') or mx.get('250_west')))
-      or show_smx_standings
-      or show_smx_playoffs
-      or (show_wsx_standings and (wsx.get('sx1') or wsx.get('sx2')))
-    %}
-    {% if has_scoped_standings %}
-    <section class="mb-10 rounded-2xl border border-slate-600/45 bg-slate-800/35 overflow-hidden shadow-xl" aria-labelledby="championship-totals-heading">
-      <div class="px-4 sm:px-6 py-4 bg-gradient-to-r from-slate-900/80 to-slate-800/50 border-b border-slate-600/40">
-        <h2 id="championship-totals-heading" class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-          <span class="text-amber-400">◎</span>
-          {% if series_filter == 'SMX' %}SMX-ställning · förare
-          {% elif series_filter == 'SX' %}SX-ställning · förare
-          {% elif series_filter == 'MX' %}MX-ställning · förare
-          {% elif series_filter == 'WSX' %}WSX-ställning · förare
-          {% else %}Totalställning · förarpoäng{% endif %}
-        </h2>
-        <p class="text-slate-400 text-sm mt-1 max-w-2xl">
-          {% if series_filter == 'SMX' %}
-            Officiell förarställning (inte fantasy). World Championship = seed + playoff-rundor (1× / 2× / 3×). Combined är SX+MX innan playoffs.
-          {% elif series_filter == 'SX' %}
-            Officiell förarställning (inte fantasy). AMA Supercross säsongspoäng för vald klass.
-          {% elif series_filter == 'MX' %}
-            Officiell förarställning (inte fantasy). Pro Motocross säsongspoäng (moto 1 + moto 2).
-          {% elif series_filter == 'WSX' %}
-            Officiell förarställning (inte fantasy). Aktuell WSX-säsong — äldre finns under Färdiga serier.
-          {% else %}
-            Officiell förarställning (inte fantasy-topplistan). Välj klass under varje serie.
-          {% endif %}
-        </p>
-      </div>
-      <div class="p-4 sm:p-6 grid grid-cols-1 {% if not standings_primary %}xl:grid-cols-2{% endif %} gap-5">
-        {% if show_smx_playoffs %}
-        <div class="rounded-xl border border-indigo-700/35 bg-slate-900/25 p-4 min-w-0 {% if series_filter == 'SMX' %}xl:col-span-1{% endif %}">
-          <h3 class="text-base font-bold text-indigo-300 mb-2 border-b border-indigo-800/40 pb-2">{{ smx_po.get('label', 'SMX World Championship (Playoffs)') }}</h3>
-          {% if smx_po.get('450') or smx_po.get('250') or smx_po.get('250_east') or smx_po.get('250_west') %}
-            {{ standings_class_picker('smxpo', 'smxpo', smx_po.get('label'), smx_po.get('450'), smx_po.get('250_east'), smx_po.get('250_west'), smx_po.get('250')) }}
-          {% else %}
-            <p class="text-slate-500 text-sm py-6 text-center">Playoff-ställning visas när SMX-rundor börjar.</p>
-          {% endif %}
-        </div>
-        {% endif %}
-
-        {% if show_smx_standings %}
-        <div class="rounded-xl border border-violet-700/35 bg-slate-900/25 p-4 min-w-0">
-          <h3 class="text-base font-bold text-violet-300 mb-2 border-b border-violet-800/40 pb-2">{{ smx.get('label', 'SMX Combined (SX + MX)') }}</h3>
-          {% if smx.get('450') or smx.get('250') or smx.get('250_east') or smx.get('250_west') %}
-            {{ standings_class_picker('smx', 'smx', smx.get('label'), smx.get('450'), smx.get('250_east'), smx.get('250_west'), smx.get('250')) }}
-            {% if series_filter != 'SMX' and (smx.get('450_lcq') or smx.get('250_lcq') or smx.get('250_east_lcq') or smx.get('250_west_lcq')) %}
-            <div class="mt-5 pt-4 border-t border-violet-800/35">
-              <p class="text-sm font-semibold text-amber-200 mb-1">LCQ-zon · plats 21–30</p>
-              {{ smx_lcq_block(smx.get('450_lcq'), '450cc') }}
-              {{ smx_lcq_block(smx.get('250_lcq'), '250 Combined') }}
-              {{ smx_lcq_block(smx.get('250_east_lcq'), '250 East') }}
-              {{ smx_lcq_block(smx.get('250_west_lcq'), '250 West') }}
-            </div>
-            {% endif %}
-          {% else %}
-            <p class="text-slate-500 text-sm py-6 text-center">Inga Combined-poäng ännu.</p>
-          {% endif %}
-        </div>
-        {% endif %}
-
-        {% if show_sx_standings and (sx.get('450') or sx.get('250_east') or sx.get('250_west')) %}
-        <div class="rounded-xl border border-cyan-700/30 bg-slate-900/25 p-4 min-w-0">
-          <h3 class="text-base font-bold text-cyan-300 mb-2 border-b border-cyan-800/40 pb-2">{{ sx.get('label', 'AMA Supercross (SX)') }}</h3>
-          {{ standings_class_picker('sx', 'sx', sx.get('label'), sx.get('450'), sx.get('250_east'), sx.get('250_west')) }}
-        </div>
-        {% endif %}
-
-        {% if show_mx_standings and (mx.get('450') or mx.get('250_east') or mx.get('250_west')) %}
-        <div class="rounded-xl border border-emerald-800/35 bg-slate-900/25 p-4 min-w-0">
-          <h3 class="text-base font-bold text-emerald-300 mb-2 border-b border-emerald-800/40 pb-2">{{ mx.get('label', 'Pro Motocross (MX)') }}</h3>
-          {{ standings_class_picker('mx', 'mx', mx.get('label'), mx.get('450'), mx.get('250_east'), mx.get('250_west')) }}
-        </div>
-        {% endif %}
-
-        {% if show_wsx_standings and (wsx.get('sx1') or wsx.get('sx2')) %}
-        <div class="rounded-xl border border-amber-700/35 bg-slate-900/25 p-4 {% if series_filter != 'WSX' %}xl:col-span-2{% endif %} min-w-0">
-          <h3 class="text-base font-bold text-amber-200 mb-2 border-b border-amber-800/40 pb-2">{{ wsx.get('label', 'WSX') }}</h3>
-          {{ standings_wsx_picker('wsx', 'wsx', wsx.get('label'), wsx.get('sx1'), wsx.get('sx2')) }}
-        </div>
-        {% endif %}
-      </div>
-    </section>
-    {% endif %}
+    {% if not standings_above_races %}
+      {{ render_championship_totals(
+           championship_totals if championship_totals is defined else none,
+           show_sx_standings, show_mx_standings, show_smx_standings, show_smx_playoffs,
+           show_wsx_standings, standings_primary, series_filter, series_finished) }}
     {% endif %}
   </div>
 

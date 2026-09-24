@@ -122,7 +122,7 @@
     'home.season_team':      { sv: 'Säsongsteam',        en: 'Season team' },
     'home.race_results':     { sv: 'Förarresultat',       en: 'Rider results' },
     'home.my_scores':        { sv: 'Mina Poäng',         en: 'My scores' },
-    'home.finished_series':  { sv: 'Färdiga Serier',     en: 'Finished series' },
+    'home.finished_series':  { sv: 'Fantasy-arkiv',      en: 'Fantasy archive' },
     'home.see_others_picks': { sv: 'Se Andras Picks',    en: "Others' picks" },
     'home.picks_locked':     { sv: 'Picks Låsta',        en: 'Picks locked' },
     'home.news':             { sv: 'Nyheter & påminnelser', en: 'News & reminders' },

@@ -1364,6 +1364,18 @@ def get_today():
     return today
 
 
+def series_display_name(name: str | None) -> str:
+    """User-facing series label (DB keeps short names like Motocross / Supercross)."""
+    n = (name or "").strip()
+    if n == "Supercross":
+        return "AMA Supercross"
+    if n == "Motocross":
+        return "Pro Motocross"
+    if n == "SMX Finals":
+        return "SMX Finals"
+    return n or "Serie"
+
+
 def _next_competition_for_picks(
     *,
     series: str | None = None,
@@ -1585,7 +1597,7 @@ def build_sx_season_wrap_context(competitions: list, today: date) -> dict | None
 def ensure_ama_2026_series_dates() -> dict:
     """Keep Motocross/SMX 2026 end dates aligned with finales (Ironman / Ridgedale).
 
-    Prevents Motocross from showing under Färdiga serier before Ironman is done
+    Prevents Motocross from showing under Fantasy-arkiv before Ironman is done
     when series.end_date was wrongly set to Budds Creek (23 aug).
     """
     from datetime import date as _date
@@ -11070,6 +11082,7 @@ def finished_series_page():
             
             series_data.append({
                 'series': series,
+                'display_name': series_display_name(series.name),
                 'competitions': competitions,
                 'total_competitions': len(competitions),
                 'total_users': len(leaderboard),
@@ -11219,6 +11232,7 @@ def finished_series_detail_page(series_id):
         return render_template(
             "finished_series_detail.html",
             series=series,
+            series_display_name=series_display_name(series.name),
             competitions=competitions,
             competition_details=competition_details,
             leaderboard=leaderboard,
@@ -19189,7 +19203,11 @@ def user_stats_page(username: str):
     )
 
 
-def compute_series_championship_totals():
+def compute_series_championship_totals(
+    *,
+    season_year: int | None = None,
+    wsx_year: int | None = None,
+):
     """
     Summarizes season points using the same rules as the per-race results view:
     WSX (rider_points or position), SMX playoffs (position × round multiplier), SX/MX (AMA scale).
@@ -19207,11 +19225,11 @@ def compute_series_championship_totals():
     totals = defaultdict(lambda: defaultdict(float))
     rider_meta = {}
     promoted_250_coasts = _promoted_250_coast_by_name()
-    season_year = _current_racing_season_year()
+    season_year = int(season_year or _current_racing_season_year())
 
-    # Race results / live standings: only the active WSX season.
-    # Older WSX years live under Färdiga serier.
-    wsx_year = _active_wsx_season_year()
+    # Race results / live standings: selected WSX year (default = active season).
+    # Older WSX years can be opened via ?year= on förarresultat.
+    wsx_year = int(wsx_year or _active_wsx_season_year())
     try:
         wsx_comp_ids = {int(c.id) for c in _wsx_competitions_for_year(wsx_year)}
     except Exception:
@@ -19519,12 +19537,347 @@ def compute_series_championship_totals():
     }
 
 
+def _build_race_results_season_wrap(
+    series_filter: str,
+    championship_totals: dict,
+    competitions: list,
+    *,
+    year_filter: int | None = None,
+) -> dict | None:
+    """Status banner when a single finished series tab is open on /race_results."""
+    code = (series_filter or "").strip().upper()
+    if code not in ("SX", "MX", "SMX", "WSX"):
+        return None
+
+    today = get_today()
+    name_by_code = {
+        "SX": "Supercross",
+        "MX": "Motocross",
+        "SMX": "SMX Finals",
+        "WSX": "WSX",
+    }
+    label_by_code = {
+        "SX": "AMA Supercross",
+        "MX": "AMA Pro Motocross",
+        "SMX": "SMX",
+        "WSX": "WSX",
+    }
+
+    if year_filter:
+        season_year = int(year_filter)
+    else:
+        season_year = _current_racing_season_year()
+        if code == "WSX":
+            try:
+                season_year = int(_active_wsx_season_year())
+            except Exception:
+                pass
+
+    year = season_year
+    finished = False
+    series_name = name_by_code[code]
+    row = Series.query.filter_by(name=series_name, year=season_year).first()
+    if row:
+        if row.year:
+            year = int(row.year)
+        if row.end_date and today > row.end_date:
+            finished = True
+
+    if not finished and competitions:
+        dated = [c for c in competitions if getattr(c, "event_date", None)]
+        if dated:
+            last = max(c.event_date for c in dated)
+            upcoming = [c for c in dated if c.event_date >= today]
+            if not upcoming and last < today:
+                finished = True
+            if last:
+                year = year or int(last.year)
+
+    if not finished:
+        return None
+
+    class_label = "450cc"
+    rows: list = []
+    class_champs: list[dict] = []
+    ct = championship_totals or {}
+
+    if code == "SX":
+        block = ct.get("SX") or {}
+        rows = block.get("450") or []
+        for key, lbl in (("250_east", "250 East"), ("250_west", "250 West")):
+            top = (block.get(key) or [None])[0]
+            if top:
+                class_champs.append(
+                    {
+                        "class_label": lbl,
+                        "rider_name": top.get("rider_name"),
+                        "points": top.get("points"),
+                    }
+                )
+    elif code == "MX":
+        block = ct.get("MX") or {}
+        rows = block.get("450") or []
+        for key, lbl in (("250_east", "250 East"), ("250_west", "250 West")):
+            top = (block.get(key) or [None])[0]
+            if top:
+                class_champs.append(
+                    {
+                        "class_label": lbl,
+                        "rider_name": top.get("rider_name"),
+                        "points": top.get("points"),
+                    }
+                )
+    elif code == "SMX":
+        po = ct.get("SMX_PLAYOFFS") or {}
+        if po.get("450"):
+            rows = po.get("450") or []
+            class_label = "450 Playoffs"
+            top250 = (po.get("250") or [None])[0]
+        else:
+            combined = ct.get("SMX") or {}
+            rows = combined.get("450") or []
+            class_label = "450 Combined"
+            top250 = (combined.get("250") or [None])[0]
+        if top250:
+            class_champs.append(
+                {
+                    "class_label": "250",
+                    "rider_name": top250.get("rider_name"),
+                    "points": top250.get("points"),
+                }
+            )
+    elif code == "WSX":
+        block = ct.get("WSX") or {}
+        rows = block.get("sx1") or []
+        class_label = "SX1"
+        top2 = (block.get("sx2") or [None])[0]
+        if top2:
+            class_champs.append(
+                {
+                    "class_label": "SX2",
+                    "rider_name": top2.get("rider_name"),
+                    "points": top2.get("points"),
+                }
+            )
+
+    podium = []
+    for i, r in enumerate((rows or [])[:3]):
+        podium.append(
+            {
+                "rank": i + 1,
+                "rider_name": r.get("rider_name") or "?",
+                "points": r.get("points"),
+                "rider_number": r.get("rider_number"),
+            }
+        )
+
+    return {
+        "finished": True,
+        "year": year,
+        "series_code": code,
+        "series_label": label_by_code[code],
+        "class_label": class_label,
+        "podium": podium,
+        "class_champs": class_champs,
+    }
+
+
+def _race_results_available_years(series_filter: str) -> list[int]:
+    """Distinct calendar years with races (plus WSX Series.year even without dates)."""
+    years: set[int] = set()
+    q = db.session.query(db.extract("year", Competition.event_date)).filter(
+        Competition.event_date.isnot(None)
+    )
+    code = (series_filter or "").strip().upper()
+    if code in ("SX", "MX", "SMX", "WSX", "MXGP", "MXON"):
+        q = q.filter(db.func.upper(Competition.series) == code)
+    elif code == "AMA":
+        q = q.filter(~db.func.upper(Competition.series).in_(tuple(TIPPA_ONLY_SERIES)))
+    for (y,) in q.distinct().all():
+        if y is not None:
+            years.add(int(y))
+
+    if code in ("", "ALL", "WSX"):
+        for (y,) in (
+            db.session.query(Series.year).filter(Series.name == "WSX", Series.year.isnot(None)).all()
+        ):
+            years.add(int(y))
+    if code in ("", "ALL", "MXGP"):
+        for (y,) in (
+            db.session.query(Series.year)
+            .filter(Series.name == "MXGP", Series.year.isnot(None))
+            .all()
+        ):
+            years.add(int(y))
+
+    return sorted(years, reverse=True)
+
+
+def _race_results_default_year(series_filter: str, available: list[int]) -> int:
+    code = (series_filter or "").strip().upper()
+    if code == "WSX":
+        prefer = int(_active_wsx_season_year())
+    elif code == "MXGP":
+        prefer = 2027
+    else:
+        prefer = int(_current_racing_season_year())
+    if prefer in available:
+        return prefer
+    if available:
+        return int(available[0])
+    return prefer
+
+
+def _race_results_series_tab_groups(year: int) -> dict:
+    """Split förarresultat series into live (active) vs finished archive tabs.
+
+    Active tabs follow each series' own live season year (SMX 2026, MXGP 2027, …).
+    Finished tabs use the selected archive year (SX/MX 2026, older WSX, …).
+    """
+    today = get_today()
+    catalog = [
+        ("SX", "AMA Supercross", "Supercross", "sx"),
+        ("MX", "AMA Pro Motocross", "Motocross", "mx"),
+        ("SMX", "SMX Finals", "SMX Finals", "smx"),
+        ("WSX", "WSX", "WSX", "wsx"),
+        ("MXGP", "MXGP", "MXGP", "mxgp"),
+    ]
+    active: list[dict] = []
+    finished: list[dict] = []
+    seen_active: set[str] = set()
+
+    def _is_finished(row: Series | None, code: str, y: int) -> bool:
+        if row and row.end_date and today > row.end_date:
+            return True
+        dated = (
+            Competition.query.filter(
+                db.func.upper(Competition.series) == code,
+                Competition.event_date.isnot(None),
+                db.extract("year", Competition.event_date) == int(y),
+            )
+            .order_by(Competition.event_date.desc())
+            .all()
+        )
+        if dated and all(c.event_date < today for c in dated):
+            return True
+        return False
+
+    # Live seasons: latest Series row per name that is not past end_date
+    for code, label, series_name, tone in catalog:
+        rows = (
+            Series.query.filter_by(name=series_name)
+            .order_by(Series.year.desc())
+            .all()
+        )
+        live = None
+        for row in rows:
+            if row.end_date and today > row.end_date:
+                continue
+            live = row
+            break
+        if live is None:
+            continue
+        y = int(live.year) if live.year else int(year)
+        if _is_finished(live, code, y):
+            continue
+        active.append(
+            {
+                "code": code,
+                "label": label,
+                "tone": tone,
+                "finished": False,
+                "year": y,
+            }
+        )
+        seen_active.add(code)
+
+    # Finished archive for the selected year (and WSX older seasons when on WSX)
+    for code, label, series_name, tone in catalog:
+        row = Series.query.filter_by(name=series_name, year=int(year)).first()
+        has_year_comps = (
+            db.session.query(Competition.id)
+            .filter(
+                db.func.upper(Competition.series) == code,
+                Competition.event_date.isnot(None),
+                db.extract("year", Competition.event_date) == int(year),
+            )
+            .first()
+            is not None
+        )
+        if not row and not has_year_comps:
+            continue
+        if not _is_finished(row, code, int(year)):
+            # Still live for this year → already in active (or skip)
+            continue
+        finished.append(
+            {
+                "code": code,
+                "label": label,
+                "tone": tone,
+                "finished": True,
+                "year": int(year),
+            }
+        )
+
+    return {"active": active, "finished": finished}
+
+
 @app.get("/race_results")
 def race_results_page():
     """Show actual race results for all competitions"""
     try:
+        series_filter = (request.args.get("series") or "").strip().upper()
+        if series_filter not in ("WSX", "SX", "MX", "SMX", "AMA", "MXGP", "MXON"):
+            series_filter = ""
+
+        # Year first (needed for finished-archive tabs); may be overridden by active tab year
+        all_years = _race_results_available_years("")
+        year_raw = (request.args.get("year") or "").strip()
+        year_filter: int | None = None
+        if year_raw.isdigit():
+            year_filter = int(year_raw)
+        if year_filter is None:
+            year_filter = _race_results_default_year(series_filter, all_years)
+
+        series_groups = _race_results_series_tab_groups(year_filter)
+        active_by_code = {t["code"]: t for t in series_groups["active"]}
+        finished_by_code = {t["code"]: t for t in series_groups["finished"]}
+
+        # Default to first active series (SMX / WSX / MXGP…) — not a finished AMA series
+        if not series_filter:
+            if series_groups["active"]:
+                series_filter = series_groups["active"][0]["code"]
+                year_filter = int(series_groups["active"][0]["year"])
+            elif series_groups["finished"]:
+                series_filter = series_groups["finished"][0]["code"]
+                year_filter = int(series_groups["finished"][0]["year"])
+
+        # If user opens an active series without year, use that series' live year
+        if series_filter in active_by_code and not year_raw:
+            year_filter = int(active_by_code[series_filter]["year"])
+
+        # Rebuild groups if year changed after defaulting to an active series
+        series_groups = _race_results_series_tab_groups(year_filter)
+        active_by_code = {t["code"]: t for t in series_groups["active"]}
+        finished_by_code = {t["code"]: t for t in series_groups["finished"]}
+
+        series_bucket = (
+            "finished"
+            if series_filter in finished_by_code
+            else "active"
+            if series_filter in active_by_code
+            else "active"
+        )
+
+        available_years = _race_results_available_years(series_filter) or [year_filter]
+        if year_filter not in available_years:
+            available_years = sorted(set(available_years) | {year_filter}, reverse=True)
+
         try:
-            championship_totals = compute_series_championship_totals()
+            championship_totals = compute_series_championship_totals(
+                season_year=year_filter,
+                wsx_year=year_filter,
+            )
         except Exception as ex_ct:
             print(f"WARNING compute_series_championship_totals: {ex_ct}")
             championship_totals = {
@@ -19538,35 +19891,65 @@ def race_results_page():
                 "show_smx_playoffs_section": False,
             }
 
-        series_filter = (request.args.get("series") or "").strip().upper()
-        if series_filter not in ("WSX", "SX", "MX", "SMX", "AMA", "MXGP", "MXON"):
-            series_filter = ""
-
         competitions = Competition.query.order_by(Competition.event_date.asc()).all()
         if series_filter == "WSX":
-            # Same season scope as WSX highscore / Mina poäng (series_id + year)
             try:
-                competitions = _wsx_competitions_for_year(_active_wsx_season_year())
+                competitions = _wsx_competitions_for_year(year_filter)
             except Exception:
-                competitions = [c for c in competitions if (c.series or "").upper() == "WSX"]
+                competitions = [
+                    c
+                    for c in competitions
+                    if (c.series or "").upper() == "WSX"
+                    and c.event_date
+                    and int(c.event_date.year) == year_filter
+                ]
         elif series_filter == "MXGP":
             try:
-                competitions = _mxgp_competitions_for_year(2027)
+                competitions = _mxgp_competitions_for_year(year_filter)
                 if not competitions:
                     competitions = [
-                        c for c in Competition.query.order_by(Competition.event_date.asc()).all()
+                        c
+                        for c in Competition.query.order_by(Competition.event_date.asc()).all()
                         if (c.series or "").upper() == "MXGP"
+                        and c.event_date
+                        and int(c.event_date.year) == year_filter
                     ]
             except Exception:
-                competitions = [c for c in competitions if (c.series or "").upper() == "MXGP"]
+                competitions = [
+                    c
+                    for c in competitions
+                    if (c.series or "").upper() == "MXGP"
+                    and (not c.event_date or int(c.event_date.year) == year_filter)
+                ]
         elif series_filter == "AMA":
             competitions = [
                 c
                 for c in competitions
                 if (c.series or "").upper() not in TIPPA_ONLY_SERIES
+                and c.event_date
+                and int(c.event_date.year) == year_filter
             ]
         elif series_filter:
-            competitions = [c for c in competitions if (c.series or "").upper() == series_filter]
+            series_ids_for_year = {
+                int(s.id)
+                for s in Series.query.filter(Series.year == year_filter).all()
+                if s.id is not None
+            }
+            competitions = [
+                c
+                for c in competitions
+                if (c.series or "").upper() == series_filter
+                and (
+                    (c.event_date and int(c.event_date.year) == year_filter)
+                    or (c.series_id and int(c.series_id) in series_ids_for_year)
+                )
+            ]
+        else:
+            competitions = [
+                c
+                for c in competitions
+                if c.event_date and int(c.event_date.year) == year_filter
+            ]
 
         competition_results: dict[int, dict] = {
             int(c.id): {"results": [], "holeshots": []} for c in competitions
@@ -19576,7 +19959,6 @@ def race_results_page():
         comp_ids = [int(c.id) for c in competitions]
 
         if comp_ids:
-            # Hämta alla resultat i en query (undvik N+1) och ladda inte rider_image_data-blobs.
             rows = (
                 db.session.query(
                     CompetitionResult.competition_id,
@@ -19614,7 +19996,6 @@ def race_results_page():
                 if not comp:
                     continue
 
-                # Use appropriate point system based on series
                 if comp.series == "WSX":
                     if hasattr(result, "rider_points") and result.rider_points is not None:
                         points = result.rider_points
@@ -19710,19 +20091,18 @@ def race_results_page():
                         "bike_brand": h.bike_brand,
                     }
                 )
-    
-        # Determine status for each competition and find the latest one
+
         today = get_today()
         latest_competition_id = None
-        latest_competition_date = None
-        
+        earliest_upcoming_id = None
+        earliest_upcoming_date = None
+
         for comp in competitions:
-            # Check if competition has results
-            has_results = len(competition_results[comp.id]['results']) > 0 or len(competition_results[comp.id]['holeshots']) > 0
-            
-            print(f"DEBUG: Competition {comp.name} (ID: {comp.id}) - Results: {len(competition_results[comp.id]['results'])}, Holeshots: {len(competition_results[comp.id]['holeshots'])}, Has Results: {has_results}")
-            
-            # Determine status
+            has_results = (
+                len(competition_results[comp.id]["results"]) > 0
+                or len(competition_results[comp.id]["holeshots"]) > 0
+            )
+
             if has_results:
                 comp.status = "completed"
                 comp.status_text = "Körda race"
@@ -19738,15 +20118,50 @@ def race_results_page():
                 comp.status_text = "Uppkommande"
                 comp.status_color = "text-blue-600"
                 comp.status_bg = "bg-blue-100"
-            
-            # Find the latest competition (most recent with results, or most recent upcoming)
-            if has_results and (latest_competition_id is None or comp.event_date > latest_competition_date):
-                latest_competition_id = comp.id
-                latest_competition_date = comp.event_date
-            elif not latest_competition_id and comp.event_date and comp.event_date >= today:
-                latest_competition_id = comp.id
-                latest_competition_date = comp.event_date
-        
+
+            if (
+                comp.status == "upcoming"
+                and comp.event_date
+                and (earliest_upcoming_date is None or comp.event_date < earliest_upcoming_date)
+            ):
+                earliest_upcoming_id = comp.id
+                earliest_upcoming_date = comp.event_date
+
+        season_wrap = None
+        try:
+            season_wrap = _build_race_results_season_wrap(
+                series_filter,
+                championship_totals,
+                competitions,
+                year_filter=year_filter,
+            )
+        except Exception as ex_sw:
+            print(f"WARNING _build_race_results_season_wrap: {ex_sw}")
+            season_wrap = None
+
+        # Default race: newest completed, else next upcoming
+        filtered_completed = [
+            c for c in competitions if c.status == "completed" and c.event_date
+        ]
+        if filtered_completed:
+            latest_competition_id = max(
+                filtered_completed, key=lambda c: (c.event_date, int(c.id))
+            ).id
+        elif earliest_upcoming_id:
+            latest_competition_id = earliest_upcoming_id
+        elif competitions:
+            dated = [c for c in competitions if c.event_date]
+            if dated:
+                latest_competition_id = max(
+                    dated, key=lambda c: (c.event_date, int(c.id))
+                ).id
+            else:
+                latest_competition_id = competitions[-1].id
+
+        competitions.sort(
+            key=lambda c: (c.event_date is None, c.event_date or date.min, int(c.id))
+        )
+
         return render_template(
             "race_results.html",
             competitions=competitions,
@@ -19754,10 +20169,15 @@ def race_results_page():
             latest_competition_id=latest_competition_id,
             championship_totals=championship_totals,
             series_filter=series_filter or "all",
+            year_filter=year_filter,
+            available_years=available_years,
+            series_groups=series_groups,
+            series_bucket=series_bucket,
+            season_wrap=season_wrap,
             username=session.get("username", "Gäst"),
             is_logged_in="user_id" in session,
         )
-    
+
     except Exception as e:
         print(f"ERROR in race_results_page: {e}")
         import traceback

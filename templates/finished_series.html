@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Färdiga Serier - MX Fantasy League</title>
+  <title>Fantasy-arkiv - MX Fantasy League</title>
   <link rel="icon" href="/favicon.ico" sizes="any" type="image/png" />
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" sizes="512x512" />
   <script src="https://cdn.tailwindcss.com"></script>
@@ -373,7 +373,7 @@
   <article class="fs-card">
     <div class="fs-card__head">
       <div>
-        <h2 class="fs-card__name">{{ data.series.name }}</h2>
+        <h2 class="fs-card__name">{{ data.display_name or data.series.name }}</h2>
         <p class="fs-card__year">Säsong {{ data.series.year }}</p>
       </div>
       <span class="fs-badge">Avslutad</span>
@@ -444,8 +444,8 @@
   <div class="fs-shell">
     <a class="fs-back" href="{{ url_for('index') }}">← Tillbaka till huvudsidan</a>
     <header class="mb-6">
-      <h1 class="fs-title">Färdiga serier</h1>
-      <p class="fs-sub">Historik och slutställningar</p>
+      <h1 class="fs-title">Fantasy-arkiv</h1>
+      <p class="fs-sub">Vem vann tippa SX / MX / SMX — slutställningar per säsong</p>
     </header>
 
     {% if sx_season_wrap %}
@@ -454,7 +454,7 @@
        data-sx-hero
        data-season-year="{{ sx_season_wrap.season_year }}">
       <div class="sx-season-hero__inner">
-        <p class="sx-season-hero__eyebrow">Supercross {{ sx_season_wrap.season_year }} — säsongsklar</p>
+        <p class="sx-season-hero__eyebrow">AMA Supercross {{ sx_season_wrap.season_year }} — säsongsklar</p>
         <h2 class="sx-season-hero__title">{{ sx_season_wrap.headline }}</h2>
         <p class="sx-season-hero__text">
           {{ sx_season_wrap.tagline }}
@@ -517,7 +517,7 @@
                         aria-selected="{{ 'true' if loop.first else 'false' }}"
                         aria-controls="fs-series-panel-{{ data.series.id }}"
                         data-year="{{ year }}"
-                        data-series-id="{{ data.series.id }}">{{ data.series.name }}</button>
+                        data-series-id="{{ data.series.id }}">{{ data.display_name or data.series.name }}</button>
               {% endfor %}
             </div>
           </div>

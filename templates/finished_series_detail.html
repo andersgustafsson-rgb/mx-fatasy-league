@@ -4,7 +4,7 @@
   {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ series.name }} {{ series.year }} — Färdig serie | MX Fantasy</title>
+  <title>{{ series_display_name|default(series.name) }} {{ series.year }} — Fantasy-arkiv | MX Fantasy</title>
   <link rel="icon" href="/favicon.ico" sizes="any" type="image/png" />
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" sizes="512x512" />
   <script src="https://cdn.tailwindcss.com"></script>
@@ -322,19 +322,19 @@
             <div class="series-wordmark text-lg sm:text-xl leading-tight">WORLD SUPERCROSS</div>
             <p class="text-[10px] sm:text-xs text-gray-500 font-orbit tracking-[0.28em] uppercase mt-1">WSX {{ series.year }} · Säsong klar</p>
             {% else %}
-            <div class="series-wordmark--generic text-lg sm:text-xl leading-tight">{{ series.name }}</div>
-            <p class="text-[10px] sm:text-xs text-gray-500 font-orbit tracking-[0.28em] uppercase mt-1">{{ series.year }} · Färdig serie</p>
+            <div class="series-wordmark--generic text-lg sm:text-xl leading-tight">{{ series_display_name|default(series.name) }}</div>
+            <p class="text-[10px] sm:text-xs text-gray-500 font-orbit tracking-[0.28em] uppercase mt-1">{{ series.year }} · Fantasy-arkiv</p>
             {% endif %}
           </div>
         </div>
         <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <a href="{{ url_for('finished_series_page') }}" class="text-center text-sm font-bold text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 rounded-lg px-4 py-2 bg-cyan-950/30">← Färdiga serier</a>
+          <a href="{{ url_for('finished_series_page') }}" class="text-center text-sm font-bold text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 rounded-lg px-4 py-2 bg-cyan-950/30">← Fantasy-arkiv</a>
           <a href="{{ url_for('index') }}" class="text-center text-sm font-bold text-white/90 border border-white/15 rounded-lg px-4 py-2 bg-slate-800/50 hover:bg-slate-700/50">Hem</a>
         </div>
       </header>
 
       <div class="text-center mb-10">
-        <h1 class="text-3xl md:text-4xl font-black text-white mb-2 font-orbit" style="text-shadow: 0 0 32px rgba(34, 211, 238, 0.2);">{{ series.name }} {{ series.year }}</h1>
+        <h1 class="text-3xl md:text-4xl font-black text-white mb-2 font-orbit" style="text-shadow: 0 0 32px rgba(34, 211, 238, 0.2);">{{ series_display_name|default(series.name) }} {{ series.year }}</h1>
         <p class="text-gray-400">Slutlig statistik · {{ total_users }} deltagare · {{ competitions|length }} tävlingar</p>
       </div>
 
