@@ -173,8 +173,8 @@ def create_app() -> Flask:
 		body = (
 			"# MX Fantasy League\n"
 			"\n"
-			"> Gratis fantasy motocross-spel i Sverige. Tippa topp 6, holeshot och wildcard "
-			"i SX, MX, SMX och WSX — ligor, poäng och leaderboard utan betting.\n"
+			"> Gratis fantasy motocross-spel i Sverige. Tippa SX, MX, SMX, WSX, MXGP och MXoN "
+			"— ligor, poäng och leaderboard utan betting.\n"
 			"\n"
 			"Officiell webbplats: https://mx-fantasy.se\n"
 			"\n"
@@ -185,6 +185,8 @@ def create_app() -> Flask:
 			f"- [Tippa motocross]({base}/tippa-motocross): tippa Pro Motocross / MX gratis\n"
 			f"- [Tippa SMX]({base}/tippa-smx): tippa SuperMotocross Playoffs / Final gratis\n"
 			f"- [Tippa WSX]({base}/tippa-wsx): tippa World Supercross (SX1/SX2) gratis\n"
+			f"- [Tippa MXGP]({base}/tippa-mxgp): tippa FIM MXGP / MX2-världsmästerskapet gratis\n"
+			f"- [Tippa MXoN]({base}/tippa-mxon): tippa Motocross of Nations (länder) gratis\n"
 			f"- [Spelmanual]({base}/manual): regler, poängsystem, holeshot och wildcard\n"
 			f"- [Starta / bjud in]({base}/start): skapa konto och gå med\n"
 			f"- [Registrera]({base}/register): gratis konto\n"
@@ -193,7 +195,7 @@ def create_app() -> Flask:
 			"- Namn: MX Fantasy League (även MX Fantasy)\n"
 			"- Språk: svenska\n"
 			"- Kostnad: gratis, ingen betting\n"
-			"- Serier: SX, MX, SMX, WSX\n"
+			"- Serier: SX, MX, SMX, WSX, MXGP, MXON\n"
 			f"- Sitemap: {base}/sitemap.xml\n"
 			f"- Facebook: {fb}\n"
 		)
@@ -237,6 +239,16 @@ def create_app() -> Flask:
   </url>
   <url>
     <loc>{base}/tippa-wsx</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>{base}/tippa-mxgp</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>{base}/tippa-mxon</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>

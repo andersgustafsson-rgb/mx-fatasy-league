@@ -48,6 +48,8 @@ _GAME_EXACT = {
     "/tippa-motocross",
     "/tippa-smx",
     "/tippa-wsx",
+    "/tippa-mxgp",
+    "/tippa-mxon",
     "/my_scores",
     "/leagues",
     "/bulletin_board",

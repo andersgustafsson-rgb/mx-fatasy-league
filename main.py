@@ -645,8 +645,8 @@ def _llms_txt_body(base: str) -> str:
     return (
         "# MX Fantasy League\n"
         "\n"
-        "> Gratis fantasy motocross-spel i Sverige. Tippa topp 6, holeshot och wildcard "
-        "i SX, MX, SMX och WSX — ligor, poäng och leaderboard utan betting.\n"
+        "> Gratis fantasy motocross-spel i Sverige. Tippa SX, MX, SMX, WSX, MXGP och MXoN "
+        "— ligor, poäng och leaderboard utan betting.\n"
         "\n"
         "Officiell webbplats: https://mx-fantasy.se\n"
         "\n"
@@ -657,6 +657,8 @@ def _llms_txt_body(base: str) -> str:
         f"- [Tippa motocross]({base}/tippa-motocross): tippa Pro Motocross / MX gratis\n"
         f"- [Tippa SMX]({base}/tippa-smx): tippa SuperMotocross Playoffs / Final gratis\n"
         f"- [Tippa WSX]({base}/tippa-wsx): tippa World Supercross (SX1/SX2) gratis\n"
+        f"- [Tippa MXGP]({base}/tippa-mxgp): tippa FIM MXGP / MX2-världsmästerskapet gratis\n"
+        f"- [Tippa MXoN]({base}/tippa-mxon): tippa Motocross of Nations (länder) gratis\n"
         f"- [Spelmanual]({base}/manual): regler, poängsystem, holeshot och wildcard\n"
         f"- [Starta / bjud in]({base}/start): skapa konto och gå med\n"
         f"- [Registrera]({base}/register): gratis konto\n"
@@ -665,7 +667,7 @@ def _llms_txt_body(base: str) -> str:
         "- Namn: MX Fantasy League (även MX Fantasy)\n"
         "- Språk: svenska\n"
         "- Kostnad: gratis, ingen betting\n"
-        "- Serier: SX, MX, SMX, WSX\n"
+        "- Serier: SX, MX, SMX, WSX, MXGP, MXON\n"
         f"- Sitemap: {base}/sitemap.xml\n"
         f"- Facebook: {os.getenv('FACEBOOK_PAGE_URL') or 'https://www.facebook.com/profile.php?id=61586769893903'}\n"
     )
@@ -715,6 +717,8 @@ def sitemap_xml():
         ("/tippa-motocross", "weekly", "0.9"),
         ("/tippa-smx", "weekly", "0.9"),
         ("/tippa-wsx", "weekly", "0.9"),
+        ("/tippa-mxgp", "weekly", "0.9"),
+        ("/tippa-mxon", "weekly", "0.9"),
         ("/start", "weekly", "0.9"),
         ("/manual", "monthly", "0.85"),
         ("/llms.txt", "monthly", "0.4"),
@@ -762,6 +766,44 @@ def _tippa_serie_faq_json(faq_items: list[dict]) -> str:
         {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": entity},
         ensure_ascii=False,
     )
+
+
+def _tippa_related_links(*exclude: str) -> list[dict]:
+    """Shared 'other series' links for SEO tippa pages."""
+    all_links = [
+        {
+            "href": "/tippa-supercross",
+            "label": "Tippa Supercross (SX)",
+            "blurb": "amerikansk AMA Supercross",
+        },
+        {
+            "href": "/tippa-motocross",
+            "label": "Tippa Motocross (MX)",
+            "blurb": "Pro Motocross utomhus",
+        },
+        {
+            "href": "/tippa-smx",
+            "label": "Tippa SMX",
+            "blurb": "SuperMotocross playoffs",
+        },
+        {
+            "href": "/tippa-wsx",
+            "label": "Tippa WSX",
+            "blurb": "World Supercross Championship",
+        },
+        {
+            "href": "/tippa-mxgp",
+            "label": "Tippa MXGP",
+            "blurb": "FIM Motocross World Championship",
+        },
+        {
+            "href": "/tippa-mxon",
+            "label": "Tippa MXoN",
+            "blurb": "Motocross of Nations — tippa länder",
+        },
+    ]
+    skip = set(exclude)
+    return [link for link in all_links if link["href"] not in skip]
 
 
 def _tippa_supercross_page_data() -> dict:
@@ -836,23 +878,7 @@ def _tippa_supercross_page_data() -> dict:
         ],
         "faq": faq,
         "faq_json": _tippa_serie_faq_json(faq),
-        "related_links": [
-            {
-                "href": "/tippa-motocross",
-                "label": "Tippa Motocross (MX)",
-                "blurb": "utomhus-Pro Motocross, heat och overall",
-            },
-            {
-                "href": "/tippa-smx",
-                "label": "Tippa SMX (Playoffs)",
-                "blurb": "SuperMotocross slutspel 1×/2×/3×",
-            },
-            {
-                "href": "/tippa-wsx",
-                "label": "Tippa WSX",
-                "blurb": "World Supercross Championship",
-            },
-        ],
+        "related_links": _tippa_related_links("/tippa-supercross"),
     }
 
 
@@ -927,23 +953,7 @@ def _tippa_motocross_page_data() -> dict:
         ],
         "faq": faq,
         "faq_json": _tippa_serie_faq_json(faq),
-        "related_links": [
-            {
-                "href": "/tippa-supercross",
-                "label": "Tippa Supercross (SX)",
-                "blurb": "amerikansk arenasupercross",
-            },
-            {
-                "href": "/tippa-smx",
-                "label": "Tippa SMX (Playoffs)",
-                "blurb": "SuperMotocross slutspel efter SX+MX",
-            },
-            {
-                "href": "/tippa-wsx",
-                "label": "Tippa WSX",
-                "blurb": "World Supercross Championship",
-            },
-        ],
+        "related_links": _tippa_related_links("/tippa-motocross"),
     }
 
 
@@ -1021,23 +1031,7 @@ def _tippa_smx_page_data() -> dict:
         ],
         "faq": faq,
         "faq_json": _tippa_serie_faq_json(faq),
-        "related_links": [
-            {
-                "href": "/tippa-supercross",
-                "label": "Tippa Supercross (SX)",
-                "blurb": "arenaserien som bygger mot SMX",
-            },
-            {
-                "href": "/tippa-motocross",
-                "label": "Tippa Motocross (MX)",
-                "blurb": "utomhus-nationals före slutspelet",
-            },
-            {
-                "href": "/tippa-wsx",
-                "label": "Tippa WSX",
-                "blurb": "World Supercross Championship",
-            },
-        ],
+        "related_links": _tippa_related_links("/tippa-smx"),
     }
 
 
@@ -1114,23 +1108,164 @@ def _tippa_wsx_page_data() -> dict:
         ],
         "faq": faq,
         "faq_json": _tippa_serie_faq_json(faq),
-        "related_links": [
-            {
-                "href": "/tippa-supercross",
-                "label": "Tippa Supercross (SX)",
-                "blurb": "amerikansk AMA Supercross",
-            },
-            {
-                "href": "/tippa-motocross",
-                "label": "Tippa Motocross (MX)",
-                "blurb": "Pro Motocross utomhus",
-            },
-            {
-                "href": "/tippa-smx",
-                "label": "Tippa SMX",
-                "blurb": "SuperMotocross playoffs",
-            },
+        "related_links": _tippa_related_links("/tippa-wsx"),
+    }
+
+
+def _tippa_mxgp_page_data() -> dict:
+    faq = [
+        {
+            "q": "Hur tippar jag MXGP / FIM Motocross World Championship?",
+            "a": "Skapa gratis konto på mx-fantasy.se, välj serien MXGP när den är öppen, öppna nästa GP och tippa topp 6 i MXGP och MX2 plus holeshot Race 1 och kvalvinnare innan deadline.",
+            "a_plain": "Skapa gratis konto på mx-fantasy.se, välj serien MXGP när den är öppen, öppna nästa GP och tippa topp 6 i MXGP och MX2 plus holeshot Race 1 och kvalvinnare innan deadline.",
+        },
+        {
+            "q": "Vad är skillnaden mellan MXGP och amerikansk Pro Motocross?",
+            "a": "MXGP är FIM:s världsmästerskap i motocross (MXGP- och MX2-klass) med GP-rundor i Europa och världen. Pro Motocross (MX) är den amerikanska utomhusserien. I appen tippar du dem som separata serier.",
+            "a_plain": "MXGP är FIM:s världsmästerskap i motocross (MXGP- och MX2-klass) med GP-rundor i Europa och världen. Pro Motocross (MX) är den amerikanska utomhusserien. I appen tippar du dem som separata serier.",
+        },
+        {
+            "q": "Finns wildcard i MXGP-tippningen?",
+            "a": "Nej — MXGP i MX Fantasy är tippa-only: topp 6 per klass, holeshot Race 1 och kvalvinnare (lördag). Ingen wildcard-omgång som i SX/MX.",
+            "a_plain": "Nej — MXGP i MX Fantasy är tippa-only: topp 6 per klass, holeshot Race 1 och kvalvinnare (lördag). Ingen wildcard-omgång som i SX/MX.",
+        },
+        {
+            "q": "Kostar det att tippa MXGP?",
+            "a": "Nej. Gratis konto, tips och leaderboard — ingen betting.",
+            "a_plain": "Nej. Gratis konto, tips och leaderboard — ingen betting.",
+        },
+        {
+            "q": "När öppnar tippa MXGP för alla?",
+            "a": "Serien byggs inför 2027-säsongen. Skapa konto nu; när publik tippa slås på syns MXGP på startsidan. Se alltid status och deadline i appen.",
+            "a_plain": "Serien byggs inför 2027-säsongen. Skapa konto nu; när publik tippa slås på syns MXGP på startsidan. Se alltid status och deadline i appen.",
+        },
+        {
+            "q": "Kan man tippa både MXGP och MX2?",
+            "a": "Ja. Du tippar topp 6 i båda klasserna, plus holeshot Race 1 och kvalvinnare per klass.",
+            "a_plain": "Ja. Du tippar topp 6 i båda klasserna, plus holeshot Race 1 och kvalvinnare per klass.",
+        },
+    ]
+    return {
+        "path": "/tippa-mxgp",
+        "series_short": "MXGP",
+        "breadcrumb_name": "Tippa MXGP",
+        "seo_title": "Tippa MXGP — gratis fantasy MXGP / FIM Motocross | MX Fantasy League",
+        "seo_description": (
+            "Hur tippar man MXGP online? Gratis fantasy MXGP-spel i MX Fantasy League: "
+            "tippa MXGP och MX2 topp 6, holeshot Race 1 och kval — utan betting."
+        ),
+        "seo_keywords": (
+            "tippa mxgp, fantasy mxgp, tippa fim motocross, mxgp fantasy sverige, "
+            "tippa mx2, fim mxgp tippning, gratis fantasy mxgp, "
+            "motocross world championship fantasy, MX Fantasy League"
+        ),
+        "h1": "Hur tippar jag MXGP?",
+        "lead": (
+            "Vill du tippa MXGP / FIM Motocross World Championship online? "
+            "I MX Fantasy League tippar du MXGP och MX2 inför varje GP — "
+            "gratis fantasy utan betting, på mx-fantasy.se."
+        ),
+        "what_title": "Vad är tippa MXGP / fantasy FIM Motocross?",
+        "what_paragraphs": [
+            (
+                "MXGP är världsmästerskapet i motocross under FIM: GP-helger runt om i världen "
+                "med klasserna MXGP och MX2. I fantasy tippar du vilka förare som placerar sig "
+                "högst och får fantasypoäng efter resultatet."
+            ),
+            (
+                "Söker du fantasy MXGP, tippa mxgp eller FIM motocross-spel på svenska är "
+                "MX Fantasy League byggt för dig som följer både AMA och världscupen — "
+                "inklusive Uddevalla och övriga GP-banor."
+            ),
         ],
+        "steps": [
+            "<strong class=\"text-white\">Skapa konto</strong> — gratis på mx-fantasy.se.",
+            "<strong class=\"text-white\">Välj serien MXGP</strong> när tippa är öppen för säsongen.",
+            "<strong class=\"text-white\">Öppna nästa GP</strong> och tippa topp 6 i MXGP och MX2.",
+            "<strong class=\"text-white\">Välj holeshot Race 1 och kvalvinnare</strong> per klass innan deadline.",
+            "<strong class=\"text-white\">Följ leaderboard</strong> och utmana i ligor.",
+        ],
+        "faq": faq,
+        "faq_json": _tippa_serie_faq_json(faq),
+        "related_links": _tippa_related_links("/tippa-mxgp"),
+    }
+
+
+def _tippa_mxon_page_data() -> dict:
+    faq = [
+        {
+            "q": "Hur tippar jag MXoN / Motocross of Nations?",
+            "a": "Skapa gratis konto, välj Motocross of Nations (MXON), öppna tippa och rangordna topp 5 nationer innan deadline (före Race 1).",
+            "a_plain": "Skapa gratis konto, välj Motocross of Nations (MXON), öppna tippa och rangordna topp 5 nationer innan deadline (före Race 1).",
+        },
+        {
+            "q": "Vad tippar man i MXoN jämfört med vanlig MXGP?",
+            "a": "I MXoN tippar du länder — inte individuella förare i topp 6. Du sätter topp 5 nationer utifrån provisional entry (t.ex. 33 lag). Poäng ges efter hur nära din lista ligger slutställningen.",
+            "a_plain": "I MXoN tippar du länder — inte individuella förare i topp 6. Du sätter topp 5 nationer utifrån provisional entry (t.ex. 33 lag). Poäng ges efter hur nära din lista ligger slutställningen.",
+        },
+        {
+            "q": "När är Motocross of Nations 2026?",
+            "a": "MXoN 2026 körs i Ernée, Frankrike. Race-dagen är söndag 4 oktober 2026; tippa låses före Race 1. Se alltid exakt deadline i appen.",
+            "a_plain": "MXoN 2026 körs i Ernée, Frankrike. Race-dagen är söndag 4 oktober 2026; tippa låses före Race 1. Se alltid exakt deadline i appen.",
+        },
+        {
+            "q": "Kostar det att tippa Motocross of Nations?",
+            "a": "Nej. Gratis konto, tips och leaderboard — ingen betting.",
+            "a_plain": "Nej. Gratis konto, tips och leaderboard — ingen betting.",
+        },
+        {
+            "q": "Finns Sverige med i tipplistan?",
+            "a": "Ja om Sverige står på den provisional entry-listan som seedats i spelet. Du tippar bland de aktiva nationerna i appen (inkl. TBA-platser där laget inte spärrats).",
+            "a_plain": "Ja om Sverige står på den provisional entry-listan som seedats i spelet. Du tippar bland de aktiva nationerna i appen (inkl. TBA-platser där laget inte spärrats).",
+        },
+        {
+            "q": "Är MXoN samma serie som MXGP?",
+            "a": "Nej. MXGP är säsongens världsmästerskap; Motocross of Nations är det årliga landslagetseventet. I MX Fantasy tippar du dem som separata grejer.",
+            "a_plain": "Nej. MXGP är säsongens världsmästerskap; Motocross of Nations är det årliga landslagetseventet. I MX Fantasy tippar du dem som separata grejer.",
+        },
+    ]
+    return {
+        "path": "/tippa-mxon",
+        "series_short": "MXoN",
+        "breadcrumb_name": "Tippa MXoN",
+        "seo_title": "Tippa MXoN / Motocross of Nations — gratis fantasy | MX Fantasy League",
+        "seo_description": (
+            "Hur tippar man Motocross of Nations (MXoN) online? Gratis fantasy i MX Fantasy League: "
+            "tippa topp 5 nationer i Ernée 2026 — utan betting."
+        ),
+        "seo_keywords": (
+            "tippa mxon, tippa motocross of nations, fantasy mxon, "
+            "motocross of nations tippning, tippa länder mxon, ernée 2026 fantasy, "
+            "gratis fantasy mxon, MX Fantasy League"
+        ),
+        "h1": "Hur tippar jag MXoN / Motocross of Nations?",
+        "lead": (
+            "Vill du tippa Motocross of Nations (MXoN) online? I MX Fantasy League tippar du "
+            "topp 5 nationer inför Ernée 2026 — gratis fantasy utan betting, på mx-fantasy.se."
+        ),
+        "what_title": "Vad är tippa MXoN / fantasy Motocross of Nations?",
+        "what_paragraphs": [
+            (
+                "Motocross of Nations är FIM:s årliga landslagstävling — lag med MXGP-, MX2- och "
+                "OPEN-förare gör upp om Nations-titeln. I fantasy tippar du vilka länder som "
+                "placerar sig högst, inte individuella topp 6 som i vanlig GP-tippning."
+            ),
+            (
+                "Söker du tippa mxon, fantasy Motocross of Nations eller landslagstippning på "
+                "svenska är MX Fantasy League byggt för just det engångseventet — separat "
+                "leaderboard från AMA och MXGP."
+            ),
+        ],
+        "steps": [
+            "<strong class=\"text-white\">Skapa konto</strong> — gratis på mx-fantasy.se.",
+            "<strong class=\"text-white\">Välj Motocross of Nations (MXON)</strong> på startsidan.",
+            "<strong class=\"text-white\">Öppna tippa</strong> och rangordna dina topp 5 nationer.",
+            "<strong class=\"text-white\">Spara innan deadline</strong> (före Race 1 på söndagen).",
+            "<strong class=\"text-white\">Följ MXoN-leaderboard</strong> när resultaten är inne.",
+        ],
+        "faq": faq,
+        "faq_json": _tippa_serie_faq_json(faq),
+        "related_links": _tippa_related_links("/tippa-mxon"),
     }
 
 
@@ -1156,6 +1291,18 @@ def tippa_smx_page():
 def tippa_wsx_page():
     """SEO: hur man tippar WSX / World Supercross."""
     return render_template("tippa_serie.html", page=_tippa_wsx_page_data())
+
+
+@app.get("/tippa-mxgp")
+def tippa_mxgp_page():
+    """SEO: hur man tippar MXGP / FIM Motocross World Championship."""
+    return render_template("tippa_serie.html", page=_tippa_mxgp_page_data())
+
+
+@app.get("/tippa-mxon")
+def tippa_mxon_page():
+    """SEO: hur man tippar MXoN / Motocross of Nations."""
+    return render_template("tippa_serie.html", page=_tippa_mxon_page_data())
 
 
 # -------------------------------------------------

@@ -11,7 +11,7 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 | 1 | **Light/dark mode-toggle** | Uppskjutet | Knapp enkel; hela appen light = större jobb (hårdkodat mörkt). Du sa: *kan vänta*. |
 | 2 | **Första-laddning error → refresh funkar** | Åtgärdat (keep-alive) | Syns mer efter `mx-fantasy.se` (kall worker/DB efter idle). Keep-alive: GitHub Action var 10 min + valfri Render Cron `scripts/cron_keepalive.py`. Health svarar alltid 200. |
 | 3 | **PWA-banner bara på mobil** | Inte beslutat | Syns på desktop via Chrome “Installera”. Frågat om begränsa till mobil — ej svarat. |
-| 4 | **SEO / “citerbara” tippa-sidor** | Gjort (v3) | `/om`, `/manual`, `/tippa-supercross`, `/tippa-motocross`, **`/tippa-smx`**, **`/tippa-wsx`** + sitemap/llms.txt. |
+| 4 | **SEO / “citerbara” tippa-sidor** | Gjort (v4) | `/om`, `/manual`, `/tippa-supercross`, `/tippa-motocross`, `/tippa-smx`, `/tippa-wsx`, **`/tippa-mxgp`**, **`/tippa-mxon`** + sitemap/llms.txt. |
 | 5 | **WSX trackmaps** | ⏳ Före race | Kartorna har **inte kommit ut än**. När de släpps: ladda ner, lägg i `static/trackmaps/`. **WSX story-hype-kort** för Stories finns (Dela WSX-hype). |
 | 6 | **SMX 1×/2×/3× på *spelar*-poäng** | ⏸️ Efter SMX-final (~26 sep) | **Beslut 30 aug:** tippa vidare på **1×** hela 2026 — byter inte regler mitt i säsongen. Förarna har redan 1×/2×/3× i SMX World Championship. Efter finalen: överväg samma multiplikator på tipp (race+HS+WC) till nästa år. |
 | 7 | **SMX trackmaps / venues** | Delvis gjort | Kartor + posters från playoffs-sidan i `static/trackmaps/smx/` (Columbus, Carson, Ridgedale). Kopplade via `trackmap_utils`. |
@@ -24,8 +24,33 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 
 | # | Idé | Status | Kommentar |
 |---|-----|--------|-----------|
-| 1 | **MXGP (FIM Motocross World Championship)** | 🚧 Scaffold (admin) | Tippa-only: UC-kort, 2027 provisional kalender (20 GP), trackmaps i `static/trackmaps/MXGP/`, admin test-GP, MXGP+MX2 topp 6 + HS Race 1 + kval (ingen WC). Publik tippa låst tills `MXGP_PUBLIC_PLAY`. |
+| 1 | **MXGP (FIM Motocross World Championship)** | 🚧 Scaffold (admin) | Tippa-only: UC-kort, 2027 provisional kalender (20 GP), trackmaps i `static/trackmaps/MXGP/`, admin test-GP, MXGP+MX2 topp 6 + HS Race 1 + kval (ingen WC). Publik tippa låst tills `MXGP_PUBLIC_PLAY`. Se launch-lista nedan. |
 | 2 | **Svenska SM (motocross)** | 💡 Idé | Nationellt SM — intressant för svensk målgrupp. Scope/klasser/kalender TBD. Bollades 17 sep 2026. |
+
+---
+
+## MXGP launch — fila mer (checklist)
+
+Scaffold + admin-test är i mål. **Inte live för alla** förrän listan är ok och `MXGP_PUBLIC_PLAY` flippas.
+
+**Klart (referens):** tippa (admin), scoring, AMA-isolering, 2027-kalender, trackmaps (de flesta), seriekort (UC + Uddevalla-BG), countdown, power rankings, fantasy-LB, mina poäng/seriesida, admin seed/holeshot/kval/OUT/manuella resultat, race-results-filter MXGP.
+
+**Kvar att fila innan launch:**
+
+- [ ] **Publik tippa** — flippa `MXGP_PUBLIC_PLAY` (i `mxgp_fantasy.py`) när UI + kalender + roster känns redo; admin kan testa redan nu.
+- [ ] **Kalender final** — 2027 är provisional (FIM/Infront). När officiell kalender landar: uppdatera venues/datum, re-seed.
+- [ ] **Trackmaps för TBA/nya banor** — saknas/TBA: Spain, Portugal, St Jean d’Angély, Ziyang (China?), Switzerland (+ ev. andra när venue byts). Lägg filer i `static/trackmaps/MXGP/` + tokens i `trackmap_utils.MXGP_TRACKMAP_TOKENS`.
+- [ ] **Officiell resultatimport** — ingen MXGP-API ännu; idag manuell admin. Hitta källa (mxgp-result.com / FIM / Infront) eller CSV-flöde innan säsong.
+- [ ] **Entry list / roster per GP** — så tippa-fältet följer gate (som WSX/SMX), inte bara säsongsroster.
+- [x] **SEO tippa-sida** — `/tippa-mxgp` + `/tippa-mxon` (+ sitemap/llms + Om-sidan). 24 sep 2026.
+- [ ] **Copy & UX** — UC-text, spelmanual-avsnitt MXGP-regler (topp 6 + HS Race 1 + kval, ingen WC), i18n-strängar.
+- [ ] **Reminders / mail** — pick-reminder copy för MXGP (ämne + body).
+- [ ] **Soft launch-check** — tippa → sätta HS/kval → manuella resultat → räkna om poäng → LB stämmer (gärna mot `scripts/test_mxgp_scoring_lab.py`-tankesätt).
+
+**Medvetet senare / lågt prio för tippa-only:**
+
+- [ ] Weekly fun / rider championship-leaders (AMA-stil) — behövs knappt för tippa.
+- [ ] Auto-import när officiell feed finns.
 
 ---
 
