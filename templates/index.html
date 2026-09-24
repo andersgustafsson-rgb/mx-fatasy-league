@@ -3203,9 +3203,9 @@
           <div id="season-team" class="tab-panel hidden">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
-                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('user') }}<span>{% if is_logged_in and my_team %}Säsongsteam{% else %}Skapa ditt säsongsteam{% endif %}</span></span></h2>
+                <h2 id="season-team-panel-title" class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('user') }}<span>{% if is_logged_in and my_team %}Säsongsteam{% else %}Skapa ditt säsongsteam{% endif %}</span></span></h2>
                 {% if is_logged_in and my_team %}
-                  <div class="rounded-xl border border-green-300/50 dark:border-green-700/50 bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-emerald-900/20 p-4 sm:p-5 shadow-inner">
+                  <div id="season-team-has-team" class="rounded-xl border border-green-300/50 dark:border-green-700/50 bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-emerald-900/20 p-4 sm:p-5 shadow-inner">
                     <div class="flex items-start justify-between gap-3 mb-4">
                       <div class="min-w-0">
                         <div class="text-xs font-semibold tracking-wide text-slate-400 uppercase">Ditt team</div>
@@ -3262,7 +3262,7 @@
                     </div>
                   </div>
                 {% else %}
-                  <div class="rounded-xl border border-cyan-500/30 bg-gradient-to-br from-slate-900 via-slate-800 to-cyan-950/40 p-5 sm:p-6 text-center">
+                  <div id="season-team-create-cta" class="rounded-xl border border-cyan-500/30 bg-gradient-to-br from-slate-900 via-slate-800 to-cyan-950/40 p-5 sm:p-6 text-center">
                     <p class="text-lg font-bold text-slate-100 mb-1">Skapa ditt säsongsteam</p>
                     <p class="text-sm text-slate-400 mb-4 leading-relaxed">
                       2×450 + 2×250 · 1,5 M budget · poäng varje race
@@ -3271,6 +3271,12 @@
                     {% if is_logged_in %}
                     <a href="{{ url_for('season_team_page') }}" class="rp-btn rp-btn--block rp-btn--accent mt-2">Se andras lag / topplista</a>
                     {% endif %}
+                  </div>
+                  <div id="season-team-has-team-fallback" class="hidden rounded-xl border border-green-300/50 dark:border-green-700/50 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950/40 p-5 sm:p-6 text-center">
+                    <p class="text-lg font-bold text-slate-100 mb-1">Ditt säsongsteam</p>
+                    <p class="text-sm text-slate-400 mb-4">Du har redan ett lag — öppna det för roster och poäng.</p>
+                    <a href="{{ url_for('season_team_page') }}" class="rp-btn rp-btn--block rp-btn--primary">Öppna mitt lag</a>
+                    <a href="{{ url_for('season_team_builder') }}" class="rp-btn rp-btn--block rp-btn--accent mt-2">Byt förare</a>
                   </div>
                 {% endif %}
               </div>
@@ -3798,6 +3804,32 @@
             container.innerHTML = `<p class="text-red-400 text-center">Fel: ${data.error}</p>`;
           }
           return;
+        }
+
+        // Stats loaded → user has a team (SSR may have missed it after schema migrate)
+        const createCta = document.getElementById('season-team-create-cta');
+        const fallback = document.getElementById('season-team-has-team-fallback');
+        const titleEl = document.getElementById('season-team-panel-title');
+        if (createCta) createCta.classList.add('hidden');
+        if (fallback) fallback.classList.remove('hidden');
+        if (titleEl) {
+          const span = titleEl.querySelector('span span') || titleEl;
+          if (span) span.textContent = 'Säsongsteam';
+        }
+        document.querySelectorAll('.tab-season-team-btn').forEach((btn) => {
+          btn.setAttribute('data-i18n', 'tab.team');
+          const label = (typeof MxI18n !== 'undefined') ? (MxI18n.t('tab.team') || 'Säsongsteam') : 'Säsongsteam';
+          btn.textContent = label;
+        });
+        const quickTeam = document.getElementById('quick-action-season-team');
+        if (quickTeam) {
+          quickTeam.href = window.seasonTeamPageUrl || '/season_team';
+          const ql = quickTeam.querySelector('.home-inner-tile__label');
+          if (ql) {
+            ql.setAttribute('data-i18n', 'home.season_team');
+            ql.textContent = (typeof MxI18n !== 'undefined' && MxI18n.t('home.season_team')) || 'Säsongsteam';
+          }
+          quickTeam.classList.remove('home-action-tile--create');
         }
         
         if (!data.competitions || data.competitions.length === 0) {

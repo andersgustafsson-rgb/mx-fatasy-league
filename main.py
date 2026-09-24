@@ -4830,10 +4830,17 @@ def _index_impl():
     if is_logged_in:
         # Get season team with error handling
         try:
+            _ensure_season_team_created_at_column()
             my_team = SeasonTeam.query.filter_by(user_id=uid).first()
         except Exception as e:
             print(f"Error getting season team: {e}")
-            my_team = None
+            try:
+                db.session.rollback()
+                _ensure_season_team_created_at_column()
+                my_team = SeasonTeam.query.filter_by(user_id=uid).first()
+            except Exception as e2:
+                print(f"Error getting season team (retry): {e2}")
+                my_team = None
 
         # Get team riders
         if my_team:
@@ -29059,8 +29066,9 @@ if init_success:
     try:
         with app.app_context():
             _ensure_competition_result_moto_columns()
+            _ensure_season_team_created_at_column()
     except Exception as e:
-        print(f"Warning: moto columns on startup: {e}")
+        print(f"Warning: schema columns on startup: {e}")
     
     # Auto-create track map images only if none exist
     print("🖼️ Checking track map images...")
