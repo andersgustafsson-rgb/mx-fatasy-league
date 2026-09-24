@@ -4385,14 +4385,33 @@ def build_series_status_list() -> list[dict]:
                 )
 
                 under_construction = not mxgp_public_play_enabled()
+                # Public card: never advertise Admin Test GP as "next race"
+                # (it sorted MXGP above live WSX while UC).
+                if next_race and getattr(next_race, "name", None) == ADMIN_TEST_GP_NAME:
+                    next_race = None
                 if under_construction:
-                    test_gp = (
-                        Competition.query.filter_by(
-                            name=ADMIN_TEST_GP_NAME, series="MXGP"
-                        ).first()
-                    )
-                    if test_gp and not getattr(test_gp, "is_cancelled", False):
-                        next_race = test_gp
+                    real_upcoming = [
+                        c
+                        for c in (upcoming_by_series.get("MXGP") or [])
+                        if getattr(c, "name", None) != ADMIN_TEST_GP_NAME
+                        and not getattr(c, "is_cancelled", False)
+                    ]
+                    next_race = _pick_next_competition(real_upcoming, require_open=False)
+                    if not next_race:
+                        next_race = next(
+                            (
+                                c
+                                for c in (
+                                    Competition.query.filter_by(series="MXGP")
+                                    .filter(Competition.event_date >= current_date)
+                                    .order_by(Competition.event_date)
+                                    .all()
+                                )
+                                if not getattr(c, "is_cancelled", False)
+                                and getattr(c, "name", None) != ADMIN_TEST_GP_NAME
+                            ),
+                            None,
+                        )
             except Exception:
                 under_construction = True
 
@@ -4445,17 +4464,18 @@ def build_series_status_list() -> list[dict]:
             }
         )
 
-    # Sort: soonest next race first (active season on top of homepage cards)
+    # Sort: soonest next race first. Under-construction teasers after live tippa.
     def _series_sort_key(item: dict):
+        uc = 1 if item.get("under_construction") else 0
         d = item.get("days_until_next_race")
         if isinstance(d, int) and d >= 0:
-            return (0, d, series_order.get(item.get("name") or "", 999))
+            return (uc, 0, d, series_order.get(item.get("name") or "", 999))
         if item.get("is_active"):
-            return (1, 0, series_order.get(item.get("name") or "", 999))
+            return (uc, 1, 0, series_order.get(item.get("name") or "", 999))
         until_start = item.get("days_until_start")
         if isinstance(until_start, int) and until_start > 0:
-            return (2, until_start, series_order.get(item.get("name") or "", 999))
-        return (3, 9999, series_order.get(item.get("name") or "", 999))
+            return (uc, 2, until_start, series_order.get(item.get("name") or "", 999))
+        return (uc, 3, 9999, series_order.get(item.get("name") or "", 999))
 
     series_data.sort(key=_series_sort_key)
 

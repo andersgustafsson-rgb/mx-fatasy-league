@@ -4062,12 +4062,13 @@
     }
 
     function seriesNextRaceSortKey(serie) {
+      const uc = serie && serie.under_construction ? 10000 : 0;
       const d = serie && serie.days_until_next_race;
-      if (Number.isFinite(d) && d >= 0) return d;
-      if (serie && serie.is_active) return 500;
+      if (Number.isFinite(d) && d >= 0) return uc + d;
+      if (serie && serie.is_active) return uc + 500;
       const untilStart = serie && serie.days_until_start;
-      if (Number.isFinite(untilStart) && untilStart > 0) return 1000 + untilStart;
-      return 9999;
+      if (Number.isFinite(untilStart) && untilStart > 0) return uc + 1000 + untilStart;
+      return uc + 9999;
     }
 
     function sortSeriesByNextRace(seriesList) {
