@@ -3,1294 +3,1187 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Säsongsteam – bygg lag</title>
+  <title>{% if has_existing_team %}Byt i säsongsteam{% else %}Skapa säsongsteam{% endif %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
   <style>
-    .rider-card {
-      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-      border: 1px solid rgb(51 65 85 / 0.6);
+    :root {
+      --stw-bg: #0b1220;
+      --stw-panel: rgba(15, 23, 42, 0.72);
+      --stw-line: rgba(148, 163, 184, 0.22);
+      --stw-cyan: #22d3ee;
+      --stw-amber: #fbbf24;
+      --stw-orange: #fb923c;
+      --stw-violet: #a78bfa;
+      --stw-ok: #34d399;
     }
-    .rider-card:hover {
-      border-color: rgb(34 211 238 / 0.45);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "DM Sans", system-ui, sans-serif;
+      color: #e2e8f0;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(34, 211, 238, 0.12), transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, rgba(251, 146, 60, 0.10), transparent 50%),
+        linear-gradient(180deg, #0b1220 0%, #111827 45%, #0b1220 100%);
+      background-attachment: fixed;
     }
-    .dark .rider-card:hover {
-      border-color: rgb(34 211 238 / 0.35);
+    .stw-display {
+      font-family: "Bebas Neue", Impact, sans-serif;
+      letter-spacing: 0.04em;
+      line-height: 0.95;
     }
-    .rider-card.selected {
-      border-color: rgb(52 211 153 / 0.45);
-      background: rgb(6 78 59 / 0.22);
-      box-shadow: 0 0 0 1px rgb(52 211 153 / 0.15), inset 0 0 0 1px rgb(52 211 153 / 0.06);
+    .stw-shell { max-width: 960px; margin: 0 auto; padding: 1rem 1rem 6.5rem; }
+    @media (min-width: 640px) { .stw-shell { padding: 1.5rem 1.5rem 7rem; } }
+
+    .stw-top {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+      margin-bottom: 1.25rem;
     }
-    .btn-add {
-      transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
-      position: relative;
+    .stw-back {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.55rem 0.9rem; border-radius: 0.65rem;
+      border: 1px solid var(--stw-line); background: rgba(30, 41, 59, 0.75);
+      color: #cbd5e1; font-size: 0.875rem; font-weight: 600; text-decoration: none;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .stw-back:hover { background: rgba(51, 65, 85, 0.9); border-color: rgba(34, 211, 238, 0.35); color: #fff; }
+
+    .stw-steps {
+      display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1.25rem;
+    }
+    .stw-step-pill {
+      flex: 1 1 0; min-width: 4.5rem;
+      display: flex; align-items: center; gap: 0.45rem;
+      padding: 0.55rem 0.65rem; border-radius: 0.75rem;
+      border: 1px solid var(--stw-line); background: rgba(15, 23, 42, 0.55);
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      color: #94a3b8; transition: border-color 0.2s, background 0.2s, color 0.2s;
+    }
+    .stw-step-pill .n {
+      width: 1.35rem; height: 1.35rem; border-radius: 999px;
+      display: grid; place-items: center;
+      background: rgba(51, 65, 85, 0.9); color: #cbd5e1; font-size: 0.7rem;
+    }
+    .stw-step-pill.is-active {
+      border-color: rgba(34, 211, 238, 0.45);
+      background: rgba(8, 47, 73, 0.45);
+      color: #e0f2fe;
+    }
+    .stw-step-pill.is-active .n { background: var(--stw-cyan); color: #0f172a; }
+    .stw-step-pill.is-done {
+      border-color: rgba(52, 211, 153, 0.35);
+      color: #a7f3d0;
+    }
+    .stw-step-pill.is-done .n { background: rgba(52, 211, 153, 0.25); color: var(--stw-ok); }
+
+    .stw-panel {
+      border: 1px solid var(--stw-line);
+      border-radius: 1.15rem;
+      background: var(--stw-panel);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
       overflow: hidden;
     }
-    .btn-add:hover:not(:disabled) {
+    .stw-panel-inner { padding: 1.25rem 1.15rem 1.5rem; }
+    @media (min-width: 640px) { .stw-panel-inner { padding: 1.75rem 1.75rem 2rem; } }
+
+    .stw-view { display: none; animation: stwIn 0.35s ease both; }
+    .stw-view.is-on { display: block; }
+    @keyframes stwIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .stw-rule-grid {
+      display: grid; gap: 0.65rem;
+      grid-template-columns: 1fr 1fr;
+    }
+    @media (min-width: 640px) { .stw-rule-grid { grid-template-columns: repeat(4, 1fr); } }
+    .stw-rule {
+      border: 1px solid var(--stw-line); border-radius: 0.85rem;
+      padding: 0.9rem 0.75rem; background: rgba(2, 6, 23, 0.35);
+      text-align: left;
+      display: flex; flex-direction: column; gap: 0.35rem; min-height: 5.5rem;
+    }
+    .stw-rule .kicker {
+      font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: #94a3b8; font-weight: 700;
+    }
+    .stw-rule strong {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 1.45rem; letter-spacing: 0.03em; color: #f8fafc; line-height: 1.05;
+    }
+    .stw-rule .desc {
+      font-size: 0.78rem; color: #94a3b8; line-height: 1.35; font-weight: 500;
+    }
+    .stw-intro-cta {
+      margin-top: 1.35rem;
+      width: 100%;
+      max-width: 280px;
+    }
+
+    .stw-budget {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.65rem;
+      margin: -0.25rem 0 1rem; padding: 0.75rem 0.9rem;
+      border-radius: 0.9rem; border: 1px solid rgba(34, 211, 238, 0.25);
+      background: linear-gradient(135deg, rgba(8, 47, 73, 0.85), rgba(15, 23, 42, 0.92));
+    }
+    .stw-budget .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: #7dd3fc; font-weight: 700; }
+    .stw-budget .val { font-family: "Bebas Neue", sans-serif; font-size: 1.65rem; letter-spacing: 0.03em; color: #fff; }
+    .stw-budget .slots { font-size: 0.8rem; font-weight: 700; color: #cbd5e1; }
+    .stw-bar {
+      width: 100%; height: 5px; border-radius: 999px; background: rgba(30, 41, 59, 0.9); overflow: hidden;
+      border: 1px solid rgba(71, 85, 105, 0.6);
+    }
+    .stw-bar > i {
+      display: block; height: 100%; width: 0%;
+      background: linear-gradient(90deg, #22d3ee, #34d399);
+      transition: width 0.3s ease, background 0.3s;
+    }
+    .stw-bar.is-over > i { background: linear-gradient(90deg, #f87171, #fb923c); }
+
+    .stw-search {
+      width: 100%; padding: 0.7rem 0.9rem; border-radius: 0.75rem;
+      border: 1px solid var(--stw-line); background: rgba(2, 6, 23, 0.45);
+      color: #f1f5f9; font-size: 0.9rem; outline: none;
+      transition: border-color 0.15s;
+    }
+    .stw-search:focus { border-color: rgba(34, 211, 238, 0.55); }
+    .stw-search::placeholder { color: #64748b; }
+
+    .stw-riders {
+      display: grid; gap: 0.65rem;
+      grid-template-columns: 1fr;
+      max-height: min(58vh, 520px); overflow: auto;
+      padding-right: 0.15rem; margin-top: 0.85rem;
+    }
+    @media (min-width: 640px) { .stw-riders { grid-template-columns: 1fr 1fr; } }
+
+    .stw-rider {
+      display: flex; align-items: center; gap: 0.7rem;
+      padding: 0.7rem 0.75rem; border-radius: 0.9rem;
+      border: 1px solid var(--stw-line); background: rgba(15, 23, 42, 0.55);
+      cursor: pointer; text-align: left; width: 100%;
+      transition: border-color 0.15s, transform 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .stw-rider:hover:not(:disabled) {
+      border-color: rgba(34, 211, 238, 0.4);
       transform: translateY(-1px);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
     }
-    .btn-add:disabled {
-      background: rgb(51 65 85);
-      cursor: not-allowed;
-      opacity: 0.55;
+    .stw-rider.is-selected {
+      border-color: rgba(52, 211, 153, 0.5);
+      background: rgba(6, 78, 59, 0.28);
+      box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.12);
     }
-    .btn-add.selected {
-      background: rgb(5 150 105);
+    .stw-rider:disabled { opacity: 0.42; cursor: not-allowed; transform: none; }
+    .stw-rider img.av, .stw-rider .av-ph {
+      width: 2.6rem; height: 2.6rem; border-radius: 999px; object-fit: cover;
+      border: 2px solid rgba(71, 85, 105, 0.8); flex-shrink: 0;
     }
-    .rule-valid { color: #34d399; font-weight: 600; }
-    .rule-invalid { color: #f87171; font-weight: 600; }
-    .budget-bar {
-      height: 6px;
-      background: rgb(30 41 59);
-      border-radius: 999px;
-      overflow: hidden;
-      border: 1px solid rgb(51 65 85 / 0.8);
+    .stw-rider .av-ph {
+      display: grid; place-items: center; background: #1e293b; font-size: 0.7rem; font-weight: 800; color: #94a3b8;
     }
-    .budget-fill {
-      height: 100%;
-      min-width: 0;
-      border-radius: 999px;
-      transition: width 0.25s ease, background 0.25s ease;
+    .stw-rider .num {
+      width: 2rem; height: 2rem; border-radius: 999px; flex-shrink: 0;
+      display: grid; place-items: center; font-size: 0.7rem; font-weight: 900;
+      background: #020617; border: 1px solid #475569; color: #e2e8f0;
     }
-    .team-card {
-      background: rgb(30 41 59 / 0.35);
-      border: 1px solid rgb(51 65 85 / 0.7);
-      transition: border-color 0.2s ease;
+    .stw-rider .meta { min-width: 0; flex: 1; }
+    .stw-rider .name { font-weight: 700; font-size: 0.88rem; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stw-rider .sub { font-size: 0.7rem; color: #94a3b8; margin-top: 0.1rem; }
+    .stw-rider .price { font-size: 0.78rem; font-weight: 800; color: var(--stw-ok); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    .stw-picked {
+      display: grid; gap: 0.55rem; grid-template-columns: 1fr 1fr; margin-top: 0.85rem;
     }
-    .team-card:hover {
-      border-color: rgb(34 211 238 / 0.25);
+    .stw-slot {
+      border: 1px dashed rgba(148, 163, 184, 0.35); border-radius: 0.85rem;
+      padding: 0.75rem; min-height: 4.5rem;
+      background: rgba(2, 6, 23, 0.28);
+      display: flex; flex-direction: column; justify-content: center; gap: 0.2rem;
     }
-    .filter-btn {
-      transition: background 0.15s ease, border-color 0.15s ease;
-      position: relative;
+    .stw-slot.is-filled {
+      border-style: solid; border-color: rgba(34, 211, 238, 0.3);
+      background: rgba(8, 47, 73, 0.35);
     }
-    .filter-btn.active {
-      box-shadow: 0 0 0 1px rgb(34 211 238 / 0.35);
+    .stw-slot .empty { font-size: 0.75rem; color: #64748b; font-weight: 600; }
+    .stw-slot .sn { font-weight: 700; font-size: 0.85rem; color: #f1f5f9; }
+    .stw-slot .sp { font-size: 0.7rem; color: #94a3b8; }
+    .stw-slot button.rm {
+      align-self: flex-start; margin-top: 0.25rem;
+      font-size: 0.65rem; font-weight: 700; color: #fca5a5;
+      background: transparent; border: none; padding: 0; cursor: pointer;
     }
-    .filter-btn:hover:not(.active) {
-      border-color: rgb(71 85 105);
+    .stw-slot button.rm:hover { color: #fecaca; text-decoration: underline; }
+
+    .stw-roster {
+      display: grid; gap: 0.75rem;
+      grid-template-columns: 1fr;
     }
-    #toast { 
-      position: fixed; 
-      bottom: 20px; 
-      left: 50%;
-             transform: translateX(-50%) translateY(100px);
-      padding: 16px 24px; 
-      border-radius: 12px;
-      color: white; 
-      font-weight: bold;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); 
-      z-index: 1000; 
+    @media (min-width: 640px) { .stw-roster { grid-template-columns: 1fr 1fr; } }
+    .stw-roster-card {
+      border: 1px solid var(--stw-line); border-radius: 1rem;
+      padding: 1rem; background: rgba(2, 6, 23, 0.4);
+      display: flex; flex-direction: column; gap: 0.75rem;
     }
-    #toast.show { transform: translateX(-50%) translateY(0) scale(1.05); }
-    #toast.success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-    #toast.error { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
-    .rider-image {
-      border: 2px solid rgb(51 65 85);
-      transition: border-color 0.2s ease;
+    .stw-roster-card.is-out {
+      border-color: rgba(251, 191, 36, 0.45);
+      box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.15);
     }
-    .rider-card:hover .rider-image {
-      border-color: rgb(34 211 238 / 0.5);
+    .stw-roster-card .cls-tag {
+      align-self: flex-start;
+      font-size: 0.65rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 0.2rem 0.5rem; border-radius: 999px;
     }
-    .price-tag {
-      display: inline-block;
-      font-size: 0.8125rem;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: -0.02em;
-      color: rgb(52 211 153);
+    .cls-450 { background: rgba(251, 146, 60, 0.18); color: #fdba74; border: 1px solid rgba(251, 146, 60, 0.35); }
+    .cls-250 { background: rgba(167, 139, 250, 0.15); color: #c4b5fd; border: 1px solid rgba(167, 139, 250, 0.35); }
+
+    .stw-foot {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+      padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom));
+      background: linear-gradient(180deg, transparent, rgba(11, 18, 32, 0.92) 28%, #0b1220);
+      border-top: 1px solid rgba(51, 65, 85, 0.5);
+      display: flex; gap: 0.65rem; justify-content: center;
     }
-    .header-gradient {
-      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #06b6d4 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    .stw-foot-inner { width: 100%; max-width: 960px; display: flex; gap: 0.65rem; }
+    .stw-btn {
+      flex: 1; border: none; border-radius: 0.85rem; padding: 0.9rem 1rem;
+      font-weight: 800; font-size: 0.95rem; cursor: pointer;
+      transition: transform 0.12s, opacity 0.15s, background 0.15s;
     }
+    .stw-btn:active:not(:disabled) { transform: scale(0.98); }
+    .stw-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .stw-btn--ghost {
+      background: rgba(30, 41, 59, 0.9); color: #e2e8f0; border: 1px solid var(--stw-line);
+    }
+    .stw-btn--ghost:hover:not(:disabled) { background: rgba(51, 65, 85, 0.95); }
+    .stw-btn--go {
+      background: linear-gradient(135deg, #0891b2, #059669);
+      color: #fff; box-shadow: 0 10px 28px rgba(8, 145, 178, 0.28);
+    }
+    .stw-btn--go:hover:not(:disabled) { filter: brightness(1.06); }
+    .stw-btn--warn {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      color: #fff;
+    }
+
+    .stw-confirm-grid {
+      display: grid; gap: 0.65rem; grid-template-columns: 1fr 1fr;
+    }
+    @media (min-width: 640px) { .stw-confirm-grid { grid-template-columns: repeat(4, 1fr); } }
+    .stw-confirm-card {
+      border: 1px solid var(--stw-line); border-radius: 0.9rem;
+      padding: 0.85rem 0.7rem; text-align: center; background: rgba(2, 6, 23, 0.35);
+    }
+    .stw-confirm-card img, .stw-confirm-card .ph {
+      width: 3.25rem; height: 3.25rem; border-radius: 999px; object-fit: cover;
+      margin: 0 auto 0.5rem; border: 2px solid rgba(71, 85, 105, 0.7);
+    }
+    .stw-confirm-card .ph {
+      display: grid; place-items: center; background: #1e293b; font-weight: 800; color: #94a3b8; font-size: 0.75rem;
+    }
+
+    #toast {
+      position: fixed; bottom: 5.5rem; left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      padding: 0.85rem 1.25rem; border-radius: 0.85rem;
+      color: #fff; font-weight: 700; font-size: 0.9rem; z-index: 60;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+      transition: transform 0.35s cubic-bezier(0.68, -0.35, 0.265, 1.25);
+      max-width: min(92vw, 420px); text-align: center;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.success { background: linear-gradient(135deg, #059669, #047857); }
+    #toast.error { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+
+    .stw-cost {
+      margin-top: 1rem; padding: 0.85rem 1rem; border-radius: 0.85rem;
+      border: 1px solid rgba(251, 191, 36, 0.35);
+      background: rgba(69, 26, 3, 0.35); color: #fde68a; font-size: 0.875rem;
+    }
+    .stw-cost strong { color: #fef3c7; }
+    .stw-proof {
+      display: none;
+    }
+    body.is-intro .stw-foot { display: none; }
+    body.is-intro .stw-shell { padding-bottom: 2rem; }
   </style>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-200 font-sans antialiased">
+<body>
   <div id="toast"></div>
 
-  <div class="container mx-auto p-3 sm:p-4 md:p-8">
-    <!-- Header - Responsiv layout -->
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
+  <div class="stw-shell">
+    <div class="stw-top">
       <header>
-        {% if has_existing_team %}
-        <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold header-gradient">Redigera Säsongsteam</h1>
-        <p class="text-base sm:text-lg mt-2 text-slate-400">
-          Inloggad som: <strong class="text-cyan-300">{{ username }}</strong>
+        <p class="text-xs font-bold uppercase tracking-[0.14em] text-cyan-300/80 mb-1">MX Fantasy League</p>
+        <h1 class="stw-display text-4xl sm:text-5xl text-white">
+          {% if has_existing_team %}Byt i säsongsteam{% else %}Skapa säsongsteam{% endif %}
+        </h1>
+        <p class="mt-2 text-sm text-slate-400">
+          Inloggad som <strong class="text-cyan-200">{{ username }}</strong>
+          {% if has_existing_team %} · <span class="text-slate-300">{{ existing_team.team_name }}</span>{% endif %}
         </p>
-        <div class="mt-3 p-3 rounded-lg border border-amber-800/40 bg-amber-950/25 dark:bg-amber-950/30 text-amber-100/95">
-          <p class="text-sm leading-snug">
-            <span class="font-semibold text-amber-200">Byte av förare:</span> 50 poäng per förare (MX-klassbyte 250↔450 är gratis). Aktivt team: <strong class="text-white">{{ existing_team.team_name }}</strong>
-          </p>
-          <p class="text-xs mt-1.5 text-amber-200/80">
-            Teamnamn kan ändras utan poängstraff.
-          </p>
-        </div>
-        <div id="mx-promotion-banner" class="mt-3 hidden p-3 rounded-lg border border-emerald-600/50 bg-emerald-950/30 text-emerald-100"></div>
-        {% if has_existing_team and team_slot_count is defined and team_slot_count < 4 %}
-        <div class="mt-3 p-3 rounded-lg border border-amber-600/50 bg-amber-950/30 text-amber-100 text-sm">
-          <p class="font-semibold text-amber-200">Ofullständigt lag ({{ team_slot_count }}/4)</p>
-          <p class="mt-1 text-amber-100/90">
-            En plats kan ha blivit tom om en 250-förare togs bort från förarlistan.
-            Välj en 250-förare och spara — att fylla till 4 kostar inga poäng.
-          </p>
-        </div>
-        {% endif %}
-        {% else %}
-        <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold header-gradient">Skapa ditt Säsongsteam</h1>
-        <p class="text-base sm:text-lg mt-2 text-slate-400">
-          Inloggad som: <strong class="text-cyan-300">{{ username }}</strong>
-        </p>
-        {% endif %}
-        
-        <!-- Poängvisning -->
-        <div id="points-display" class="mt-4 p-4 rounded-xl border border-slate-600/60 bg-slate-800/40 dark:bg-slate-800/50">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <h3 class="text-sm font-bold uppercase tracking-wide text-slate-300">Dina poäng</h3>
-              <p class="text-xs text-slate-400">Tillgängligt saldo</p>
-            </div>
-            <div class="text-right">
-              <div id="current-points" class="text-2xl font-black tabular-nums text-cyan-300">Laddar...</div>
-              <div id="penalty-preview" class="text-xs text-red-400 font-medium hidden mt-0.5">
-                −<span id="penalty-amount">0</span><span class="penalty-text"> vid sparning</span>
-              </div>
-            </div>
-          </div>
-          <div class="mt-2 border-t border-slate-600/50 pt-2 hidden" id="points-after-wrap">
-            <div class="text-xs text-slate-400">
-              <span id="points-after-change" class="font-medium">Efter ändring: <span id="points-after-amount">-</span> poäng</span>
-            </div>
-          </div>
-        </div>
       </header>
-      <a href="{{ url_for('index') }}"
-         class="border border-slate-500 bg-slate-800/80 hover:bg-slate-700 text-slate-100 font-semibold py-2 px-3 sm:px-4 rounded-lg text-sm sm:text-base self-start sm:self-center transition-colors">
-        Tillbaka
-      </a>
+      <a href="{{ url_for('index') }}" class="stw-back">← Hem</a>
     </div>
 
-    <main class="space-y-4 sm:space-y-6">
-      <!-- Nuvarande team (om det finns) - kompakt version ovanför -->
-      {% if has_existing_team %}
-      <div class="current-team-card rounded-xl border border-slate-600/70 bg-slate-800/30 dark:bg-slate-900/40 p-4 shadow-lg border-l-4 border-l-cyan-500/80">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-          <h2 class="text-sm font-bold uppercase tracking-wide text-slate-200">Nuvarande team</h2>
-          <button type="button" onclick="copyCurrentTeam()" class="text-xs font-semibold text-cyan-300 hover:text-cyan-200 underline-offset-2 hover:underline sm:no-underline sm:border sm:border-cyan-700/60 sm:rounded-lg sm:px-3 sm:py-1.5 sm:hover:bg-cyan-950/40">
-            Kopiera som utgångsläge
+    <nav class="stw-steps" id="step-nav" aria-label="Wizard-steg"></nav>
+
+    <div class="stw-panel">
+      <div class="stw-panel-inner">
+
+        <!-- INTRO (create only) -->
+        <section class="stw-view" data-view="intro" id="view-intro">
+          <h2 class="stw-display text-3xl text-white mb-2">Så funkar det</h2>
+          <p class="text-slate-400 text-sm leading-relaxed max-w-xl">
+            Bygg ett lag för hela säsongen. Du får poäng varje race utifrån hur dina förare kör —
+            och kan byta ut förare senare mot en poängkostnad.
+          </p>
+          <div class="stw-rule-grid mt-5">
+            <div class="stw-rule">
+              <span class="kicker">450cc</span>
+              <strong>2 förare</strong>
+              <span class="desc">Välj två i 450-klassen</span>
+            </div>
+            <div class="stw-rule">
+              <span class="kicker">250cc</span>
+              <strong>2 förare</strong>
+              <span class="desc">Välj två i 250-klassen</span>
+            </div>
+            <div class="stw-rule">
+              <span class="kicker">Budget</span>
+              <strong>1,5 M</strong>
+              <span class="desc">Maxpris för hela laget</span>
+            </div>
+            <div class="stw-rule">
+              <span class="kicker">Byte</span>
+              <strong>50 poäng</strong>
+              <span class="desc">Per förare du byter ut senare</span>
+            </div>
+          </div>
+          <button type="button" class="stw-btn stw-btn--go stw-intro-cta" id="btn-intro-start">
+            Börja bygga
           </button>
-        </div>
-        <div id="current-team-list" class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-          <!-- Current team riders will be loaded here -->
-        </div>
-        <p class="text-[11px] text-slate-400 mt-3 leading-relaxed">
-          Använd <strong class="text-slate-300">Byt ut</strong> under en förare, eller <strong class="text-slate-300">Kopiera som utgångsläge</strong> för att fylla utkastet till höger.
-        </p>
-      </div>
-      {% endif %}
+        </section>
 
-      <!-- Huvudlayout med grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-        <!-- Riderlista -->
-        <div class="lg:col-span-2 rounded-xl border border-slate-600/70 bg-slate-800/25 dark:bg-slate-800/40 p-4 sm:p-5 shadow-lg">
-          <h2 class="text-lg sm:text-xl font-bold text-slate-100 mb-1">Välj förare</h2>
-          <p class="text-xs text-slate-400 mb-4">Filtrera klass och lägg till i utkastet till höger.</p>
-
-          <div class="mb-3 flex flex-wrap gap-2 items-center">
-            <button type="button" id="tab-all" class="filter-btn px-3 py-2 rounded-lg bg-cyan-600 text-white text-sm font-semibold border border-cyan-500/50" onclick="setFilter('all')">
-              Alla
-            </button>
-            <button type="button" id="tab-450" class="filter-btn px-3 py-2 rounded-lg bg-slate-700 text-slate-200 text-sm font-medium border border-slate-600" onclick="setFilter('450cc')">
-              450cc
-            </button>
-            <button type="button" id="tab-250" class="filter-btn px-3 py-2 rounded-lg bg-slate-700 text-slate-200 text-sm font-medium border border-slate-600" onclick="setFilter('250cc')">
-              250cc
-            </button>
+        <!-- ROSTER (edit mode home) -->
+        <section class="stw-view" data-view="roster" id="view-roster">
+          <h2 class="stw-display text-3xl text-white mb-1">Ditt lag</h2>
+          <p class="text-slate-400 text-sm mb-4">Markera vem som åker ut, välj ersättare — 50 poäng per byte (MX-klassbyte kan vara gratis).</p>
+          <div id="mx-promo-banner" class="hidden mb-4 p-3 rounded-xl border border-emerald-600/40 bg-emerald-950/40 text-emerald-100 text-sm"></div>
+          {% if has_existing_team and team_slot_count is defined and team_slot_count < 4 %}
+          <div class="mb-4 p-3 rounded-xl border border-amber-600/40 bg-amber-950/35 text-amber-100 text-sm">
+            <strong class="text-amber-200">Ofullständigt lag ({{ team_slot_count }}/4).</strong>
+            Fyll till 4 — det kostar inga poäng.
           </div>
-
-          <div class="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
-            <div class="flex-1">
-              <label for="rider-search" class="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
-                Sök förare
-              </label>
-              <input
-                id="rider-search"
-                type="search"
-                inputmode="search"
-                autocomplete="off"
-                placeholder="Sök på namn, nummer eller märke…"
-                class="w-full p-2.5 rounded-lg bg-slate-900/50 border border-slate-600 text-slate-100 text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/40 outline-none transition-all placeholder:text-slate-500"
-                oninput="setSearch(this.value)"
-              />
-              <p class="text-[11px] text-slate-500 mt-1">
-                Listan laddas inte fullt ut: skriv <strong class="text-slate-300">minst 2 tecken</strong> (namn, # eller märke). Dina valda i utkastet syns alltid.
-              </p>
-            </div>
-            <div class="sm:pt-6 flex items-center justify-between sm:justify-end gap-2">
-              <span id="rider-count" class="text-xs text-slate-400 tabular-nums"></span>
-              <button type="button" onclick="clearSearch()" class="text-xs font-semibold text-slate-300 hover:text-white border border-slate-600 bg-slate-800/80 hover:bg-slate-700 px-3 py-2 rounded-lg transition-colors">
-                Rensa
-              </button>
-            </div>
-          </div>
-
-          <div id="rider-list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3"></div>
-      </div>
-
-      <!-- Ditt team -->
-      <div class="team-card rounded-xl p-4 sm:p-5 shadow-xl h-fit lg:sticky lg:top-4">
-        <h2 class="text-lg font-bold text-slate-100 mb-1 pb-3 border-b border-slate-600/80">
-          {% if has_existing_team %}Nytt team (utkast){% else %}Ditt team{% endif %}
-        </h2>
-
-        <div class="mb-4">
-          <label for="team-name-input" class="block text-slate-300 mb-1.5 text-xs font-semibold uppercase tracking-wide">
-            Teamnamn
-            {% if has_existing_team %}
-            <span class="normal-case font-normal text-slate-500"> · kan ändras fritt</span>
-            {% endif %}
-          </label>
-          <input type="text" id="team-name-input"
-                 class="w-full p-2.5 rounded-lg bg-slate-900/50 border border-slate-600 text-slate-100 text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/40 outline-none transition-all placeholder:text-slate-500"
-                 placeholder="T.ex. Team Awesome" 
-                 {% if has_existing_team %}value="{{ existing_team.team_name }}"{% endif %}
-                 oninput="validateAndRender()"
-                 onfocus="this.select()" />
-        </div>
-
-        <div class="mb-4 p-3 rounded-xl border border-slate-600/70 bg-slate-900/35">
-          <h4 class="font-bold mb-2 text-[11px] uppercase tracking-wide text-slate-400">Regler & budget</h4>
-          <div class="grid grid-cols-2 gap-2 text-sm">
-            <div id="rule-total" class="flex justify-between items-center gap-2 rounded-lg bg-slate-800/80 px-2.5 py-2 border border-slate-700/80">
-              <span class="text-slate-400 text-xs">Totalt</span><span class="font-mono font-bold tabular-nums">0 / 4</span>
-            </div>
-            <div id="rule-450" class="flex justify-between items-center gap-2 rounded-lg bg-slate-800/80 px-2.5 py-2 border border-slate-700/80">
-              <span class="text-slate-400 text-xs">450cc</span><span class="font-mono font-bold tabular-nums">0 / 2</span>
-            </div>
-            <div id="rule-250" class="flex justify-between items-center gap-2 rounded-lg bg-slate-800/80 px-2.5 py-2 border border-slate-700/80">
-              <span class="text-slate-400 text-xs">250cc</span><span class="font-mono font-bold tabular-nums">0 / 2</span>
-            </div>
-            <div id="rule-budget" class="flex justify-between items-center gap-2 rounded-lg bg-slate-800/80 px-2.5 py-2 border border-slate-700/80">
-              <span class="text-slate-400 text-xs">Kvar</span>
-              <span id="budget-remaining" class="font-mono font-bold tabular-nums text-emerald-400">1 500 000</span>
-            </div>
-          </div>
-          
-          <div class="mt-3">
-            <div class="flex justify-between text-[10px] text-slate-500 mb-1">
-              <span>Budget använd</span>
-              <span id="budget-pct-label">0%</span>
-            </div>
-            <div class="budget-bar">
-              <div class="budget-fill" id="budget-progress" style="width: 0%"></div>
-            </div>
-          </div>
-        </div>
-
-        <div id="your-team-list" class="space-y-2 sm:space-y-3"></div>
-
-        <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {% if has_existing_team %}
-          <button type="button" onclick="undoChanges()"
-                  id="undo-btn"
-                  class="border border-slate-500 bg-slate-800 hover:bg-slate-700 font-semibold py-3 px-4 rounded-lg text-slate-100 text-sm sm:text-base transition-colors">
-            Ångra
-          </button>
           {% endif %}
-          <button type="button" onclick="saveSeasonTeam()"
-                  id="save-team-btn"
-                  class="{% if has_existing_team %}col-span-1{% else %}col-span-2{% endif %} bg-emerald-600 hover:bg-emerald-500 font-bold py-3 px-4 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base transition-colors shadow-lg shadow-emerald-900/20"
-                  disabled>
-            {% if has_existing_team %}
-            Uppdatera team
-            {% else %}
-            Spara team
-            {% endif %}
-          </button>
-        </div>
+          <div class="stw-roster" id="roster-grid"></div>
+          <div id="fill-slot-wrap" class="hidden mt-3">
+            <button type="button" class="stw-btn stw-btn--go w-full" id="btn-fill-slot" style="flex:none">
+              Fyll tom plats
+            </button>
+          </div>
+          <div class="mt-4">
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Teamnamn</label>
+            <input type="text" id="team-name-roster" class="stw-search"
+                   value="{% if has_existing_team %}{{ existing_team.team_name }}{% endif %}"
+                   placeholder="Teamnamn" />
+          </div>
+          <div id="edit-cost-box" class="stw-cost hidden"></div>
+        </section>
+
+        <!-- PICK 450 / 250 / SWAP -->
+        <section class="stw-view" data-view="pick" id="view-pick">
+          <div class="stw-budget" id="budget-bar">
+            <div>
+              <div class="label">Budget kvar</div>
+              <div class="val" id="budget-val">1 500 000</div>
+            </div>
+            <div class="text-right">
+              <div class="slots" id="slot-val">0 / 2</div>
+              <div class="text-[11px] text-slate-400 mt-0.5" id="pick-hint">Välj 450cc</div>
+            </div>
+            <div class="stw-bar" id="budget-bar-track"><i id="budget-fill"></i></div>
+          </div>
+          <h2 class="stw-display text-3xl text-white mb-1" id="pick-title">Välj 2×450</h2>
+          <p class="text-slate-400 text-sm mb-3" id="pick-sub">Sök eller bläddra — tryck för att välja.</p>
+          <input type="search" id="rider-search" class="stw-search" placeholder="Sök namn, nummer eller märke…" autocomplete="off" />
+          <div class="stw-picked" id="picked-slots"></div>
+          <div class="stw-riders" id="rider-list"></div>
+        </section>
+
+        <!-- CONFIRM -->
+        <section class="stw-view" data-view="confirm" id="view-confirm">
+          <h2 class="stw-display text-3xl text-white mb-1">Bekräfta lag</h2>
+          <p class="text-slate-400 text-sm mb-4">Kolla igenom, namnge laget och spara.</p>
+          <div class="mb-4">
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Teamnamn</label>
+            <input type="text" id="team-name-input" class="stw-search" placeholder="T.ex. Dirt Kings"
+                   value="{% if has_existing_team %}{{ existing_team.team_name }}{% endif %}" />
+          </div>
+          <div class="stw-confirm-grid" id="confirm-grid"></div>
+          <div class="mt-4 flex flex-wrap gap-3 text-sm">
+            <div class="px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-600/60">
+              Budget kvar: <strong class="text-emerald-400 tabular-nums" id="confirm-budget">—</strong>
+            </div>
+            <div class="px-3 py-2 rounded-lg bg-slate-900/50 border border-slate-600/60">
+              Dina poäng: <strong class="text-cyan-300 tabular-nums" id="confirm-points">—</strong>
+            </div>
+          </div>
+          <div id="confirm-cost" class="stw-cost hidden"></div>
+        </section>
+
       </div>
-      </div> <!-- End grid container -->
-    </main>
+    </div>
+  </div>
+
+  <div class="stw-foot">
+    <div class="stw-foot-inner">
+      <button type="button" class="stw-btn stw-btn--ghost" id="btn-back">Tillbaka</button>
+      <button type="button" class="stw-btn stw-btn--go" id="btn-next">Nästa</button>
+    </div>
   </div>
 
   <script>
-    // Data från servern (se till att du skickar 'riders' i samma format som tidigare)
     const allRiders = {{ riders | tojson | safe }};
     const hasExistingTeam = {{ has_existing_team | default(false) | tojson | safe }};
-    const existingTeamRiders = {{ existing_team_riders | default([]) | tojson | safe }};
+    const existingIds = {{ existing_team_riders | default([]) | tojson | safe }};
+    const existingRiderObjs = {{ existing_team_rider_objs | default([]) | tojson | safe }};
+    const originalTeamName = {% if has_existing_team %}{{ existing_team.team_name | tojson | safe }}{% else %}""{% endif %};
     window.promotionOffers = {{ mx_promotion_offers | default([]) | tojson | safe }};
-    window.promotionPairs = {};
-    for (const o of window.promotionOffers) {
-      window.promotionPairs[String(o.from_id)] = o.to_id;
-    }
 
-    // Konfiguration
-    const totalBudget = 1500000;
+    const TOTAL_BUDGET = 1500000;
+    const CREATE_STEPS = ["intro", "pick450", "pick250", "confirm"];
+    const EDIT_STEPS = ["roster", "pickSwap", "confirm"];
 
-    // App-state
-    let budget = totalBudget;
+    let mode = hasExistingTeam ? "edit" : "create";
+    let stepIndex = 0;
     let myTeam = [];
-    let classFilter = "all";
-    let currentTeam = []; // Store current team riders
+    let baselineIds = new Set();
+    let swapOutId = null;
+    let fillClass = null; // when editing incomplete squad
     let searchQuery = "";
+    let userPoints = 0;
 
-    function normalizeSearch(s) {
-      return (s || "")
-        .toString()
-        .toLowerCase()
-        .trim();
+    function money(v) {
+      return new Intl.NumberFormat("sv-SE").format(Math.round(v || 0));
     }
-
-    function setSearch(val) {
-      searchQuery = val || "";
-      renderRiderList();
+    function spent() {
+      return myTeam.reduce((s, r) => s + (r.price || 0), 0);
     }
-
-    function clearSearch() {
-      const input = document.getElementById("rider-search");
-      if (input) input.value = "";
-      searchQuery = "";
-      renderRiderList();
+    function remaining() {
+      return TOTAL_BUDGET - spent();
     }
-
+    function countClass(cls) {
+      return myTeam.filter((r) => r.class === cls).length;
+    }
+    function imgSrc(r) {
+      if (!r || !r.image_url) return "";
+      if (r.image_url.startsWith("data:")) return r.image_url;
+      const p = r.image_url.startsWith("riders/") ? r.image_url : "riders/" + r.image_url;
+      return "/static/" + p;
+    }
+    function avatarHtml(r, sizeClass) {
+      const src = imgSrc(r);
+      if (src) {
+        return `<img class="av ${sizeClass || ""}" src="${src}" alt="" width="44" height="44"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><div class="av-ph ${sizeClass || ""}" style="display:none">#${r.rider_number || "?"}</div>`;
+      }
+      return `<div class="av-ph ${sizeClass || ""}">#${r.rider_number || "?"}</div>`;
+    }
     function showToast(msg, ok = true) {
       const t = document.getElementById("toast");
       t.textContent = msg;
-      t.className = ok ? "success" : "error";
-      t.classList.add("show");
-      setTimeout(() => t.classList.remove("show"), 2500);
+      t.className = (ok ? "success" : "error") + " show";
+      setTimeout(() => t.classList.remove("show"), 2800);
+    }
+    function currentStepKey() {
+      if (fillClass) return fillClass === "450cc" ? "pick450" : "pick250";
+      return (mode === "edit" ? EDIT_STEPS : CREATE_STEPS)[stepIndex];
+    }
+    function steps() {
+      if (fillClass) return ["pickFill"];
+      return mode === "edit" ? EDIT_STEPS : CREATE_STEPS;
     }
 
-    function setFilter(cls) {
-      classFilter = cls;
-      
-      // Update filter buttons with new classes
-      const allBtn = document.getElementById("tab-all");
-      const btn450 = document.getElementById("tab-450");
-      const btn250 = document.getElementById("tab-250");
-      
-      const inactive = "filter-btn px-3 py-2 rounded-lg text-slate-200 text-sm font-medium border border-slate-600 bg-slate-700";
-      const active = "filter-btn px-3 py-2 rounded-lg text-white text-sm font-semibold border border-cyan-500/50 bg-cyan-600 active";
-      allBtn.className = cls === "all" ? active : inactive;
-      btn450.className = cls === "450cc" ? active : inactive;
-      btn250.className = cls === "250cc" ? active : inactive;
+    function penalizedChanges() {
+      const promoMap = {};
+      for (const o of window.promotionOffers || []) {
+        promoMap[String(o.from_id)] = String(o.to_id);
+      }
+      const next = new Set(myTeam.map((r) => String(r.id)));
+      const prev = new Set([...baselineIds].map(String));
+      let removed = [...prev].filter((id) => !next.has(id));
+      let added = [...next].filter((id) => !prev.has(id));
 
-      renderRiderList();
-    }
+      // Incomplete 3→4 fill: free
+      if (prev.size === 3 && next.size === 4 && removed.length === 0 && added.length === 1) {
+        return 0;
+      }
 
-    function formatCurrency(v) {
-      return new Intl.NumberFormat("sv-SE").format(v);
-    }
-
-    function riderCardHTML(r) {
-      const isSelected = myTeam.some(x => x.id === r.id);
-      const canAdd = canAddRider(r);
-      
-      // In replacement mode, no rider is too expensive since we're swapping
-      let isTooExpensive = false;
-      
-      // Bygg HTML för rider-kortet: visa image_url om finns (data-URL eller filsökväg), annars logga/placeholder
-      const riderImgSrc = r.image_url ? (r.image_url.startsWith('data:') ? r.image_url : '/static/' + (r.image_url.startsWith('riders/') ? r.image_url : 'riders/' + r.image_url)) : '';
-      const imgHtml = r.image_url
-        ? `<img src="${riderImgSrc}"
-                alt="${r.name} headshot"
-                class="rider-image w-11 h-11 object-cover rounded-full" width="44" height="44"
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-            <div class="w-11 h-11 bg-slate-700 rounded-full flex items-center justify-center" style="display: none;">
-              ${r.bike_brand 
-                ? `<img src="/static/brand_logos/${r.bike_brand.toLowerCase()}.png" 
-                       alt="${r.bike_brand} logo" 
-                       class="w-8 h-8 object-contain"
-                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                  <span class="text-white text-xs font-bold" style="display: none;">#${r.rider_number}</span>`
-                : `<span class="text-white text-xs font-bold">#${r.rider_number}</span>`}
-            </div>`
-        : (r.bike_brand
-            ? `<img src="{{ url_for('static', filename='brand_logos') }}/${(r.bike_brand || '').toLowerCase()}.png"
-                   alt="${r.bike_brand} logo"
-                   class="rider-image w-11 h-11 object-contain" width="44" height="44" />`
-            : `<div class="w-11 h-11 bg-slate-700 rounded-full flex items-center justify-center">
-                 <span class="text-white text-xs font-bold">#${r.rider_number}</span>
-               </div>`);
-
-      const classChip =
-        r.class === "450cc"
-          ? '<span class="inline-flex items-center gap-1 rounded-full bg-orange-500/15 text-orange-200 border border-orange-500/30 px-2 py-0.5 text-[10px] font-bold">450cc</span>'
-          : '<span class="inline-flex items-center gap-1 rounded-full bg-violet-500/15 text-violet-200 border border-violet-500/30 px-2 py-0.5 text-[10px] font-bold">250cc</span>';
-      const numberHtml = `<div class="w-9 h-9 rounded-full flex items-center justify-center bg-slate-900/80 border border-slate-500/80">
-        <span class="text-slate-200 text-xs font-black tabular-nums">#${r.rider_number || "-"}</span>
-      </div>`;
-
-      return `
-        <div class="rider-card bg-slate-800/40 dark:bg-slate-800/50 p-3 rounded-xl flex items-center gap-3 ${isSelected ? 'selected' : ''} ${isTooExpensive ? 'opacity-55' : ''}">
-          <div class="flex-shrink-0 flex items-center gap-2.5">
-            ${imgHtml}
-            ${numberHtml}
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="font-bold text-slate-100 text-sm leading-tight truncate">${r.name}</span>
-              ${classChip}
-            </div>
-            <div class="text-[11px] text-slate-400 mt-0.5 truncate">${r.bike_brand || "—"}</div>
-            <div class="price-tag mt-1 ${isTooExpensive ? '!text-red-400' : ''}">${formatCurrency(r.price)} kr</div>
-            ${isTooExpensive ? '<div class="text-[10px] text-red-400 font-medium mt-0.5">Över budget för detta byte</div>' : ''}
-          </div>
-          <button type="button" class="btn-add shrink-0 px-3 py-2 text-white rounded-lg font-semibold text-xs ${isSelected ? 'selected' : isTooExpensive ? 'bg-red-900/60 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500'}"
-                  ${!canAdd ? "disabled" : ""}>
-            ${isSelected ? "Vald" : isTooExpensive ? "Stopp" : "Lägg till"}
-          </button>
-        </div>
-      `;
-    }
-
-    const MIN_SEARCH_LEN = 2;
-
-    function renderRiderList() {
-      const container = document.getElementById("rider-list");
-      container.innerHTML = "";
-      const countEl = document.getElementById("rider-count");
-      const q = normalizeSearch(searchQuery);
-      const draftIds = new Set(myTeam.map((x) => x.id));
-
-      const matchesClass = (r) => classFilter === "all" || r.class === classFilter;
-
-      const matchesSearch = (r) => {
-        const name = normalizeSearch(r.name);
-        const brand = normalizeSearch(r.bike_brand);
-        const num = normalizeSearch(r.rider_number);
-        return name.includes(q) || brand.includes(q) || num.includes(q);
-      };
-
-      // Never dump the full roster: need search, except we always show riders already in the draft.
-      if (q.length < MIN_SEARCH_LEN) {
-        const draftOnly = allRiders.filter((r) => matchesClass(r) && draftIds.has(r.id));
-        if (draftOnly.length === 0) {
-          if (countEl) countEl.textContent = "";
-          container.innerHTML = `
-          <div class="col-span-full rounded-xl border border-slate-600/70 bg-slate-900/30 p-4 text-center">
-            <div class="text-sm font-semibold text-slate-200">Börja med att söka</div>
-            <div class="text-xs text-slate-400 mt-1">Skriv minst ${MIN_SEARCH_LEN} tecken (namn, nummer eller märke). Välj gärna 450cc/250cc först om du vill begränsa klassen.</div>
-          </div>
-        `;
-          return;
+      // Free promotion swaps
+      const freePairs = [];
+      for (const fromId of [...removed]) {
+        const toId = promoMap[fromId];
+        if (toId && added.includes(toId)) {
+          freePairs.push([fromId, toId]);
+          removed = removed.filter((x) => x !== fromId);
+          added = added.filter((x) => x !== toId);
         }
-        if (countEl) countEl.textContent = `${draftOnly.length} i utkastet · sök för fler`;
-        container.insertAdjacentHTML(
-          "afterbegin",
-          `<div class="col-span-full text-[11px] text-slate-400 -mt-1 mb-2">Visar endast valda i utkastet tills du söker.</div>`
-        );
-        draftOnly.forEach((r) => {
-          const wrapper = document.createElement("div");
-          wrapper.innerHTML = riderCardHTML(r);
-          const btn = wrapper.querySelector(".btn-add");
-          btn.onclick = (event) => {
-            event.stopPropagation();
-            addRider(r);
-          };
-          container.appendChild(wrapper.firstElementChild);
-        });
+      }
+      return Math.max(removed.length, added.length);
+    }
+
+    function penaltyPoints() {
+      return penalizedChanges() * 50;
+    }
+
+    function renderStepNav() {
+      const nav = document.getElementById("step-nav");
+      if (fillClass) {
+        nav.innerHTML = `<div class="stw-step-pill is-active"><span class="n">+</span><span>Fyll ${fillClass}</span></div>`;
         return;
       }
+      const labels =
+        mode === "edit"
+          ? [
+              { key: "roster", label: "Lag" },
+              { key: "pickSwap", label: "Byte" },
+              { key: "confirm", label: "Spara" },
+            ]
+          : [
+              { key: "intro", label: "Intro" },
+              { key: "pick450", label: "450" },
+              { key: "pick250", label: "250" },
+              { key: "confirm", label: "Klar" },
+            ];
+      nav.innerHTML = labels
+        .map((s, i) => {
+          const done = i < stepIndex;
+          const active = i === stepIndex;
+          return `<div class="stw-step-pill ${active ? "is-active" : ""} ${done ? "is-done" : ""}">
+            <span class="n">${done ? "✓" : i + 1}</span>
+            <span>${s.label}</span>
+          </div>`;
+        })
+        .join("");
+    }
 
-      const fromSearch = allRiders.filter(
-        (r) => matchesClass(r) && matchesSearch(r)
-      );
-      const searchIds = new Set(fromSearch.map((r) => r.id));
-      const draftExtra = allRiders.filter(
-        (r) => matchesClass(r) && draftIds.has(r.id) && !searchIds.has(r.id)
-      );
-      const filtered = draftExtra.length
-        ? [...draftExtra, ...fromSearch]
-        : fromSearch;
+    function showView(name) {
+      document.querySelectorAll(".stw-view").forEach((el) => el.classList.remove("is-on"));
+      const map = {
+        intro: "view-intro",
+        roster: "view-roster",
+        pick450: "view-pick",
+        pick250: "view-pick",
+        pickSwap: "view-pick",
+        confirm: "view-confirm",
+      };
+      const el = document.getElementById(map[name]);
+      if (el) el.classList.add("is-on");
+      document.body.classList.toggle("is-intro", name === "intro");
+    }
 
-      if (countEl) {
-        countEl.textContent =
-          draftExtra.length > 0
-            ? `${filtered.length} träffar (${draftExtra.length} i utkast + sök)`
-            : `${filtered.length} träffar`;
-      }
+    function syncNameInputs(fromId) {
+      const a = document.getElementById("team-name-input");
+      const b = document.getElementById("team-name-roster");
+      if (!a || !b) return;
+      if (fromId === "roster") a.value = b.value;
+      if (fromId === "confirm") b.value = a.value;
+    }
 
-      if (filtered.length === 0) {
-        container.innerHTML = `
-          <div class="col-span-full rounded-xl border border-slate-600/70 bg-slate-900/30 p-4 text-center">
-            <div class="text-sm font-semibold text-slate-200">Inga träffar</div>
-            <div class="text-xs text-slate-400 mt-1">Prova en annan sökning eller byt klass.</div>
-          </div>
-        `;
-        return;
-      }
+    function readTeamName() {
+      const confirmName = (document.getElementById("team-name-input")?.value || "").trim();
+      const rosterName = (document.getElementById("team-name-roster")?.value || "").trim();
+      // Prefer the field that actually has text (create flow only uses confirm)
+      return confirmName || rosterName;
+    }
 
-      filtered.forEach((r) => {
-        const wrapper = document.createElement("div");
-        wrapper.innerHTML = riderCardHTML(r);
-        const btn = wrapper.querySelector(".btn-add");
-        btn.onclick = (event) => {
-          console.log("🖱️ Button clicked for rider:", r.name, "ID:", r.id);
-          event.stopPropagation();
-          addRider(r);
+    function writeTeamName(name) {
+      const a = document.getElementById("team-name-input");
+      const b = document.getElementById("team-name-roster");
+      if (a) a.value = name;
+      if (b) b.value = name;
+    }
+
+    function updateBudgetUI(needSlots, needClass) {
+      const rem = remaining();
+      document.getElementById("budget-val").textContent = money(rem);
+      const fill = document.getElementById("budget-fill");
+      const track = document.getElementById("budget-bar-track");
+      const pct = Math.min(100, Math.max(0, (spent() / TOTAL_BUDGET) * 100));
+      fill.style.width = pct + "%";
+      track.classList.toggle("is-over", rem < 0);
+      const have = needClass ? countClass(needClass) : myTeam.length;
+      document.getElementById("slot-val").textContent = `${have} / ${needSlots}`;
+    }
+
+    function renderPickedSlots(cls) {
+      const wrap = document.getElementById("picked-slots");
+      const selected = myTeam.filter((r) => r.class === cls);
+      const slots = [0, 1].map((i) => {
+        const r = selected[i];
+        if (!r) {
+          return `<div class="stw-slot"><span class="empty">Plats ${i + 1} · ${cls}</span></div>`;
+        }
+        return `<div class="stw-slot is-filled">
+          <div class="sn">${r.name}</div>
+          <div class="sp">#${r.rider_number || "—"} · ${money(r.price)} kr</div>
+          <button type="button" class="rm" data-rm="${r.id}">Ta bort</button>
+        </div>`;
+      });
+      wrap.innerHTML = slots.join("");
+      wrap.querySelectorAll("[data-rm]").forEach((btn) => {
+        btn.onclick = () => {
+          removeRider(parseInt(btn.getAttribute("data-rm"), 10));
         };
-        container.appendChild(wrapper.firstElementChild);
       });
     }
 
-    function canAddRider(r) {
-      // If we're in replacement mode, check price and class restrictions
-      if (window.replacingRiderId) {
-        const riderToReplace = currentTeam.find(rt => rt.id === window.replacingRiderId);
-        if (riderToReplace && r.class === riderToReplace.class) {
-          return true;
-        }
+    function canSelect(r, pickClass) {
+      if (swapOutId != null) {
+        if (sameId(r.id, swapOutId)) return false;
+        if (myTeam.some((x) => sameId(x.id, r.id))) return false;
+        const out = myTeam.find((x) => sameId(x.id, swapOutId)) ||
+          existingRiderObjs.find((x) => sameId(x.id, swapOutId));
+        if (!out) return false;
         const promo = (window.promotionOffers || []).find(
-          (o) => String(o.from_id) === String(window.replacingRiderId)
+          (o) => String(o.from_id) === String(swapOutId) && sameId(o.to_id, r.id)
         );
-        if (promo && r.id === promo.to_id) {
-          return true;
-        }
-        return false;
+        if (promo) return true;
+        if (r.class !== out.class) return false;
+        const othersCost = myTeam
+          .filter((x) => !sameId(x.id, swapOutId))
+          .reduce((s, x) => s + (x.price || 0), 0);
+        return othersCost + (r.price || 0) <= TOTAL_BUDGET;
       }
-      
-      // Normal validation
+      if (myTeam.some((x) => sameId(x.id, r.id))) return true; // toggle off
+      if (pickClass && r.class !== pickClass) return false;
       if (myTeam.length >= 4) return false;
-      if (r.price > budget) return false;
-      const c450 = myTeam.filter((x) => x.class === "450cc").length;
-      const c250 = myTeam.filter((x) => x.class === "250cc").length;
-      if (r.class === "450cc" && c450 >= 2) return false;
-      if (r.class === "250cc" && c250 >= 2) return false;
+      if (countClass(r.class) >= 2) return false;
+      if ((r.price || 0) > remaining()) return false;
       return true;
     }
 
-    function addRider(r) {
-      console.log("🎯 addRider called with:", r.name, "ID:", r.id);
-      console.log("🎯 window.replacingRiderId:", window.replacingRiderId);
-      console.log("💰 BUDGET BEFORE addRider:", budget);
-      
-      // Check if we're replacing a rider
-      if (window.replacingRiderId) {
-        // Find the rider being replaced
-        const riderToReplace = currentTeam.find(rt => rt.id === window.replacingRiderId);
-        console.log("🎯 riderToReplace in addRider:", riderToReplace);
-        
-        // Don't allow selecting the same rider that's being replaced
-        if (r.id === window.replacingRiderId) {
-          showToast(`Du kan inte ersätta ${r.name} med sig själv!`, false);
-          return;
-        }
-        
-        const promoSwap = (window.promotionOffers || []).find(
-          (o) => String(o.from_id) === String(window.replacingRiderId) && r.id === o.to_id
-        );
-        if (promoSwap) {
-          applyPromotionUpgrade(promoSwap.from_id);
-          return;
-        }
-        if (riderToReplace && r.class === riderToReplace.class) {
-          const ridersChanged = 1;
-          const penaltyPoints = ridersChanged * 50;
-          
-          // Get current user points
-          fetch("/get_user_total_points")
-            .then(response => response.json())
-            .then(pointsData => {
-              if (pointsData.total_points < penaltyPoints) {
-                showToast(`Du har inte tillräckligt med poäng! Du har ${pointsData.total_points} poäng men behöver ${penaltyPoints} poäng för att byta ${ridersChanged} förare. Klicka "Ångra" för att gå tillbaka till ditt ursprungliga team.`, false);
-                return;
-              }
-              
-              // User has enough points, proceed with the replacement
-              // Remove the old rider from myTeam first
-              const oldRiderIndex = myTeam.findIndex(rt => rt.id === window.replacingRiderId);
-              if (oldRiderIndex > -1) {
-                const oldRider = myTeam[oldRiderIndex];
-                budget += oldRider.price; // Return budget for old rider
-                myTeam.splice(oldRiderIndex, 1); // Remove old rider
-                console.log("🗑️ Removed old rider:", oldRider.name, "from myTeam");
-                console.log("💰 Budget after removing old rider:", budget);
-              }
-              
-              // Add the new rider
-              myTeam.push(r);
-              budget -= r.price;
-              console.log("➕ Added new rider:", r.name, "to myTeam");
-              console.log("💰 BUDGET AFTER adding new rider:", budget);
-              
-              // Clear the replacement mode
-              window.replacingRiderId = null;
-              
-              // Show success message with budget info
-              const budgetDiff = r.price - riderToReplace.price;
-              if (budgetDiff > 0) {
-                showToast(`${r.name} ersätter ${riderToReplace.name}. Kostar ${budgetDiff.toLocaleString()} kr mer.`, true);
-              } else if (budgetDiff < 0) {
-                showToast(`${r.name} ersätter ${riderToReplace.name}. Sparar ${Math.abs(budgetDiff).toLocaleString()} kr!`, true);
-              } else {
-                showToast(`${r.name} ersätter ${riderToReplace.name}. Samma pris.`, true);
-              }
-              
-              validateAndRender();
-              
-              // Re-render current team to clear highlighting
-              renderCurrentTeam();
-            })
-            .catch(error => {
-              console.error("Error checking user points:", error);
-              showToast("Ett fel uppstod vid kontroll av poäng. Försök igen.", false);
-            });
-          return;
-        } else if (riderToReplace && r.class === riderToReplace.class && r.price > riderToReplace.price) {
-          showToast(`${r.name} kostar ${r.price.toLocaleString()} kr, men ${riderToReplace.name} kostade bara ${riderToReplace.price.toLocaleString()} kr. Du kan inte byta till en dyrare förare!`, false);
-          return;
-        } else {
-          showToast(`Du måste välja en ${riderToReplace?.class || 'annan'} förare`, false);
-          return;
-        }
+    function sameId(a, b) {
+      return String(a) === String(b);
+    }
+
+    function clearRiderSearch() {
+      searchQuery = "";
+      const input = document.getElementById("rider-search");
+      if (input) input.value = "";
+    }
+
+    function toggleRider(r, pickClass) {
+      const idx = myTeam.findIndex((x) => sameId(x.id, r.id));
+      if (idx >= 0 && swapOutId == null) {
+        myTeam.splice(idx, 1);
+        clearRiderSearch();
+        refreshPick();
+        return;
       }
-      
-      // Normal add rider logic
-      if (!canAddRider(r)) return;
-      if (myTeam.some((x) => x.id === r.id)) return;
+      if (swapOutId != null) {
+        const outIdx = myTeam.findIndex((x) => sameId(x.id, swapOutId));
+        if (outIdx < 0) {
+          showToast("Välj först vem som åker ut från laget", false);
+          return;
+        }
+        if (sameId(r.id, swapOutId)) {
+          showToast("Välj en annan förare som ersättare", false);
+          return;
+        }
+        if (!canSelect(r, null)) {
+          showToast("Den föraren går inte att byta till (klass/budget)", false);
+          return;
+        }
+        const outName = myTeam[outIdx].name;
+        myTeam[outIdx] = r;
+        swapOutId = null;
+        clearRiderSearch();
+        showToast(`${r.name} ersätter ${outName}`, true);
+        goStep(EDIT_STEPS.indexOf("confirm"));
+        return;
+      }
+      if (!canSelect(r, pickClass)) {
+        showToast("Kan inte lägga till (klass, antal eller budget)", false);
+        return;
+      }
       myTeam.push(r);
-      budget -= r.price;
-      validateAndRender();
+      clearRiderSearch();
+      refreshPick();
     }
 
     function removeRider(id) {
-      const idx = myTeam.findIndex((x) => x.id === id);
-      if (idx > -1) {
-        budget += myTeam[idx].price;
-        myTeam.splice(idx, 1);
-        validateAndRender();
-      }
+      myTeam = myTeam.filter((r) => r.id !== id);
+      refreshPick();
     }
 
-    function validateAndRender() {
-      console.log("💰 validateAndRender debug:");
-      console.log("💰 myTeam riders:", myTeam.map(r => `${r.name}: ${r.price.toLocaleString()} kr`));
-      console.log("💰 myTeam total cost:", myTeam.reduce((sum, r) => sum + r.price, 0).toLocaleString());
-      console.log("💰 current budget:", budget.toLocaleString());
-      
-      // Render teamlistan
-      const list = document.getElementById("your-team-list");
-      list.innerHTML = myTeam.length ? "" : "<p class='text-slate-500 text-sm'>Välj fyra förare i listan till vänster.</p>";
-
-      myTeam.forEach((r) => {
-        const row = document.createElement("div");
-        row.className =
-          "flex justify-between items-center gap-2 p-2.5 rounded-lg border border-slate-600/80 bg-slate-900/40";
-        row.innerHTML = `
-          <div class="flex items-center gap-2.5 min-w-0">
-            ${r.image_url
-              ? `<img src="${r.image_url.startsWith('data:') ? r.image_url : '/static/' + (r.image_url.startsWith('riders/') ? r.image_url : 'riders/' + r.image_url)}"
-                       alt="${r.name} headshot"
-                       class="w-9 h-9 object-cover rounded-full border border-slate-500 shrink-0" width="36" height="36"
-                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                   <div class="w-9 h-9 bg-slate-700 rounded-full flex items-center justify-center shrink-0" style="display: none;">
-                     ${r.bike_brand 
-                       ? `<img src="/static/brand_logos/${r.bike_brand.toLowerCase()}.png" 
-                              alt="${r.bike_brand} logo" 
-                              class="w-5 h-5 object-contain"
-                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                         <span class="text-white text-[10px] font-bold" style="display: none;">#${r.rider_number}</span>`
-                       : `<span class="text-white text-[10px] font-bold">#${r.rider_number}</span>`}
-                   </div>`
-              : (r.bike_brand
-                  ? `<img src="{{ url_for('static', filename='brand_logos') }}/${(r.bike_brand || '').toLowerCase()}.png"
-                         alt="${r.bike_brand} logo"
-                         class="w-9 h-9 object-contain border border-slate-500 rounded-full shrink-0" width="36" height="36" />`
-                  : `<div class="w-9 h-9 bg-slate-700 rounded-full flex items-center justify-center shrink-0">
-                       <span class="text-white text-[10px] font-bold">#${r.rider_number}</span>
-                     </div>`)}
-            <div class="min-w-0">
-              <div class="font-semibold text-slate-100 text-sm truncate">${r.name}</div>
-              <div class="text-[11px] text-slate-400">${r.class} · #${r.rider_number || "-"}</div>
-              <div class="text-[11px] text-emerald-400/90 font-semibold tabular-nums">${formatCurrency(r.price)} kr</div>
-            </div>
-          </div>
-          <button type="button" class="shrink-0 text-slate-500 hover:text-red-400 text-sm font-bold px-2 py-1 rounded-md hover:bg-slate-800 transition-colors" onclick="removeRider(${r.id})" title="Ta bort från team">✕</button>
-        `;
-        list.appendChild(row);
-      });
-
-      // Regler
-      const c450 = myTeam.filter((x) => x.class === "450cc").length;
-      const c250 = myTeam.filter((x) => x.class === "250cc").length;
-      const total = myTeam.length;
-
-      const ruleBox =
-        "flex justify-between items-center gap-2 rounded-lg bg-slate-800/80 px-2.5 py-2 border border-slate-700/80";
-      const rule = (id, ok, txt) => {
-        const box = document.getElementById(id);
-        const val = box.querySelector("span:last-child");
-        val.textContent = txt;
-        val.className =
-          "font-mono font-bold tabular-nums " + (ok ? "text-emerald-400" : "text-red-400");
-        box.className = ruleBox;
-      };
-
-      document.getElementById("budget-remaining").textContent = formatCurrency(budget);
-      rule("rule-total", total === 4, `${total} / 4`);
-      rule("rule-450", c450 === 2, `${c450} / 2`);
-      rule("rule-250", c250 === 2, `${c250} / 2`);
-      rule("rule-budget", budget >= 0, `${formatCurrency(budget)}`);
-      
-      // Update budget progress bar
-      const spent = totalBudget - budget;
-      const percentage = (spent / totalBudget) * 100;
-      const progressBar = document.getElementById("budget-progress");
-      progressBar.style.width = `${percentage}%`;
-      const pctEl = document.getElementById("budget-pct-label");
-      if (pctEl) pctEl.textContent = `${Math.min(100, Math.round(percentage))}%`;
-      
-      // Change color based on budget usage
-      if (percentage > 80) {
-        progressBar.style.background = "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)";
-      } else if (percentage > 60) {
-        progressBar.style.background = "linear-gradient(90deg, #f59e0b 0%, #d97706 100%)";
-      } else {
-        progressBar.style.background = "linear-gradient(90deg, #10b981 0%, #059669 100%)";
+    function riderCards(list, pickClass) {
+      const box = document.getElementById("rider-list");
+      const q = (searchQuery || "").toLowerCase().trim();
+      let filtered = list;
+      if (q) {
+        filtered = list.filter((r) => {
+          const name = (r.name || "").toLowerCase();
+          const brand = (r.bike_brand || "").toLowerCase();
+          const num = String(r.rider_number || "");
+          return name.includes(q) || brand.includes(q) || num.includes(q);
+        });
       }
-
-      // Uppdatera riderlista (disable knappar)
-      renderRiderList();
-
-      // Aktivera Spara om valid
-      const save = document.getElementById("save-team-btn");
-      const valid =
-        total === 4 &&
-        c450 === 2 &&
-        c250 === 2 &&
-        budget >= 0 &&
-        document.getElementById("team-name-input").value.trim();
-      save.disabled = !valid;
-      
-      // Update save button text based on riders changed
-      updateSaveButtonText();
-      
-      // Update points preview
-      updatePointsPreview();
-    }
-
-    function calculateRidersChanged() {
-      if (!hasExistingTeam || !existingTeamRiders || existingTeamRiders.length === 0) {
-        return 0;
-      }
-      const currentRiderIds = new Set(myTeam.map((r) => r.id.toString()));
-      const originalRiderIds = new Set(existingTeamRiders.map(String));
-      const removed = [...originalRiderIds].filter((id) => !currentRiderIds.has(id));
-      const added = [...currentRiderIds].filter((id) => !originalRiderIds.has(id));
-      if (originalRiderIds.size === 3 && currentRiderIds.size === 4 && removed.length === 0 && added.length === 1) {
-        return 0;
-      }
-      const pairs = window.promotionPairs || {};
-      let penalty = 0;
-      for (const id of removed) {
-        const promotedTo = pairs[id];
-        if (promotedTo && currentRiderIds.has(String(promotedTo))) continue;
-        penalty += 1;
-      }
-      if (!removed.length && added.length) {
-        penalty += added.length;
-      }
-      return penalty;
-    }
-
-    function renderMxPromotionBanner() {
-      const el = document.getElementById("mx-promotion-banner");
-      if (!el) return;
-      const offers = window.promotionOffers || [];
-      if (!offers.length) {
-        el.classList.add("hidden");
-        el.innerHTML = "";
+      filtered = [...filtered].sort((a, b) => (a.rider_number || 999) - (b.rider_number || 999));
+      if (!filtered.length) {
+        box.innerHTML = `<div class="col-span-full text-center text-sm text-slate-500 py-8">Inga träffar</div>`;
         return;
       }
-      el.innerHTML = offers
-        .map(
-          (o) => `
-        <p class="text-sm font-semibold text-emerald-200 mb-1">MX-klassbyte (gratis)</p>
-        <p class="text-xs text-emerald-100/90 mb-2">
-          ${o.from_name || "Din förare"} (${o.from_class}, #${o.from_number || "?"}) kör nu 450 som #${o.to_number}.
-          Efter uppgradering: se till att du fortfarande har 2×450 och 2×250 innan du sparar.
-        </p>
-        <button type="button" class="text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg"
-                onclick="applyPromotionUpgrade(${o.from_id})">
-          Uppgradera till ${o.to_name} (#${o.to_number})
-        </button>`
-        )
+      box.innerHTML = filtered
+        .map((r) => {
+          const selected = myTeam.some((x) => x.id === r.id);
+          const ok = canSelect(r, pickClass);
+          const disabled = !selected && !ok;
+          return `<button type="button" class="stw-rider ${selected ? "is-selected" : ""}" data-id="${r.id}" ${disabled ? "disabled" : ""}>
+            ${avatarHtml(r)}
+            <span class="num">#${r.rider_number || "—"}</span>
+            <span class="meta">
+              <span class="name">${r.name}</span>
+              <span class="sub">${r.bike_brand || "—"} · ${r.class}</span>
+            </span>
+            <span class="price">${money(r.price)}</span>
+          </button>`;
+        })
         .join("");
-      el.classList.remove("hidden");
+      box.querySelectorAll(".stw-rider").forEach((btn) => {
+        btn.onclick = () => {
+          const id = parseInt(btn.getAttribute("data-id"), 10);
+          const r = allRiders.find((x) => x.id === id);
+          if (r) toggleRider(r, pickClass);
+        };
+      });
     }
 
-    function ensureDraftFromCurrentTeam() {
-      if (myTeam.length === 0 && currentTeam.length > 0) {
-        myTeam = currentTeam.map((r) => ({ ...r }));
-        const cost = myTeam.reduce((s, r) => s + (r.price || 0), 0);
-        budget = totalBudget - cost;
+    function refreshPick() {
+      const key = currentStepKey();
+      if (key === "pick450") {
+        document.getElementById("pick-title").textContent = "Välj 2×450";
+        document.getElementById("pick-sub").textContent = "Två förare i 450cc-klassen.";
+        document.getElementById("pick-hint").textContent = "450cc";
+        updateBudgetUI(2, "450cc");
+        renderPickedSlots("450cc");
+        riderCards(allRiders.filter((r) => r.class === "450cc"), "450cc");
+      } else if (key === "pick250") {
+        document.getElementById("pick-title").textContent = "Välj 2×250";
+        document.getElementById("pick-sub").textContent = "Två förare i 250cc — budget måste gå ihop.";
+        document.getElementById("pick-hint").textContent = "250cc";
+        updateBudgetUI(2, "250cc");
+        renderPickedSlots("250cc");
+        riderCards(allRiders.filter((r) => r.class === "250cc"), "250cc");
+      } else if (key === "pickSwap") {
+        const out = existingRiderObjs.find((x) => sameId(x.id, swapOutId)) ||
+          myTeam.find((x) => sameId(x.id, swapOutId));
+        if (!out) {
+          // Swap already done or lost context → back to roster
+          goStep(EDIT_STEPS.indexOf("roster"));
+          return;
+        }
+        document.getElementById("pick-title").textContent = `Ersätt ${out.name}`;
+        document.getElementById("pick-sub").textContent =
+          `Samma klass (${out.class}) · kostar 50 poäng (gratis vid MX-klassbyte).`;
+        document.getElementById("pick-hint").textContent = "1 byte";
+        updateBudgetUI(4, null);
+        document.getElementById("picked-slots").innerHTML =
+          `<div class="stw-slot is-filled" style="grid-column:1/-1">
+              <div class="sn">Ut: ${out.name}</div>
+              <div class="sp">${out.class} · #${out.rider_number || "—"} · ${money(out.price)} kr</div>
+            </div>`;
+        const cls = out.class;
+        const promo = (window.promotionOffers || []).find(
+          (o) => String(o.from_id) === String(swapOutId)
+        );
+        let list = allRiders.filter((r) => r.class === cls && !sameId(r.id, swapOutId));
+        if (promo) {
+          const to = allRiders.find((r) => sameId(r.id, promo.to_id));
+          if (to && !list.some((r) => sameId(r.id, to.id))) list = [to, ...list];
+        }
+        riderCards(list, null);
       }
+      updateFooter();
     }
 
-    function applyPromotionUpgrade(fromId) {
+    function renderRoster() {
+      const grid = document.getElementById("roster-grid");
+      const riders = myTeam.length ? myTeam : existingRiderObjs;
+      grid.innerHTML = riders
+        .map((r) => {
+          const isOut = swapOutId === r.id;
+          const promo = (window.promotionOffers || []).find(
+            (o) => String(o.from_id) === String(r.id)
+          );
+          return `<div class="stw-roster-card ${isOut ? "is-out" : ""}">
+            <span class="cls-tag ${r.class === "450cc" ? "cls-450" : "cls-250"}">${r.class}</span>
+            <div class="flex items-center gap-3">
+              ${avatarHtml(r)}
+              <div class="min-w-0">
+                <div class="font-bold text-slate-100 truncate">${r.name}</div>
+                <div class="text-xs text-slate-400">#${r.rider_number || "—"} · ${money(r.price)} kr</div>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button type="button" class="stw-btn stw-btn--ghost" style="padding:0.55rem;font-size:0.8rem"
+                data-swap="${r.id}">${isOut ? "Avbryt" : "Byt ut"}</button>
+              ${
+                promo
+                  ? `<button type="button" class="stw-btn stw-btn--go" style="padding:0.55rem;font-size:0.75rem"
+                      data-promo="${r.id}">Gratis klassbyte</button>`
+                  : ""
+              }
+            </div>
+          </div>`;
+        })
+        .join("");
+      grid.querySelectorAll("[data-swap]").forEach((btn) => {
+        btn.onclick = () => {
+          const id = parseInt(btn.getAttribute("data-swap"), 10);
+          if (swapOutId === id) {
+            swapOutId = null;
+            renderRoster();
+            updateFooter();
+            return;
+          }
+          swapOutId = id;
+          // Ensure draft mirrors current roster
+          if (!myTeam.length) {
+            myTeam = existingRiderObjs.map((r) => ({ ...r }));
+          }
+          stepIndex = EDIT_STEPS.indexOf("pickSwap");
+          goStep(stepIndex);
+        };
+      });
+      grid.querySelectorAll("[data-promo]").forEach((btn) => {
+        btn.onclick = () => applyPromo(parseInt(btn.getAttribute("data-promo"), 10));
+      });
+
+      const banner = document.getElementById("mx-promo-banner");
+      if (window.promotionOffers && window.promotionOffers.length) {
+        banner.classList.remove("hidden");
+        banner.textContent =
+          "Gratis MX-klassbyte tillgängligt: " +
+          window.promotionOffers
+            .map((o) => `${o.from_name || "förare"} → ${o.to_name || "ny klass"}`)
+            .join(", ");
+      }
+
+      const cost = document.getElementById("edit-cost-box");
+      const p = penaltyPoints();
+      if (p > 0) {
+        cost.classList.remove("hidden");
+        cost.innerHTML = `Kostnad vid sparning: <strong>${p} poäng</strong> (${penalizedChanges()} byte). Saldo: <strong>${userPoints} p</strong>.`;
+      } else {
+        cost.classList.add("hidden");
+      }
+
+      const fillWrap = document.getElementById("fill-slot-wrap");
+      if (fillWrap) {
+        const need450 = Math.max(0, 2 - countClass("450cc"));
+        const need250 = Math.max(0, 2 - countClass("250cc"));
+        if (myTeam.length < 4 && (need450 > 0 || need250 > 0)) {
+          fillWrap.classList.remove("hidden");
+          const btn = document.getElementById("btn-fill-slot");
+          const cls = need450 > 0 ? "450cc" : "250cc";
+          const n = need450 > 0 ? need450 : need250;
+          btn.textContent = `Lägg till ${n}×${cls.replace("cc", "")}`;
+          btn.onclick = () => {
+            if (!myTeam.length) myTeam = existingRiderObjs.map((r) => ({ ...r }));
+            fillClass = cls;
+            searchQuery = "";
+            const search = document.getElementById("rider-search");
+            if (search) search.value = "";
+            renderStepNav();
+            showView(cls === "450cc" ? "pick450" : "pick250");
+            refreshPick();
+            updateFooter();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          };
+        } else {
+          fillWrap.classList.add("hidden");
+        }
+      }
+      updateFooter();
+    }
+
+    function applyPromo(fromId) {
       const offer = (window.promotionOffers || []).find(
         (o) => String(o.from_id) === String(fromId)
       );
-      if (!offer) {
-        showToast("Klassbytet hittades inte.", false);
+      if (!offer) return;
+      const to = allRiders.find((r) => r.id === offer.to_id);
+      if (!to) {
+        showToast("Målförare saknas i listan", false);
         return;
       }
-      const toRider = allRiders.find((r) => r.id === offer.to_id);
-      if (!toRider) {
-        showToast("450-föraren finns inte i listan — ladda om sidan.", false);
-        return;
-      }
-      ensureDraftFromCurrentTeam();
-      const idx = myTeam.findIndex((r) => String(r.id) === String(fromId));
-      if (idx > -1) {
-        budget += myTeam[idx].price || 0;
-        myTeam.splice(idx, 1);
-      }
-      if (!myTeam.some((r) => r.id === toRider.id)) {
-        myTeam.push(toRider);
-        budget -= toRider.price || 0;
-      }
-      window.replacingRiderId = null;
-      const c450 = myTeam.filter((x) => x.class === "450cc").length;
-      const c250 = myTeam.filter((x) => x.class === "250cc").length;
-      validateAndRender();
-      renderCurrentTeam();
-      if (c450 !== 2 || c250 !== 2) {
-        showToast(
-          `Uppgradering i utkastet (${c450}×450, ${c250}×250). Byt en till 450 mot en 250 om det behövs — MX-klassbytet är gratis vid sparning.`,
-          true
-        );
+      if (!myTeam.length) myTeam = existingRiderObjs.map((r) => ({ ...r }));
+      const idx = myTeam.findIndex((r) => r.id === fromId);
+      if (idx < 0) return;
+      myTeam[idx] = to;
+      swapOutId = null;
+      showToast(`Gratis klassbyte: ${to.name}`, true);
+      renderRoster();
+    }
+
+    function renderConfirm() {
+      const name = readTeamName();
+      writeTeamName(name);
+      const grid = document.getElementById("confirm-grid");
+      const ordered = [
+        ...myTeam.filter((r) => r.class === "450cc"),
+        ...myTeam.filter((r) => r.class === "250cc"),
+      ];
+      grid.innerHTML = ordered
+        .map(
+          (r) => `<div class="stw-confirm-card">
+            ${imgSrc(r) ? `<img src="${imgSrc(r)}" alt="" />` : `<div class="ph">#${r.rider_number || "?"}</div>`}
+            <div class="text-sm font-bold text-slate-100 truncate">${r.name}</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">${r.class} · #${r.rider_number || "—"}</div>
+            <div class="text-xs font-bold text-emerald-400 mt-1">${money(r.price)} kr</div>
+          </div>`
+        )
+        .join("");
+      document.getElementById("confirm-budget").textContent = money(remaining()) + " kr";
+      document.getElementById("confirm-points").textContent = userPoints + " p";
+      const box = document.getElementById("confirm-cost");
+      const p = penaltyPoints();
+      if (hasExistingTeam && p > 0) {
+        box.classList.remove("hidden");
+        box.innerHTML = `Detta byte kostar <strong>${p} poäng</strong> (${penalizedChanges()} förare). Efteråt: <strong>${userPoints - p} p</strong>.`;
+      } else if (hasExistingTeam) {
+        box.classList.remove("hidden");
+        box.innerHTML = `Inga poängstraff — bara namnändring eller gratis klassbyte/fyllnad.`;
+        if (penalizedChanges() === 0 && myTeam.every((r, i) => String(r.id) === String(existingIds[i]) || baselineIds.has(r.id)) &&
+            [...baselineIds].every((id) => myTeam.some((r) => String(r.id) === String(id)))) {
+          // keep message
+        }
       } else {
-        showToast("Deegan 450 i utkastet — spara när du är klar (gratis byte).", true);
+        box.classList.add("hidden");
       }
+      updateFooter();
     }
 
-    function updateSaveButtonText() {
-      const saveBtn = document.getElementById("save-team-btn");
-      if (!hasExistingTeam) {
-        saveBtn.textContent = "Spara team";
-        return;
-      }
-      
-      const ridersChanged = calculateRidersChanged();
-      if (ridersChanged === 0) {
-        saveBtn.textContent = "Uppdatera team (inga poängstraff)";
-      } else {
-        const penaltyPoints = ridersChanged * 50;
-        saveBtn.textContent = `Uppdatera team (−${penaltyPoints} poäng)`;
-      }
-    }
-
-    function loadCurrentTeam() {
-      if (!hasExistingTeam || !existingTeamRiders || existingTeamRiders.length === 0) {
-        return;
-      }
-      
-      // Find riders that match the existing team rider IDs
-      currentTeam = allRiders.filter((rider) =>
-        existingTeamRiders.includes(rider.id.toString())
-      );
-      for (const id of existingTeamRiders) {
-        if (currentTeam.some((r) => String(r.id) === String(id))) continue;
-        const offer = (window.promotionOffers || []).find(
-          (o) => String(o.from_id) === String(id)
+    function canAdvance() {
+      const key = currentStepKey();
+      if (key === "intro" || key === "roster") return true;
+      if (key === "pick450") return countClass("450cc") === 2;
+      if (key === "pick250") return countClass("250cc") === 2 && remaining() >= 0;
+      if (key === "pickSwap") {
+        // Must have completed a swap (no pending swapOut) and still 4 riders / rules
+        if (swapOutId != null) return false;
+        return (
+          myTeam.length === 4 &&
+          countClass("450cc") === 2 &&
+          countClass("250cc") === 2 &&
+          remaining() >= 0
         );
-        currentTeam.push({
-          id: parseInt(id, 10),
-          name: offer?.from_name || "Borttagen från förarlistan",
-          class: offer?.from_class || "250cc",
-          rider_number: offer?.from_number || "?",
-          bike_brand: "",
-          image_url: "",
-          price: offer?.from_price || 0,
-          isOrphan: true,
-        });
       }
-
-      // IMPORTANT: Also load them into myTeam so the save button is enabled
-      // This allows saving when only the name is changed
-      myTeam = [...currentTeam];
-      
-      // Calculate the cost of the current team and update the budget
-      const currentTeamCost = currentTeam.reduce((sum, rider) => sum + rider.price, 0);
-      budget = totalBudget - currentTeamCost; // Set initial budget based on current team
-      
-      console.log("💰 loadCurrentTeam debug:");
-      console.log("💰 totalBudget:", totalBudget);
-      console.log("💰 currentTeam riders:", currentTeam.map(r => `${r.name}: ${r.price.toLocaleString()} kr`));
-      console.log("💰 currentTeamCost:", currentTeamCost.toLocaleString());
-      console.log("💰 calculated budget:", budget.toLocaleString());
-      console.log("✅ Loaded existing team into myTeam for editing");
-      
-      renderCurrentTeam();
-      renderMxPromotionBanner();
+      if (key === "confirm") {
+        const name = readTeamName();
+        return (
+          !!name &&
+          myTeam.length === 4 &&
+          countClass("450cc") === 2 &&
+          countClass("250cc") === 2 &&
+          remaining() >= 0
+        );
+      }
+      return false;
     }
 
-    // Load user's current points
-    async function loadUserPoints() {
+    function updateFooter() {
+      const back = document.getElementById("btn-back");
+      const next = document.getElementById("btn-next");
+      const key = currentStepKey();
+      back.style.visibility = stepIndex === 0 && !fillClass ? "hidden" : "visible";
+      if (fillClass) {
+        const need = Math.max(0, 2 - countClass(fillClass));
+        next.textContent = need > 0 ? `Välj ${need} till` : "Tillbaka till laget";
+        next.disabled = countClass(fillClass) < 2 && myTeam.length < 4
+          ? countClass(fillClass) < Math.min(2, countClass(fillClass) + (4 - myTeam.length))
+          : false;
+        // Enable when class quota met OR team full with valid rules
+        const classOk = countClass(fillClass) === 2 || (myTeam.length === 4 && countClass(fillClass) <= 2);
+        next.disabled = !(classOk && remaining() >= 0 && myTeam.length <= 4);
+        if (myTeam.length === 4 && countClass("450cc") === 2 && countClass("250cc") === 2) {
+          next.textContent = "Klar — till laget";
+          next.disabled = remaining() < 0;
+        }
+        next.className = "stw-btn stw-btn--go";
+        return;
+      }
+      if (key === "intro") next.textContent = "Börja bygga";
+      else if (key === "roster") next.textContent = myTeamChanged() ? "Granska & spara" : "Spara / byt namn";
+      else if (key === "confirm") next.textContent = hasExistingTeam ? "Spara ändringar" : "Spara säsongsteam";
+      else if (key === "pickSwap") next.textContent = "Fortsätt";
+      else next.textContent = "Nästa";
+      next.disabled = !canAdvance();
+      next.className =
+        "stw-btn " + (key === "confirm" && hasExistingTeam && penaltyPoints() > 0 ? "stw-btn--warn" : "stw-btn--go");
+    }
+
+    function myTeamChanged() {
+      if (!hasExistingTeam) return true;
+      const next = new Set(myTeam.map((r) => String(r.id)));
+      if (next.size !== baselineIds.size) return true;
+      for (const id of baselineIds) if (!next.has(String(id))) return true;
+      const name = (document.getElementById("team-name-roster")?.value || "").trim();
+      return name !== originalTeamName;
+    }
+
+    function goStep(i) {
+      stepIndex = Math.max(0, Math.min(steps().length - 1, i));
+      const key = currentStepKey();
+      renderStepNav();
+      showView(key);
+      if (key === "pick450" || key === "pick250" || key === "pickSwap") refreshPick();
+      if (key === "roster") renderRoster();
+      if (key === "confirm") renderConfirm();
+      updateFooter();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    async function saveTeam() {
+      const name = readTeamName();
+      writeTeamName(name);
+      if (!name) {
+        showToast("Ange teamnamn", false);
+        return;
+      }
+      if (myTeam.length !== 4 || countClass("450cc") !== 2 || countClass("250cc") !== 2) {
+        showToast("Behöver 2×450 och 2×250", false);
+        return;
+      }
+      if (remaining() < 0) {
+        showToast("Över budget", false);
+        return;
+      }
+      const p = penaltyPoints();
+      if (hasExistingTeam && p > 0) {
+        if (userPoints < p) {
+          showToast(`För få poäng (${userPoints}) — behöver ${p}`, false);
+          return;
+        }
+        const ok = confirm(
+          `Du byter ${penalizedChanges()} förare.\nKostnad: ${p} poäng.\n\nFortsätt?`
+        );
+        if (!ok) return;
+      }
+      const btn = document.getElementById("btn-next");
       try {
-        const response = await fetch("/get_user_total_points");
-        const data = await response.json();
-        
-        if (data.total_points !== undefined) {
-          document.getElementById("current-points").textContent = `${data.total_points} poäng`;
-          window.userTotalPoints = data.total_points;
-          updatePointsPreview();
-        } else {
-          document.getElementById("current-points").textContent = "0 poäng";
-          window.userTotalPoints = 0;
-        }
-      } catch (error) {
-        console.error("Error loading user points:", error);
-        document.getElementById("current-points").textContent = "Fel vid laddning";
-        window.userTotalPoints = 0;
-      }
-    }
-
-    // Update points preview when team changes
-    function updatePointsPreview() {
-      // In replacement mode, we're only changing 1 rider at a time
-      const ridersChanged = window.replacingRiderId ? 1 : calculateRidersChanged();
-      const penaltyPoints = ridersChanged * 50;
-      const pointsAfter = window.userTotalPoints - penaltyPoints;
-      
-      const penaltyPreview = document.getElementById("penalty-preview");
-      const penaltyAmount = document.getElementById("penalty-amount");
-      const pointsAfterAmount = document.getElementById("points-after-amount");
-      const pointsAfterChange = document.getElementById("points-after-change");
-      const pointsAfterWrap = document.getElementById("points-after-wrap");
-      
-      if (penaltyPoints > 0) {
-        penaltyAmount.textContent = penaltyPoints;
-        penaltyPreview.classList.remove("hidden");
-        pointsAfterAmount.textContent = pointsAfter;
-        if (pointsAfterWrap) pointsAfterWrap.classList.remove("hidden");
-        
-        const penaltyText = penaltyPreview.querySelector('.penalty-text');
-        if (penaltyText) {
-          penaltyText.textContent = ` poäng (${ridersChanged} byte)`;
-        }
-        
-        if (pointsAfter < 0) {
-          pointsAfterChange.className = "font-medium text-red-400";
-          pointsAfterAmount.className = "text-red-400 font-bold tabular-nums";
-        } else {
-          pointsAfterChange.className = "font-medium text-slate-400";
-          pointsAfterAmount.className = "text-emerald-400 font-bold tabular-nums";
-        }
-      } else {
-        penaltyPreview.classList.add("hidden");
-        if (pointsAfterWrap) pointsAfterWrap.classList.add("hidden");
-      }
-    }
-
-    function renderCurrentTeam() {
-      const list = document.getElementById("current-team-list");
-      if (!list) return;
-      
-      list.innerHTML = "";
-      
-      currentTeam.forEach((rider) => {
-        const card = document.createElement("div");
-        // Highlight the rider being replaced
-        const isBeingReplaced = window.replacingRiderId === rider.id;
-        const baseClasses = "p-2.5 rounded-xl border text-center";
-        const normalClasses = "bg-slate-900/35 border-slate-600/80";
-        const highlightClasses = "bg-cyan-950/50 border-cyan-500/70 ring-1 ring-cyan-400/40";
-        
-        card.className = `${baseClasses} ${isBeingReplaced ? highlightClasses : normalClasses}`;
-        const numberHtml = `<div class="w-6 h-6 rounded-full flex items-center justify-center bg-slate-800 border border-slate-600">
-          <span class="text-slate-200 text-[10px] font-black">#${rider.rider_number || "-"}</span>
-        </div>`;
-
-        card.innerHTML = `
-          <div class="flex flex-col items-center space-y-1 mb-2">
-            <div class="flex-shrink-0 flex items-center gap-2">
-              ${rider.image_url
-                ? `<img src="${rider.image_url.startsWith('data:') ? rider.image_url : '/static/' + (rider.image_url.startsWith('riders/') ? rider.image_url : 'riders/' + rider.image_url)}"
-                       alt="${rider.name} headshot"
-                       class="w-8 h-8 object-cover rounded-full border border-slate-500" width="32" height="32"
-                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                 <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center" style="display: none;">
-                   ${rider.bike_brand 
-                     ? `<img src="/static/brand_logos/${rider.bike_brand.toLowerCase()}.png" 
-                            alt="${rider.bike_brand} logo" 
-                            class="w-5 h-5 object-contain"
-                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                       <span class="text-white text-xs font-bold" style="display: none;">#${rider.rider_number}</span>`
-                     : `<span class="text-white text-xs font-bold">#${rider.rider_number}</span>`}
-                 </div>`
-                : (rider.bike_brand
-                    ? `<img src="/static/brand_logos/${rider.bike_brand.toLowerCase()}.png"
-                           alt="${rider.bike_brand} logo"
-                           class="w-8 h-8 object-contain border border-slate-500 rounded-full" width="32" height="32" />`
-                    : `<div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
-                         <span class="text-white text-xs font-bold">#${rider.rider_number}</span>
-                       </div>`)}
-              ${numberHtml}
-            </div>
-            <div class="w-full">
-              <div class="font-semibold text-slate-100 text-xs truncate">${rider.name}</div>
-              <div class="text-[10px] text-slate-400">${rider.class}</div>
-            </div>
-          </div>
-          <button type="button" class="w-full ${isBeingReplaced ? 'bg-cyan-700 hover:bg-cyan-600' : 'bg-slate-700 hover:bg-slate-600 border border-slate-500'} text-white px-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
-                  onclick="event.stopPropagation(); replaceRider(${rider.id})"
-                  title="Byt ut denna förare">
-            ${isBeingReplaced ? 'Välj ersättare…' : 'Byt ut'}
-          </button>
-          ${
-            (window.promotionOffers || []).some((o) => String(o.from_id) === String(rider.id))
-              ? `<button type="button" class="w-full mt-1 bg-emerald-700 hover:bg-emerald-600 text-white px-1 py-1.5 rounded-lg text-[10px] font-bold"
-                  onclick="event.stopPropagation(); applyPromotionUpgrade(${rider.id})">
-                  ↑ Gratis MX-klassbyte
-                </button>`
-              : ""
-          }
-        `;
-        list.appendChild(card);
-      });
-    }
-
-    function replaceRider(riderIdToReplace) {
-      console.log("🔍 replaceRider called with ID:", riderIdToReplace);
-      console.log("🔍 currentTeam:", currentTeam);
-      console.log("🔍 currentTeam IDs and names:", currentTeam.map(r => `${r.id}: ${r.name}`));
-      console.log("🔍 Looking for rider with ID:", riderIdToReplace);
-      console.log("💰 BUDGET BEFORE replaceRider:", budget);
-      
-      // Find the rider to replace
-      const riderToReplace = currentTeam.find(r => r.id === riderIdToReplace);
-      console.log("🔍 riderToReplace found:", riderToReplace);
-      
-      if (!riderToReplace) {
-        console.log("❌ No rider found to replace!");
-        return;
-      }
-      
-      // If user hasn't started building a new team yet, initialize it with current team
-      if (myTeam.length === 0) {
-        console.log("💰 Initializing myTeam with current team (excluding rider to replace)");
-        console.log("💰 Budget before initialization:", budget);
-        
-        // Add all other riders from current team to myTeam (without changing budget)
-        currentTeam.forEach(rider => {
-          if (rider.id !== riderIdToReplace) {
-            myTeam.push(rider);
-            console.log(`💰 Added ${rider.name} to myTeam (no budget change)`);
-          }
-        });
-        
-        // Add the price of the rider being replaced back to budget
-        console.log(`💰 Adding back ${riderToReplace.name} price (${riderToReplace.price.toLocaleString()} kr) to budget`);
-        budget += riderToReplace.price;
-        console.log("💰 BUDGET AFTER adding back rider price:", budget);
-      } else {
-        // If myTeam already has riders, remove the rider being replaced and add back their price
-        console.log("💰 myTeam already exists, handling replacement within existing myTeam");
-        
-        // Find and remove the rider being replaced from myTeam
-        const indexToRemove = myTeam.findIndex(r => r.id === riderIdToReplace);
-        if (indexToRemove > -1) {
-          const removedRider = myTeam[indexToRemove];
-          myTeam.splice(indexToRemove, 1); // Remove the rider from myTeam
-          console.log(`🗑️ Removed ${removedRider.name} (ID: ${removedRider.id}) from myTeam during replacement`);
-          budget += removedRider.price; // Add their price back to budget
-          console.log(`💰 Added back ${removedRider.name} price (${removedRider.price.toLocaleString()} kr) to budget`);
-        } else {
-          console.warn(`⚠️ Rider to replace (ID: ${riderIdToReplace}) not found in myTeam, but myTeam was not empty. This should not happen if myTeam is kept consistent.`);
-          // Even if not found in myTeam, if it was part of the original team, its price needs to be added back
-          budget += riderToReplace.price;
-          console.log(`💰 Added back ${riderToReplace.name} price (${riderToReplace.price.toLocaleString()} kr) to budget (rider not found in myTeam)`);
-        }
-        console.log("💰 BUDGET AFTER handling replacement in existing myTeam:", budget);
-      }
-      
-      // Show a message about what we're doing
-      showToast(`Välj en ny ${riderToReplace.class} förare att ersätta ${riderToReplace.name}. Du kan välja vilken ${riderToReplace.class} förare som helst. Budget: ${budget.toLocaleString()} kr.`, true);
-      
-      // Set filter to the same class as the rider being replaced
-      setFilter(riderToReplace.class);
-      
-      // Store which rider we're replacing
-      window.replacingRiderId = riderIdToReplace;
-      console.log("🔧 Set window.replacingRiderId to:", window.replacingRiderId);
-      
-      // Update the display
-      validateAndRender();
-      
-      // Re-render current team to show highlighting
-      renderCurrentTeam();
-      
-      // Scroll to rider list
-      document.getElementById("rider-list").scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function copyCurrentTeam() {
-      // Clear current team
-      myTeam = [];
-      budget = totalBudget;
-      
-      // Copy all current team riders
-      currentTeam.forEach(rider => {
-        myTeam.push(rider);
-        budget -= rider.price;
-      });
-      
-      showToast(`Nuvarande team kopierat! Budget: ${budget.toLocaleString()} kr kvar. Du kan nu byta ut förarna en i taget.`, true);
-      validateAndRender();
-    }
-
-    function undoChanges() {
-      // Reset to original team
-      myTeam = [];
-      budget = totalBudget;
-      
-      // Add all riders from current team (original team)
-      currentTeam.forEach(rider => {
-        myTeam.push(rider);
-        budget -= rider.price;
-      });
-      
-      // Reset team name to original
-      const originalTeamName = {% if has_existing_team %}"{{ existing_team.team_name }}"{% else %}""{% endif %};
-      const teamNameInput = document.getElementById("team-name-input");
-      if (teamNameInput && originalTeamName) {
-        teamNameInput.value = originalTeamName;
-      }
-      
-      // Clear any replacement mode
-      window.replacingRiderId = null;
-      
-      showToast("Ångrat! Återställt till ursprungligt team och namn.", true);
-      validateAndRender();
-      renderCurrentTeam();
-    }
-
-    async function saveSeasonTeam() {
-      const name = document.getElementById("team-name-input").value.trim();
-      if (!name) { showToast("Du måste ange teamnamn", false); return; }
-      if (myTeam.length !== 4) { showToast("Du måste välja exakt 4 förare", false); return; }
-      const c450 = myTeam.filter((x) => x.class === "450cc").length;
-      const c250 = myTeam.filter((x) => x.class === "250cc").length;
-      if (c450 !== 2 || c250 !== 2) { showToast("Regel: 2×450cc och 2×250cc", false); return; }
-
-      // Check if this is a team change (user already has a team)
-      if (hasExistingTeam) {
-        const ridersChanged = calculateRidersChanged();
-        const penaltyPoints = ridersChanged * 50;
-        
-        if (penaltyPoints > 0) {
-          // Check if user has enough points
-          try {
-            const pointsResponse = await fetch("/get_user_total_points");
-            const pointsData = await pointsResponse.json();
-            
-            if (pointsData.total_points < penaltyPoints) {
-              showToast(`Du har inte tillräckligt med poäng! Du har ${pointsData.total_points} poäng men behöver ${penaltyPoints} poäng för att byta ${ridersChanged} förare.`, false);
-              return;
-            }
-          } catch (error) {
-            console.error("Error checking user points:", error);
-            showToast("Kunde inte kontrollera dina poäng. Försök igen.", false);
+        await withBusyButton(btn, async () => {
+          const resp = await fetch("/save_season_team", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              team_name: name,
+              team: myTeam.map((r) => ({ id: r.id })),
+            }),
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            showToast(data.message || "Kunde inte spara", false);
             return;
           }
-        }
-        
-        let confirmMessage;
-        const originalTeamName = {% if has_existing_team %}"{{ existing_team.team_name }}"{% else %}""{% endif %};
-        const nameChanged = name !== originalTeamName;
-        
-        if (ridersChanged === 0) {
-          if (nameChanged) {
-            confirmMessage = `💾 Du uppdaterar bara teamnamnet från "${originalTeamName}" till "${name}".\n\nInga förare byts ut, så det kostar inga poäng.\n\nÄr du säker på att du vill fortsätta?`;
-          } else {
-            confirmMessage = "⚠️ Du har redan ett team!\n\nInga ändringar gjorda (varken namn eller förare).\n\nÄr du säker på att du vill fortsätta?";
-          }
-        } else {
-          if (nameChanged) {
-            confirmMessage = `⚠️ Du har redan ett team!\n\nDu byter ut ${ridersChanged} förare och ändrar teamnamnet från "${originalTeamName}" till "${name}".\nDetta kommer att kosta ${penaltyPoints} poäng (bara för förarebytena).\n\nÄr du säker på att du vill fortsätta?`;
-          } else {
-            confirmMessage = `⚠️ Du har redan ett team!\n\nDu byter ut ${ridersChanged} förare.\nDetta kommer att kosta ${penaltyPoints} poäng.\n\nÄr du säker på att du vill fortsätta?`;
-          }
-        }
-        
-        const confirmed = confirm(confirmMessage);
-        if (!confirmed) {
-          return;
-        }
-      }
-
-      const payload = {
-        team_name: name,
-        team: myTeam.map((r) => ({ id: r.id })),
-      };
-
-      const saveBtn = document.getElementById("save-team-btn");
-      try {
-        await withBusyButton(saveBtn, async () => {
-        const resp = await fetch("/save_season_team", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          showToast(hasExistingTeam ? "Lag uppdaterat!" : "Säsongsteam skapat!", true);
+          setTimeout(() => (window.location.href = "/season_team"), 650);
         });
-        
-        // Check if response is JSON
-        const contentType = resp.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          console.error("Response is not JSON:", await resp.text());
-          showToast("Serverfel - fick inte JSON-svar", false);
-          return;
-        }
-        
-        const data = await resp.json();
-        if (!resp.ok) {
-          showToast(data.message || "Kunde inte spara teamet.", false);
-          return;
-        }
-        showToast(data.message || "Team sparat!", true);
-        setTimeout(() => (window.location.href = "/season_team"), 600);
-        }, { busyText: 'Sparar…' });
       } catch (e) {
-        console.error("Error saving team:", e);
-        showToast("Nätverksfel vid sparning: " + e.message, false);
+        showToast("Nätverksfel — försök igen", false);
       }
     }
 
-
-    // Init
-    document.addEventListener("DOMContentLoaded", async () => {
-      setFilter("all");
-      try {
-        const pr = await fetch("/season_team_mx_promotions");
-        if (pr.ok) {
-          const data = await pr.json();
-          if (data.offers) window.promotionOffers = data.offers;
-          window.promotionPairs = data.promotion_pairs || window.promotionPairs;
+    document.getElementById("btn-back").onclick = () => {
+      if (fillClass) {
+        fillClass = null;
+        goStep(EDIT_STEPS.indexOf("roster"));
+        return;
+      }
+      if (currentStepKey() === "pickSwap") {
+        swapOutId = null;
+        goStep(EDIT_STEPS.indexOf("roster"));
+        return;
+      }
+      goStep(stepIndex - 1);
+    };
+    function advanceFromIntroOrNext() {
+      if (fillClass) {
+        if (myTeam.length === 4 && countClass("450cc") === 2 && countClass("250cc") === 2 && remaining() >= 0) {
+          fillClass = null;
+          goStep(EDIT_STEPS.indexOf("confirm"));
+          return;
         }
-      } catch (e) {
-        console.warn("MX promotions:", e);
+        const need450 = Math.max(0, 2 - countClass("450cc"));
+        const need250 = Math.max(0, 2 - countClass("250cc"));
+        if (need450 > 0) {
+          fillClass = "450cc";
+          refreshPick();
+          updateFooter();
+          return;
+        }
+        if (need250 > 0) {
+          fillClass = "250cc";
+          refreshPick();
+          updateFooter();
+          return;
+        }
+        fillClass = null;
+        goStep(EDIT_STEPS.indexOf("roster"));
+        return;
       }
-      loadCurrentTeam();
-      loadUserPoints();
-      validateAndRender();
-      
-      // Ensure team name input is always editable
-      const teamNameInput = document.getElementById("team-name-input");
-      if (teamNameInput) {
-        teamNameInput.removeAttribute("disabled");
-        teamNameInput.removeAttribute("readonly");
-        teamNameInput.style.pointerEvents = "auto";
-        teamNameInput.style.opacity = "1";
-        console.log("✅ Team name input is editable");
+      const key = currentStepKey();
+      if (key === "confirm") {
+        saveTeam();
+        return;
       }
+      if (key === "roster") {
+        if (!myTeam.length) myTeam = existingRiderObjs.map((r) => ({ ...r }));
+        writeTeamName(readTeamName());
+        goStep(EDIT_STEPS.indexOf("confirm"));
+        return;
+      }
+      goStep(stepIndex + 1);
+    }
+    document.getElementById("btn-next").onclick = advanceFromIntroOrNext;
+    const introStart = document.getElementById("btn-intro-start");
+    if (introStart) introStart.onclick = () => goStep(1);
+    document.getElementById("rider-search").addEventListener("input", (e) => {
+      searchQuery = e.target.value || "";
+      refreshPick();
     });
+    ["team-name-input", "team-name-roster"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("input", updateFooter);
+    });
+
+    async function boot() {
+      try {
+        const res = await fetch("/get_user_total_points");
+        const data = await res.json();
+        userPoints = data.total_points || 0;
+      } catch (_) {
+        userPoints = 0;
+      }
+      if (hasExistingTeam) {
+        myTeam = (existingRiderObjs || []).map((r) => ({ ...r }));
+        baselineIds = new Set(myTeam.map((r) => r.id));
+        // Also include orphan ids from existingIds
+        for (const id of existingIds) baselineIds.add(parseInt(id, 10));
+      }
+      goStep(0);
+    }
+    boot();
   </script>
 </body>
 </html>

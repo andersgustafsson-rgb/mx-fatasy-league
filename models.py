@@ -225,6 +225,8 @@ class SeasonTeam(db.Model):
     )
     team_name = db.Column(db.String(100), nullable=False)
     total_points = db.Column(db.Integer, default=0)
+    # When the team was first created — races before this date do not count
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=True)
     riders = db.relationship(
         "SeasonTeamRider", backref="team", cascade="all, delete-orphan"
     )

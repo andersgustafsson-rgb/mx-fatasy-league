@@ -281,6 +281,14 @@
                 <div class="au-actions">
                   <button
                     type="button"
+                    class="reset-season-team-btn au-btn"
+                    data-user-id="{{ user.id }}"
+                    data-username="{{ user.username }}"
+                    title="Ta bort säsongsteam + transfer-straff (racepoäng behålls)"
+                  >Reset team</button>
+
+                  <button
+                    type="button"
                     class="toggle-email-opt-out-btn au-btn {% if user.email_opt_out %}au-btn--mail-on{% else %}au-btn--mail{% endif %}"
                     data-user-id="{{ user.id }}"
                     data-username="{{ user.username }}"
@@ -430,6 +438,34 @@
             console.error("Error:", error);
             showToast("Ett fel uppstod", "error");
           }
+        }
+        return;
+      }
+
+      const resetTeamBtn = e.target.closest(".reset-season-team-btn");
+      if (resetTeamBtn) {
+        const userId = resetTeamBtn.getAttribute("data-user-id");
+        const username = resetTeamBtn.getAttribute("data-username");
+        if (
+          !confirm(
+            `Återställ säsongsteam för "${username}"?\n\nTar bort laget och transfer-straff. Racepoäng behålls. Användaren kan bygga lag från scratch.`
+          )
+        ) {
+          return;
+        }
+        try {
+          const response = await fetch(`/admin/reset_season_team/${userId}`, {
+            method: "POST",
+          });
+          const result = await response.json();
+          if (response.ok && result.success) {
+            showToast(result.message || `Säsongsteam återställt för ${username}`);
+          } else {
+            showToast(result.error || "Kunde inte återställa", "error");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          showToast("Ett fel uppstod", "error");
         }
         return;
       }

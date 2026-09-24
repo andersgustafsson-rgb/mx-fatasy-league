@@ -1,5 +1,5 @@
 /* PWA service worker: cache static assets + Web Push. */
-const CACHE = "mx-fantasy-v68";
+const CACHE = "mx-fantasy-v69";
 const OFFLINE_URL = "/static/offline.html";
 const NOTIFY_ICON = "/static/icons/mx_fantasy_app_icon_192.png";
 const NOTIFY_BADGE_DATA =
@@ -83,7 +83,7 @@ self.addEventListener("fetch", (event) => {
 
   if (!sameOrigin(url)) return;
 
-  if (url.pathname.endsWith("/kundmail.js")) {
+  if (url.pathname.endsWith("/mx_i18n.js") || url.pathname.endsWith("/kundmail.js")) {
     event.respondWith(
       fetch(req)
         .then((res) => {

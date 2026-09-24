@@ -26,7 +26,8 @@
     'tab.stats':             { sv: 'Statistik',   en: 'Stats' },
     'tab.games':             { sv: 'Spel',        en: 'Games' },
     'tab.leagues':           { sv: 'Ligor',       en: 'Leagues' },
-    'tab.team':              { sv: 'Team',        en: 'Team' },
+    'tab.team':              { sv: 'Säsongsteam', en: 'Season team' },
+    'tab.team.create':       { sv: 'Skapa säsongsteam', en: 'Create season team' },
     'tab.settings':          { sv: 'Inställningar', en: 'Settings' },
     'tab.settings.short':    { sv: 'Inst.',       en: 'Settings' },
     'tab.manual':            { sv: 'Manual',      en: 'Manual' },
@@ -120,6 +121,8 @@
     /* ---- Homepage quick actions ---- */
     'home.quick_actions':    { sv: 'Snabba åtgärder',   en: 'Quick actions' },
     'home.season_team':      { sv: 'Säsongsteam',        en: 'Season team' },
+    'home.create_season_team': { sv: 'Skapa säsongsteam', en: 'Create season team' },
+    'home.season_team_count':  { sv: '{n} har lag',       en: '{n} have a team' },
     'home.race_results':     { sv: 'Förarresultat',       en: 'Rider results' },
     'home.my_scores':        { sv: 'Mina Poäng',         en: 'My scores' },
     'home.finished_series':  { sv: 'Fantasy-arkiv',      en: 'Fantasy archive' },

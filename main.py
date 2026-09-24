@@ -36,6 +36,7 @@ from models import db, User, GlobalSimulation, Series, Competition, Rider, Seaso
 _INDEX_SCHEMA_CHECKED = False
 _RIDER_IMAGE_COLUMN_CHECKED = False
 _MOTO_COLUMNS_CHECKED = False
+_SEASON_TEAM_CREATED_AT_CHECKED = False
 _CHAMPIONSHIP_TOTALS_CACHE: dict[int, tuple[float, dict]] = {}
 # Shell/mode cache keyed by series scope ("AMA", "SX", "MX", "SMX", "WSX")
 _RIDER_SPOTLIGHT_CACHE: dict[str, tuple[float, dict]] = {}
@@ -3187,6 +3188,10 @@ def is_admin_user():
             if user.username and not username:
                 session["username"] = user.username
             return True
+        # Hardcoded local/dev admin usernames (flag may be off after DB sync)
+        uname = (user.username if user else username) or ""
+        if uname.lower() in ("test", "spliffan"):
+            return True
         # Log soft-misses for admin POSTs (helps diagnose "unauthorized" after deploy)
         if username or user_id:
             print(
@@ -3196,7 +3201,7 @@ def is_admin_user():
     except Exception as e:
         print(f"Error checking is_admin flag: {e}")
     # Fallback to old method for backward compatibility
-    return bool(username == "test")
+    return bool(username and str(username).lower() == "test")
 
 def check_session_timeout():
     """Check if session has expired and logout if needed"""
@@ -4570,6 +4575,7 @@ def index():
                     upcoming_races=[],
                     my_team=None,
                     team_riders=[],
+                    season_team_count=0,
                     current_picks_450=None,
                     current_picks_250=None,
                     current_holeshot_450=None,
@@ -5253,6 +5259,7 @@ def _index_impl():
         ],
         my_team=my_team if is_logged_in else None,
         team_riders=team_riders if is_logged_in else [],
+        season_team_count=SeasonTeam.query.count(),
         current_picks_450=current_picks_450 if is_logged_in else None,
         current_picks_250=current_picks_250 if is_logged_in else None,
         current_holeshot_450=current_holeshot_450 if is_logged_in and 'current_holeshot_450' in locals() else None,
@@ -9402,8 +9409,113 @@ def _resolve_season_team_user_id() -> int | None:
     return session["user_id"]
 
 
+def _ensure_season_team_created_at_column() -> None:
+    """season_teams.created_at — used so late-built teams get no retroactive race points."""
+    global _SEASON_TEAM_CREATED_AT_CHECKED
+    if _SEASON_TEAM_CREATED_AT_CHECKED:
+        return
+    try:
+        if "sqlite" in str(db.engine.url):
+            _sqlite_add_column_if_missing(
+                "season_teams", "created_at", "created_at DATETIME"
+            )
+        else:
+            db.session.execute(
+                db.text(
+                    "ALTER TABLE season_teams ADD COLUMN IF NOT EXISTS created_at TIMESTAMP"
+                )
+            )
+            db.session.commit()
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        print(f"ensure season_teams.created_at: {e}")
+    _SEASON_TEAM_CREATED_AT_CHECKED = True
+
+
+def _season_team_created_date(team) -> date | None:
+    """Calendar date the season team first existed (UTC). None = legacy / unknown."""
+    created = getattr(team, "created_at", None)
+    if not created:
+        return None
+    if hasattr(created, "date"):
+        return created.date()
+    return None
+
+
+def season_team_counts_competition(team, competition) -> bool:
+    """
+    Late joiners must not score races that already happened.
+    Rule: competition.event_date >= team.created_at (date).
+    Legacy teams without created_at keep counting all races.
+    """
+    created_d = _season_team_created_date(team)
+    if created_d is None:
+        return True
+    if not competition or not getattr(competition, "event_date", None):
+        return True
+    event_d = competition.event_date
+    if hasattr(event_d, "date"):
+        event_d = event_d.date()
+    return event_d >= created_d
+
+
+def recalculate_season_team_total_points(team) -> int:
+    """Sum rider result points (+ SMX top-6 class bonus) only for eligible races."""
+    _ensure_season_team_created_at_column()
+    team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
+    rider_ids = [tr.rider_id for tr in team_riders]
+    if not rider_ids:
+        team.total_points = 0
+        return 0
+
+    riders_by_class: dict[str, list[int]] = {}
+    for tr in team_riders:
+        rider = Rider.query.get(tr.rider_id)
+        if rider:
+            riders_by_class.setdefault(rider.class_name, []).append(rider.id)
+
+    total_season_points = 0
+    bonus_points = 0
+    competition_bonuses: dict[int, dict[str, list[int]]] = {}
+
+    for rider_id in rider_ids:
+        for result in CompetitionResult.query.filter_by(rider_id=rider_id).all():
+            comp = Competition.query.get(result.competition_id)
+            if not season_team_counts_competition(team, comp):
+                continue
+            total_season_points += calculate_rider_points_for_position(result.position)
+            if result.position and result.position <= 6:
+                rider = Rider.query.get(rider_id)
+                if rider and (not comp or comp.series in ("SMX", None)):
+                    competition_bonuses.setdefault(
+                        result.competition_id, {"450cc": [], "250cc": []}
+                    )
+                    competition_bonuses[result.competition_id][rider.class_name].append(
+                        rider_id
+                    )
+
+    for comp_id_key, classes in competition_bonuses.items():
+        comp = Competition.query.get(comp_id_key)
+        if comp and comp.series not in ("SMX", None):
+            continue
+        for class_name in ("450cc", "250cc"):
+            if class_name not in riders_by_class:
+                continue
+            team_set = set(riders_by_class[class_name])
+            top6_set = set(classes.get(class_name) or [])
+            if team_set and team_set.issubset(top6_set):
+                bonus_points += 50
+
+    team.total_points = total_season_points + bonus_points
+    return team.total_points
+
+
 def build_season_team_competition_points(user_id: int) -> tuple[dict | None, str | None]:
     """Returnerar {competitions: [...]} eller felkod."""
+    _ensure_season_team_created_at_column()
     team = SeasonTeam.query.filter_by(user_id=user_id).first()
     if not team:
         return None, "no_team"
@@ -9414,53 +9526,55 @@ def build_season_team_competition_points(user_id: int) -> tuple[dict | None, str
 
     competition_points = []
     for comp in competitions:
+        counts = season_team_counts_competition(team, comp)
         comp_points = 0
         rider_breakdown = []
         bonus_points = 0
 
-        for rider_id in rider_ids:
-            result = CompetitionResult.query.filter_by(
-                rider_id=rider_id, competition_id=comp.id
-            ).first()
-            if result:
-                rider = Rider.query.get(rider_id)
-                points = calculate_rider_points_for_position(result.position)
-                comp_points += points
-                rider_breakdown.append(
-                    {
-                        "rider_name": rider.name if rider else f"Rider {rider_id}",
-                        "rider_number": rider.rider_number if rider else None,
-                        "class_name": rider.class_name if rider else None,
-                        "position": result.position,
-                        "points": points,
-                    }
-                )
-
-        if comp.series == "SMX" or comp.series is None:
-            riders_by_class = {}
-            for tr in team_riders:
-                rider = Rider.query.get(tr.rider_id)
-                if rider:
-                    riders_by_class.setdefault(rider.class_name, []).append(rider.id)
-
-            competition_bonuses = {"450cc": [], "250cc": []}
+        if counts:
             for rider_id in rider_ids:
                 result = CompetitionResult.query.filter_by(
                     rider_id=rider_id, competition_id=comp.id
                 ).first()
                 if result:
                     rider = Rider.query.get(rider_id)
-                    if rider and result.position and result.position <= 6:
-                        competition_bonuses[rider.class_name].append(rider_id)
+                    points = calculate_rider_points_for_position(result.position)
+                    comp_points += points
+                    rider_breakdown.append(
+                        {
+                            "rider_name": rider.name if rider else f"Rider {rider_id}",
+                            "rider_number": rider.rider_number if rider else None,
+                            "class_name": rider.class_name if rider else None,
+                            "position": result.position,
+                            "points": points,
+                        }
+                    )
 
-            for class_name in ("450cc", "250cc"):
-                if class_name in riders_by_class:
-                    team_riders_in_class = set(riders_by_class[class_name])
-                    top6_riders_in_class = set(competition_bonuses[class_name])
-                    if team_riders_in_class and team_riders_in_class.issubset(
-                        top6_riders_in_class
-                    ):
-                        bonus_points += 50
+            if comp.series == "SMX" or comp.series is None:
+                riders_by_class = {}
+                for tr in team_riders:
+                    rider = Rider.query.get(tr.rider_id)
+                    if rider:
+                        riders_by_class.setdefault(rider.class_name, []).append(rider.id)
+
+                competition_bonuses = {"450cc": [], "250cc": []}
+                for rider_id in rider_ids:
+                    result = CompetitionResult.query.filter_by(
+                        rider_id=rider_id, competition_id=comp.id
+                    ).first()
+                    if result:
+                        rider = Rider.query.get(rider_id)
+                        if rider and result.position and result.position <= 6:
+                            competition_bonuses[rider.class_name].append(rider_id)
+
+                for class_name in ("450cc", "250cc"):
+                    if class_name in riders_by_class:
+                        team_riders_in_class = set(riders_by_class[class_name])
+                        top6_riders_in_class = set(competition_bonuses[class_name])
+                        if team_riders_in_class and team_riders_in_class.issubset(
+                            top6_riders_in_class
+                        ):
+                            bonus_points += 50
 
         has_results = (
             CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
@@ -9473,15 +9587,21 @@ def build_season_team_competition_points(user_id: int) -> tuple[dict | None, str
                 if comp.event_date
                 else "",
                 "series": comp.series,
-                "total_points": comp_points + bonus_points,
-                "rider_points": comp_points,
-                "bonus_points": bonus_points,
+                "total_points": (comp_points + bonus_points) if counts else 0,
+                "rider_points": comp_points if counts else 0,
+                "bonus_points": bonus_points if counts else 0,
                 "has_results": has_results,
-                "rider_breakdown": rider_breakdown,
+                "counts_for_team": counts,
+                "before_team": (not counts),
+                "rider_breakdown": rider_breakdown if counts else [],
             }
         )
 
-    return {"competitions": competition_points}, None
+    return {
+        "competitions": competition_points,
+        "team_created_at": team.created_at.isoformat() if team.created_at else None,
+    }, None
+
 
 
 def _season_team_riders_for_user(user_id: int):
@@ -9501,6 +9621,7 @@ def season_team_page():
     if "user_id" not in session:
         return _redirect_to_login()
 
+    _ensure_season_team_created_at_column()
     user_id = session["user_id"]
     team, riders = _season_team_riders_for_user(user_id)
 
@@ -9569,7 +9690,20 @@ def get_season_team_competition_details(competition_id: int):
     if not team:
         return jsonify({"error": "no_team"}), 404
     
+    _ensure_season_team_created_at_column()
     comp = Competition.query.get_or_404(competition_id)
+
+    if not season_team_counts_competition(team, comp):
+        return jsonify({
+            "competition_name": comp.name,
+            "total_points": 0,
+            "bonus_points": 0,
+            "bonus_details": [],
+            "breakdown": [],
+            "counts_for_team": False,
+            "before_team": True,
+            "message": "Tävlingen var före ditt säsongsteam skapades — ger inga poäng.",
+        })
     
     # Get all team riders
     team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
@@ -10820,6 +10954,34 @@ def season_team_builder():
         user = User.query.get(user_id)
         mx_promotion_offers = get_user_promotion_offers(user_id)
         team_slot_count = len(existing_team_riders) if existing_team else 0
+
+        # Full rider objects for edit/swap UI (not just IDs)
+        existing_team_rider_objs = []
+        if existing_team and existing_team_riders:
+            by_id = {r["id"]: r for r in riders_data}
+            for rid in existing_team_riders:
+                rid_i = int(rid)
+                if rid_i in by_id:
+                    existing_team_rider_objs.append(by_id[rid_i])
+                else:
+                    existing_team_rider_objs.append({
+                        "id": rid_i,
+                        "name": "Borttagen från förarlistan",
+                        "class": "250cc",
+                        "rider_number": "?",
+                        "bike_brand": "",
+                        "image_url": "",
+                        "price": 0,
+                        "coast_250": None,
+                        "isOrphan": True,
+                    })
+            # Prefer class order: 450 then 250
+            existing_team_rider_objs.sort(
+                key=lambda r: (0 if r.get("class") == "450cc" else 1, -(r.get("price") or 0))
+            )
+
+        season_team_count = SeasonTeam.query.count()
+
         html = render_template(
             "season_team_builder.html",
             username=user.username if user else "",
@@ -10827,8 +10989,10 @@ def season_team_builder():
             has_existing_team=has_existing_team,
             existing_team=existing_team,
             existing_team_riders=existing_team_riders,
+            existing_team_rider_objs=existing_team_rider_objs,
             team_slot_count=team_slot_count,
             mx_promotion_offers=mx_promotion_offers,
+            season_team_count=season_team_count,
         )
         resp = make_response(html)
         resp.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
@@ -10855,10 +11019,12 @@ def create_season_team():
             return jsonify({"success": False, "message": "Du har redan ett säsongsteam"})
         
         # Create new season team
+        _ensure_season_team_created_at_column()
         new_team = SeasonTeam(
             user_id=user_id,
             team_name=team_name,
-            total_points=0
+            total_points=0,
+            created_at=datetime.utcnow(),
         )
         db.session.add(new_team)
         db.session.flush()  # Get the team ID
@@ -10870,7 +11036,8 @@ def create_season_team():
                 rider_id=rider_id
             )
             db.session.add(team_rider)
-        
+
+        recalculate_season_team_total_points(new_team)
         db.session.commit()
         return jsonify({"success": True, "message": "Säsongsteam skapat!"})
         
@@ -12597,8 +12764,14 @@ def save_season_team():
         penalty_points = 0
         
         if not team:
-            # First time creating team - no penalty
-            team = SeasonTeam(user_id=uid, team_name=team_name, total_points=0)
+            # First time creating team - no penalty; no retroactive race points
+            _ensure_season_team_created_at_column()
+            team = SeasonTeam(
+                user_id=uid,
+                team_name=team_name,
+                total_points=0,
+                created_at=datetime.utcnow(),
+            )
             db.session.add(team)
             db.session.flush()
         else:
@@ -12634,29 +12807,49 @@ def save_season_team():
             # Delete old riders and apply penalty
             SeasonTeamRider.query.filter_by(season_team_id=team.id).delete()
             
-            # Apply penalty to user's total points
+            # Apply penalty to user's total points (accumulate across saves)
             if penalty_points > 0:
                 user = User.query.get(uid)
                 if user:
-                    # Replace any previous season-team penalty rows (avoid stacking -50, -100, …)
-                    CompetitionScore.query.filter(
-                        CompetitionScore.user_id == uid,
-                        CompetitionScore.competition_id.is_(None),
-                    ).delete(synchronize_session=False)
-                    penalty_score = CompetitionScore(
-                        user_id=uid,
-                        competition_id=None,  # Penalty not tied to a specific competition
-                        total_points=-penalty_points,
-                        race_points=-penalty_points,  # Put penalty here so it gets summed in profile
-                        holeshot_points=0,
-                        wildcard_points=0,
+                    existing_penalty = (
+                        CompetitionScore.query.filter(
+                            CompetitionScore.user_id == uid,
+                            CompetitionScore.competition_id.is_(None),
+                        )
+                        .order_by(CompetitionScore.score_id.desc())
+                        .first()
                     )
-                    db.session.add(penalty_score)
-                    print(f"DEBUG: Applied -{penalty_points} point penalty for {riders_changed} rider changes to user {uid}")
-                    print(f"DEBUG: Created CompetitionScore with race_points={-penalty_points}, total_points={-penalty_points}")
+                    if existing_penalty:
+                        existing_penalty.race_points = (
+                            existing_penalty.race_points or 0
+                        ) - penalty_points
+                        existing_penalty.total_points = (
+                            existing_penalty.total_points or 0
+                        ) - penalty_points
+                        print(
+                            f"DEBUG: Accumulated -{penalty_points} season-team penalty "
+                            f"(now {existing_penalty.race_points}) for user {uid}"
+                        )
+                    else:
+                        penalty_score = CompetitionScore(
+                            user_id=uid,
+                            competition_id=None,  # not tied to a race
+                            total_points=-penalty_points,
+                            race_points=-penalty_points,
+                            holeshot_points=0,
+                            wildcard_points=0,
+                        )
+                        db.session.add(penalty_score)
+                        print(
+                            f"DEBUG: Applied -{penalty_points} point penalty for "
+                            f"{riders_changed} rider changes to user {uid}"
+                        )
 
         for r in riders:
             db.session.add(SeasonTeamRider(season_team_id=team.id, rider_id=r.id))
+
+        # Recalc with eligibility (races before created_at do not count)
+        recalculate_season_team_total_points(team)
 
         db.session.commit()
         
@@ -22987,63 +23180,14 @@ def calculate_scores(comp_id: int):
     # NOTE: This recalculates points based on ALL race results in the database
     # If you want to reset points to 0 for a new season, use /reset_season_team_points first
     # and make sure to clear old CompetitionResult entries for previous season
+    # Update season team points after race scores (no retroactive races for late teams)
     all_season_teams = SeasonTeam.query.all()
     for team in all_season_teams:
-        # Get all riders in this season team
-        team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
-        rider_ids = [tr.rider_id for tr in team_riders]
-        
-        total_season_points = 0
-        
-        # Calculate points for each rider based on their race results
-        for rider_id in rider_ids:
-            # Get all race results for this rider
-            rider_results = CompetitionResult.query.filter_by(rider_id=rider_id).all()
-            
-            for result in rider_results:
-                # Season team always uses position-based points (not WSX rider_points)
-                points = calculate_rider_points_for_position(result.position)
-                total_season_points += points
-        
-        # BONUS: Check if all riders in team finished in top 6 for this competition
-        # Get riders by class
-        riders_by_class = {}
-        for tr in team_riders:
-            rider = Rider.query.get(tr.rider_id)
-            if rider:
-                class_name = rider.class_name
-                if class_name not in riders_by_class:
-                    riders_by_class[class_name] = []
-                riders_by_class[class_name].append(rider.id)
-        
-        # Check for top 6 bonus for THIS competition (only if it's SMX)
-        competition_bonuses = {'450cc': [], '250cc': []}
-        current_competition = Competition.query.get(comp_id)
-        # Only calculate bonus for SMX competitions
-        if current_competition and (current_competition.series == 'SMX' or current_competition.series is None):
-            for rider_id in rider_ids:
-                rider_results = CompetitionResult.query.filter_by(rider_id=rider_id, competition_id=comp_id).all()
-                for result in rider_results:
-                    rider = Rider.query.get(rider_id)
-                    if rider and result.position and result.position <= 6:
-                        competition_bonuses[rider.class_name].append(rider_id)
-        
-        # Apply bonus if all riders in a class finished top 6
-        bonus_points = 0
-        for class_name in ['450cc', '250cc']:
-            if class_name in riders_by_class:
-                team_riders_in_class = set(riders_by_class[class_name])
-                top6_riders_in_class = set(competition_bonuses[class_name])
-                # Check if ALL team riders in this class finished top 6
-                if team_riders_in_class and team_riders_in_class.issubset(top6_riders_in_class):
-                    bonus_points += 50  # 50 bonus points per class per competition
-                    print(f"DEBUG: 🎉 BONUS! Team {team.team_name} - All {class_name} riders in top 6 for competition {comp_id} (+50p)")
-        
-        team.total_points = total_season_points + bonus_points
-        if bonus_points > 0:
-            print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) to {team.total_points} points ({total_season_points} base + {bonus_points} bonus) based on {len(rider_ids)} riders")
-        else:
-            print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) to {team.total_points} points based on {len(rider_ids)} riders")
+        recalculate_season_team_total_points(team)
+        print(
+            f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) "
+            f"to {team.total_points} points"
+        )
 
     db.session.commit()
     print(f"✅ Poängberäkning klar för tävling ID: {comp_id}")
@@ -23188,24 +23332,11 @@ def clear_competition_results(competition_id):
     # Update season team points after clearing competition scores (rider results system)
     all_season_teams = SeasonTeam.query.all()
     for team in all_season_teams:
-        # Get all riders in this season team
-        team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
-        rider_ids = [tr.rider_id for tr in team_riders]
-        
-        total_season_points = 0
-        
-        # Calculate points for each rider based on their race results
-        for rider_id in rider_ids:
-            # Get all race results for this rider
-            rider_results = CompetitionResult.query.filter_by(rider_id=rider_id).all()
-            
-            for result in rider_results:
-                # Season team always uses position-based points (not WSX rider_points)
-                points = calculate_rider_points_for_position(result.position)
-                total_season_points += points
-        
-        team.total_points = total_season_points
-        print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) to {total_season_points} points based on {len(rider_ids)} riders")
+        recalculate_season_team_total_points(team)
+        print(
+            f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) "
+            f"to {team.total_points} points based on eligible races"
+        )
     
     db.session.commit()
     
@@ -23445,67 +23576,20 @@ def update_season_team_points():
     updated_teams = []
     
     for team in all_season_teams:
-        # Get all riders in this season team
-        team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
-        rider_ids = [tr.rider_id for tr in team_riders]
-        
-        total_season_points = 0
-        
-        # Calculate points for each rider based on their race results
-        for rider_id in rider_ids:
-            # Get all race results for this rider
-            rider_results = CompetitionResult.query.filter_by(rider_id=rider_id).all()
-            
-            for result in rider_results:
-                # Season team always uses position-based points (not WSX rider_points)
-                points = calculate_rider_points_for_position(result.position)
-                total_season_points += points
-        
-        # BONUS: Check if all riders in team finished in top 6 per competition
-        riders_by_class = {}
-        for tr in team_riders:
-            rider = Rider.query.get(tr.rider_id)
-            if rider:
-                class_name = rider.class_name
-                if class_name not in riders_by_class:
-                    riders_by_class[class_name] = []
-                riders_by_class[class_name].append(rider.id)
-        
-        # Check for top 6 bonus per competition
-        competition_bonuses = {}
-        for rider_id in rider_ids:
-            rider_results = CompetitionResult.query.filter_by(rider_id=rider_id).all()
-            for result in rider_results:
-                comp_id_key = result.competition_id
-                if comp_id_key not in competition_bonuses:
-                    competition_bonuses[comp_id_key] = {'450cc': [], '250cc': []}
-                
-                rider = Rider.query.get(rider_id)
-                if rider and result.position and result.position <= 6:
-                    competition_bonuses[comp_id_key][rider.class_name].append(rider_id)
-        
-        # Apply bonus if all riders in a class finished top 6
-        bonus_points = 0
-        for comp_id_key, classes in competition_bonuses.items():
-            for class_name in ['450cc', '250cc']:
-                if class_name in riders_by_class:
-                    team_riders_in_class = set(riders_by_class[class_name])
-                    top6_riders_in_class = set(classes[class_name])
-                    # Check if ALL team riders in this class finished top 6
-                    if team_riders_in_class and team_riders_in_class.issubset(top6_riders_in_class):
-                        bonus_points += 50  # 50 bonus points per class per competition
-                        print(f"DEBUG: 🎉 BONUS! Team {team.team_name} - All {class_name} riders in top 6 for competition {comp_id_key} (+50p)")
-        
         old_points = team.total_points
-        team.total_points = total_season_points + bonus_points
+        rider_count = SeasonTeamRider.query.filter_by(season_team_id=team.id).count()
+        new_points = recalculate_season_team_total_points(team)
         updated_teams.append({
             "team_name": team.team_name,
             "user_id": team.user_id,
             "old_points": old_points,
-            "new_points": total_season_points,
-            "rider_count": len(rider_ids)
+            "new_points": new_points,
+            "rider_count": rider_count,
         })
-        print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) from {old_points} to {total_season_points} points based on {len(rider_ids)} riders")
+        print(
+            f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) "
+            f"from {old_points} to {new_points} points"
+        )
     
     db.session.commit()
     
@@ -23519,9 +23603,9 @@ def get_user_total_points():
     """Get current user's total points for team change validation"""
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
-    
+
     user_id = session["user_id"]
-    
+
     user_scores = (
         db.session.query(CompetitionScore)
         .join(Competition, Competition.id == CompetitionScore.competition_id)
@@ -23529,25 +23613,40 @@ def get_user_total_points():
         .filter(ama_competition_clause())
         .all()
     )
-    
-    total_points = sum(score.total_points or 0 for score in user_scores)
-    
-    # Also calculate individual components for debugging
+
     total_race_points = sum(score.race_points or 0 for score in user_scores)
     total_holeshot_points = sum(score.holeshot_points or 0 for score in user_scores)
     total_wildcard_points = sum(score.wildcard_points or 0 for score in user_scores)
-    
-    print(f"DEBUG: get_user_total_points for user {user_id}: race={total_race_points}, holeshot={total_holeshot_points}, wildcard={total_wildcard_points}, total={total_points}")
-    print(f"DEBUG: Found {len(user_scores)} CompetitionScore entries for user {user_id} (excluding WSX)")
-    for score in user_scores:
-        comp = Competition.query.get(score.competition_id)
-        print(f"DEBUG: Score entry - competition_id={score.competition_id}, series={comp.series if comp else 'N/A'}, race_points={score.race_points}, total_points={score.total_points}")
-    
+
+    # Season-team transfer penalties live on competition_id=NULL rows
+    transfer_penalty = (
+        db.session.query(db.func.coalesce(db.func.sum(CompetitionScore.race_points), 0))
+        .filter(
+            CompetitionScore.user_id == user_id,
+            CompetitionScore.competition_id.is_(None),
+        )
+        .scalar()
+    )
+    try:
+        transfer_penalty = int(transfer_penalty or 0)
+    except (TypeError, ValueError):
+        transfer_penalty = 0
+
+    total_race_points += transfer_penalty
+    total_points = total_race_points + total_holeshot_points + total_wildcard_points
+
+    print(
+        f"DEBUG: get_user_total_points for user {user_id}: race={total_race_points}, "
+        f"holeshot={total_holeshot_points}, wildcard={total_wildcard_points}, "
+        f"transfer_penalty={transfer_penalty}, total={total_points}"
+    )
+
     return jsonify({
         "total_points": total_points,
         "race_points": total_race_points,
         "holeshot_points": total_holeshot_points,
-        "wildcard_points": total_wildcard_points
+        "wildcard_points": total_wildcard_points,
+        "transfer_penalty": transfer_penalty,
     })
 
 @app.post("/upload_entry_list")
@@ -31201,6 +31300,50 @@ def delete_user(user_id):
     except Exception as e:
         db.session.rollback()
         print(f"Error deleting user: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/admin/reset_season_team/<int:user_id>")
+def admin_reset_season_team(user_id: int):
+    """Delete one user's season team + transfer penalties so they can rebuild from scratch."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "user_not_found"}), 404
+
+        team = SeasonTeam.query.filter_by(user_id=user_id).first()
+        deleted_riders = 0
+        deleted_team = 0
+        if team:
+            deleted_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).delete(
+                synchronize_session=False
+            )
+            db.session.delete(team)
+            deleted_team = 1
+
+        deleted_penalties = CompetitionScore.query.filter(
+            CompetitionScore.user_id == user_id,
+            CompetitionScore.competition_id.is_(None),
+        ).delete(synchronize_session=False)
+
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "message": (
+                f"Återställde säsongsteam för '{user.username}': "
+                f"tog bort lag={deleted_team}, förare={deleted_riders}, "
+                f"transfer-straff={deleted_penalties}. Racepoäng orörda."
+            ),
+            "deleted_team": deleted_team,
+            "deleted_riders": deleted_riders,
+            "deleted_penalties": deleted_penalties,
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error resetting season team for user {user_id}: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/cleanup_duplicate_users")
