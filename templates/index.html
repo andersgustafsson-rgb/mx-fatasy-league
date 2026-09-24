@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
-  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=5"></script>
+  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=6"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=mxgp-kval-1">
   {% if is_logged_in %}
   <script src="{{ url_for('static', filename='home_picks_portraits.js') }}?v=3" defer></script>
@@ -2738,7 +2738,7 @@
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
                     </span>
-                    <span class="home-inner-tile__label" data-i18n="home.race_results">Race Resultat</span>
+                    <span class="home-inner-tile__label" data-i18n="home.race_results">Förarresultat</span>
                   </a>
 
                   <a href="{{ url_for('my_scores') }}" id="quick-action-my-scores" class="home-inner-tile home-action-tile--scores">
@@ -3053,33 +3053,11 @@
       </div>
     </div>
 
-    <div class="home-ui-panel mb-6">
-      <div class="home-ui-panel__head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Series Leaders & SMX</span></span></h2>
-      </div>
-      <div class="home-ui-panel__body">
-        <div id="series-leaders-container" class="space-y-2">
-          <div class="text-center text-slate-400">
-            <div class="animate-spin inline-block w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full"></div>
-            <span class="ml-1 text-xs">Laddar...</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="home-ui-panel mb-6">
-      <div class="home-ui-panel__head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>WSX Series Leaders</span></span></h2>
-      </div>
-      <div class="home-ui-panel__body">
-        <div id="wsx-leaders-container" class="space-y-2">
-          <div class="text-center text-slate-400">
-            <div class="animate-spin inline-block w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full"></div>
-            <span class="ml-1 text-xs">Laddar...</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <p class="text-center text-sm text-slate-400 mb-2 px-2">
+      Förarställning (serieledare / SMX) finns under
+      <a href="{{ url_for('race_results_page') }}" id="lb-to-race-results" class="text-cyan-400 underline underline-offset-2 font-semibold">Race Resultat · förare</a>
+      — inte här på fantasy-topplistan.
+    </p>
 
     <!-- Cross Jump Highscore Widget -->
   </div>
@@ -4231,6 +4209,8 @@
         : '';
       const resultsLink = document.getElementById('quick-action-race-results');
       if (resultsLink) resultsLink.href = '/race_results' + seriesQ;
+      const lbResultsLink = document.getElementById('lb-to-race-results');
+      if (lbResultsLink) lbResultsLink.href = '/race_results' + seriesQ;
       const scoresLink = document.getElementById('quick-action-my-scores');
       if (scoresLink) scoresLink.href = '/my_scores' + seriesQ;
 
@@ -5411,7 +5391,6 @@
           fetchSeasonLeaderboard();
           fetchSeasonTeamLeaderboard();
           fetchLeagueLeaderboard();
-          loadSeriesLeaders();
           fetchWeeklyFunStats();
         } else if (targetTab === 'games') {
           fetchCrossDinoHighscores();
@@ -6529,8 +6508,6 @@
       [
         fetchLeagueLeaderboard,
         fetchCrossDinoHighscores,
-        loadSeriesLeaders,
-        loadWSXLeaders,
       ].forEach(function(fn, i) {
         setTimeout(fn, 700 + i * 200);
       });

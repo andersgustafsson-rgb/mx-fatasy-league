@@ -120,7 +120,7 @@
     /* ---- Homepage quick actions ---- */
     'home.quick_actions':    { sv: 'Snabba åtgärder',   en: 'Quick actions' },
     'home.season_team':      { sv: 'Säsongsteam',        en: 'Season team' },
-    'home.race_results':     { sv: 'Race Resultat',      en: 'Race results' },
+    'home.race_results':     { sv: 'Förarresultat',       en: 'Rider results' },
     'home.my_scores':        { sv: 'Mina Poäng',         en: 'My scores' },
     'home.finished_series':  { sv: 'Färdiga Serier',     en: 'Finished series' },
     'home.see_others_picks': { sv: 'Se Andras Picks',    en: "Others' picks" },

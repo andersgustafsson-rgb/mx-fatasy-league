@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Race Results – AMA Supercross 2026</title>
+  <title>Förarresultat – MX Fantasy League</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
   <script>
@@ -545,14 +545,15 @@
       <div class="relative p-5 sm:p-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight mb-1 drop-shadow-lg">
-            {% if series_filter == 'WSX' %}WSX race results
-            {% elif series_filter == 'SX' %}AMA Supercross results
-            {% elif series_filter == 'MX' %}AMA Pro Motocross results
-            {% elif series_filter == 'SMX' %}SMX race results
-            {% elif series_filter == 'MXGP' %}MXGP race results
-            {% else %}Race results{% endif %}
+            {% if series_filter == 'WSX' %}WSX förarresultat
+            {% elif series_filter == 'SX' %}AMA Supercross förarresultat
+            {% elif series_filter == 'MX' %}AMA Pro Motocross förarresultat
+            {% elif series_filter == 'SMX' %}SMX förarresultat
+            {% elif series_filter == 'MXGP' %}MXGP förarresultat
+            {% else %}Förarresultat{% endif %}
           </h1>
           <p class="text-blue-100/90 text-sm max-w-xl">
+            Officiella <strong class="text-white font-semibold">förar</strong>resultat och serieledare — inte fantasy-spelarnas topplista.
             Välj serie ovan, sedan tävling i listan. Senaste med resultat öppnas först.
           </p>
         </div>
@@ -853,23 +854,23 @@
       <div class="px-4 sm:px-6 py-4 bg-gradient-to-r from-slate-900/80 to-slate-800/50 border-b border-slate-600/40">
         <h2 id="championship-totals-heading" class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
           <span class="text-amber-400">◎</span>
-          {% if series_filter == 'SMX' %}SMX-ställning
-          {% elif series_filter == 'SX' %}SX-ställning
-          {% elif series_filter == 'MX' %}MX-ställning
-          {% elif series_filter == 'WSX' %}WSX-ställning
-          {% else %}Totalställning · säsongspoäng{% endif %}
+          {% if series_filter == 'SMX' %}SMX-ställning · förare
+          {% elif series_filter == 'SX' %}SX-ställning · förare
+          {% elif series_filter == 'MX' %}MX-ställning · förare
+          {% elif series_filter == 'WSX' %}WSX-ställning · förare
+          {% else %}Totalställning · förarpoäng{% endif %}
         </h2>
         <p class="text-slate-400 text-sm mt-1 max-w-2xl">
           {% if series_filter == 'SMX' %}
-            World Championship = seed (Hunter 25 osv) + playoff-rundor (1× / 2× / 3×). Combined är SX+MX innan playoffs.
+            Officiell förarställning (inte fantasy). World Championship = seed + playoff-rundor (1× / 2× / 3×). Combined är SX+MX innan playoffs.
           {% elif series_filter == 'SX' %}
-            AMA Supercross säsongspoäng för vald klass.
+            Officiell förarställning (inte fantasy). AMA Supercross säsongspoäng för vald klass.
           {% elif series_filter == 'MX' %}
-            Pro Motocross säsongspoäng (moto 1 + moto 2).
+            Officiell förarställning (inte fantasy). Pro Motocross säsongspoäng (moto 1 + moto 2).
           {% elif series_filter == 'WSX' %}
-            Aktuell WSX-säsong — äldre finns under Färdiga serier.
+            Officiell förarställning (inte fantasy). Aktuell WSX-säsong — äldre finns under Färdiga serier.
           {% else %}
-            Välj klass under varje serie. Avslutade serier ligger kvar här när du tittar på hela AMA.
+            Officiell förarställning (inte fantasy-topplistan). Välj klass under varje serie.
           {% endif %}
         </p>
       </div>
