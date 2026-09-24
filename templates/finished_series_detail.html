@@ -1,12 +1,21 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" style="background:#070b14;color:#e2e8f0">
 <head>
   {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#070b14" />
   <title>{{ series_display_name|default(series.name) }} {{ series.year }} — Fantasy-arkiv | MX Fantasy</title>
   <link rel="icon" href="/favicon.ico" sizes="any" type="image/png" />
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" sizes="512x512" />
+  {# Dark paint before Tailwind CDN — avoids white flash on navigation #}
+  <style>
+    html, body {
+      background: #070b14;
+      color: #e2e8f0;
+      margin: 0;
+    }
+  </style>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
