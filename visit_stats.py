@@ -54,6 +54,9 @@ _GAME_EXACT = {
     "/leagues",
     "/bulletin_board",
     "/bulletin",
+    "/profile",
+    "/login",
+    "/register",
 }
 
 _GAME_PREFIXES = (
@@ -74,6 +77,7 @@ _GAME_PREFIXES = (
     "/trackmaps",
     "/manual",
     "/om",
+    "/profile",
 )
 
 _TABLE_READY = False
@@ -83,7 +87,15 @@ def today_stockholm() -> date:
     try:
         return datetime.now(ZoneInfo("Europe/Stockholm")).date()
     except Exception:
-        return datetime.utcnow().date()
+        # Windows / slim images without tzdata — UTC+2 approx (CEST).
+        return (datetime.utcnow() + timedelta(hours=2)).date()
+
+
+def _stockholm_tz():
+    try:
+        return ZoneInfo("Europe/Stockholm")
+    except Exception:
+        return None
 
 
 def _ensure_table() -> None:
@@ -144,14 +156,19 @@ def should_count_request(req: Request, response: Response | None = None) -> bool
     if not _is_game_page(path):
         return False
 
-    # Real Chrome/Firefox/Safari navigations always send these. Crawlers usually don't.
+    # Real Chrome/Firefox/Safari send Fetch Metadata. Many FB/IG in-app browsers
+    # omit them entirely — requiring the headers zeroed out race-day traffic.
     dest = (req.headers.get("Sec-Fetch-Dest") or "").lower()
     mode = (req.headers.get("Sec-Fetch-Mode") or "").lower()
-    if dest != "document" or mode != "navigate":
-        return False
+    if dest or mode:
+        if dest and dest not in ("document", "iframe"):
+            return False
+        if mode and mode not in ("navigate", "nested-navigate"):
+            return False
 
     accept = (req.headers.get("Accept") or "").lower()
-    if "text/html" not in accept:
+    # Some WebViews send */* only — still allow if other checks pass.
+    if accept and "text/html" not in accept and "*/*" not in accept:
         return False
 
     ua = (req.headers.get("User-Agent") or "").lower()
@@ -165,9 +182,8 @@ def should_count_request(req: Request, response: Response | None = None) -> bool
         "crawl",
         "slurp",
         "facebookexternalhit",
-        "preview",
         "wget",
-        "curl",
+        "curl/",
         "python-requests",
         "httpclient",
         "scrapy",
@@ -188,9 +204,8 @@ def should_count_request(req: Request, response: Response | None = None) -> bool
         "baidu",
         "duckduck",
         "bingpreview",
-        "slurp",
         "monitoring",
-        "render",
+        "render.com",
     )
     if any(b in ua for b in bot_bits):
         return False
@@ -285,7 +300,7 @@ def attach_visitor_cookie(response: Response, visitor_id: str) -> Response:
 
 def _signup_stats(start: date, end: date) -> tuple[dict[str, int], list[dict[str, Any]]]:
     """Count new accounts per Stockholm calendar day; list today's signups."""
-    tz = ZoneInfo("Europe/Stockholm")
+    tz = _stockholm_tz()
     # created_at is stored as naive UTC — pad the window for timezone skew.
     window_start = datetime.combine(start - timedelta(days=1), datetime.min.time())
     window_end = datetime.combine(end + timedelta(days=1), datetime.max.time())
@@ -304,9 +319,18 @@ def _signup_stats(start: date, end: date) -> tuple[dict[str, int], list[dict[str
         ca = u.created_at
         if ca is None:
             continue
-        if ca.tzinfo is None:
-            ca = ca.replace(tzinfo=ZoneInfo("UTC"))
-        local_day = ca.astimezone(tz).date()
+        try:
+            if tz is not None:
+                if ca.tzinfo is None:
+                    from datetime import timezone as _tz
+
+                    ca = ca.replace(tzinfo=_tz.utc)
+                local_day = ca.astimezone(tz).date()
+            else:
+                # No tzdata: naive UTC → Stockholm ≈ UTC+2 (CEST)
+                local_day = (ca + timedelta(hours=2)).date()
+        except Exception:
+            local_day = (ca.replace(tzinfo=None) + timedelta(hours=2)).date()
         if local_day < start or local_day > end:
             continue
         key = local_day.isoformat()
