@@ -5897,14 +5897,20 @@ def leagues_page():
         init_database()
 
     try:
-        my_leagues = League.query.join(LeagueMembership).filter(LeagueMembership.user_id == uid).all()
+        _ensure_league_membership_unique()
+        my_leagues = (
+            League.query.join(LeagueMembership)
+            .filter(LeagueMembership.user_id == uid)
+            .distinct()
+            .all()
+        )
     except Exception as e:
         print(f"Error getting leagues: {e}")
         my_leagues = []
 
     public_leagues = db.session.query(
         League,
-        db.func.count(LeagueMembership.user_id).label('member_count')
+        db.func.count(db.func.distinct(LeagueMembership.user_id)).label('member_count')
     ).outerjoin(LeagueMembership).filter(
         League.is_public == True
     ).group_by(League.id).order_by(
@@ -5915,7 +5921,7 @@ def leagues_page():
     user_league_ids = [
         lid[0] for lid in db.session.query(LeagueMembership.league_id).filter(
             LeagueMembership.user_id == uid
-        ).all()
+        ).distinct().all()
     ]
     pending_league_ids = [
         rid[0] for rid in db.session.query(LeagueRequest.league_id).filter(
@@ -10808,22 +10814,31 @@ def profile_page():
 
     my_leagues = []
     try:
+        _ensure_league_membership_unique()
         memberships = (
             db.session.query(LeagueMembership, League)
             .join(League, League.id == LeagueMembership.league_id)
             .filter(LeagueMembership.user_id == user.id)
-            .order_by(League.name.asc())
+            .order_by(League.name.asc(), LeagueMembership.id.asc())
             .all()
         )
+        seen_league_ids: set[int] = set()
         for mem, league in memberships:
-            member_count = LeagueMembership.query.filter_by(league_id=league.id).count()
+            if league.id in seen_league_ids:
+                continue
+            seen_league_ids.add(league.id)
+            member_count = (
+                db.session.query(db.func.count(db.func.distinct(LeagueMembership.user_id)))
+                .filter(LeagueMembership.league_id == league.id)
+                .scalar()
+            ) or 0
             my_leagues.append(
                 {
                     "id": league.id,
                     "name": league.name,
                     "is_public": bool(league.is_public),
                     "is_creator": league.creator_id == user.id,
-                    "member_count": member_count,
+                    "member_count": int(member_count),
                     "joined_at": mem.joined_at,
                 }
             )
@@ -12777,9 +12792,12 @@ def leave_league(league_id):
     if league.creator_id == session["user_id"]:
         flash("Skaparen kan inte lämna sin egen liga. Du kan radera ligan i stället.", "error")
         return redirect(url_for("league_detail_page", league_id=league_id))
-    mem = LeagueMembership.query.filter_by(league_id=league_id, user_id=session["user_id"]).first()
-    if mem:
-        db.session.delete(mem)
+    mems = LeagueMembership.query.filter_by(
+        league_id=league_id, user_id=session["user_id"]
+    ).all()
+    if mems:
+        for mem in mems:
+            db.session.delete(mem)
         db.session.commit()
         flash("Du har lämnat ligan.", "success")
     return redirect(url_for("leagues_page"))
@@ -26249,12 +26267,14 @@ def approve_league_request(league_id, request_id):
     request_obj.status = 'approved'
     request_obj.processed_at = datetime.utcnow()
     
-    # Add user to league
-    membership = LeagueMembership(
-        league_id=league_id,
-        user_id=request_obj.user_id
-    )
-    db.session.add(membership)
+    # Add user to league (skip if already a member — avoids duplicate profile rows)
+    already = LeagueMembership.query.filter_by(
+        league_id=league_id, user_id=request_obj.user_id
+    ).first()
+    if not already:
+        db.session.add(
+            LeagueMembership(league_id=league_id, user_id=request_obj.user_id)
+        )
     db.session.commit()
     
     flash("Ansökan godkändes!", "success")
@@ -26707,6 +26727,81 @@ def calculate_league_points_single(league_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+def _ensure_league_membership_unique() -> None:
+    """Dedupe league_memberships and enforce (league_id, user_id) unique (prod was missing it)."""
+    from sqlalchemy import inspect, text
+
+    try:
+        if not inspect(db.engine).has_table("league_memberships"):
+            return
+    except Exception:
+        return
+
+    # Keep lowest id per (league_id, user_id); drop the rest.
+    try:
+        dialect = (db.engine.dialect.name or "").lower()
+        if dialect == "postgresql":
+            deleted = db.session.execute(
+                text(
+                    """
+                    DELETE FROM league_memberships a
+                    USING league_memberships b
+                    WHERE a.league_id = b.league_id
+                      AND a.user_id = b.user_id
+                      AND a.id > b.id
+                    """
+                )
+            )
+            n = deleted.rowcount or 0
+        else:
+            deleted = db.session.execute(
+                text(
+                    """
+                    DELETE FROM league_memberships
+                    WHERE id NOT IN (
+                        SELECT MIN(id) FROM league_memberships
+                        GROUP BY league_id, user_id
+                    )
+                    """
+                )
+            )
+            n = deleted.rowcount or 0
+        if n:
+            print(f"league_memberships: removed {n} duplicate row(s)")
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"league_memberships dedupe skipped: {e}")
+        return
+
+    try:
+        insp = inspect(db.engine)
+        uniques = {c.get("name") for c in (insp.get_unique_constraints("league_memberships") or [])}
+        indexes = {i.get("name") for i in (insp.get_indexes("league_memberships") or [])}
+        if "uq_league_user" in uniques or "uq_league_user" in indexes:
+            return
+        dialect = (db.engine.dialect.name or "").lower()
+        if dialect == "postgresql":
+            db.session.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_league_user "
+                    "ON league_memberships (league_id, user_id)"
+                )
+            )
+        else:
+            db.session.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_league_user "
+                    "ON league_memberships (league_id, user_id)"
+                )
+            )
+        db.session.commit()
+        print("league_memberships: ensured unique index uq_league_user")
+    except Exception as e:
+        db.session.rollback()
+        print(f"league_memberships unique index skipped: {e}")
 
 
 @app.get("/fix_league_memberships_column")
@@ -28967,6 +29062,10 @@ def init_database():
                     _ensure_google_oauth_columns()
                 except Exception as g_col_err:
                     print(f"Warning: google_sub migration skipped: {g_col_err}")
+                try:
+                    _ensure_league_membership_unique()
+                except Exception as league_mem_err:
+                    print(f"Warning: league_membership unique fix skipped: {league_mem_err}")
                 # Auto-seed WSX so calendar exists for the UI (2025 history + 2026 season)
                 try:
                     ensure_wsx_series_and_competitions()
