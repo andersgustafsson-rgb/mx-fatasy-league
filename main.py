@@ -556,22 +556,16 @@ def inject_season_team_combined_flags():
 
         promo = season_team_promo_live()
         combined = season_team_combined_live()
-        try:
-            st_count = int(SeasonTeam.query.count() or 0)
-        except Exception:
-            st_count = 0
         return {
             "season_team_promo_live": promo,
             "season_team_combined_live": combined,
             "season_team_promo_copy": season_team_promo_copy(combined=combined) if promo else None,
-            "season_team_count": st_count,
         }
     except Exception:
         return {
             "season_team_promo_live": False,
             "season_team_combined_live": False,
             "season_team_promo_copy": None,
-            "season_team_count": 0,
         }
 
 

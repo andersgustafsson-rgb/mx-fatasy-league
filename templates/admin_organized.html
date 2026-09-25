@@ -430,6 +430,9 @@
                 <span>7d: <strong id="visit-week-signups">–</strong> nya</span>
                 <span class="text-gray-600">·</span>
                 <span>Rekord: <strong id="visit-peak-uv">–</strong> <span class="text-gray-500" id="visit-peak-day"></span></span>
+                <span class="text-gray-600">·</span>
+                <span class="ap-visit-label">Säsongsteam</span>
+                <span><strong id="season-team-live-count" class="text-cyan-300">–</strong> lag skapade</span>
                 <span class="text-gray-600 text-xs w-full sm:w-auto">Bara speletsidor · ej personal/kundmail/bots</span>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:0.35rem;">
@@ -1807,15 +1810,17 @@
 
                     <article class="ap-hub-card">
                         <div>
-                            <p class="ap-hub-card__eyebrow">Databas</p>
-                            <h3 class="ap-hub-card__title">Rensa data</h3>
+                            <p class="ap-hub-card__eyebrow">Säsongsteam</p>
+                            <h3 class="ap-hub-card__title">Lag &amp; reset</h3>
                         </div>
                         <p class="ap-hub-card__desc">
-                            Rensa säsongsteam eller spel-highscores (Cross Jump / Quiz). Resultat och picks har egna knappar under Avancerat.
+                            Just nu: <strong id="season-team-tools-count" class="text-cyan-300">–</strong> live-lag.
+                            Efter SMX Finals: arkivera snapshot + nollställ så alla bygger om inför 2027.
                         </p>
                         <div class="ap-hub-card__actions">
-                            <button type="button" onclick="clearSeasonTeams()" class="ap-btn ap-btn--sm">Rensa säsongsteam</button>
-                            <button type="button" onclick="openClearGameHighscoresModal()" class="ap-btn ap-btn--sm">Rensa highscores</button>
+                            <button type="button" onclick="checkSeasonTeams()" class="ap-btn ap-btn--sm">Visa lag</button>
+                            <button type="button" onclick="archiveAndResetSeasonTeams()" class="ap-btn ap-btn--primary">Arkivera &amp; nollställ</button>
+                            <button type="button" onclick="clearSeasonTeams()" class="ap-btn ap-btn--sm ap-btn--ghost">Rensa utan arkiv</button>
                         </div>
                     </article>
                 </div>
@@ -1827,6 +1832,7 @@
                             Full reset tar bort <strong>all</strong> data. Använd med försiktighet.
                         </p>
                         <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="openClearGameHighscoresModal()" class="ap-btn ap-btn--sm">Rensa highscores</button>
                             <button type="button" onclick="clearRaceResults()" class="ap-btn ap-btn--sm">Rensa resultat</button>
                             <button type="button" onclick="clearUserPicks()" class="ap-btn ap-btn--sm">Rensa picks</button>
                             <button type="button" onclick="clearAllData()" class="btn-danger px-3 py-2 rounded-lg text-sm">Full reset</button>
@@ -2219,18 +2225,43 @@
         }
 
         async function clearSeasonTeams() {
-            if (confirm('This will clear ALL season teams and riders. Continue?')) {
+            if (confirm('This will clear ALL season teams and riders WITHOUT archiving. Prefer «Arkivera & nollställ». Continue?')) {
                 try {
                     const response = await fetch('/clear_season_teams');
                     const result = await response.json();
                     if (result.message) {
                         alert('✅ ' + result.message);
+                        if (typeof loadVisitStats === 'function') loadVisitStats();
                     } else {
                         alert('❌ Error: ' + result.error);
                     }
                 } catch (error) {
                     alert('❌ Error: ' + error.message);
                 }
+            }
+        }
+
+        async function archiveAndResetSeasonTeams() {
+            const label = prompt('Arkiv-etikett (t.ex. SMX 2026):', 'SMX 2026');
+            if (label === null) return;
+            if (!confirm(`Arkivera alla säsongsteam som «${label || 'SMX 2026'}» och nollställ live-lagen?\n\nAlla spelare måste skapa nytt lag efteråt.`)) {
+                return;
+            }
+            try {
+                const response = await fetch('/admin/season_teams/archive_and_reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label: (label || 'SMX 2026').trim() || 'SMX 2026' }),
+                });
+                const result = await response.json();
+                if (response.ok && result.ok) {
+                    alert('✅ ' + result.message);
+                    if (typeof loadVisitStats === 'function') loadVisitStats();
+                } else {
+                    alert('❌ ' + (result.error || 'Kunde inte arkivera'));
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
             }
         }
 
@@ -3222,6 +3253,19 @@
                 }
             } catch (error) {
                 console.error('visit stats', error);
+            }
+            try {
+                const stRes = await fetch('/admin/season_teams/archives');
+                const stData = await stRes.json();
+                const stEl = document.getElementById('season-team-live-count');
+                if (stEl && stRes.ok && stData.ok) {
+                    const n = String(stData.live_team_count ?? 0);
+                    stEl.textContent = n;
+                    const toolsEl = document.getElementById('season-team-tools-count');
+                    if (toolsEl) toolsEl.textContent = n;
+                }
+            } catch (error) {
+                console.error('season team count', error);
             }
         }
 

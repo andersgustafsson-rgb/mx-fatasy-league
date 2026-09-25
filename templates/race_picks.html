@@ -954,10 +954,6 @@
       <div class="flex flex-wrap items-center gap-3">
         <a href="{{ url_for('season_team_builder') }}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold text-sm transition">{{ season_team_promo_copy.cta }} →</a>
         <a href="{{ url_for('manual_page') }}#season-team" target="_blank" rel="noopener" class="text-sm font-semibold text-cyan-300 hover:text-cyan-200 underline underline-offset-2">{{ season_team_promo_copy.read_more }} →</a>
-        <span class="text-xs text-slate-400 tabular-nums">
-          <strong class="text-cyan-300">{{ season_team_count|default(0) }}</strong>
-          {{ season_team_promo_copy.count_label|default('lag skapade') }}
-        </span>
       </div>
       {% if season_team_promo_copy.notice %}
       <p class="mt-3 text-xs text-amber-200/90 leading-relaxed">{{ season_team_promo_copy.notice }}</p>
