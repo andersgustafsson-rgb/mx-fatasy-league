@@ -179,9 +179,16 @@
         <div class="text-[11px] font-bold uppercase tracking-wider text-cyan-300/90 mb-1">{{ season_team_promo_copy.eyebrow }}</div>
         <div class="font-bold text-lg text-white mb-1">{{ season_team_promo_copy.title }}</div>
         <p class="text-sm text-slate-300 mb-3 leading-relaxed">{{ season_team_promo_copy.body }}</p>
+        {% if season_team_promo_copy.notice %}
+        <p class="text-xs text-amber-200/90 mb-3 leading-relaxed">{{ season_team_promo_copy.notice }}</p>
+        {% endif %}
         <div class="flex flex-wrap items-center gap-3">
           <a href="{{ url_for('season_team_builder') }}" class="rp-btn rp-btn--primary rp-btn--sm">{{ season_team_promo_copy.cta }}</a>
           <a href="{{ url_for('manual_page') }}#season-team" target="_blank" rel="noopener" class="text-sm font-semibold text-cyan-300 hover:text-cyan-200 underline underline-offset-2">{{ season_team_promo_copy.read_more }} →</a>
+          <span class="text-xs text-slate-400 tabular-nums">
+            <strong class="text-cyan-300">{{ season_team_count|default(0) }}</strong>
+            {{ season_team_promo_copy.count_label|default('lag skapade') }}
+          </span>
         </div>
       </div>
     {% endif %}
@@ -260,7 +267,7 @@
         <div class="flex items-start justify-between gap-3 mb-4">
           <div>
             <h3 class="text-lg font-bold text-white">Säsongsteam</h3>
-            <p class="text-xs text-slate-400 mt-0.5">Ditt lag för SX / MX / SMX</p>
+            <p class="text-xs text-slate-400 mt-0.5">Ditt lag för SX / MX / SMX · {{ season_team_count|default(0) }} lag skapade totalt</p>
           </div>
           {% if season_team %}
           <a href="{{ url_for('season_team_page') }}" class="text-sm font-semibold text-cyan-300 hover:text-cyan-200 shrink-0">Öppna →</a>

@@ -31,7 +31,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, QualifyingPick, QualifyingResult, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, MxonCompetitionOut, BarnivaSchemaWorkspace, BarnivaSchemaWorkspaceVersion, rider_query_for_list_ui
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, SeasonTeamArchive, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, QualifyingPick, QualifyingResult, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, MxonCompetitionOut, BarnivaSchemaWorkspace, BarnivaSchemaWorkspaceVersion, rider_query_for_list_ui
 
 _INDEX_SCHEMA_CHECKED = False
 _RIDER_IMAGE_COLUMN_CHECKED = False
@@ -556,16 +556,22 @@ def inject_season_team_combined_flags():
 
         promo = season_team_promo_live()
         combined = season_team_combined_live()
+        try:
+            st_count = int(SeasonTeam.query.count() or 0)
+        except Exception:
+            st_count = 0
         return {
             "season_team_promo_live": promo,
             "season_team_combined_live": combined,
             "season_team_promo_copy": season_team_promo_copy(combined=combined) if promo else None,
+            "season_team_count": st_count,
         }
     except Exception:
         return {
             "season_team_promo_live": False,
             "season_team_combined_live": False,
             "season_team_promo_copy": None,
+            "season_team_count": 0,
         }
 
 
@@ -26080,7 +26086,7 @@ def reset_season_team_points():
 
 @app.get("/clear_season_teams")
 def clear_season_teams():
-    """Clear all season teams (admin only)"""
+    """Clear all season teams (admin only). Prefer archive_and_reset_season_teams."""
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
@@ -26107,6 +26113,131 @@ def clear_season_teams():
         db.session.rollback()
         print(f"❌ Error clearing season teams: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+def _ensure_season_team_archives_table() -> None:
+    try:
+        SeasonTeamArchive.__table__.create(bind=db.engine, checkfirst=True)
+    except Exception as e:
+        print(f"season_team_archives ensure: {e}")
+
+
+def _snapshot_season_teams_payload() -> tuple[list[dict], int]:
+    """Build JSON-serializable snapshot of all live season teams."""
+    teams = SeasonTeam.query.order_by(SeasonTeam.total_points.desc(), SeasonTeam.id.asc()).all()
+    out = []
+    for t in teams:
+        user = User.query.get(t.user_id)
+        riders = (
+            db.session.query(Rider)
+            .join(SeasonTeamRider, Rider.id == SeasonTeamRider.rider_id)
+            .filter(SeasonTeamRider.season_team_id == t.id)
+            .order_by(Rider.class_name.desc(), Rider.price.desc())
+            .all()
+        )
+        out.append(
+            {
+                "team_id": t.id,
+                "user_id": t.user_id,
+                "username": user.username if user else None,
+                "team_name": t.team_name,
+                "total_points": int(t.total_points or 0),
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+                "riders": [
+                    {
+                        "id": r.id,
+                        "name": r.name,
+                        "class": r.class_name,
+                        "number": r.rider_number,
+                        "brand": r.bike_brand,
+                        "price": r.price,
+                    }
+                    for r in riders
+                ],
+            }
+        )
+    return out, len(out)
+
+
+@app.post("/admin/season_teams/archive_and_reset")
+def archive_and_reset_season_teams():
+    """Archive all season teams (JSON snapshot) then wipe live rosters — post SMX reset."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    label = (request.json or {}).get("label") if request.is_json else None
+    label = (label or request.form.get("label") or request.args.get("label") or "SMX 2026").strip()
+    if not label:
+        label = "SMX 2026"
+
+    try:
+        import json
+        from datetime import datetime as _dt
+
+        _ensure_season_team_archives_table()
+        payload, team_count = _snapshot_season_teams_payload()
+        archive = SeasonTeamArchive(
+            label=label,
+            archived_at=_dt.utcnow(),
+            team_count=team_count,
+            payload=json.dumps(payload, ensure_ascii=False),
+        )
+        db.session.add(archive)
+        db.session.flush()
+
+        deleted_riders = SeasonTeamRider.query.delete()
+        deleted_teams = SeasonTeam.query.delete()
+        db.session.commit()
+
+        return jsonify(
+            {
+                "ok": True,
+                "message": (
+                    f"Arkiverade {team_count} lag som «{label}» och nollställde live-lagen. "
+                    f"Alla måste skapa nytt säsongsteam."
+                ),
+                "archive_id": archive.id,
+                "label": label,
+                "archived_teams": team_count,
+                "deleted_teams": deleted_teams,
+                "deleted_riders": deleted_riders,
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
+        print(f"archive_and_reset_season_teams: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.get("/admin/season_teams/archives")
+def list_season_team_archives():
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        _ensure_season_team_archives_table()
+        rows = (
+            SeasonTeamArchive.query.order_by(SeasonTeamArchive.archived_at.desc())
+            .limit(50)
+            .all()
+        )
+        return jsonify(
+            {
+                "ok": True,
+                "archives": [
+                    {
+                        "id": r.id,
+                        "label": r.label,
+                        "archived_at": r.archived_at.isoformat() if r.archived_at else None,
+                        "team_count": r.team_count,
+                    }
+                    for r in rows
+                ],
+                "live_team_count": SeasonTeam.query.count(),
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.get("/check_season_teams")
 def check_season_teams():
@@ -29066,6 +29197,10 @@ def init_database():
                     _ensure_league_membership_unique()
                 except Exception as league_mem_err:
                     print(f"Warning: league_membership unique fix skipped: {league_mem_err}")
+                try:
+                    _ensure_season_team_archives_table()
+                except Exception as st_arch_err:
+                    print(f"Warning: season_team_archives ensure skipped: {st_arch_err}")
                 # Auto-seed WSX so calendar exists for the UI (2025 history + 2026 season)
                 try:
                     ensure_wsx_series_and_competitions()

@@ -231,6 +231,17 @@ class SeasonTeam(db.Model):
         "SeasonTeamRider", backref="team", cascade="all, delete-orphan"
     )
 
+
+class SeasonTeamArchive(db.Model):
+    """Snapshot of all season teams before a season reset (e.g. after SMX Finals)."""
+    __tablename__ = "season_team_archives"
+    id = db.Column(db.Integer, primary_key=True)
+    label = db.Column(db.String(80), nullable=False)  # e.g. "SMX 2026"
+    archived_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    team_count = db.Column(db.Integer, nullable=False, default=0)
+    payload = db.Column(db.Text, nullable=False)  # JSON: teams + riders + points
+
+
 class SeasonTeamRider(db.Model):
     __tablename__ = "season_team_riders"
     entry_id = db.Column(db.Integer, primary_key=True)

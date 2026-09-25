@@ -73,6 +73,11 @@ def season_team_promo_copy(*, combined: bool | None = None) -> dict[str, str | l
         "Byte kostar 50 tippa-poäng per förare",
         "Gäller SX, MX och SMX — inte WSX",
     ]
+    reset_notice = (
+        "Skapar du lag nu är det för att öva och vara redo. "
+        "Efter SMX Finals 2026 arkiveras och nollställs alla säsongsteam — "
+        "då väljer alla om inför SMX-säsongen 2027."
+    )
     if combined:
         return {
             "eyebrow": "Extra poäng",
@@ -82,6 +87,8 @@ def season_team_promo_copy(*, combined: bool | None = None) -> dict[str, str | l
                 "Teampoängen räknas in i Total-highscoren tillsammans med race picks."
             ),
             "how": how[:3] + ["Teampoäng + tippa = din Total på topplistan"],
+            "notice": reset_notice,
+            "count_label": "lag skapade",
             "read_more": "Läs mer i manualen",
             "cta": "Bygg laget",
             "cta_has": "Öppna mitt lag",
@@ -92,9 +99,12 @@ def season_team_promo_copy(*, combined: bool | None = None) -> dict[str, str | l
         "title": "Säsongsteam ger extra poäng till highscore",
         "body": (
             "Bygg ett lag som får poäng varje race. "
-            "Från SMX-säsongen 2027 räknas teampoäng in i highscoren — skapa laget redan nu."
+            "Från SMX-säsongen 2027 räknas teampoäng in i highscoren — skapa laget redan nu. "
+            "Efter SMX Finals 2026 nollställs alla lag och du väljer om."
         ),
-        "how": how,
+        "how": how + ["Efter SMX 2026: lag arkiveras — alla bygger om inför 2027"],
+        "notice": reset_notice,
+        "count_label": "lag skapade",
         "read_more": "Läs mer i manualen",
         "cta": "Skapa säsongsteam",
         "cta_has": "Öppna mitt lag",

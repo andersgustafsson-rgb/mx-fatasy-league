@@ -2732,8 +2732,15 @@
                   {% else %}
                   <a href="{{ url_for('season_team_builder') }}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-extrabold text-sm transition">{{ season_team_promo_copy.cta }} →</a>
                   {% endif %}
+                  <p class="text-center text-xs text-slate-400 tabular-nums">
+                    <strong class="text-cyan-200 text-sm">{{ season_team_count|default(0) }}</strong>
+                    {{ season_team_promo_copy.count_label|default('lag skapade') }}
+                  </p>
                 </div>
               </div>
+              {% if season_team_promo_copy.notice %}
+              <p class="mt-3 pt-3 border-t border-white/10 text-xs sm:text-sm text-amber-200/90 leading-relaxed">{{ season_team_promo_copy.notice }}</p>
+              {% endif %}
             </div>
             {% endif %}
             {% if upcoming_race %}
@@ -3345,6 +3352,13 @@
                     </ul>
                     {% endif %}
                     <a href="{{ url_for('season_team_builder') }}" class="rp-btn rp-btn--block rp-btn--primary">{{ season_team_promo_copy.cta }}</a>
+                    <p class="mt-2 text-center text-xs text-slate-400 tabular-nums">
+                      <strong class="text-cyan-300">{{ season_team_count|default(0) }}</strong>
+                      {{ season_team_promo_copy.count_label|default('lag skapade') }}
+                    </p>
+                    {% if season_team_promo_copy.notice %}
+                    <p class="mt-3 text-xs text-amber-200/85 leading-relaxed">{{ season_team_promo_copy.notice }}</p>
+                    {% endif %}
                     <a href="{{ url_for('manual_page') }}#season-team" target="_blank" rel="noopener" class="inline-block mt-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200 underline underline-offset-2">{{ season_team_promo_copy.read_more }} →</a>
                     {% else %}
                     <p class="text-lg font-bold text-slate-100 mb-1">Skapa ditt säsongsteam</p>
