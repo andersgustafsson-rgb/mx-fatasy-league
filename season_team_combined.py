@@ -88,15 +88,15 @@ def season_team_promo_copy(*, combined: bool | None = None) -> dict[str, str | l
             "tab_hint": "Teampoäng i highscore",
         }
     return {
-        "eyebrow": "Snart",
+        "eyebrow": "SMX 2027",
         "title": "Säsongsteam ger extra poäng till highscore",
         "body": (
             "Bygg ett lag som får poäng varje race. "
-            "Från nästa säsong räknas teampoäng in i highscoren — skapa laget redan nu."
+            "Från SMX-säsongen 2027 räknas teampoäng in i highscoren — skapa laget redan nu."
         ),
         "how": how,
         "read_more": "Läs mer i manualen",
         "cta": "Skapa säsongsteam",
         "cta_has": "Öppna mitt lag",
-        "tab_hint": "Snart i highscore",
+        "tab_hint": "SMX 2027",
     }
