@@ -28084,22 +28084,60 @@ def view_user_profile(user_id):
         # Get user's race results for profile
         race_results = []
         total_points = 0
+        total_race_points = 0
+        total_holeshot_points = 0
+        total_wildcard_points = 0
         competitions = Competition.query.order_by(Competition.event_date).all()
         for competition in competitions:
             score = CompetitionScore.query.filter_by(user_id=user_id, competition_id=competition.id).first()
             has_results = CompetitionResult.query.filter_by(competition_id=competition.id).first() is not None
             if score or has_results:
+                rp = int(score.race_points or 0) if score else 0
+                hp = int(score.holeshot_points or 0) if score else 0
+                wp = int(getattr(score, "wildcard_points", 0) or 0) if score else 0
+                tp = int(score.total_points or 0) if score else 0
                 race_results.append({
                     'competition': competition,
-                    'points': score.total_points if score else 0,
-                    'race_points': 0,  # CompetitionScore only has total_points
-                    'holeshot_points': 0,  # CompetitionScore only has total_points
-                    'wildcard_points': 0,  # CompetitionScore only has total_points
+                    'points': tp,
+                    'race_points': rp,
+                    'holeshot_points': hp,
+                    'wildcard_points': wp,
                     'has_results': has_results
                 })
                 if score:
-                    total_points += score.total_points
+                    total_points += tp
+                    total_race_points += rp
+                    total_holeshot_points += hp
+                    total_wildcard_points += wp
         race_results.sort(key=lambda x: x['competition'].event_date, reverse=True)
+
+        tippa_points, team_points, highscore_total = _user_highscore_total(user_id)
+
+        my_leagues = []
+        try:
+            memberships = (
+                db.session.query(LeagueMembership, League)
+                .join(League, League.id == LeagueMembership.league_id)
+                .filter(LeagueMembership.user_id == user_id)
+                .order_by(League.name.asc(), LeagueMembership.id.asc())
+                .all()
+            )
+            seen = set()
+            for mem, league in memberships:
+                if league.id in seen:
+                    continue
+                seen.add(league.id)
+                my_leagues.append(
+                    {
+                        "id": league.id,
+                        "name": league.name,
+                        "is_public": bool(league.is_public),
+                        "member_count": LeagueMembership.query.filter_by(league_id=league.id).count(),
+                    }
+                )
+        except Exception as e:
+            print(f"view_user_profile leagues: {e}")
+            my_leagues = []
         
         return render_template(
             "user_profile.html",
@@ -28112,7 +28150,14 @@ def view_user_profile(user_id):
             picks_locked=picks_locked,
             current_user_id=session["user_id"],
             race_results=race_results,
-            total_points=total_points
+            total_points=total_points,
+            total_race_points=total_race_points,
+            total_holeshot_points=total_holeshot_points,
+            total_wildcard_points=total_wildcard_points,
+            tippa_points=tippa_points,
+            team_points=team_points,
+            highscore_total=highscore_total,
+            my_leagues=my_leagues,
         )
         
     except Exception as e:

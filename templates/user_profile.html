@@ -4,453 +4,406 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ target_user.username }}'s Profil - MX Fantasy League</title>
+  <title>{{ target_user.display_name or target_user.username }} — MX Fantasy League</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
-  <script>
-    // Suppress Tailwind CDN warning in production
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      console.warn = function() {}; // Suppress console warnings in production
-    }
-  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    .pit-lane-bell-toolbar .pit-lane-bell-btn {
-      padding: 0.5rem;
-      border-radius: 0.5rem;
-      background: rgb(31 41 55);
-      border: 1px solid rgb(75 85 99);
+    :root {
+      --pf-panel: #1a2436;
+      --pf-line: #2a3548;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "DM Sans", system-ui, sans-serif;
       color: #e2e8f0;
+      background:
+        radial-gradient(900px 420px at 12% -10%, rgba(34, 211, 238, 0.12), transparent 55%),
+        radial-gradient(700px 380px at 100% 0%, rgba(251, 146, 60, 0.08), transparent 50%),
+        linear-gradient(180deg, #0b1220 0%, #111827 50%, #0b1220 100%);
     }
-    .pit-lane-bell-toolbar .pit-lane-bell-btn:hover {
-      background: rgb(55 65 81);
+    .pf-display {
+      font-family: "Bebas Neue", Impact, sans-serif;
+      letter-spacing: 0.04em;
+      line-height: 0.95;
     }
-    .pit-lane-bell-toolbar .pit-lane-bell-icon {
-      width: 1.15rem;
-      height: 1.15rem;
+    .pf-panel {
+      border: 1px solid var(--pf-line);
+      border-radius: 1rem;
+      background: rgba(26, 36, 54, 0.92);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
     }
-    .pit-lane-bell-toolbar #pit-lane-bell-wrap.pit-lane-bell-wrap--unread .pit-lane-bell-icon {
+    .pf-stat {
+      border: 1px solid var(--pf-line);
+      border-radius: 0.85rem;
+      background: rgba(15, 23, 42, 0.55);
+      padding: 0.9rem 1rem;
+      min-width: 0;
+    }
+    .pf-stat__val {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 1.75rem;
+      letter-spacing: 0.03em;
+      color: #f8fafc;
+      line-height: 1;
+    }
+    .pf-stat__label {
+      margin-top: 0.25rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    .pf-rider {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.55rem 0.65rem;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(2, 6, 23, 0.35);
+      min-width: 0;
+    }
+    .pf-rider img, .pf-rider .ph {
+      width: 2.4rem;
+      height: 2.4rem;
+      border-radius: 999px;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 2px solid rgba(71, 85, 105, 0.7);
+    }
+    .pf-rider .ph {
+      display: grid;
+      place-items: center;
+      background: #1e293b;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: #94a3b8;
+    }
+    .pf-fold > summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      user-select: none;
+    }
+    .pf-fold > summary::-webkit-details-marker { display: none; }
+    .pf-fold__chev {
+      flex-shrink: 0;
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 999px;
+      border: 1px solid var(--pf-line);
+      display: grid;
+      place-items: center;
+      color: #94a3b8;
+      transition: transform 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+    .pf-fold[open] > summary .pf-fold__chev {
+      transform: rotate(180deg);
       color: #22d3ee;
-      filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.55));
+      border-color: rgba(34, 211, 238, 0.45);
+    }
+    .pf-fold__body {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--pf-line);
+    }
+    .pf-race-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.7rem 0.85rem;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      background: rgba(2, 6, 23, 0.35);
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .pf-race-row:hover {
+      border-color: rgba(34, 211, 238, 0.4);
+      background: rgba(15, 23, 42, 0.65);
     }
   </style>
 </head>
-<body class="relative font-sans min-h-screen text-gray-200">
-  <!-- Bakgrund -->
-  <div
-    class="absolute inset-0 bg-cover bg-center"
-    style="background-image: url('{{ url_for("static", filename="images/huvudsida.jpg") }}');"
-  ></div>
-  <div class="absolute inset-0 bg-black bg-opacity-70"></div>
+<body>
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-16">
 
-  <!-- Innehåll -->
-  <div class="relative z-10">
-    <div class="container mx-auto p-4 md:p-8">
-      <!-- Header -->
-      <div class="mb-6 md:mb-8">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <header class="text-center sm:text-left">
-            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-yellow-400">MX Fantasy League</h1>
-            <p class="text-base md:text-lg text-gray-200 mt-2">
-              {{ target_user.username }}'s Profil
-            </p>
-          </header>
-          
-          <!-- Navigation -->
-          <div class="flex flex-wrap justify-center sm:justify-end gap-2 sm:gap-4 items-center">
-            {% set is_logged_in = true %}
-            <div class="pit-lane-bell-toolbar">
-              {% include 'includes/pit_lane_bell.html' %}
-            </div>
-            <a
-              href="{{ url_for('pit_lane.pit_lane_page') }}?to={{ target_user.id }}&tab=messages"
-              class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow text-sm sm:text-base"
-            >
-              {{ mx_icon('mail') }} Skicka meddelande
-            </a>
-            <a
-              href="{{ url_for('index') }}"
-              class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow nav-sound text-sm sm:text-base"
-            >
-              Tillbaka till Huvudsidan
-            </a>
-            <a
-              href="{{ url_for('profile_page') }}"
-              class="bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow nav-sound text-sm sm:text-base"
-            >
-              Min Profil
-            </a>
-          </div>
-        </div>
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-6">
+      <header class="min-w-0">
+        <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-cyan-300/85 mb-1">MX Fantasy League</p>
+        <h1 class="pf-display text-4xl sm:text-5xl text-white truncate">
+          {{ target_user.display_name or target_user.username }}
+        </h1>
+        <p class="mt-2 text-sm text-slate-400">Profil · lag · ligor · poäng</p>
+      </header>
+      <div class="rp-btn-row">
+        <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm">← Hem</a>
+        <a href="{{ url_for('pit_lane.pit_lane_page') }}?to={{ target_user.id }}&tab=messages" class="rp-btn rp-btn--accent rp-btn--sm">Meddelande</a>
+        <a href="{{ url_for('profile_page') }}" class="rp-btn rp-btn--primary rp-btn--sm">Min profil</a>
       </div>
-
-      <!-- Flash Messages -->
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="mb-6">
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }} p-4 rounded-lg mb-2
-                {% if category == 'success' %}bg-green-600 text-white
-                {% elif category == 'error' %}bg-red-600 text-white
-                {% elif category == 'warning' %}bg-yellow-600 text-white
-                {% else %}bg-blue-600 text-white{% endif %}">
-                {{ message }}
-              </div>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endwith %}
-
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-        <!-- Profilinformation -->
-        <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-6 rounded-lg shadow-lg">
-          <h2 class="text-2xl font-bold text-blue-500 mb-4">Profilinformation</h2>
-          
-          <!-- Profilbild -->
-          <div class="flex items-center gap-4 mb-6">
-            {% if target_user.profile_picture_url %}
-              {% if target_user.profile_picture_url.startswith('data:') %}
-                <img src="{{ target_user.profile_picture_url }}" 
-                     alt="Profilbild" 
-                     class="w-20 h-20 rounded-full object-cover border-4 border-blue-400">
-              {% else %}
-                <img src="{{ url_for('static', filename=target_user.profile_picture_url) }}" 
-                     alt="Profilbild" 
-                     class="w-20 h-20 rounded-full object-cover border-4 border-blue-400"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="w-20 h-20 rounded-full bg-gray-600 flex items-center justify-center border-4 border-blue-400" style="display:none;">
-                  <span class="text-blue-400 text-2xl font-bold">{{ target_user.username[0].upper() }}</span>
-                </div>
-              {% endif %}
-            {% else %}
-              <div class="w-20 h-20 rounded-full bg-gray-600 flex items-center justify-center border-4 border-blue-400">
-                <span class="text-blue-400 text-2xl font-bold">{{ target_user.username[0].upper() }}</span>
-              </div>
-            {% endif %}
-            <div>
-              <h3 class="text-xl font-bold text-gray-800 dark:text-gray-200">{{ target_user.username }}</h3>
-              {% if target_user.display_name %}
-                <p class="text-gray-600 dark:text-gray-400">{{ target_user.display_name }}</p>
-              {% endif %}
-            </div>
-          </div>
-
-          <!-- Användarinfo -->
-          <div class="space-y-3">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Användarnamn</label>
-              <p class="text-gray-800 dark:text-gray-200 font-medium">{{ target_user.username }}</p>
-            </div>
-            
-            {% if target_user.display_name %}
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Visningsnamn</label>
-              <p class="text-gray-800 dark:text-gray-200">{{ target_user.display_name }}</p>
-            </div>
-            {% endif %}
-            
-            {% if target_user.bio %}
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Om mig</label>
-              <p class="text-gray-800 dark:text-gray-200">{{ target_user.bio }}</p>
-            </div>
-            {% endif %}
-            
-            {% if target_user.favorite_rider %}
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Favoritförare</label>
-              <p class="text-gray-800 dark:text-gray-200">{{ target_user.favorite_rider }}</p>
-            </div>
-            {% endif %}
-            
-            {% if target_user.favorite_team %}
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Favoritlag</label>
-              <p class="text-gray-800 dark:text-gray-200">{{ target_user.favorite_team }}</p>
-            </div>
-            {% endif %}
-            
-            {% if target_user.created_at %}
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Medlem sedan</label>
-              <p class="text-gray-800 dark:text-gray-200">{{ target_user.created_at.strftime('%d %B %Y') }}</p>
-            </div>
-            {% endif %}
-          </div>
-        </div>
-
-        <!-- Säsongsteam -->
-        <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-6 rounded-lg shadow-lg">
-          <h2 class="text-2xl font-bold text-green-500 mb-4">Säsongsteam</h2>
-          
-          {% if season_team %}
-            <div class="mb-4">
-              <p class="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                Teamnamn: <span class="text-green-600">{{ season_team.team_name }}</span>
-              </p>
-              <p class="text-xl font-bold text-green-600 dark:text-green-400">
-                Totala poäng: {{ season_team.total_points or 0 }}
-              </p>
-            </div>
-
-            {% if team_riders %}
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                {% for r in team_riders %}
-                <div class="flex items-center gap-3 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-lg px-4 py-3 shadow-md hover:shadow-lg transition-shadow">
-                  <div class="flex items-center gap-2 flex-shrink-0">
-                    {% if r.image_url %}
-                      <img src="{{ r.image_url if r.image_url.startswith('data:') else url_for('static', filename=r.image_url) }}"
-                           alt="{{ r.name }} headshot"
-                           class="w-10 h-10 rounded-full object-cover border-2 {% if r.class == '450cc' %}border-orange-500{% else %}border-yellow-500{% endif %}"
-                           onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                      <div class="w-10 h-10 rounded-full {% if r.class == '450cc' %}bg-orange-600{% else %}bg-yellow-600{% endif %} flex items-center justify-center border-2 {% if r.class == '450cc' %}border-orange-500{% else %}border-yellow-500{% endif %}" style="display:none;">
-                        <span class="text-white text-xs font-bold">#{{ r.number }}</span>
-                      </div>
-                    {% else %}
-                      <div class="w-10 h-10 rounded-full {% if r.class == '450cc' %}bg-orange-600{% else %}bg-yellow-600{% endif %} flex items-center justify-center border-2 {% if r.class == '450cc' %}border-orange-500{% else %}border-yellow-500{% endif %}">
-                        <span class="text-white text-xs font-bold">#{{ r.number }}</span>
-                      </div>
-                    {% endif %}
-                    {% if r.brand %}
-                      <img src="{{ url_for('static', filename='brand_logos/' ~ r.brand ~ '.png') }}"
-                           alt="{{ r.brand }} logo"
-                           class="w-6 h-6 object-contain"
-                           onerror="this.style.display='none';">
-                    {% endif %}
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <div class="font-semibold text-gray-800 dark:text-gray-200 truncate">#{{ r.number }} {{ r.name }}</div>
-                    <div class="text-xs text-gray-600 dark:text-gray-400">
-                      <span class="inline-block px-2 py-0.5 rounded {% if r.class == '450cc' %}bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200{% else %}bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200{% endif %}">
-                        {{ r.class }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                {% endfor %}
-              </div>
-            {% else %}
-              <p class="text-gray-600 dark:text-gray-400">Inga riders i teamet än.</p>
-            {% endif %}
-          {% else %}
-            <p class="text-gray-600 dark:text-gray-400">Inget säsongsteam skapat än.</p>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Aktuella picks -->
-      {% if current_picks_450 or current_picks_250 %}
-      <div class="mt-6">
-        <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-6 rounded-lg shadow-lg">
-          <h2 class="text-2xl font-bold text-purple-500 mb-4">Aktuella Race Picks</h2>
-          
-          {% if upcoming_race %}
-            <p class="text-gray-600 dark:text-gray-400 mb-4">
-              För {{ upcoming_race.name }} ({{ upcoming_race.event_date.strftime('%Y-%m-%d') if upcoming_race.event_date else '' }})
-            </p>
-          {% endif %}
-          
-          {% if picks_locked %}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- 450cc picks -->
-              {% if current_picks_450 %}
-              <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-                <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">450cc Picks</h4>
-                <div class="space-y-2">
-                  {% for pick in current_picks_450 %}
-                  <div class="flex items-center justify-between text-sm">
-                    <span class="text-gray-600 dark:text-gray-400 font-medium">{{ pick.position }}.</span>
-                    <span class="text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
-                  </div>
-                  {% endfor %}
-                </div>
-              </div>
-              {% endif %}
-              
-              <!-- 250cc picks -->
-              {% if current_picks_250 %}
-              <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-                <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">250cc Picks</h4>
-                <div class="space-y-2">
-                  {% for pick in current_picks_250 %}
-                  <div class="flex items-center justify-between text-sm">
-                    <span class="text-gray-600 dark:text-gray-400 font-medium">{{ pick.position }}.</span>
-                    <span class="text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
-                  </div>
-                  {% endfor %}
-                </div>
-              </div>
-              {% endif %}
-            </div>
-          {% else %}
-            <div class="text-center py-8">
-              <div class="mb-4 text-amber-300 flex justify-center">{{ mx_icon('lock', 'mx-icon--2xl') }}</div>
-              <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Picks dolda</h3>
-              <p class="text-gray-600 dark:text-gray-400">
-                Picks visas efter deadline för att förhindra tjuvkikning.
-              </p>
-            </div>
-          {% endif %}
-          
-          <!-- Show deadline status -->
-          {% if picks_locked %}
-            <div class="mt-4 p-3 bg-red-100 dark:bg-red-900 rounded-lg">
-              <p class="text-sm text-red-700 dark:text-red-300">
-                {{ mx_icon('lock') }} <strong>Picks låsta!</strong> Andra användares picks visas nu.
-              </p>
-            </div>
-          {% else %}
-            <div class="mt-4 p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <p class="text-sm text-blue-700 dark:text-blue-300">
-                {{ mx_icon('clock') }} <strong>Picks öppna.</strong> Andra användares picks är dolda tills deadline.
-              </p>
-            </div>
-          {% endif %}
-        </div>
-
-      </div>
-      {% endif %}
-
-      <!-- Achievements -->
-      <div class="mt-6">
-        <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-6 rounded-lg shadow-lg">
-          <div class="flex items-center justify-between gap-3 mb-4">
-            <h2 class="text-2xl font-bold text-yellow-500">{{ mx_icon('medal') }} Achievements</h2>
-            <span id="achievements-meta" class="text-xs text-gray-600 dark:text-gray-400"></span>
-          </div>
-          <div id="achievements-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-              <p class="text-sm text-gray-700 dark:text-gray-200">Laddar…</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Race Resultat -->
-      {% if race_results is defined and race_results %}
-      <div class="mt-8">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center">
-              {{ mx_icon('flag') }} Race Resultat
-              <span class="ml-2 text-lg text-gray-600 dark:text-gray-400">({{ total_points }} poäng totalt)</span>
-            </h2>
-            <a href="{{ url_for('user_scores_page', username=target_user.username) }}" 
-               class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow">
-              {{ mx_icon('chart') }} Detaljerad poänghistorik
-            </a>
-          </div>
-          
-          <div class="space-y-4">
-            {% for result in race_results %}
-            <div onclick="showDetails({{ result.competition.id }})" 
-                 class="race-result-item bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-l-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors
-                        {% if loop.index > 15 %}hidden{% endif %}
-                        {% if result.has_results and result.points > 0 %} border-green-500
-                        {% elif result.has_results and result.points == 0 %} border-red-500
-                        {% else %} border-gray-400 {% endif %}">
-              
-              <div class="flex justify-between items-start mb-3">
-                <div>
-                  <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
-                    {{ result.competition.name }}
-                  </h3>
-                  <p class="text-sm text-gray-600 dark:text-gray-400">
-                    {{ result.competition.event_date.strftime('%d %B %Y') if result.competition.event_date }}
-                  </p>
-                </div>
-                
-                <div class="text-right">
-                  {% if result.has_results %}
-                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                      {{ mx_icon('check-circle') }} Kört
-                    </span>
-                  {% else %}
-                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                      {{ mx_icon('hourglass') }} Väntar
-                    </span>
-                  {% endif %}
-                </div>
-              </div>
-              
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                <div class="text-center">
-                  <p class="text-gray-600 dark:text-gray-400">Race</p>
-                  <p class="font-semibold text-gray-800 dark:text-white">{{ result.race_points }}</p>
-                </div>
-                <div class="text-center">
-                  <p class="text-gray-600 dark:text-gray-400">Holeshot</p>
-                  <p class="font-semibold text-gray-800 dark:text-white">{{ result.holeshot_points }}</p>
-                </div>
-                {% if result.competition.series != 'WSX' %}
-                <div class="text-center">
-                  <p class="text-gray-600 dark:text-gray-400">Wildcard</p>
-                  <p class="font-semibold text-gray-800 dark:text-white">{{ result.wildcard_points }}</p>
-                </div>
-                {% endif %}
-                <div class="text-center">
-                  <p class="text-gray-600 dark:text-gray-400">Total</p>
-                  <p class="font-bold text-lg 
-                             {% if result.has_results and result.points > 0 %} text-green-500
-                             {% elif result.has_results and result.points == 0 %} text-red-500
-                             {% else %} text-gray-400 {% endif %}">
-                    {{ result.points }}
-                  </p>
-                </div>
-              </div>
-              {% if result.has_results %}
-              <p class="text-xs text-blue-600 dark:text-blue-400 mt-2 text-center">Klicka för detaljerad poängfördelning</p>
-              {% endif %}
-            </div>
-            {% endfor %}
-          </div>
-          
-          {% if race_results|length > 15 %}
-          <div class="mt-4 text-center">
-            <button id="expand-race-results-btn" 
-                    onclick="toggleRaceResults()"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-colors">
-              {{ mx_icon('clipboard') }} Visa fler ({{ race_results|length - 15 }} till)
-            </button>
-          </div>
-          {% endif %}
-          
-          <!-- Sammanfattning -->
-          <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">
-            <h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3">{{ mx_icon('chart') }} Sammanfattning</h3>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-              <div class="text-center">
-                <p class="text-blue-600 dark:text-blue-400">Tävlingar</p>
-                <p class="font-bold text-blue-800 dark:text-blue-200">{{ race_results|length }}</p>
-              </div>
-              <div class="text-center">
-                <p class="text-blue-600 dark:text-blue-400">Totala poäng</p>
-                <p class="font-bold text-blue-800 dark:text-blue-200">{{ total_points }}</p>
-              </div>
-              <div class="text-center">
-                <p class="text-blue-600 dark:text-blue-400">Holeshot poäng</p>
-                <p class="font-bold text-blue-800 dark:text-blue-200">{{ race_results|sum(attribute='holeshot_points') }}</p>
-              </div>
-              <div class="text-center">
-                <p class="text-blue-600 dark:text-blue-400">Wildcard poäng</p>
-                <p class="font-bold text-blue-800 dark:text-blue-200">{{ race_results|sum(attribute='wildcard_points') }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      {% endif %}
     </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="p-3 rounded-lg mb-4 text-center text-white {% if category == 'success' %}bg-emerald-600{% else %}bg-red-600{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {# —— Hero —— #}
+    <section class="pf-panel p-5 sm:p-6 mb-5">
+      <div class="flex flex-col sm:flex-row gap-5 sm:items-center">
+        <div class="shrink-0 mx-auto sm:mx-0">
+          {% if target_user.profile_picture_url and not target_user.profile_picture_url.startswith('uploaded_') %}
+            <img
+              src="{{ target_user.profile_picture_url if target_user.profile_picture_url.startswith('data:') else url_for('static', filename=target_user.profile_picture_url) }}"
+              alt="Profilbild"
+              class="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-2 border-cyan-400/50 shadow-lg"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            />
+            <div class="hidden w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-slate-700 items-center justify-center border-2 border-slate-500 text-3xl font-extrabold text-slate-200">
+              {{ (target_user.display_name or target_user.username or '?')[:1]|upper }}
+            </div>
+          {% else %}
+            <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-slate-700 flex items-center justify-center border-2 border-slate-500 text-3xl font-extrabold text-slate-200">
+              {{ (target_user.display_name or target_user.username or '?')[:1]|upper }}
+            </div>
+          {% endif %}
+        </div>
+        <div class="min-w-0 flex-1 text-center sm:text-left">
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white truncate">
+            {{ target_user.display_name or target_user.username }}
+          </h2>
+          <p class="text-sm text-cyan-200/90 font-mono mt-0.5">@{{ target_user.username }}</p>
+          <p class="text-xs text-slate-400 mt-2">
+            Medlem sedan {{ target_user.created_at.strftime('%d %b %Y') if target_user.created_at else '—' }}
+            {% if target_user.favorite_rider %} · Favoritförare: <span class="text-slate-200">{{ target_user.favorite_rider }}</span>{% endif %}
+            {% if target_user.favorite_team %} · Märke: <span class="text-slate-200">{{ target_user.favorite_team }}</span>{% endif %}
+          </p>
+          {% if target_user.bio %}
+          <p class="mt-3 text-sm text-slate-300 leading-relaxed max-w-2xl">{{ target_user.bio }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    {# —— Stats —— #}
+    <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 mb-5">
+      <div class="pf-stat">
+        <div class="pf-stat__val">{{ '{:,}'.format(highscore_total or total_points or 0).replace(',', ' ') }}</div>
+        <div class="pf-stat__label">Total p</div>
+      </div>
+      <div class="pf-stat">
+        <div class="pf-stat__val">{{ '{:,}'.format(tippa_points or total_points or 0).replace(',', ' ') }}</div>
+        <div class="pf-stat__label">Tippa</div>
+      </div>
+      <div class="pf-stat">
+        <div class="pf-stat__val">{{ '{:,}'.format(team_points or (season_team.total_points if season_team else 0) or 0).replace(',', ' ') }}</div>
+        <div class="pf-stat__label">Säsongsteam</div>
+      </div>
+      <div class="pf-stat">
+        <div class="pf-stat__val">{{ race_results|length if race_results is defined else 0 }}</div>
+        <div class="pf-stat__label">Tävlingar</div>
+      </div>
+      <div class="pf-stat">
+        <div class="pf-stat__val">{{ my_leagues|length if my_leagues is defined else 0 }}</div>
+        <div class="pf-stat__label">Ligor</div>
+      </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 mb-5">
+      {# —— Season team —— #}
+      <section class="pf-panel p-5">
+        <div class="mb-4">
+          <h3 class="text-lg font-bold text-white">Säsongsteam</h3>
+          <p class="text-xs text-slate-400 mt-0.5">SX / MX / SMX</p>
+        </div>
+        {% if season_team %}
+          <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
+            <span class="text-xl font-extrabold text-white">{{ season_team.team_name }}</span>
+            <span class="text-sm text-emerald-300 font-bold tabular-nums">{{ season_team.total_points or 0 }} p</span>
+          </div>
+          {% if team_riders %}
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {% for r in team_riders %}
+            <div class="pf-rider">
+              {% if r.image_url %}
+                <img src="{{ r.image_url if r.image_url.startswith('data:') else url_for('static', filename=r.image_url) }}" alt="{{ r.name }}" loading="lazy" />
+              {% else %}
+                <div class="ph">#{{ r.number or '—' }}</div>
+              {% endif %}
+              <div class="min-w-0 flex-1">
+                <div class="text-sm font-bold text-white truncate">{{ r.name }}</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">
+                  {{ r.class or '—' }} · #{{ r.number or '—' }}{% if r.brand %} · {{ r.brand }}{% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-sm text-slate-400">Inga förare i laget.</p>
+          {% endif %}
+        {% else %}
+          <p class="text-sm text-slate-400">Inget säsongsteam ännu.</p>
+        {% endif %}
+      </section>
+
+      {# —— Leagues —— #}
+      <section class="pf-panel p-5">
+        <div class="mb-4">
+          <h3 class="text-lg font-bold text-white">Ligor</h3>
+          <p class="text-xs text-slate-400 mt-0.5">{{ my_leagues|length if my_leagues is defined else 0 }} liga{% if (my_leagues|length if my_leagues is defined else 0) != 1 %}r{% endif %}</p>
+        </div>
+        {% if my_leagues %}
+        <ul class="space-y-2">
+          {% for lg in my_leagues %}
+          <li>
+            <a href="{{ url_for('league_detail_page', league_id=lg.id) }}"
+               class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/40 px-3.5 py-3 hover:border-cyan-400/40 hover:bg-slate-900/60 transition">
+              <div class="min-w-0">
+                <div class="font-bold text-white truncate">{{ lg.name }}</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">
+                  {{ lg.member_count }} medlem{% if lg.member_count != 1 %}mar{% endif %}
+                  · {% if lg.is_public %}Publik{% else %}Privat{% endif %}
+                </div>
+              </div>
+              <span class="text-cyan-300 shrink-0" aria-hidden="true">→</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-slate-400">Inte med i någon liga.</p>
+        {% endif %}
+      </section>
+    </div>
+
+    {# —— Achievements —— #}
+    <section class="pf-panel p-5 mb-5">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <h3 class="text-lg font-bold text-white">Achievements</h3>
+        <span id="achievements-meta" class="text-xs text-slate-500"></span>
+      </div>
+      <div id="achievements-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <div class="pf-stat"><p class="text-sm text-slate-400">Laddar…</p></div>
+      </div>
+    </section>
+
+    {# —— Locked picks (if any) —— #}
+    {% if current_picks_450 or current_picks_250 %}
+    <section class="pf-panel p-5 mb-5">
+      <h3 class="text-lg font-bold text-white mb-1">Aktuella picks</h3>
+      {% if upcoming_race %}
+      <p class="text-xs text-slate-400 mb-4">{{ upcoming_race.name }} · låsta</p>
+      {% endif %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+        {% if current_picks_450 %}
+        <div>
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">450</div>
+          <ul class="space-y-1">
+            {% for p in current_picks_450 %}
+            <li class="text-slate-200"><span class="text-cyan-300 font-mono">P{{ p.position }}</span> {{ p.rider_name }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        {% if current_picks_250 %}
+        <div>
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">250</div>
+          <ul class="space-y-1">
+            {% for p in current_picks_250 %}
+            <li class="text-slate-200"><span class="text-cyan-300 font-mono">P{{ p.position }}</span> {{ p.rider_name }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+    {% elif upcoming_race and not picks_locked %}
+    <section class="pf-panel p-4 mb-5 border-cyan-500/20">
+      <p class="text-sm text-slate-400">Picks öppna — andras tipp visas efter deadline.</p>
+    </section>
+    {% endif %}
+
+    {# —— Race results (collapsed) —— #}
+    {% if race_results is defined and race_results %}
+    <details class="pf-panel pf-fold p-5 sm:p-6 mb-5" id="race-results">
+      <summary>
+        <div class="min-w-0">
+          <h3 class="text-lg font-bold text-white">Race-resultat</h3>
+          <p class="text-sm text-slate-400 mt-0.5">
+            {{ race_results|length }} tävlingar ·
+            <span class="text-emerald-300 font-semibold tabular-nums">{{ '{:,}'.format(total_points or 0).replace(',', ' ') }} p</span>
+            tippa totalt
+          </p>
+        </div>
+        <span class="pf-fold__chev" aria-hidden="true">▾</span>
+      </summary>
+      <div class="pf-fold__body">
+        <div class="grid grid-cols-3 gap-2 mb-4">
+          <div class="pf-stat">
+            <div class="pf-stat__val text-cyan-200 text-xl">{{ total_race_points|default(0) }}</div>
+            <div class="pf-stat__label">Race</div>
+          </div>
+          <div class="pf-stat">
+            <div class="pf-stat__val text-amber-200 text-xl">{{ total_holeshot_points|default(0) }}</div>
+            <div class="pf-stat__label">Holeshot</div>
+          </div>
+          <div class="pf-stat">
+            <div class="pf-stat__val text-emerald-200 text-xl">{{ total_wildcard_points|default(0) }}</div>
+            <div class="pf-stat__label">Wildcard</div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <p class="text-xs text-slate-500">Klicka en rad för detaljerad fördelning</p>
+          <a href="{{ url_for('user_scores_page', username=target_user.username) }}" class="text-sm font-semibold text-cyan-300 hover:text-cyan-200">Full historik →</a>
+        </div>
+
+        <div class="space-y-2">
+          {% for result in race_results %}
+          <button type="button" class="pf-race-row w-full text-left"
+                  onclick="showDetails({{ result.competition.id }})">
+            <div class="min-w-0">
+              <div class="font-bold text-white truncate">{{ result.competition.name }}</div>
+              <div class="text-[11px] text-slate-500 mt-0.5">
+                {{ result.competition.event_date.strftime('%d %b %Y') if result.competition.event_date else '—' }}
+                · R {{ result.race_points }} · HS {{ result.holeshot_points }}{% if result.competition.series != 'WSX' %} · WC {{ result.wildcard_points }}{% endif %}
+              </div>
+            </div>
+            <div class="shrink-0 text-right">
+              <div class="font-extrabold tabular-nums text-lg
+                {% if result.has_results and result.points > 0 %}text-emerald-300
+                {% elif result.has_results %}text-slate-500
+                {% else %}text-amber-300{% endif %}">{{ result.points }}</div>
+              <div class="text-[10px] uppercase tracking-wide text-slate-500">
+                {% if result.has_results %}Kört{% else %}Väntar{% endif %}
+              </div>
+            </div>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </details>
+    {% endif %}
   </div>
 
-  <!-- Navigation Sound -->
-  <audio id="navSound" preload="auto">
-    <source src="{{ url_for('static', filename='sfx/moto.mp3') }}" type="audio/mpeg">
-  </audio>
-
-  <!-- Modal för detaljvy (samma layout som Mina poäng) -->
-  <div id="detail-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-3" style="z-index: 9999;">
-    <div class="bg-slate-950 border border-slate-700/60 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden" style="z-index: 10000;">
+  <div id="detail-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-3">
+    <div class="bg-slate-950 border border-slate-700/60 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden">
       <div class="p-4 sm:p-5 border-b border-slate-800/80 shrink-0">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
@@ -477,7 +430,7 @@
   </div>
 
   <script>
-    const viewingUser = '{{ target_user.username }}';
+    const viewingUser = {{ target_user.username|tojson }};
 
     async function loadAchievements() {
       const grid = document.getElementById("achievements-grid");
@@ -495,7 +448,7 @@
 
         const badges = Array.isArray(data.badges) ? data.badges : [];
         if (!badges.length) {
-          grid.innerHTML = '<div class="col-span-full text-sm text-gray-600 dark:text-gray-300">Inga achievements ännu.</div>';
+          grid.innerHTML = '<div class="col-span-full text-sm text-slate-400">Inga achievements ännu.</div>';
           return;
         }
 
@@ -506,42 +459,39 @@
           const tier = b.tier || null;
           const pct = nextGoal > 0 ? Math.max(0, Math.min(100, Math.round(100 * prog / nextGoal))) : 0;
           const tierText = tier ? ` · ${tier}` : '';
-
           let tierChip = '';
           if (tier) {
             const t = String(tier).toLowerCase();
-            const isBronze = t.includes('brons');
-            const isSilver = t.includes('silver');
             const isGold = t.includes('guld');
-            const medal = mxIcon('medal');
+            const isSilver = t.includes('silver');
             const chipClass = isGold
-              ? 'bg-amber-200 text-amber-950 border-amber-300 dark:bg-amber-500/20 dark:text-amber-200 dark:border-amber-500/40'
+              ? 'bg-amber-500/20 text-amber-200 border-amber-500/40'
               : isSilver
-                ? 'bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-500/20 dark:text-slate-200 dark:border-slate-500/40'
-                : 'bg-orange-200 text-orange-950 border-orange-300 dark:bg-orange-500/20 dark:text-orange-200 dark:border-orange-500/40';
-            tierChip = `<span class="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-extrabold ${chipClass}">${medal}<span>${tier}</span></span>`;
+                ? 'bg-slate-500/20 text-slate-200 border-slate-500/40'
+                : 'bg-orange-500/20 text-orange-200 border-orange-500/40';
+            tierChip = `<span class="ml-auto inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-extrabold ${chipClass}">${tier}</span>`;
           }
           return `
-            <div class="rounded-lg p-4 border ${done ? 'border-emerald-300 dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700'}">
+            <div class="rounded-xl p-4 border ${done ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-white/10 bg-slate-950/40'}">
               <div class="flex items-center gap-2">
-                <div class="text-xl">${b.emoji || mxIcon('medal')}</div>
+                <div class="text-xl">${b.emoji || ''}</div>
                 <div class="min-w-0">
-                  <div class="text-sm font-bold text-gray-900 dark:text-white truncate">${b.title || ''}</div>
-                  <div class="text-xs text-gray-700 dark:text-gray-200">${prog} / ${nextGoal}${tierText}</div>
+                  <div class="text-sm font-bold text-white truncate">${b.title || ''}</div>
+                  <div class="text-xs text-slate-400">${prog} / ${nextGoal}${tierText}</div>
                 </div>
                 ${tierChip}
               </div>
-              <div class="mt-3 h-2 rounded bg-gray-200 dark:bg-gray-600 overflow-hidden">
-                <div class="h-2 ${done ? 'bg-emerald-500' : 'bg-blue-500'}" style="width: ${pct}%"></div>
+              <div class="mt-3 h-2 rounded bg-slate-800 overflow-hidden">
+                <div class="h-2 ${done ? 'bg-emerald-500' : 'bg-cyan-500'}" style="width: ${pct}%"></div>
               </div>
             </div>
           `;
         }).join('');
       } catch (e) {
-        grid.innerHTML = '<div class="col-span-full text-sm text-red-500 dark:text-red-400">Kunde inte ladda achievements.</div>';
+        grid.innerHTML = '<div class="col-span-full text-sm text-rose-400">Kunde inte ladda achievements.</div>';
       }
     }
-    
+
     function closeModal(){
       const m = document.getElementById("detail-modal");
       m.classList.add("hidden");
@@ -550,7 +500,7 @@
 
     function renderPickRow(row) {
       const status = row.status || "miss";
-      const icon = status === "perfect" ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : status === "close" ? "▲" : mxIcon('x-circle', { className: 'mx-icon--danger' });
+      const icon = status === "perfect" ? "✓" : status === "close" ? "▲" : "✗";
       const bg = status === "perfect" ? "bg-emerald-950/25 border-emerald-800/40" : status === "close" ? "bg-amber-950/20 border-amber-800/35" : "bg-rose-950/15 border-rose-900/30";
       const actualCls = status === "perfect" ? "bg-emerald-400 text-emerald-950" : status === "close" ? "bg-amber-400 text-amber-950" : "bg-rose-400 text-rose-950";
       const pts = Number(row.points || 0);
@@ -575,13 +525,13 @@
 
     function renderSimpleRow(row) {
       if (row.kind === "bonus") {
-        return `<div class="py-2 px-3 rounded-lg border border-amber-700/40 bg-amber-950/20 text-amber-100 text-xs font-semibold">${mxIcon('target')} ${row.text || row.hint}</div>`;
+        return `<div class="py-2 px-3 rounded-lg border border-amber-700/40 bg-amber-950/20 text-amber-100 text-xs font-semibold">${row.text || row.hint}</div>`;
       }
       if (row.kind === "note") {
         return `<div class="py-2 px-3 rounded-lg border border-rose-800/30 bg-rose-950/15 text-rose-200 text-xs">${row.text}</div>`;
       }
       const ok = row.status === "correct";
-      const icon = ok ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : mxIcon('x-circle', { className: 'mx-icon--danger' });
+      const icon = ok ? "✓" : "✗";
       const pts = Number(row.points || 0);
       const ptsTxt = pts > 0 ? `+${pts}p` : "0p";
       if (row.kind === "wildcard") {
@@ -591,15 +541,15 @@
         const pos = posNum != null ? `plats ${posNum}` : "—";
         let bodyHtml;
         if (ok) {
-          bodyHtml = `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> (10–20) · gissade <strong class="text-slate-200">${picked}</strong> — stämde</span>`;
+          bodyHtml = `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> · gissade <strong class="text-slate-200">${picked}</strong> — stämde</span>`;
         } else if (actual) {
-          bodyHtml = `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> (10–20) · gissade <strong class="text-slate-200">${picked}</strong> → där kom <strong class="text-amber-200">${actual}</strong></span>`;
+          bodyHtml = `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> · gissade <strong class="text-slate-200">${picked}</strong> → <strong class="text-amber-200">${actual}</strong></span>`;
         } else {
-          bodyHtml = `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> (10–20) · gissade <strong class="text-slate-200">${picked}</strong> <span class="text-rose-300/90">(ingen på platsen i resultat)</span></span>`;
+          bodyHtml = `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> · gissade <strong class="text-slate-200">${picked}</strong></span>`;
         }
         return `<div class="py-2.5 px-3 rounded-lg border border-slate-700/60 bg-slate-900/40 space-y-1.5">
           <div class="flex items-center justify-between gap-2">
-            <span class="text-xs font-bold uppercase text-slate-500">Wildcard · plats 10–20</span>
+            <span class="text-xs font-bold uppercase text-slate-500">Wildcard</span>
             <span class="text-base shrink-0">${icon}</span>
           </div>
           <div class="text-sm leading-snug">${bodyHtml}</div>
@@ -613,7 +563,7 @@
       const actual = (row.actual_name || "").trim();
       const actualHtml = actual
         ? `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> → holeshot <strong class="text-amber-200">${actual}</strong></span>`
-        : `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> <span class="text-rose-300/90">(resultat saknas)</span></span>`;
+        : `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong></span>`;
       return `<div class="py-2.5 px-3 rounded-lg border border-slate-700/60 bg-slate-900/40 space-y-1.5">
         <div class="flex items-center justify-between gap-2">
           <span class="text-xs font-bold uppercase text-slate-500">${row.label || "Holeshot"}</span>
@@ -701,7 +651,7 @@
 
     async function showDetails(compId){
       try{
-        const url = `/get_user_race_results/${viewingUser}/${compId}`;
+        const url = `/get_user_race_results/${encodeURIComponent(viewingUser)}/${compId}`;
         const res = await fetch(url);
         const data = await res.json();
         if (!res.ok || data.error) {
@@ -731,46 +681,8 @@
         console.error(e);
       }
     }
-    
-    // Expand/collapse race results
-    let raceResultsExpanded = false;
-    function toggleRaceResults() {
-      const items = document.querySelectorAll('.race-result-item');
-      const btn = document.getElementById('expand-race-results-btn');
-      const totalHidden = items.length - 15;
-      
-      if (!raceResultsExpanded) {
-        // Show all
-        items.forEach(item => item.classList.remove('hidden'));
-        btn.innerHTML = `${mxIcon('clipboard')} Visa färre (visar alla ${items.length})`;
-        raceResultsExpanded = true;
-      } else {
-        // Show only first 15
-        items.forEach((item, index) => {
-          if (index >= 15) {
-            item.classList.add('hidden');
-          }
-        });
-        btn.innerHTML = `${mxIcon('clipboard')} Visa fler (${totalHidden} till)`;
-        raceResultsExpanded = false;
-      }
-    }
-    
-    // Navigation sound
-    document.addEventListener('DOMContentLoaded', function() {
-      loadAchievements();
-      const navSound = document.getElementById('navSound');
-      const navLinks = document.querySelectorAll('.nav-sound');
-      
-      navLinks.forEach(link => {
-        link.addEventListener('click', function() {
-          if (navSound) {
-            navSound.currentTime = 0;
-            navSound.play().catch(e => console.log('Could not play sound:', e));
-          }
-        });
-      });
-    });
+
+    document.addEventListener('DOMContentLoaded', loadAchievements);
   </script>
 </body>
 </html>
