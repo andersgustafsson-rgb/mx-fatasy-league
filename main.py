@@ -544,6 +544,31 @@ def inject_google_oauth_flags():
     return {"google_login_enabled": google_oauth_configured()}
 
 
+@app.context_processor
+def inject_season_team_combined_flags():
+    """Promo / Combined highscore flags for templates."""
+    try:
+        from season_team_combined import (
+            season_team_combined_live,
+            season_team_promo_copy,
+            season_team_promo_live,
+        )
+
+        promo = season_team_promo_live()
+        combined = season_team_combined_live()
+        return {
+            "season_team_promo_live": promo,
+            "season_team_combined_live": combined,
+            "season_team_promo_copy": season_team_promo_copy(combined=combined) if promo else None,
+        }
+    except Exception:
+        return {
+            "season_team_promo_live": False,
+            "season_team_combined_live": False,
+            "season_team_promo_copy": None,
+        }
+
+
 @app.before_request
 def _redirect_legacy_render_host():
     """Send old *.onrender.com traffic to mx-fantasy.se (keep path + query)."""
@@ -6026,7 +6051,7 @@ def api_leagues_leaderboard():
 
 
 def _user_pick_total_points(user_id: int) -> int:
-    """Total pick points (AMA only), deduped per competition — same logic as season leaderboard."""
+    """Total pick points (AMA only), deduped per competition — tippa + transfer penalties only."""
     all_scores = (
         db.session.query(CompetitionScore)
         .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
@@ -6041,6 +6066,29 @@ def _user_pick_total_points(user_id: int) -> int:
         if prev is None or score.score_id > prev.score_id:
             scores_by_comp[comp_id] = score
     return int(sum(s.total_points or 0 for s in scores_by_comp.values()))
+
+
+def _user_season_team_points(user_id: int) -> int:
+    """SeasonTeam.total_points for user (0 if no team)."""
+    team = SeasonTeam.query.filter_by(user_id=user_id).first()
+    return int(team.total_points or 0) if team else 0
+
+
+def _user_highscore_total(user_id: int) -> tuple[int, int, int]:
+    """AMA highscore: tippa, season-team, and combined total (flag-aware).
+
+    Returns (tippa_points, team_points, total_for_leaderboard).
+    """
+    tippa = _user_pick_total_points(user_id)
+    team = _user_season_team_points(user_id)
+    try:
+        from season_team_combined import season_team_combined_live
+
+        combined = season_team_combined_live()
+    except Exception:
+        combined = False
+    total = tippa + team if combined else tippa
+    return tippa, team, int(total)
 
 
 def _user_avatar_fields(user: User | None) -> dict[str, str | int | bool | None]:
@@ -9906,14 +9954,23 @@ def calculate_leaderboard_deltas():
     )
 
     # Per user: total + poäng från "denna veckas" tävlingar (för baslinjerank)
+    try:
+        from season_team_combined import season_team_combined_live
+
+        combined_live = season_team_combined_live()
+    except Exception:
+        combined_live = False
+
     user_scores_list = []
     for user_row in user_scores:
         user_id = user_row.id
+        tippa_total = 0
+        team_points = 0
         total = 0
         recent_week_points = 0
 
         try:
-            total = _user_pick_total_points(user_id)
+            tippa_total, team_points, total = _user_highscore_total(user_id)
             if recent_comp_ids:
                 all_scores = (
                     db.session.query(CompetitionScore)
@@ -9935,10 +9992,15 @@ def calculate_leaderboard_deltas():
                 )
         except Exception as e:
             print(f"Error calculating points for user {user_row.username}: {e}")
+            tippa_total = 0
+            team_points = 0
             total = 0
             recent_week_points = 0
 
-        baseline_total = max(0, total - recent_week_points)
+        # Week deltas stay tippa-driven; current team points on both sides so ST doesn't
+        # invent fake week movement without per-race ST snapshots.
+        tippa_baseline = max(0, tippa_total - recent_week_points)
+        baseline_total = tippa_baseline + (team_points if combined_live else 0)
 
         user_scores_list.append(
             {
@@ -9946,9 +10008,12 @@ def calculate_leaderboard_deltas():
                 "username": user_row.username,
                 "display_name": getattr(user_row, "display_name", None) or user_row.username,
                 "team_name": user_row.team_name,
+                "tippa_points": tippa_total,
+                "team_points": team_points,
                 "total_points": total,
                 "baseline_total": baseline_total,
                 "recent_week_points": recent_week_points,
+                "combined": combined_live,
             }
         )
 
@@ -10031,6 +10096,9 @@ def calculate_leaderboard_deltas():
                 "rank": current_rank,
                 "delta": delta,
                 "total_points": user_row["total_points"],
+                "tippa_points": int(user_row.get("tippa_points") or 0),
+                "team_points": int(user_row.get("team_points") or 0),
+                "combined": bool(user_row.get("combined")),
             }
         )
 
@@ -10712,6 +10780,68 @@ def profile_page():
     
     # Hämta säsongsteam
     season_team = SeasonTeam.query.filter_by(user_id=user.id).first()
+
+    team_riders = []
+    if season_team:
+        try:
+            rs = (
+                db.session.query(Rider)
+                .join(SeasonTeamRider, Rider.id == SeasonTeamRider.rider_id)
+                .filter(SeasonTeamRider.season_team_id == season_team.id)
+                .order_by(Rider.class_name.desc(), Rider.price.desc())
+                .all()
+            )
+            team_riders = [
+                {
+                    "id": r.id,
+                    "name": r.name,
+                    "number": r.rider_number,
+                    "class": r.class_name,
+                    "brand": r.bike_brand or "",
+                    "image_url": getattr(r, "rider_image_data", None) or r.image_url or None,
+                }
+                for r in rs
+            ]
+        except Exception as e:
+            print(f"profile_page team riders: {e}")
+            team_riders = []
+
+    my_leagues = []
+    try:
+        memberships = (
+            db.session.query(LeagueMembership, League)
+            .join(League, League.id == LeagueMembership.league_id)
+            .filter(LeagueMembership.user_id == user.id)
+            .order_by(League.name.asc())
+            .all()
+        )
+        for mem, league in memberships:
+            member_count = LeagueMembership.query.filter_by(league_id=league.id).count()
+            my_leagues.append(
+                {
+                    "id": league.id,
+                    "name": league.name,
+                    "is_public": bool(league.is_public),
+                    "is_creator": league.creator_id == user.id,
+                    "member_count": member_count,
+                    "joined_at": mem.joined_at,
+                }
+            )
+    except Exception as e:
+        print(f"profile_page leagues: {e}")
+        my_leagues = []
+
+    tippa_points, team_points, highscore_total = _user_highscore_total(user.id)
+
+    highscore_rank = None
+    try:
+        board = calculate_leaderboard_deltas()
+        for row in board:
+            if int(row.get("user_id") or 0) == int(user.id):
+                highscore_rank = row.get("rank")
+                break
+    except Exception as e:
+        print(f"profile_page rank: {e}")
     
     # Beräkna statistik
     competitions_played = CompetitionScore.query.filter_by(user_id=user.id).count()
@@ -10748,6 +10878,12 @@ def profile_page():
         user=user,
         needs_email=needs_email,
         season_team=season_team,
+        team_riders=team_riders,
+        my_leagues=my_leagues,
+        tippa_points=tippa_points,
+        team_points=team_points,
+        highscore_total=highscore_total,
+        highscore_rank=highscore_rank,
         competitions_played=competitions_played,
         best_position=best_position,
         total_race_points=total_race_points,
@@ -12468,6 +12604,15 @@ def race_picks_page(competition_id):
             "container_class": "mb-4 p-4 rounded-lg border-2 border-dashed border-amber-500/60 bg-amber-950/20",
         }
 
+    has_season_team = False
+    if is_logged_in:
+        try:
+            has_season_team = (
+                SeasonTeam.query.filter_by(user_id=int(session["user_id"])).first() is not None
+            )
+        except Exception:
+            has_season_team = False
+
     return render_template(
         "race_picks.html",
         competition=comp,
@@ -12495,6 +12640,7 @@ def race_picks_page(competition_id):
         initial_picks_status=initial_picks_status,
         initial_wizard_step=initial_wizard_step,
         is_logged_in=is_logged_in,
+        has_season_team=has_season_team,
         invite_share=(
             _build_invite_share_payload(
                 session.get("username") or "",
@@ -19304,6 +19450,9 @@ def get_season_leaderboard():
                 "display_name": user_data['display_name'] or None,
                 "team_name": user_data.get('team_name') or None,
                 "total_points": int(user_data['total_points']),
+                "tippa_points": int(user_data.get('tippa_points') or 0),
+                "team_points": int(user_data.get('team_points') or 0),
+                "combined": bool(user_data.get('combined')),
                 "rank": user_data['rank'],
                 "delta": user_data['delta']
             })

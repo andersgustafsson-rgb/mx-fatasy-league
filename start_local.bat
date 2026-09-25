@@ -16,6 +16,8 @@ set HOST=127.0.0.1
 set PORT=5000
 set DATABASE_URL=sqlite:///fantasy_mx_local.db
 set RENDER=
+REM Visuell preview av säsongsteam-promo (glow/CTA). Combined: SEASON_TEAM_COMBINED_LIVE=1
+set SEASON_TEAM_PROMO_LIVE=1
 
 set PY=py -3
 if exist ".venv\Scripts\python.exe" set PY=.venv\Scripts\python.exe

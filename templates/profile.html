@@ -7,29 +7,127 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
-<script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
+  <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --pf-bg: #0b1220;
+      --pf-panel: #1a2436;
+      --pf-line: #2a3548;
+      --pf-cyan: #22d3ee;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "DM Sans", system-ui, sans-serif;
+      color: #e2e8f0;
+      background:
+        radial-gradient(900px 420px at 12% -10%, rgba(34, 211, 238, 0.12), transparent 55%),
+        radial-gradient(700px 380px at 100% 0%, rgba(251, 146, 60, 0.08), transparent 50%),
+        linear-gradient(180deg, #0b1220 0%, #111827 50%, #0b1220 100%);
+    }
+    .pf-display {
+      font-family: "Bebas Neue", Impact, sans-serif;
+      letter-spacing: 0.04em;
+      line-height: 0.95;
+    }
+    .pf-panel {
+      border: 1px solid var(--pf-line);
+      border-radius: 1rem;
+      background: rgba(26, 36, 54, 0.92);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+    }
+    .pf-stat {
+      border: 1px solid var(--pf-line);
+      border-radius: 0.85rem;
+      background: rgba(15, 23, 42, 0.55);
+      padding: 0.9rem 1rem;
+      min-width: 0;
+    }
+    .pf-stat__val {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 1.75rem;
+      letter-spacing: 0.03em;
+      color: #f8fafc;
+      line-height: 1;
+    }
+    .pf-stat__label {
+      margin-top: 0.25rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    .pf-input {
+      width: 100%;
+      padding: 0.75rem 0.9rem;
+      border-radius: 0.65rem;
+      border: 1px solid var(--pf-line);
+      background: rgba(2, 6, 23, 0.45);
+      color: #f1f5f9;
+      outline: none;
+    }
+    .pf-input:focus { border-color: rgba(34, 211, 238, 0.55); }
+    .pf-label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    .pf-rider {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.55rem 0.65rem;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(2, 6, 23, 0.35);
+      min-width: 0;
+    }
+    .pf-rider img, .pf-rider .ph {
+      width: 2.4rem;
+      height: 2.4rem;
+      border-radius: 999px;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 2px solid rgba(71, 85, 105, 0.7);
+    }
+    .pf-rider .ph {
+      display: grid;
+      place-items: center;
+      background: #1e293b;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: #94a3b8;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
-  <div class="container mx-auto p-4 md:p-8">
+<body>
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-16">
 
-    <!-- Header -->
-    <div class="flex flex-wrap justify-between items-center mb-8 gap-4">
-      <header>
-        <h1 class="text-4xl md:text-5xl font-bold text-blue-500">Min Profil</h1>
-        <p class="text-lg mt-2 text-gray-400">
-          Hantera din profil och inställningar
-        </p>
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-6">
+      <header class="min-w-0">
+        <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-cyan-300/85 mb-1">MX Fantasy League</p>
+        <h1 class="pf-display text-4xl sm:text-5xl text-white">Min profil</h1>
+        <p class="mt-2 text-sm text-slate-400">Konto, lag, ligor och poäng — allt på ett ställe.</p>
       </header>
       <div class="rp-btn-row">
-        <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm">Tillbaka till Huvudsidan</a>
+        <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm">← Hem</a>
+        <a href="{{ url_for('my_scores') }}" class="rp-btn rp-btn--accent rp-btn--sm">Mina poäng</a>
       </div>
     </div>
 
-    <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="p-3 rounded-md mb-4 text-center {{ 'bg-green-500' if category == 'success' else 'bg-red-500' }} text-white">
+          <div class="p-3 rounded-lg mb-4 text-center text-white {% if category == 'success' %}bg-emerald-600{% else %}bg-red-600{% endif %}">
             {{ message }}
           </div>
         {% endfor %}
@@ -37,250 +135,262 @@
     {% endwith %}
 
     {% if needs_email %}
-      <div class="p-4 rounded-lg mb-6 bg-amber-500/20 border border-amber-400 text-amber-100">
+      <div class="p-4 rounded-xl mb-5 border border-amber-400/50 bg-amber-500/15 text-amber-100">
         <div class="font-semibold">Lägg till e‑postadress</div>
-        <div class="text-sm opacity-90">Behövs för lösenordsreset och viktiga notiser. Du kan spela som vanligt, men profilen går inte att spara utan e‑post.</div>
+        <div class="text-sm opacity-90">Behövs för lösenordsreset och viktiga notiser. Du kan spela utan — men profilen sparas inte förrän e‑post finns.</div>
       </div>
     {% endif %}
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    {% if season_team_promo_live and season_team_promo_copy and not season_team %}
+      <div class="p-4 sm:p-5 rounded-xl mb-5 border border-cyan-400/40 bg-gradient-to-br from-slate-900 via-slate-800 to-cyan-950/50">
+        <div class="text-[11px] font-bold uppercase tracking-wider text-cyan-300/90 mb-1">{{ season_team_promo_copy.eyebrow }}</div>
+        <div class="font-bold text-lg text-white mb-1">{{ season_team_promo_copy.title }}</div>
+        <p class="text-sm text-slate-300 mb-3 leading-relaxed">{{ season_team_promo_copy.body }}</p>
+        <div class="flex flex-wrap items-center gap-3">
+          <a href="{{ url_for('season_team_builder') }}" class="rp-btn rp-btn--primary rp-btn--sm">{{ season_team_promo_copy.cta }}</a>
+          <a href="{{ url_for('manual_page') }}#season-team" target="_blank" rel="noopener" class="text-sm font-semibold text-cyan-300 hover:text-cyan-200 underline underline-offset-2">{{ season_team_promo_copy.read_more }} →</a>
+        </div>
+      </div>
+    {% endif %}
 
-      <!-- Profilbild och grundinfo -->
-      <div class="lg:col-span-1">
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-          <h2 class="text-2xl font-semibold mb-4">Profilbild</h2>
-          
-          <!-- Profilbild -->
-          <div class="flex justify-center mb-6">
-            <div class="relative">
-              {% if user.profile_picture_url %}
-                {% if user.profile_picture_url.startswith('data:') %}
-                  <img src="{{ user.profile_picture_url }}" alt="Profilbild"
-                       class="w-32 h-32 rounded-full object-cover border-4 border-blue-500"
-                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                {% elif user.profile_picture_url.startswith('uploaded_') %}
-                  <div class="w-32 h-32 rounded-full bg-green-600 flex items-center justify-center border-4 border-blue-500">
-                    <div class="text-center text-white">
-                      <div class="text-4xl mb-2">📷</div>
-                      <div class="text-sm font-semibold">Bild uppladdad</div>
-                    </div>
-                  </div>
-                {% else %}
-                  <img src="{{ url_for('static', filename=user.profile_picture_url) }}" alt="Profilbild"
-                       class="w-32 h-32 rounded-full object-cover border-4 border-blue-500"
-                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                {% endif %}
+    {# —— Hero —— #}
+    <section class="pf-panel p-5 sm:p-6 mb-5">
+      <div class="flex flex-col sm:flex-row gap-5 sm:items-center">
+        <div class="shrink-0 mx-auto sm:mx-0">
+          {% if user.profile_picture_url and not user.profile_picture_url.startswith('uploaded_') %}
+            <img
+              src="{{ user.profile_picture_url if user.profile_picture_url.startswith('data:') else url_for('static', filename=user.profile_picture_url) }}"
+              alt="Profilbild"
+              class="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-2 border-cyan-400/50 shadow-lg"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            />
+            <div class="hidden w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-slate-700 items-center justify-center border-2 border-slate-500 text-3xl font-extrabold text-slate-200">
+              {{ (user.display_name or user.username or '?')[:1]|upper }}
+            </div>
+          {% else %}
+            <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-slate-700 flex items-center justify-center border-2 border-slate-500 text-3xl font-extrabold text-slate-200">
+              {{ (user.display_name or user.username or '?')[:1]|upper }}
+            </div>
+          {% endif %}
+        </div>
+        <div class="min-w-0 flex-1 text-center sm:text-left">
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white truncate">
+            {{ user.display_name or user.username }}
+          </h2>
+          <p class="text-sm text-cyan-200/90 font-mono mt-0.5">@{{ user.username }}</p>
+          <p class="text-xs text-slate-400 mt-2">
+            Medlem sedan {{ user.created_at.strftime('%d %b %Y') if user.created_at else '—' }}
+            {% if user.favorite_rider %} · Favoritförare: <span class="text-slate-200">{{ user.favorite_rider }}</span>{% endif %}
+            {% if user.favorite_team %} · Märke: <span class="text-slate-200">{{ user.favorite_team }}</span>{% endif %}
+          </p>
+          {% if user.bio %}
+          <p class="mt-3 text-sm text-slate-300 leading-relaxed max-w-2xl">{{ user.bio }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    {# —— Stats —— #}
+    <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3 mb-5">
+      <div class="pf-stat">
+        <div class="pf-stat__val text-cyan-300">{% if highscore_rank %}#{{ highscore_rank }}{% else %}—{% endif %}</div>
+        <div class="pf-stat__label">Highscore</div>
+      </div>
+      <div class="pf-stat">
+        <div class="pf-stat__val">{{ '{:,}'.format(highscore_total or 0).replace(',', ' ') }}</div>
+        <div class="pf-stat__label">Total p</div>
+      </div>
+      <div class="pf-stat">
+        <div class="pf-stat__val">{{ '{:,}'.format(tippa_points or 0).replace(',', ' ') }}</div>
+        <div class="pf-stat__label">Tippa</div>
+      </div>
+      <div class="pf-stat">
+        <div class="pf-stat__val">{{ '{:,}'.format(team_points or 0).replace(',', ' ') }}</div>
+        <div class="pf-stat__label">Säsongsteam</div>
+      </div>
+      <div class="pf-stat">
+        <div class="pf-stat__val">{{ competitions_played or 0 }}</div>
+        <div class="pf-stat__label">Tävlingar</div>
+      </div>
+      <div class="pf-stat">
+        <div class="pf-stat__val">{% if best_position %}#{{ best_position }}{% else %}—{% endif %}</div>
+        <div class="pf-stat__label">Bästa race</div>
+      </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 mb-5">
+      {# —— Season team —— #}
+      <section class="pf-panel p-5">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-lg font-bold text-white">Säsongsteam</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Ditt lag för SX / MX / SMX</p>
+          </div>
+          {% if season_team %}
+          <a href="{{ url_for('season_team_page') }}" class="text-sm font-semibold text-cyan-300 hover:text-cyan-200 shrink-0">Öppna →</a>
+          {% endif %}
+        </div>
+
+        {% if season_team %}
+          <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
+            <span class="text-xl font-extrabold text-white">{{ season_team.team_name }}</span>
+            <span class="text-sm text-emerald-300 font-bold tabular-nums">{{ season_team.total_points or 0 }} p</span>
+          </div>
+          {% if team_riders %}
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {% for r in team_riders %}
+            <div class="pf-rider">
+              {% if r.image_url %}
+                <img src="{{ r.image_url if r.image_url.startswith('data:') else url_for('static', filename=r.image_url) }}" alt="{{ r.name }}" loading="lazy" />
+              {% else %}
+                <div class="ph">#{{ r.number or '—' }}</div>
               {% endif %}
-              <div class="w-32 h-32 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center border-4 border-blue-500 {% if user.profile_picture_url %}hidden{% endif %}">
-                <div class="text-center text-gray-500 dark:text-gray-400">
-                  <div class="mb-2 text-slate-400 flex justify-center">{{ mx_icon('user', 'mx-icon--2xl') }}</div>
-                  <div class="text-sm font-semibold">Ingen bild</div>
+              <div class="min-w-0 flex-1">
+                <div class="text-sm font-bold text-white truncate">{{ r.name }}</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">
+                  {{ r.class or '—' }} · #{{ r.number or '—' }}{% if r.brand %} · {{ r.brand }}{% endif %}
                 </div>
               </div>
             </div>
+            {% endfor %}
           </div>
-
-          <!-- Grundläggande info -->
-          <div class="space-y-3">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Användarnamn</label>
-              <div class="p-3 bg-gray-100 dark:bg-gray-700 rounded-md">
-                <span class="font-mono text-blue-600 dark:text-blue-400">{{ user.username }}</span>
-              </div>
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Medlem sedan</label>
-              <div class="p-3 bg-gray-100 dark:bg-gray-700 rounded-md">
-                <span class="text-gray-600 dark:text-gray-400">
-                  {{ user.created_at.strftime('%d %B %Y') if user.created_at else 'Okänt' }}
-                </span>
-              </div>
-            </div>
+          {% else %}
+          <p class="text-sm text-slate-400">Inga förare i laget ännu.</p>
+          {% endif %}
+          <div class="mt-4 flex flex-wrap gap-2">
+            <a href="{{ url_for('season_team_builder') }}" class="rp-btn rp-btn--accent rp-btn--sm">Byt förare</a>
+            <a href="{{ url_for('manual_page') }}#season-team" target="_blank" rel="noopener" class="rp-btn rp-btn--secondary rp-btn--sm">Hur det funkar</a>
           </div>
-        </div>
-      </div>
-
-      <!-- Profilformulär -->
-      <div class="lg:col-span-2">
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-          <h2 class="text-2xl font-semibold mb-4">Redigera Profil</h2>
-          
-          <form action="{{ url_for('update_profile') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
-            
-            <!-- Profilbild upload -->
-            <div>
-              <label for="profile_picture" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Ladda upp profilbild
-              </label>
-              <input type="file" name="profile_picture" id="profile_picture" accept="image/*"
-                     class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Rekommenderat: JPG, PNG eller GIF. Max storlek: 5MB
-              </p>
-            </div>
-
-            <!-- E-post -->
-            <div>
-              <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                E-postadress
-              </label>
-              <input type="email" name="email" id="email" 
-                     value="{{ user.email or '' }}"
-                     placeholder="din@email.com"
-                     required
-                     class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Används för att skicka påminnelser om picks och viktiga uppdateringar
-              </p>
-            </div>
-
-            <!-- Visningsnamn -->
-            <div>
-              <label for="display_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Visningsnamn
-              </label>
-              <input type="text" name="display_name" id="display_name" 
-                     value="{{ user.display_name or '' }}"
-                     placeholder="Ditt riktiga namn (valfritt)"
-                     class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-            </div>
-
-            <!-- Bio -->
-            <div>
-              <label for="bio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Om mig
-              </label>
-              <textarea name="bio" id="bio" rows="4" 
-                        placeholder="Berätta lite om dig själv, dina intressen, favoritförare..."
-                        class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">{{ user.bio or '' }}</textarea>
-            </div>
-
-            <!-- Favoritförare -->
-            <div>
-              <label for="favorite_rider" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Favoritförare
-              </label>
-              <input type="text" name="favorite_rider" id="favorite_rider" 
-                     value="{{ user.favorite_rider or '' }}"
-                     placeholder="T.ex. Jett Lawrence, Chase Sexton..."
-                     class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-            </div>
-
-            <!-- Favoritlag -->
-            <div>
-              <label for="favorite_team" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Favoritlag
-              </label>
-              <input type="text" name="favorite_team" id="favorite_team" 
-                     value="{{ user.favorite_team or '' }}"
-                     placeholder="T.ex. Honda, Kawasaki, Yamaha..."
-                     class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-            </div>
-
-            <!-- Submit button -->
-            <div class="flex justify-end">
-              <button type="submit"
-                      id="save-profile-btn"
-                      class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors">
-                Spara Profil
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <script>
-      (function () {
-        const email = document.getElementById('email');
-        const btn = document.getElementById('save-profile-btn');
-        if (!email || !btn) return;
-
-        const sync = () => {
-          const ok = !!(email.value || '').trim();
-          btn.disabled = !ok;
-          btn.classList.toggle('opacity-50', !ok);
-          btn.classList.toggle('cursor-not-allowed', !ok);
-        };
-        email.addEventListener('input', sync);
-        sync();
-      })();
-    </script>
-
-    <!-- Statistik och prestationer -->
-    <div class="mt-8">
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-        <h2 class="text-2xl font-semibold mb-4">Min Statistik</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <!-- Detaljerad poänguppdelning -->
-          <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <div class="text-center mb-3">
-              <div class="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                {{ season_team.total_points if season_team else 0 }}
-              </div>
-              <div class="text-sm text-gray-600 dark:text-gray-400">Säsongspoäng</div>
-            </div>
-            <div class="space-y-2 text-sm">
-              <div class="flex justify-between">
-                <span class="text-gray-600 dark:text-gray-400">Race:</span>
-                <span class="font-semibold text-cyan-600 dark:text-cyan-400">{{ total_race_points }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600 dark:text-gray-400">Holeshot:</span>
-                <span class="font-semibold text-yellow-600 dark:text-yellow-400">{{ total_holeshot_points }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600 dark:text-gray-400">Wildcard:</span>
-                <span class="font-semibold text-purple-600 dark:text-purple-400">{{ total_wildcard_points }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Antal tävlingar -->
-          <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <div class="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
-              {{ competitions_played }}
-            </div>
-            <div class="text-sm text-gray-600 dark:text-gray-400">Tävlingar spelade</div>
-          </div>
-
-          <!-- Bästa placering -->
-          <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <div class="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-              {{ best_position if best_position else '-' }}
-            </div>
-            <div class="text-sm text-gray-600 dark:text-gray-400">Bästa placering</div>
-          </div>
-        </div>
-
-        <!-- Säsongsteam info -->
-        {% if season_team %}
-        <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">Ditt Säsongsteam</h3>
-          <p class="text-blue-700 dark:text-blue-300">
-            <strong>{{ season_team.team_name }}</strong> med {{ season_team.riders|length }} förare
-          </p>
-          <a href="{{ url_for('season_team_page') }}" 
-             class="inline-block mt-2 text-blue-600 dark:text-blue-400 hover:underline">
-            Visa säsongsteam →
-          </a>
-        </div>
         {% else %}
-        <div class="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-          <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">Inget säsongsteam än</h3>
-          <p class="text-yellow-700 dark:text-yellow-300 mb-2">
-            Skapa ditt säsongsteam för att börja samla poäng!
+          <p class="text-sm text-slate-300 leading-relaxed mb-4">
+            Du har inget säsongsteam ännu. Bygg 2×450 + 2×250 och samla poäng varje race
+            {% if season_team_combined_live %}— poängen räknas i highscoren{% else %}— snart räknas poängen i highscoren{% endif %}.
           </p>
-          <a href="{{ url_for('season_team_page') }}" 
-             class="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition-colors">
-            Skapa Säsongsteam
-          </a>
+          <a href="{{ url_for('season_team_builder') }}" class="rp-btn rp-btn--primary rp-btn--sm">Skapa säsongsteam</a>
+        {% endif %}
+      </section>
+
+      {# —— Leagues —— #}
+      <section class="pf-panel p-5">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-lg font-bold text-white">Mina ligor</h3>
+            <p class="text-xs text-slate-400 mt-0.5">{{ my_leagues|length }} liga{% if my_leagues|length != 1 %}r{% endif %}</p>
+          </div>
+          <a href="{{ url_for('leagues_page') }}" class="text-sm font-semibold text-cyan-300 hover:text-cyan-200 shrink-0">Alla ligor →</a>
+        </div>
+
+        {% if my_leagues %}
+        <ul class="space-y-2">
+          {% for lg in my_leagues %}
+          <li>
+            <a href="{{ url_for('league_detail_page', league_id=lg.id) }}"
+               class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/40 px-3.5 py-3 hover:border-cyan-400/40 hover:bg-slate-900/60 transition">
+              <div class="min-w-0">
+                <div class="font-bold text-white truncate">{{ lg.name }}</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">
+                  {{ lg.member_count }} medlem{% if lg.member_count != 1 %}mar{% endif %}
+                  · {% if lg.is_public %}Publik{% else %}Privat{% endif %}
+                  {% if lg.is_creator %} · Admin{% endif %}
+                </div>
+              </div>
+              <span class="text-cyan-300 shrink-0" aria-hidden="true">→</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-slate-300 leading-relaxed mb-4">
+          Du är inte med i någon liga än. Skapa en privat liga för kompisar eller utforska publika.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <a href="{{ url_for('leagues_page') }}" class="rp-btn rp-btn--primary rp-btn--sm">Hitta ligor</a>
+          <a href="{{ url_for('leagues_page', tab='explore') }}" class="rp-btn rp-btn--accent rp-btn--sm">Utforska</a>
         </div>
         {% endif %}
-      </div>
+      </section>
     </div>
+
+    {# Tippa breakdown #}
+    <section class="pf-panel p-5 mb-5">
+      <h3 class="text-lg font-bold text-white mb-3">Tippa — poänguppdelning</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <div class="pf-stat">
+          <div class="pf-stat__val text-cyan-200">{{ total_race_points }}</div>
+          <div class="pf-stat__label">Race picks</div>
+        </div>
+        <div class="pf-stat">
+          <div class="pf-stat__val text-amber-200">{{ total_holeshot_points }}</div>
+          <div class="pf-stat__label">Holeshot</div>
+        </div>
+        <div class="pf-stat">
+          <div class="pf-stat__val text-emerald-200">{{ total_wildcard_points }}</div>
+          <div class="pf-stat__label">Wildcard</div>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500 mt-3">Summering över alla sparade tävlingar (inkl. eventuella transfer-straff).</p>
+    </section>
+
+    {# —— Edit —— #}
+    <section class="pf-panel p-5 sm:p-6" id="edit">
+      <h3 class="text-lg font-bold text-white mb-1">Redigera profil</h3>
+      <p class="text-sm text-slate-400 mb-5">Uppdatera bild, e‑post och hur du syns för andra.</p>
+
+      <form action="{{ url_for('update_profile') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
+        <div>
+          <label for="profile_picture" class="pf-label">Profilbild</label>
+          <input type="file" name="profile_picture" id="profile_picture" accept="image/*" class="pf-input">
+          <p class="text-xs text-slate-500 mt-1">JPG, PNG eller GIF. Max 5MB.</p>
+        </div>
+
+        <div>
+          <label for="email" class="pf-label">E-postadress</label>
+          <input type="email" name="email" id="email" value="{{ user.email or '' }}" placeholder="din@email.com" required class="pf-input">
+          <p class="text-xs text-slate-500 mt-1">Påminnelser, lösenordsreset och viktiga notiser.</p>
+        </div>
+
+        <div>
+          <label for="display_name" class="pf-label">Visningsnamn</label>
+          <input type="text" name="display_name" id="display_name" value="{{ user.display_name or '' }}" placeholder="Valfritt namn på leaderboards" class="pf-input">
+        </div>
+
+        <div>
+          <label for="bio" class="pf-label">Om mig</label>
+          <textarea name="bio" id="bio" rows="4" placeholder="Kort om dig, stil, favoritbanor…" class="pf-input">{{ user.bio or '' }}</textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="favorite_rider" class="pf-label">Favoritförare</label>
+            <input type="text" name="favorite_rider" id="favorite_rider" value="{{ user.favorite_rider or '' }}" placeholder="T.ex. Jett Lawrence" class="pf-input">
+          </div>
+          <div>
+            <label for="favorite_team" class="pf-label">Favoritmärke / team</label>
+            <input type="text" name="favorite_team" id="favorite_team" value="{{ user.favorite_team or '' }}" placeholder="T.ex. Honda, Star Racing" class="pf-input">
+          </div>
+        </div>
+
+        <div class="flex justify-end pt-1">
+          <button type="submit" id="save-profile-btn" class="rp-btn rp-btn--primary">Spara profil</button>
+        </div>
+      </form>
+    </section>
   </div>
+
+  <script>
+    (function () {
+      const email = document.getElementById('email');
+      const btn = document.getElementById('save-profile-btn');
+      if (!email || !btn) return;
+      const sync = () => {
+        const ok = !!(email.value || '').trim();
+        btn.disabled = !ok;
+        btn.classList.toggle('opacity-50', !ok);
+        btn.classList.toggle('cursor-not-allowed', !ok);
+      };
+      email.addEventListener('input', sync);
+      sync();
+    })();
+  </script>
 </body>
 </html>

@@ -1430,6 +1430,44 @@
       margin-top: 0;
       scroll-margin-top: 0.75rem;
     }
+    /* Season-team promo: soft cyan pulse when user has no team */
+    @keyframes stwPromoPulse {
+      0%, 100% {
+        box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.35), 0 0 10px rgba(34, 211, 238, 0.12);
+        border-color: rgba(34, 211, 238, 0.45);
+      }
+      50% {
+        box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.65), 0 0 18px rgba(34, 211, 238, 0.28);
+        border-color: rgba(103, 232, 249, 0.75);
+      }
+    }
+    .tab-season-team-btn.stw-promo-glow {
+      position: relative;
+      animation: stwPromoPulse 2.4s ease-in-out infinite;
+      color: #e0f2fe !important;
+      border-color: rgba(34, 211, 238, 0.5);
+    }
+    /* Also glow the quick-action tile when promoting create */
+    #quick-action-season-team.home-action-tile--create.stw-promo-glow,
+    #quick-action-season-team.stw-promo-glow {
+      animation: stwPromoPulse 2.4s ease-in-out infinite;
+      border-color: rgba(34, 211, 238, 0.55);
+    }
+    .tab-season-team-btn.stw-promo-glow::after {
+      content: attr(data-promo-hint);
+      display: block;
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #67e8f9;
+      opacity: 0.9;
+      line-height: 1.1;
+      margin-top: 0.1rem;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .tab-season-team-btn.stw-promo-glow { animation: none; }
+    }
     .home-sidebar-card {
       margin-top: 0.75rem;
       padding: 1rem 1.05rem;
@@ -2366,7 +2404,8 @@
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="games" data-i18n="tab.games">Spel</button>
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="leagues" data-i18n="tab.leagues">Ligor</button>
                 <button type="button" id="tab-season-team-btn"
-                  class="tab-btn rp-tab-btn tab-season-team-btn" data-tab="season-team"
+                  class="tab-btn rp-tab-btn tab-season-team-btn{% if season_team_promo_live and is_logged_in and not my_team %} stw-promo-glow{% endif %}" data-tab="season-team"
+                  {% if season_team_promo_live and is_logged_in and not my_team and season_team_promo_copy %}data-promo-hint="{{ season_team_promo_copy.tab_hint }}"{% endif %}
                   {% if upcoming_race and upcoming_race.series == 'WSX' %}disabled title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}
                   {% if is_logged_in and my_team %}data-i18n="tab.team"{% else %}data-i18n="tab.team.create"{% endif %}>
                   {% if is_logged_in and my_team %}Säsongsteam{% else %}Skapa säsongsteam{% endif %}
@@ -2471,7 +2510,8 @@
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="stats" data-i18n="tab.stats">Statistik</button>
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="games" data-i18n="tab.games">Spel</button>
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="leagues" data-i18n="tab.leagues">Ligor</button>
-              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page tab-season-team-btn" data-tab="season-team"
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page tab-season-team-btn{% if season_team_promo_live and not my_team %} stw-promo-glow{% endif %}" data-tab="season-team"
+                {% if season_team_promo_live and not my_team and season_team_promo_copy %}data-promo-hint="{{ season_team_promo_copy.tab_hint }}"{% endif %}
                 {% if upcoming_race and upcoming_race.series == 'WSX' %}disabled title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}
                 {% if is_logged_in and my_team %}data-i18n="tab.team"{% else %}data-i18n="tab.team.create"{% endif %}>
                 {% if is_logged_in and my_team %}Säsongsteam{% else %}Skapa säsongsteam{% endif %}
@@ -2500,7 +2540,8 @@
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="stats" data-i18n="tab.stats">Statistik</button>
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="games" data-i18n="tab.games">Spel</button>
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="leagues" data-i18n="tab.leagues">Ligor</button>
-              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page tab-season-team-btn" data-tab="season-team"
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page tab-season-team-btn{% if season_team_promo_live %} stw-promo-glow{% endif %}" data-tab="season-team"
+                {% if season_team_promo_live and season_team_promo_copy %}data-promo-hint="{{ season_team_promo_copy.tab_hint }}"{% endif %}
                 {% if upcoming_race and upcoming_race.series == 'WSX' %}disabled title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}
                 data-i18n="tab.team.create">Skapa säsongsteam</button>
               <a href="{{ url_for('manual_page') }}" class="home-sidebar-foot__btn home-sidebar-foot__page" target="_blank" rel="noopener" data-i18n="tab.manual">Manual</a>
@@ -2666,6 +2707,35 @@
         <div class="tab-content">
           <!-- Race Info Tab -->
           <div id="race-info" class="tab-panel active">
+            {% if season_team_promo_live and season_team_promo_copy and is_logged_in %}
+            <div id="stw-promo-home-banner" class="mb-6 rounded-xl border border-cyan-400/50 bg-gradient-to-r from-cyan-950/80 via-slate-900 to-slate-900 p-4 sm:p-5 shadow-lg shadow-cyan-500/10">
+              <div class="flex flex-col lg:flex-row lg:items-start gap-4">
+                <div class="min-w-0 flex-1">
+                  <p class="text-[11px] font-bold uppercase tracking-wider text-cyan-300 mb-1">{{ season_team_promo_copy.eyebrow }} · säsongsteam</p>
+                  <p class="text-base sm:text-lg font-bold text-white leading-snug">{{ season_team_promo_copy.title }}</p>
+                  <p class="text-sm text-slate-300 mt-1.5 leading-relaxed">{{ season_team_promo_copy.body }}</p>
+                  {% if season_team_promo_copy.how %}
+                  <ul class="mt-3 space-y-1.5 text-sm text-slate-200/95">
+                    {% for line in season_team_promo_copy.how %}
+                    <li class="flex gap-2 leading-snug"><span class="text-cyan-400 shrink-0" aria-hidden="true">·</span><span>{{ line }}</span></li>
+                    {% endfor %}
+                  </ul>
+                  {% endif %}
+                  <a href="{{ url_for('manual_page') }}#season-team" target="_blank" rel="noopener"
+                     class="inline-flex mt-3 text-sm font-semibold text-cyan-300 hover:text-cyan-200 underline underline-offset-2">
+                    {{ season_team_promo_copy.read_more }} →
+                  </a>
+                </div>
+                <div class="shrink-0 flex flex-col gap-2 w-full lg:w-auto lg:min-w-[11.5rem]">
+                  {% if my_team %}
+                  <a href="{{ url_for('season_team_page') }}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-extrabold text-sm transition">{{ season_team_promo_copy.cta_has }} →</a>
+                  {% else %}
+                  <a href="{{ url_for('season_team_builder') }}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-extrabold text-sm transition">{{ season_team_promo_copy.cta }} →</a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endif %}
             {% if upcoming_race %}
             <!-- Fältets favoriter: full bredd högst upp (syns bara när picksen är låsta / race klart; döljs när picksen öppnas via JS) -->
             <div id="crowd-picks-teaser-wrap" class="home-ui-panel hidden mb-6">
@@ -2759,7 +2829,7 @@
                   </a>
                   {% else %}
                   <a href="{{ url_for('season_team_builder') }}" id="quick-action-season-team"
-                     class="home-inner-tile home-action-tile--team home-action-tile--create{% if upcoming_race and upcoming_race.series == 'WSX' %} home-inner-tile--muted{% endif %}"
+                     class="home-inner-tile home-action-tile--team home-action-tile--create{% if season_team_promo_live %} stw-promo-glow{% endif %}{% if upcoming_race and upcoming_race.series == 'WSX' %} home-inner-tile--muted{% endif %}"
                      {% if upcoming_race and upcoming_race.series == 'WSX' %}aria-disabled="true" title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}>
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
@@ -3263,11 +3333,26 @@
                   </div>
                 {% else %}
                   <div id="season-team-create-cta" class="rounded-xl border border-cyan-500/30 bg-gradient-to-br from-slate-900 via-slate-800 to-cyan-950/40 p-5 sm:p-6 text-center">
+                    {% if season_team_promo_live and season_team_promo_copy %}
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-cyan-300/90 mb-1">{{ season_team_promo_copy.eyebrow }}</p>
+                    <p class="text-lg font-bold text-slate-100 mb-1">{{ season_team_promo_copy.title }}</p>
+                    <p class="text-sm text-slate-400 mb-3 leading-relaxed">{{ season_team_promo_copy.body }}</p>
+                    {% if season_team_promo_copy.how %}
+                    <ul class="text-left text-sm text-slate-300 mb-4 space-y-1.5 max-w-md mx-auto">
+                      {% for line in season_team_promo_copy.how %}
+                      <li class="flex gap-2"><span class="text-cyan-400 shrink-0">·</span><span>{{ line }}</span></li>
+                      {% endfor %}
+                    </ul>
+                    {% endif %}
+                    <a href="{{ url_for('season_team_builder') }}" class="rp-btn rp-btn--block rp-btn--primary">{{ season_team_promo_copy.cta }}</a>
+                    <a href="{{ url_for('manual_page') }}#season-team" target="_blank" rel="noopener" class="inline-block mt-2 text-sm font-semibold text-cyan-300 hover:text-cyan-200 underline underline-offset-2">{{ season_team_promo_copy.read_more }} →</a>
+                    {% else %}
                     <p class="text-lg font-bold text-slate-100 mb-1">Skapa ditt säsongsteam</p>
                     <p class="text-sm text-slate-400 mb-4 leading-relaxed">
                       2×450 + 2×250 · 1,5 M budget · poäng varje race
                     </p>
                     <a href="{{ url_for('season_team_builder') }}" class="rp-btn rp-btn--block rp-btn--primary">Kom igång</a>
+                    {% endif %}
                     {% if is_logged_in %}
                     <a href="{{ url_for('index') }}#leaderboard" class="rp-btn rp-btn--block rp-btn--accent mt-2" onclick="if(typeof setActiveTab==='function'){var b=document.querySelector('.tab-btn[data-tab=leaderboard]');if(b){b.click();setTimeout(function(){var el=document.getElementById('season-team-leaderboard-list');if(el){var p=el.closest('.home-ui-panel')||el;p.scrollIntoView({behavior:'smooth',block:'start'});}},80);return false;}}">Se andras lag / topplista</a>
                     {% endif %}
@@ -3637,6 +3722,10 @@
         // Store leaderboard data globally for expand/collapse
         window.seasonLeaderboardData = leaderboard;
 
+        if (!isTippaOnly && titleEl && leaderboard[0] && leaderboard[0].combined) {
+          titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>Total highscore</span></span>`;
+        }
+
         // Populate header chips for current user only on AMA leaderboard
         if (!isTippaOnly) {
           try {
@@ -3708,9 +3797,13 @@
         leaderboard.forEach((row, i) => {
           const name = `<a href="/profile/${row.user_id}" class="hover:text-cyan-200 transition-colors" title="Visa ${row.display_name || row.username}">${row.display_name || row.username}${row.team_name ? ` <span class="text-xs font-normal text-gray-400">/ ${row.team_name}</span>` : ''}</a>`;
           const delta = deltaIcon(row.delta === null || row.delta === undefined ? 0 : Number(row.delta));
+          const sub = row.combined
+            ? `Tippa ${Number(row.tippa_points || 0).toLocaleString('sv-SE')} · Team ${Number(row.team_points || 0).toLocaleString('sv-SE')}`
+            : '';
           rowsHtml += homeLbRow(i + 1, name, row.total_points, {
             hidden: i >= 15,
             extraRight: delta,
+            sub,
           });
         });
 

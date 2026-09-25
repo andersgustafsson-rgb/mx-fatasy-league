@@ -937,6 +937,26 @@
         </div>
       </div>
     </div>
+
+    {% set _series_u = (competition.series or '')|upper %}
+    {% if season_team_promo_live and season_team_promo_copy and is_logged_in and not has_season_team and not is_wsx and not is_mxgp and _series_u not in ('WSX', 'MXON', 'MXGP') %}
+    <div class="mb-4 p-4 rounded-xl border border-cyan-400/40 bg-gradient-to-r from-slate-900/90 to-cyan-950/40">
+      <div class="text-[11px] font-bold uppercase tracking-wider text-cyan-300/90 mb-1">{{ season_team_promo_copy.eyebrow }}</div>
+      <div class="font-bold text-white text-base mb-1">{{ season_team_promo_copy.title }}</div>
+      <p class="text-sm text-slate-300 mb-2 leading-relaxed">{{ season_team_promo_copy.body }}</p>
+      {% if season_team_promo_copy.how %}
+      <ul class="mb-3 space-y-1 text-sm text-slate-200/90">
+        {% for line in season_team_promo_copy.how %}
+        <li class="flex gap-2"><span class="text-cyan-400 shrink-0">·</span><span>{{ line }}</span></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <div class="flex flex-wrap items-center gap-3">
+        <a href="{{ url_for('season_team_builder') }}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold text-sm transition">{{ season_team_promo_copy.cta }} →</a>
+        <a href="{{ url_for('manual_page') }}#season-team" target="_blank" rel="noopener" class="text-sm font-semibold text-cyan-300 hover:text-cyan-200 underline underline-offset-2">{{ season_team_promo_copy.read_more }} →</a>
+      </div>
+    </div>
+    {% endif %}
     
     {% if out_ids %}
     {% set _out_label_450 = 'SX1' if competition.series == 'WSX' else ('MXGP' if (competition.series or '')|upper == 'MXGP' else '450cc') %}

@@ -21,9 +21,15 @@
       --stw-ok: #34d399;
     }
     * { box-sizing: border-box; }
+    html {
+      overflow-x: clip;
+      max-width: 100%;
+    }
     body {
       margin: 0;
       min-height: 100vh;
+      max-width: 100%;
+      overflow-x: clip;
       font-family: "DM Sans", system-ui, sans-serif;
       color: #e2e8f0;
       background:
@@ -36,16 +42,35 @@
       font-family: "Bebas Neue", Impact, sans-serif;
       letter-spacing: 0.04em;
       line-height: 0.95;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
-    .stw-shell { max-width: 960px; margin: 0 auto; padding: 1rem 1rem 6.5rem; }
+    .stw-shell {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 1rem 1rem 6.5rem;
+      overflow-x: clip;
+      min-width: 0;
+    }
     @media (min-width: 640px) { .stw-shell { padding: 1.5rem 1.5rem 7rem; } }
 
     .stw-top {
-      display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;
       margin-bottom: 1.25rem;
+      min-width: 0;
+    }
+    .stw-top > header {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+    .stw-top h1 {
+      font-size: clamp(1.85rem, 7.5vw, 3rem);
+      margin: 0;
     }
     .stw-back {
       display: inline-flex; align-items: center; gap: 0.4rem;
+      flex-shrink: 0;
       padding: 0.55rem 0.9rem; border-radius: 0.65rem;
       border: 1px solid var(--stw-line); background: rgba(30, 41, 59, 0.75);
       color: #cbd5e1; font-size: 0.875rem; font-weight: 600; text-decoration: none;
@@ -55,14 +80,21 @@
 
     .stw-steps {
       display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1.25rem;
+      min-width: 0;
     }
     .stw-step-pill {
-      flex: 1 1 0; min-width: 4.5rem;
+      flex: 1 1 0; min-width: 0;
       display: flex; align-items: center; gap: 0.45rem;
       padding: 0.55rem 0.65rem; border-radius: 0.75rem;
       border: 1px solid var(--stw-line); background: rgba(15, 23, 42, 0.55);
       font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
       color: #94a3b8; transition: border-color 0.2s, background 0.2s, color 0.2s;
+    }
+    .stw-step-pill > span:last-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .stw-step-pill .n {
       width: 1.35rem; height: 1.35rem; border-radius: 999px;
@@ -88,11 +120,13 @@
       backdrop-filter: blur(10px);
       box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
       overflow: hidden;
+      min-width: 0;
+      max-width: 100%;
     }
-    .stw-panel-inner { padding: 1.25rem 1.15rem 1.5rem; }
+    .stw-panel-inner { padding: 1.25rem 1.15rem 1.5rem; min-width: 0; max-width: 100%; }
     @media (min-width: 640px) { .stw-panel-inner { padding: 1.75rem 1.75rem 2rem; } }
 
-    .stw-view { display: none; animation: stwIn 0.35s ease both; }
+    .stw-view { display: none; animation: stwIn 0.35s ease both; min-width: 0; }
     .stw-view.is-on { display: block; }
     @keyframes stwIn {
       from { opacity: 0; transform: translateY(10px); }
@@ -101,14 +135,16 @@
 
     .stw-rule-grid {
       display: grid; gap: 0.65rem;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      min-width: 0;
     }
-    @media (min-width: 640px) { .stw-rule-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 640px) { .stw-rule-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
     .stw-rule {
       border: 1px solid var(--stw-line); border-radius: 0.85rem;
       padding: 0.9rem 0.75rem; background: rgba(2, 6, 23, 0.35);
       text-align: left;
       display: flex; flex-direction: column; gap: 0.35rem; min-height: 5.5rem;
+      min-width: 0;
     }
     .stw-rule .kicker {
       font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
@@ -133,12 +169,18 @@
       margin: -0.25rem 0 1rem; padding: 0.75rem 0.9rem;
       border-radius: 0.9rem; border: 1px solid rgba(34, 211, 238, 0.25);
       background: linear-gradient(135deg, rgba(8, 47, 73, 0.85), rgba(15, 23, 42, 0.92));
+      min-width: 0;
+      max-width: 100%;
     }
+    .stw-budget > div { min-width: 0; }
     .stw-budget .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: #7dd3fc; font-weight: 700; }
-    .stw-budget .val { font-family: "Bebas Neue", sans-serif; font-size: 1.65rem; letter-spacing: 0.03em; color: #fff; }
+    .stw-budget .val { font-family: "Bebas Neue", sans-serif; font-size: clamp(1.25rem, 5vw, 1.65rem); letter-spacing: 0.03em; color: #fff; }
     .stw-budget .slots { font-size: 0.8rem; font-weight: 700; color: #cbd5e1; }
     .stw-bar {
-      width: 100%; height: 5px; border-radius: 999px; background: rgba(30, 41, 59, 0.9); overflow: hidden;
+      flex: 1 1 100%;
+      width: 100%;
+      min-width: 0;
+      height: 5px; border-radius: 999px; background: rgba(30, 41, 59, 0.9); overflow: hidden;
       border: 1px solid rgba(71, 85, 105, 0.6);
     }
     .stw-bar > i {
@@ -159,17 +201,25 @@
 
     .stw-riders {
       display: grid; gap: 0.65rem;
-      grid-template-columns: 1fr;
-      max-height: min(58vh, 520px); overflow: auto;
+      grid-template-columns: minmax(0, 1fr);
+      max-height: min(58vh, 520px);
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
       padding-right: 0.15rem; margin-top: 0.85rem;
+      min-width: 0;
+      max-width: 100%;
     }
-    @media (min-width: 640px) { .stw-riders { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 640px) { .stw-riders { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
     .stw-rider {
       display: flex; align-items: center; gap: 0.7rem;
       padding: 0.7rem 0.75rem; border-radius: 0.9rem;
       border: 1px solid var(--stw-line); background: rgba(15, 23, 42, 0.55);
       cursor: pointer; text-align: left; width: 100%;
+      max-width: 100%;
+      min-width: 0;
       transition: border-color 0.15s, transform 0.15s, background 0.15s, box-shadow 0.15s;
     }
     .stw-rider:hover:not(:disabled) {
@@ -201,20 +251,22 @@
     .stw-rider .price { font-size: 0.78rem; font-weight: 800; color: var(--stw-ok); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
     .stw-picked {
-      display: grid; gap: 0.55rem; grid-template-columns: 1fr 1fr; margin-top: 0.85rem;
+      display: grid; gap: 0.55rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0.85rem;
+      min-width: 0;
     }
     .stw-slot {
       border: 1px dashed rgba(148, 163, 184, 0.35); border-radius: 0.85rem;
       padding: 0.75rem; min-height: 4.5rem;
       background: rgba(2, 6, 23, 0.28);
       display: flex; flex-direction: column; justify-content: center; gap: 0.2rem;
+      min-width: 0;
     }
     .stw-slot.is-filled {
       border-style: solid; border-color: rgba(34, 211, 238, 0.3);
       background: rgba(8, 47, 73, 0.35);
     }
     .stw-slot .empty { font-size: 0.75rem; color: #64748b; font-weight: 600; }
-    .stw-slot .sn { font-weight: 700; font-size: 0.85rem; color: #f1f5f9; }
+    .stw-slot .sn { font-weight: 700; font-size: 0.85rem; color: #f1f5f9; overflow-wrap: anywhere; }
     .stw-slot .sp { font-size: 0.7rem; color: #94a3b8; }
     .stw-slot button.rm {
       align-self: flex-start; margin-top: 0.25rem;
@@ -225,13 +277,15 @@
 
     .stw-roster {
       display: grid; gap: 0.75rem;
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
+      min-width: 0;
     }
-    @media (min-width: 640px) { .stw-roster { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 640px) { .stw-roster { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     .stw-roster-card {
       border: 1px solid var(--stw-line); border-radius: 1rem;
       padding: 1rem; background: rgba(2, 6, 23, 0.4);
       display: flex; flex-direction: column; gap: 0.75rem;
+      min-width: 0;
     }
     .stw-roster-card.is-out {
       border-color: rgba(251, 191, 36, 0.45);
@@ -251,10 +305,12 @@
       background: linear-gradient(180deg, transparent, rgba(11, 18, 32, 0.92) 28%, #0b1220);
       border-top: 1px solid rgba(51, 65, 85, 0.5);
       display: flex; gap: 0.65rem; justify-content: center;
+      max-width: 100%;
+      box-sizing: border-box;
     }
-    .stw-foot-inner { width: 100%; max-width: 960px; display: flex; gap: 0.65rem; }
+    .stw-foot-inner { width: 100%; max-width: 960px; display: flex; gap: 0.65rem; min-width: 0; }
     .stw-btn {
-      flex: 1; border: none; border-radius: 0.85rem; padding: 0.9rem 1rem;
+      flex: 1; min-width: 0; border: none; border-radius: 0.85rem; padding: 0.9rem 1rem;
       font-weight: 800; font-size: 0.95rem; cursor: pointer;
       transition: transform 0.12s, opacity 0.15s, background 0.15s;
     }
@@ -275,9 +331,10 @@
     }
 
     .stw-confirm-grid {
-      display: grid; gap: 0.65rem; grid-template-columns: 1fr 1fr;
+      display: grid; gap: 0.65rem; grid-template-columns: repeat(2, minmax(0, 1fr));
+      min-width: 0;
     }
-    @media (min-width: 640px) { .stw-confirm-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 640px) { .stw-confirm-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
     .stw-confirm-card {
       border: 1px solid var(--stw-line); border-radius: 0.9rem;
       padding: 0.85rem 0.7rem; text-align: center; background: rgba(2, 6, 23, 0.35);
@@ -323,7 +380,7 @@
     <div class="stw-top">
       <header>
         <p class="text-xs font-bold uppercase tracking-[0.14em] text-cyan-300/80 mb-1">MX Fantasy League</p>
-        <h1 class="stw-display text-4xl sm:text-5xl text-white">
+        <h1 class="stw-display text-white">
           {% if has_existing_team %}Byt i säsongsteam{% else %}Skapa säsongsteam{% endif %}
         </h1>
         <p class="mt-2 text-sm text-slate-400">
