@@ -107,6 +107,37 @@
       font-weight: 800;
       color: #94a3b8;
     }
+    .pf-fold > summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      user-select: none;
+    }
+    .pf-fold > summary::-webkit-details-marker { display: none; }
+    .pf-fold__chev {
+      flex-shrink: 0;
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 999px;
+      border: 1px solid var(--pf-line);
+      display: grid;
+      place-items: center;
+      color: #94a3b8;
+      transition: transform 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+    .pf-fold[open] > summary .pf-fold__chev {
+      transform: rotate(180deg);
+      color: #22d3ee;
+      border-color: rgba(34, 211, 238, 0.45);
+    }
+    .pf-fold__body {
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--pf-line);
+    }
   </style>
 </head>
 <body>
@@ -137,7 +168,9 @@
     {% if needs_email %}
       <div class="p-4 rounded-xl mb-5 border border-amber-400/50 bg-amber-500/15 text-amber-100">
         <div class="font-semibold">Lägg till e‑postadress</div>
-        <div class="text-sm opacity-90">Behövs för lösenordsreset och viktiga notiser. Du kan spela utan — men profilen sparas inte förrän e‑post finns.</div>
+        <div class="text-sm opacity-90">Behövs för lösenordsreset och viktiga notiser. Du kan spela utan — men profilen sparas inte förrän e‑post finns.
+          <a href="#edit" class="font-semibold underline underline-offset-2 ml-1">Öppna redigering →</a>
+        </div>
       </div>
     {% endif %}
 
@@ -186,6 +219,9 @@
           {% if user.bio %}
           <p class="mt-3 text-sm text-slate-300 leading-relaxed max-w-2xl">{{ user.bio }}</p>
           {% endif %}
+          <div class="mt-4">
+            <a href="#edit" class="text-sm font-semibold text-cyan-300 hover:text-cyan-200 underline underline-offset-2">Redigera profil</a>
+          </div>
         </div>
       </div>
     </section>
@@ -331,54 +367,71 @@
       <p class="text-xs text-slate-500 mt-3">Summering över alla sparade tävlingar (inkl. eventuella transfer-straff).</p>
     </section>
 
-    {# —— Edit —— #}
-    <section class="pf-panel p-5 sm:p-6" id="edit">
-      <h3 class="text-lg font-bold text-white mb-1">Redigera profil</h3>
-      <p class="text-sm text-slate-400 mb-5">Uppdatera bild, e‑post och hur du syns för andra.</p>
-
-      <form action="{{ url_for('update_profile') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
-        <div>
-          <label for="profile_picture" class="pf-label">Profilbild</label>
-          <input type="file" name="profile_picture" id="profile_picture" accept="image/*" class="pf-input">
-          <p class="text-xs text-slate-500 mt-1">JPG, PNG eller GIF. Max 5MB.</p>
+    {# —— Edit (collapsed by default) —— #}
+    <details class="pf-panel pf-fold p-5 sm:p-6" id="edit"{% if needs_email %} open{% endif %}>
+      <summary>
+        <div class="min-w-0">
+          <h3 class="text-lg font-bold text-white">Redigera profil</h3>
+          <p class="text-sm text-slate-400 mt-0.5">Bild, e‑post och hur du syns för andra</p>
         </div>
-
-        <div>
-          <label for="email" class="pf-label">E-postadress</label>
-          <input type="email" name="email" id="email" value="{{ user.email or '' }}" placeholder="din@email.com" required class="pf-input">
-          <p class="text-xs text-slate-500 mt-1">Påminnelser, lösenordsreset och viktiga notiser.</p>
-        </div>
-
-        <div>
-          <label for="display_name" class="pf-label">Visningsnamn</label>
-          <input type="text" name="display_name" id="display_name" value="{{ user.display_name or '' }}" placeholder="Valfritt namn på leaderboards" class="pf-input">
-        </div>
-
-        <div>
-          <label for="bio" class="pf-label">Om mig</label>
-          <textarea name="bio" id="bio" rows="4" placeholder="Kort om dig, stil, favoritbanor…" class="pf-input">{{ user.bio or '' }}</textarea>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <span class="pf-fold__chev" aria-hidden="true">▾</span>
+      </summary>
+      <div class="pf-fold__body">
+        <form action="{{ url_for('update_profile') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
           <div>
-            <label for="favorite_rider" class="pf-label">Favoritförare</label>
-            <input type="text" name="favorite_rider" id="favorite_rider" value="{{ user.favorite_rider or '' }}" placeholder="T.ex. Jett Lawrence" class="pf-input">
+            <label for="profile_picture" class="pf-label">Profilbild</label>
+            <input type="file" name="profile_picture" id="profile_picture" accept="image/*" class="pf-input">
+            <p class="text-xs text-slate-500 mt-1">JPG, PNG eller GIF. Max 5MB.</p>
           </div>
-          <div>
-            <label for="favorite_team" class="pf-label">Favoritmärke / team</label>
-            <input type="text" name="favorite_team" id="favorite_team" value="{{ user.favorite_team or '' }}" placeholder="T.ex. Honda, Star Racing" class="pf-input">
-          </div>
-        </div>
 
-        <div class="flex justify-end pt-1">
-          <button type="submit" id="save-profile-btn" class="rp-btn rp-btn--primary">Spara profil</button>
-        </div>
-      </form>
-    </section>
+          <div>
+            <label for="email" class="pf-label">E-postadress</label>
+            <input type="email" name="email" id="email" value="{{ user.email or '' }}" placeholder="din@email.com" required class="pf-input">
+            <p class="text-xs text-slate-500 mt-1">Påminnelser, lösenordsreset och viktiga notiser.</p>
+          </div>
+
+          <div>
+            <label for="display_name" class="pf-label">Visningsnamn</label>
+            <input type="text" name="display_name" id="display_name" value="{{ user.display_name or '' }}" placeholder="Valfritt namn på leaderboards" class="pf-input">
+          </div>
+
+          <div>
+            <label for="bio" class="pf-label">Om mig</label>
+            <textarea name="bio" id="bio" rows="4" placeholder="Kort om dig, stil, favoritbanor…" class="pf-input">{{ user.bio or '' }}</textarea>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="favorite_rider" class="pf-label">Favoritförare</label>
+              <input type="text" name="favorite_rider" id="favorite_rider" value="{{ user.favorite_rider or '' }}" placeholder="T.ex. Jett Lawrence" class="pf-input">
+            </div>
+            <div>
+              <label for="favorite_team" class="pf-label">Favoritmärke / team</label>
+              <input type="text" name="favorite_team" id="favorite_team" value="{{ user.favorite_team or '' }}" placeholder="T.ex. Honda, Star Racing" class="pf-input">
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-1">
+            <button type="submit" id="save-profile-btn" class="rp-btn rp-btn--primary">Spara profil</button>
+          </div>
+        </form>
+      </div>
+    </details>
   </div>
 
   <script>
     (function () {
+      const fold = document.getElementById('edit');
+      const openEdit = () => {
+        if (!fold) return;
+        fold.open = true;
+        fold.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+      if (location.hash === '#edit') openEdit();
+      document.querySelectorAll('a[href="#edit"]').forEach((a) => {
+        a.addEventListener('click', () => setTimeout(openEdit, 0));
+      });
+
       const email = document.getElementById('email');
       const btn = document.getElementById('save-profile-btn');
       if (!email || !btn) return;
