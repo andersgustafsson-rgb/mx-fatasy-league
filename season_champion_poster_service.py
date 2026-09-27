@@ -228,153 +228,76 @@ def render_season_champion_poster_png(
     return buf.getvalue()
 
 
+def _fit_name(draw, name: str, max_px: int, start_size: int = 28, min_size: int = 16) -> tuple[str, Any]:
+    """Shrink + truncate a name to fit max_px width."""
+    text = (name or "").strip() or "?"
+    size = start_size
+    font = _load_display_font(size, bold=True)
+    while _text_width(font, text) > max_px and size > min_size:
+        size -= 1
+        font = _load_display_font(size, bold=True)
+    while _text_width(font, text) > max_px and len(text) > 4:
+        text = text[:-2].rstrip() + "…"
+    return text, font
+
+
 def _render_facebook(data: dict[str, Any]) -> Image.Image:
     img = _backdrop(W_FB, H_FB)
     draw = ImageDraw.Draw(img)
-    margin = 48
+    margin = 40
 
-    # Top accent bar
     draw.rectangle([0, 0, W_FB, 6], fill=AMBER)
 
-    logo = _load_brand_logo(72)
+    logo = _load_brand_logo(64)
     if logo:
-        img.paste(logo, (margin, 28), logo)
+        img.paste(logo, (margin, 22), logo)
 
     year = data["year"]
     _draw_styled_text(
         draw,
-        (W_FB - margin, 36),
+        (W_FB - margin, 28),
         f"AMA FANTASY {year}",
-        _load_display_font(28, bold=True),
+        _load_display_font(26, bold=True),
         AMBER,
         anchor="rt",
     )
     _draw_styled_text(
         draw,
-        (W_FB - margin, 68),
+        (W_FB - margin, 58),
         "SÄSONGSKLAR",
-        _load_display_font(22, bold=True),
+        _load_display_font(20, bold=True),
         MUTED,
         anchor="rt",
     )
 
     _draw_styled_text(
         draw,
-        (W_FB // 2, 110),
+        (W_FB // 2, 96),
         data["subtitle"],
-        _load_display_font(56, bold=True),
+        _load_display_font(48, bold=True),
         WHITE,
         anchor="mt",
     )
     _draw_styled_text(
         draw,
-        (W_FB // 2, 172),
+        (W_FB // 2, 152),
         data["tagline"],
-        _load_display_font(26, bold=True),
+        _load_display_font(22, bold=True),
         MUTED,
         anchor="mt",
     )
 
-    # Left: champion hero
-    champ = data["champion"]
-    podium = data["podium"]
-    left_cx = int(W_FB * 0.32)
-    avatar_y = 430
-    _draw_crown(draw, left_cx, 210, scale=1.35)
-    _safe_paste_avatar(
-        img,
-        left_cx,
-        avatar_y,
-        110,
-        champ["user_id"],
-        champ["display_name"],
-    )
-    # Gold ring boost
-    ring = Image.new("RGBA", (W_FB, H_FB), (0, 0, 0, 0))
-    rd = ImageDraw.Draw(ring)
-    rd.ellipse(
-        [left_cx - 118, avatar_y - 118, left_cx + 118, avatar_y + 118],
-        outline=(*AMBER, 220),
-        width=6,
-    )
-    img = Image.alpha_composite(img.convert("RGBA"), ring).convert("RGB")
-    draw = ImageDraw.Draw(img)
-
-    _draw_styled_text(
-        draw,
-        (left_cx, 570),
-        "CHAMPION",
-        _load_display_font(22, bold=True),
-        AMBER,
-        anchor="mt",
-    )
-    name = champ["display_name"]
-    name_size = 44
-    name_f = _load_display_font(name_size, bold=True)
-    while _text_width(name_f, name) > 520 and name_size > 28:
-        name_size -= 2
-        name_f = _load_display_font(name_size, bold=True)
-    _draw_styled_text(draw, (left_cx, 602), name, name_f, WHITE, anchor="mt")
-    _draw_styled_text(
-        draw,
-        (left_cx, 658),
-        f"{champ['total_points']} poäng",
-        _load_display_font(36, bold=True),
-        AMBER_HOT,
-        anchor="mt",
-    )
-
-    # Flanking 2nd / 3rd
-    for slot, dx, radius, y_av in (
-        (1, -210, 58, 520),
-        (2, 210, 58, 520),
-    ):
-        if slot >= len(podium):
-            continue
-        row = podium[slot]
-        cx = left_cx + dx
-        color = _medal_color(row["rank"])
-        _safe_paste_avatar(img, cx, y_av, radius, row["user_id"], row["display_name"])
-        badge = f"#{row['rank']}"
-        _draw_styled_text(
-            draw,
-            (cx, y_av + radius + 18),
-            badge,
-            _load_display_font(20, bold=True),
-            color,
-            anchor="mt",
-        )
-        short = row["display_name"]
-        if len(short) > 14:
-            short = short[:13] + "…"
-        _draw_styled_text(
-            draw,
-            (cx, y_av + radius + 42),
-            short,
-            _load_display_font(20, bold=True),
-            WHITE,
-            anchor="mt",
-        )
-        _draw_styled_text(
-            draw,
-            (cx, y_av + radius + 66),
-            f"{row['total_points']}p",
-            _load_display_font(18, bold=True),
-            MUTED,
-            anchor="mt",
-        )
-
-    # Right panel: top 10
-    panel_x0 = int(W_FB * 0.58)
-    panel_y0 = 210
+    # Right: top 10 panel (leave left ~56% for podium)
+    panel_x0 = int(W_FB * 0.56)
+    panel_y0 = 196
     panel_x1 = W_FB - margin
-    panel_y1 = H_FB - 70
+    panel_y1 = H_FB - 56
     panel = Image.new("RGBA", (W_FB, H_FB), (0, 0, 0, 0))
     pd = ImageDraw.Draw(panel)
     pd.rounded_rectangle(
         [panel_x0, panel_y0, panel_x1, panel_y1],
-        radius=18,
-        fill=(8, 12, 22, 200),
+        radius=16,
+        fill=(8, 12, 22, 210),
         outline=(*AMBER, 90),
         width=2,
     )
@@ -383,59 +306,146 @@ def _render_facebook(data: dict[str, Any]) -> Image.Image:
 
     _draw_styled_text(
         draw,
-        ((panel_x0 + panel_x1) // 2, panel_y0 + 22),
+        ((panel_x0 + panel_x1) // 2, panel_y0 + 18),
         "TOP 10",
-        _load_display_font(26, bold=True),
+        _load_display_font(24, bold=True),
         AMBER,
         anchor="mt",
     )
-    row_y = panel_y0 + 70
+    row_y = panel_y0 + 62
+    name_max = panel_x1 - panel_x0 - 140
     for row in data["top10"]:
         color = _medal_color(row["rank"])
-        rank_s = f"{row['rank']:>2}"
         _draw_styled_text(
             draw,
-            (panel_x0 + 28, row_y),
-            rank_s,
-            _load_display_font(24, bold=True),
+            (panel_x0 + 24, row_y),
+            f"{row['rank']}",
+            _load_display_font(22, bold=True),
             color,
             anchor="lt",
         )
-        nm = row["display_name"]
-        if len(nm) > 18:
-            nm = nm[:17] + "…"
+        nm, nm_f = _fit_name(draw, row["display_name"], name_max, start_size=22, min_size=16)
+        _draw_styled_text(draw, (panel_x0 + 58, row_y), nm, nm_f, WHITE, anchor="lt")
         _draw_styled_text(
             draw,
-            (panel_x0 + 70, row_y),
-            nm,
-            _load_display_font(24, bold=True),
-            WHITE,
-            anchor="lt",
-        )
-        _draw_styled_text(
-            draw,
-            (panel_x1 - 28, row_y),
+            (panel_x1 - 24, row_y),
             f"{row['total_points']}",
-            _load_display_font(24, bold=True),
+            _load_display_font(22, bold=True),
             AMBER_HOT if row["rank"] == 1 else MUTED,
             anchor="rt",
         )
-        row_y += 52
+        row_y += 54
+
+    # Left: classic podium — #2 | #1 | #3 in three clear columns
+    podium = data["podium"]
+    left_x0 = margin
+    left_x1 = panel_x0 - 28
+    left_w = left_x1 - left_x0
+    col_w = left_w // 3
+    c2 = left_x0 + col_w // 2
+    c1 = left_x0 + col_w + col_w // 2
+    c3 = left_x0 + 2 * col_w + col_w // 2
+
+    # Stepped avatar baselines (1st highest). Text stays in its own column.
+    av_y1 = 355
+    av_y2 = 420
+    av_y3 = 440
+    r1_rad, r2_rad, r3_rad = 68, 46, 46
+
+    def _podium_slot(
+        cx: int,
+        row: dict[str, Any] | None,
+        *,
+        radius: int,
+        avatar_y: int,
+        crown: bool = False,
+        name_max: int = 200,
+        name_size: int = 26,
+        pts_size: int = 22,
+    ) -> None:
+        nonlocal img, draw
+        if not row:
+            return
+        color = _medal_color(row["rank"])
+        if crown:
+            _draw_crown(draw, cx, avatar_y - radius - 70, scale=1.05)
+        _safe_paste_avatar(img, cx, avatar_y, radius, row["user_id"], row["display_name"])
+        if crown:
+            ring = Image.new("RGBA", (W_FB, H_FB), (0, 0, 0, 0))
+            rd = ImageDraw.Draw(ring)
+            rd.ellipse(
+                [cx - radius - 7, avatar_y - radius - 7, cx + radius + 7, avatar_y + radius + 7],
+                outline=(*AMBER, 230),
+                width=5,
+            )
+            img = Image.alpha_composite(img.convert("RGBA"), ring).convert("RGB")
+            draw = ImageDraw.Draw(img)
+
+        y = avatar_y + radius + 14
+        if crown:
+            _draw_styled_text(
+                draw, (cx, y), "CHAMPION", _load_display_font(16, bold=True), AMBER, anchor="mt"
+            )
+            y += 28
+        else:
+            _draw_styled_text(
+                draw,
+                (cx, y),
+                f"#{row['rank']}",
+                _load_display_font(16, bold=True),
+                color,
+                anchor="mt",
+            )
+            y += 26
+
+        nm, nm_f = _fit_name(draw, row["display_name"], name_max, start_size=name_size, min_size=14)
+        _draw_styled_text(draw, (cx, y), nm, nm_f, WHITE, anchor="mt")
+        # _load_display_font scales size (~1.5x) — leave room for real glyph height
+        y += max(34, int(name_size * 1.7))
+        _draw_styled_text(
+            draw,
+            (cx, y),
+            f"{row['total_points']}p",
+            _load_display_font(pts_size, bold=True),
+            AMBER_HOT if row["rank"] == 1 else MUTED,
+            anchor="mt",
+        )
+
+    r2 = podium[1] if len(podium) > 1 else None
+    r1 = podium[0] if podium else None
+    r3 = podium[2] if len(podium) > 2 else None
+
+    _podium_slot(
+        c2, r2, radius=r2_rad, avatar_y=av_y2, name_max=col_w - 18, name_size=20, pts_size=18
+    )
+    _podium_slot(
+        c1,
+        r1,
+        radius=r1_rad,
+        avatar_y=av_y1,
+        crown=True,
+        name_max=col_w - 6,
+        name_size=24,
+        pts_size=22,
+    )
+    _podium_slot(
+        c3, r3, radius=r3_rad, avatar_y=av_y3, name_max=col_w - 18, name_size=20, pts_size=18
+    )
 
     # Footer
     _draw_styled_text(
         draw,
-        (margin, H_FB - 28),
+        (margin, H_FB - 22),
         f"{data['total_users']} tippare · {data['total_competitions']} race",
-        _load_display_font(20, bold=True),
+        _load_display_font(18, bold=True),
         MUTED,
         anchor="lb",
     )
     _draw_styled_text(
         draw,
-        (W_FB - margin, H_FB - 28),
+        (W_FB - margin, H_FB - 22),
         data["site"],
-        _load_display_font(22, bold=True),
+        _load_display_font(20, bold=True),
         CYAN,
         anchor="rb",
     )
