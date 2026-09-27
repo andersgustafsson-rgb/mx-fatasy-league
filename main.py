@@ -1390,6 +1390,20 @@ def get_today():
     return today
 
 
+# Tippa series that make up the live AMA highscore (SX + MX + SMX Playoffs).
+from ama_season_totals import (  # noqa: E402
+    AMA_TIPPA_SERIES_NAMES,
+    AMA_TOTAL_SERIES_NAME,
+    _aggregate_series_user_scores,
+    _ama_tippa_series_for_year,
+    _build_ama_year_total,
+    _empty_user_score_bucket,
+    _ensure_ama_total_series,
+    _leaderboard_from_user_scores,
+    _write_finished_series_stats,
+)
+
+
 def series_display_name(name: str | None) -> str:
     """User-facing series label (DB keeps short names like Motocross / Supercross)."""
     n = (name or "").strip()
@@ -1399,6 +1413,8 @@ def series_display_name(name: str | None) -> str:
         return "Pro Motocross"
     if n == "SMX Finals":
         return "SMX Finals"
+    if n == AMA_TOTAL_SERIES_NAME:
+        return "Totalställning"
     return n or "Serie"
 
 
@@ -11347,64 +11363,14 @@ def finished_series_page():
         
         series_data = []
         for series in finished_series:
-            # Get competitions for this series
+            # Synthetic AMA Total is shown via ama_totals_by_year, not as a series card
+            if (series.name or "").strip() == AMA_TOTAL_SERIES_NAME:
+                continue
+
             competitions = Competition.query.filter_by(series_id=series.id).order_by(Competition.event_date).all()
-            
-            # Try to get archived statistics first, fallback to CompetitionScore if not archived
-            archived_stats = FinishedSeriesStats.query.filter_by(series_id=series.id).all()
-            
-            user_scores = {}
-            
-            if archived_stats:
-                # Use archived statistics
-                for stat in archived_stats:
-                    user_scores[stat.user_id] = {
-                        'total_points': stat.total_points,
-                        'race_points': stat.race_points,
-                        'holeshot_points': stat.holeshot_points,
-                        'wildcard_points': stat.wildcard_points,
-                        'competitions_participated': stat.competitions_participated
-                    }
-            else:
-                # Fallback to CompetitionScore (for series not yet archived)
-                comp_ids = [comp.id for comp in competitions]
-                if comp_ids:
-                    scores = CompetitionScore.query.filter(
-                        CompetitionScore.competition_id.in_(comp_ids)
-                    ).all()
-                    
-                    for score in scores:
-                        if score.user_id not in user_scores:
-                            user_scores[score.user_id] = {
-                                'total_points': 0,
-                                'race_points': 0,
-                                'holeshot_points': 0,
-                                'wildcard_points': 0,
-                                'competitions_participated': 0
-                            }
-                        user_scores[score.user_id]['total_points'] += score.total_points or 0
-                        user_scores[score.user_id]['race_points'] += score.race_points or 0
-                        user_scores[score.user_id]['holeshot_points'] += score.holeshot_points or 0
-                        user_scores[score.user_id]['wildcard_points'] += score.wildcard_points or 0
-                        user_scores[score.user_id]['competitions_participated'] += 1
-            
-            # Convert to list and sort by total points
-            leaderboard = []
-            for user_id, stats in user_scores.items():
-                user = User.query.get(user_id)
-                if user:
-                    leaderboard.append({
-                        'user_id': user_id,
-                        'username': user.username,
-                        'display_name': getattr(user, 'display_name', None) or user.username,
-                        'profile_picture_url': getattr(user, 'profile_picture_url', None),
-                        **stats
-                    })
-            
-            leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
-            for i, row in enumerate(leaderboard, start=1):
-                row["rank"] = i
-            
+            user_scores = _aggregate_series_user_scores(series)
+            leaderboard = _leaderboard_from_user_scores(user_scores)
+
             series_data.append({
                 'series': series,
                 'display_name': series_display_name(series.name),
@@ -11436,10 +11402,34 @@ def finished_series_page():
             year = data["series"].year
             series_by_year.setdefault(year, []).append(data)
 
+        # AMA year total (SX+MX+SMX) — same points that made the live highscore
+        ama_totals_by_year = OrderedDict()
+        years_for_total = set(series_by_year.keys())
+        years_for_total.update(
+            y for (y,) in db.session.query(Series.year)
+            .filter(Series.name.in_(AMA_TIPPA_SERIES_NAMES))
+            .distinct()
+            .all()
+        )
+        for year in sorted(years_for_total, reverse=True):
+            # Only show when at least one AMA tippa series is finished (or total archived)
+            ama = _build_ama_year_total(year)
+            if not ama:
+                continue
+            parts = _ama_tippa_series_for_year(year)
+            any_finished = any(
+                (p.end_date and p.end_date < current_date) or not p.is_active
+                for p in parts
+            )
+            if ama.get("from_archive") or any_finished or year in series_by_year:
+                ama_totals_by_year[year] = ama
+                series_by_year.setdefault(year, [])
+
         return render_template(
             "finished_series.html",
             series_data=series_data,
             series_by_year=series_by_year,
+            ama_totals_by_year=ama_totals_by_year,
             sx_season_wrap=sx_season_wrap,
         )
         
@@ -11577,6 +11567,56 @@ def finished_series_detail_page(series_id):
         print(f"ERROR traceback: {error_trace}")
         db.session.rollback()
         flash("Fel vid laddning av seriedetaljer.", "error")
+        return redirect(url_for("finished_series_page"))
+
+
+@app.route("/finished_series/ama/<int:year>")
+def finished_ama_year_page(year):
+    """AMA tippa year total — Supercross + Motocross + SMX Finals (same as live highscore)."""
+    try:
+        ama = _build_ama_year_total(year)
+        if not ama or not ama.get("all_users"):
+            flash(f"Ingen AMA-totalställning hittades för {year}.", "error")
+            return redirect(url_for("finished_series_page"))
+
+        uid = session.get("user_id")
+        # Lightweight stand-in so finished_series_detail.html can render
+        series_stub = ama.get("series") or type(
+            "SeriesStub",
+            (),
+            {
+                "id": None,
+                "name": AMA_TOTAL_SERIES_NAME,
+                "year": year,
+                "end_date": None,
+                "is_active": False,
+            },
+        )()
+
+        return render_template(
+            "finished_series_detail.html",
+            series=series_stub,
+            series_display_name="Totalställning",
+            competitions=[],
+            competition_details={},
+            leaderboard=ama["all_users"],
+            total_users=ama["total_users"],
+            is_logged_in=uid is not None,
+            current_user_id=uid,
+            is_wsx=False,
+            is_sx=False,
+            is_ama_total=True,
+            ama_parts=ama.get("parts") or [],
+            ama_total_competitions=ama.get("total_competitions") or 0,
+            wsx_rider_podiums=None,
+            sx_rider_podiums=None,
+        )
+    except Exception as e:
+        import traceback
+        print(f"ERROR in finished_ama_year_page: {e}")
+        print(traceback.format_exc())
+        db.session.rollback()
+        flash("Fel vid laddning av totalställning.", "error")
         return redirect(url_for("finished_series_page"))
 
 
@@ -26200,6 +26240,156 @@ def archive_and_reset_season_teams():
     except Exception as e:
         db.session.rollback()
         print(f"archive_and_reset_season_teams: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/admin/archive_ama_season_and_reset")
+def archive_ama_season_and_reset():
+    """
+    Post-SMX closeout for AMA tippa season:
+    1) Freeze SX / MX / SMX + AMA Total into FinishedSeriesStats
+    2) Delete AMA CompetitionScore rows (zeros live highscore; keeps rider results)
+    3) Optionally archive + wipe season teams
+    Does NOT touch WSX / MXGP / MXON tippa scores.
+    """
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    year = int(body.get("year") or request.args.get("year") or 2026)
+    reset_tippa = body.get("reset_tippa_scores", True)
+    if isinstance(reset_tippa, str):
+        reset_tippa = reset_tippa.strip().lower() not in ("0", "false", "no")
+    archive_teams = body.get("archive_season_teams", True)
+    if isinstance(archive_teams, str):
+        archive_teams = archive_teams.strip().lower() not in ("0", "false", "no")
+    team_label = (body.get("season_team_label") or f"SMX {year}").strip() or f"SMX {year}"
+
+    try:
+        import json
+        from datetime import datetime as _dt
+
+        parts = _ama_tippa_series_for_year(year)
+        if len(parts) < 1:
+            return jsonify({"error": f"Inga AMA-serier (SX/MX/SMX) hittades för {year}"}), 400
+
+        archived_series = []
+        deleted_scores_total = 0
+        ama_comp_ids: list[int] = []
+        combined: dict[int, dict] = {}
+
+        for series in parts:
+            # Always aggregate from live CompetitionScore when present so we freeze
+            # the true totals before wipe (ignore older FinishedSeriesStats).
+            competitions = Competition.query.filter_by(series_id=series.id).all()
+            comp_ids = [c.id for c in competitions]
+            ama_comp_ids.extend(comp_ids)
+            user_scores: dict[int, dict] = {}
+            if comp_ids:
+                for score in CompetitionScore.query.filter(
+                    CompetitionScore.competition_id.in_(comp_ids)
+                ).all():
+                    bucket = user_scores.setdefault(score.user_id, _empty_user_score_bucket())
+                    bucket["total_points"] += score.total_points or 0
+                    bucket["race_points"] += score.race_points or 0
+                    bucket["holeshot_points"] += score.holeshot_points or 0
+                    bucket["wildcard_points"] += score.wildcard_points or 0
+                    bucket["competitions_participated"] += 1
+            if not user_scores:
+                # Fallback if scores already wiped — keep existing archive rows
+                user_scores = _aggregate_series_user_scores(series)
+
+            n = _write_finished_series_stats(series.id, user_scores)
+            for uid, stats in user_scores.items():
+                bucket = combined.setdefault(uid, _empty_user_score_bucket())
+                bucket["total_points"] += stats["total_points"]
+                bucket["race_points"] += stats["race_points"]
+                bucket["holeshot_points"] += stats["holeshot_points"]
+                bucket["wildcard_points"] += stats["wildcard_points"]
+                bucket["competitions_participated"] += stats["competitions_participated"]
+
+            series.is_active = False
+            if competitions:
+                max_date = max((c.event_date for c in competitions if c.event_date), default=None)
+                if max_date and (series.end_date is None or series.end_date < max_date):
+                    series.end_date = max_date
+            archived_series.append(
+                {
+                    "series_id": series.id,
+                    "name": series.name,
+                    "users": n,
+                    "competitions": len(comp_ids),
+                }
+            )
+
+        # Freeze AMA Total (SX+MX+SMX sum)
+        total_series = _ensure_ama_total_series(year)
+        total_users = _write_finished_series_stats(total_series.id, combined)
+        total_series.is_active = False
+        end_dates = [s.end_date for s in parts if s.end_date]
+        if end_dates:
+            total_series.end_date = max(end_dates)
+
+        db.session.flush()
+
+        if reset_tippa and ama_comp_ids:
+            deleted_scores_total = CompetitionScore.query.filter(
+                CompetitionScore.competition_id.in_(ama_comp_ids)
+            ).delete(synchronize_session=False)
+
+        team_result = None
+        if archive_teams:
+            _ensure_season_team_archives_table()
+            payload, team_count = _snapshot_season_teams_payload()
+            archive = SeasonTeamArchive(
+                label=team_label,
+                archived_at=_dt.utcnow(),
+                team_count=team_count,
+                payload=json.dumps(payload, ensure_ascii=False),
+            )
+            db.session.add(archive)
+            db.session.flush()
+            deleted_riders = SeasonTeamRider.query.delete()
+            deleted_teams = SeasonTeam.query.delete()
+            team_result = {
+                "archive_id": archive.id,
+                "label": team_label,
+                "archived_teams": team_count,
+                "deleted_teams": deleted_teams,
+                "deleted_riders": deleted_riders,
+            }
+
+        db.session.commit()
+
+        msg_parts = [
+            f"AMA {year} tippa arkiverad (SX+MX+SMX + Totalställning).",
+            f"{total_users} spelare i totalställningen.",
+        ]
+        if reset_tippa:
+            msg_parts.append(f"{deleted_scores_total} CompetitionScore raderade (AMA).")
+        if team_result:
+            msg_parts.append(
+                f"Säsongsteam: {team_result['archived_teams']} arkiverade som «{team_label}»."
+            )
+
+        return jsonify(
+            {
+                "ok": True,
+                "message": " ".join(msg_parts),
+                "year": year,
+                "archived_series": archived_series,
+                "ama_total_users": total_users,
+                "ama_total_series_id": total_series.id,
+                "deleted_competition_scores": deleted_scores_total,
+                "season_teams": team_result,
+                "finished_series_url": url_for("finished_ama_year_page", year=year),
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(f"archive_ama_season_and_reset: {e}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 

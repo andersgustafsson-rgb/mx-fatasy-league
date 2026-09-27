@@ -330,6 +330,9 @@
             {% if is_wsx %}
             <div class="series-wordmark text-lg sm:text-xl leading-tight">WORLD SUPERCROSS</div>
             <p class="text-[10px] sm:text-xs text-gray-500 font-orbit tracking-[0.28em] uppercase mt-1">WSX {{ series.year }} · Säsong klar</p>
+            {% elif is_ama_total|default(false) %}
+            <div class="series-wordmark--generic text-lg sm:text-xl leading-tight">TOTALSTÄLLNING</div>
+            <p class="text-[10px] sm:text-xs text-gray-500 font-orbit tracking-[0.28em] uppercase mt-1">AMA {{ series.year }} · SX + MX + SMX</p>
             {% else %}
             <div class="series-wordmark--generic text-lg sm:text-xl leading-tight">{{ series_display_name|default(series.name) }}</div>
             <p class="text-[10px] sm:text-xs text-gray-500 font-orbit tracking-[0.28em] uppercase mt-1">{{ series.year }} · Fantasy-arkiv</p>
@@ -344,26 +347,37 @@
 
       <div class="text-center mb-10">
         <h1 class="text-3xl md:text-4xl font-black text-white mb-2 font-orbit" style="text-shadow: 0 0 32px rgba(34, 211, 238, 0.2);">{{ series_display_name|default(series.name) }} {{ series.year }}</h1>
+        {% if is_ama_total|default(false) %}
+        <p class="text-gray-400">Motocross + Supercross + SMX Playoffs · {{ total_users }} deltagare · {{ ama_total_competitions|default(0) }} tävlingar</p>
+        <p class="text-gray-500 text-sm mt-2 max-w-xl mx-auto">Samma poäng som summerats på live-highscoren under säsongen.</p>
+        {% else %}
         <p class="text-gray-400">Slutlig statistik · {{ total_users }} deltagare · {{ competitions|length }} tävlingar</p>
+        {% endif %}
       </div>
 
       <div class="glass-panel rounded-2xl p-5 sm:p-6 mb-10">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
           <div>
             <p class="text-gray-500 text-xs font-orbit uppercase tracking-wider mb-1">Tävlingar</p>
-            <p class="text-3xl font-black text-white font-orbit">{{ competitions|length }}</p>
+            <p class="text-3xl font-black text-white font-orbit">{% if is_ama_total|default(false) %}{{ ama_total_competitions|default(0) }}{% else %}{{ competitions|length }}{% endif %}</p>
           </div>
           <div>
             <p class="text-gray-500 text-xs font-orbit uppercase tracking-wider mb-1">Deltagare</p>
             <p class="text-3xl font-black text-cyan-300 font-orbit">{{ total_users }}</p>
           </div>
           <div>
-            <p class="text-gray-500 text-xs font-orbit uppercase tracking-wider mb-1">Period</p>
+            <p class="text-gray-500 text-xs font-orbit uppercase tracking-wider mb-1">{% if is_ama_total|default(false) %}Serier{% else %}Period{% endif %}</p>
+            {% if is_ama_total|default(false) %}
+            <p class="text-sm font-bold text-white mt-1">
+              {% for p in ama_parts|default([]) %}{{ p.display_name }}{% if not loop.last %} · {% endif %}{% else %}SX · MX · SMX{% endfor %}
+            </p>
+            {% else %}
             <p class="text-sm font-bold text-white mt-1">
               {% if series.start_date and series.end_date %}
                 {{ series.start_date.strftime('%d/%m/%Y') }} – {{ series.end_date.strftime('%d/%m/%Y') }}
               {% else %}—{% endif %}
             </p>
+            {% endif %}
           </div>
         </div>
       </div>

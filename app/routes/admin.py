@@ -527,6 +527,45 @@ def smx_seed_poster_png():
 		return jsonify({"error": str(e) or type(e).__name__}), 500
 
 
+@bp.get("/admin/api/season-champion-poster")
+@login_required
+def season_champion_poster_api():
+	"""JSON: AMA year total champion data + FB caption."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	year = request.args.get("year", type=int) or 2026
+	try:
+		from season_champion_poster_service import build_season_champion_poster_data
+
+		data = build_season_champion_poster_data(year=year)
+		return jsonify(data)
+	except ValueError as e:
+		return jsonify({"error": str(e)}), 404
+	except Exception as e:
+		current_app.logger.exception("season_champion_poster_api failed: %s", e)
+		return jsonify({"error": str(e) or type(e).__name__}), 500
+
+
+@bp.get("/admin/api/season-champion-poster.png")
+@login_required
+def season_champion_poster_png():
+	"""PNG: AMA Totalställning champion hype — layout=facebook|story."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	year = request.args.get("year", type=int) or 2026
+	layout = (request.args.get("layout") or "facebook").strip().lower()
+	try:
+		from season_champion_poster_service import render_season_champion_poster_png
+
+		png = render_season_champion_poster_png(year=year, layout=layout)
+		return Response(png, mimetype="image/png")
+	except ValueError as e:
+		return jsonify({"error": str(e)}), 404
+	except Exception as e:
+		current_app.logger.exception("season_champion_poster_png failed: %s", e)
+		return jsonify({"error": str(e) or type(e).__name__}), 500
+
+
 @bp.get("/admin/api/hype-poster")
 @login_required
 def hype_poster_api():

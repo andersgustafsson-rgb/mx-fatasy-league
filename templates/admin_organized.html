@@ -451,6 +451,7 @@
             <button type="button" onclick="showSection('rider-competition-management', this)" class="tab-btn">Förare &amp; tävlingar</button>
             <button type="button" onclick="showSection('user-management', this)" class="tab-btn">Användare</button>
             <button type="button" onclick="showSection('league-management', this)" class="tab-btn">Ligor</button>
+            <button type="button" onclick="showSection('sasongsslut', this)" class="tab-btn">Säsongsslut</button>
             <button type="button" onclick="showSection('system-tools', this)" class="tab-btn">Verktyg</button>
             <button type="button" onclick="showSection('announcements', this)" class="tab-btn">Meddelanden</button>
         </div>
@@ -1595,6 +1596,110 @@
             </div>
         </div>
 
+        <!-- Säsongsslut: champion poster + AMA archive + resets -->
+        <div id="sasongsslut" class="section-panel hidden">
+            <div class="section-card rounded-lg p-6 mb-6">
+                <div class="ap-hub-head">
+                    <h2>Säsongsslut</h2>
+                    <p>Hylla vinnaren, frys Fantasy-arkivet, nollställ säsongsteam och ligapoäng.</p>
+                </div>
+
+                <div class="rounded-lg border border-amber-500/30 bg-amber-950/20 px-4 py-3 mb-5 text-sm text-amber-100/90">
+                    <strong class="text-amber-300">Ordning:</strong>
+                    1) Ladda ner champion-poster &amp; posta på FB ·
+                    2) Arkivera tippa / totalställning ·
+                    3) Nollställ säsongsteam ·
+                    4) Nollställ ligapoäng
+                </div>
+
+                <div class="ap-hub-grid mb-6">
+                    <article class="ap-hub-card" style="grid-column: 1 / -1;">
+                        <div>
+                            <p class="ap-hub-card__eyebrow">Social</p>
+                            <h3 class="ap-hub-card__title">Champion-poster · Totalställning</h3>
+                        </div>
+                        <p class="ap-hub-card__desc mb-3">
+                            Hyllningsbild för AMA tippa (SX + MX + SMX) — vinnare, pall och top 10. Facebook 1620×900 eller Story.
+                        </p>
+                        <div class="flex flex-wrap items-end gap-3 mb-4">
+                            <label class="text-sm text-gray-300">
+                                År
+                                <input id="champion-poster-year" type="number" value="2026" min="2024" max="2035"
+                                       class="ml-2 w-24 px-2 py-1.5 rounded bg-gray-800 border border-gray-600 text-white" />
+                            </label>
+                            <button type="button" onclick="loadChampionPosterPreview()" class="ap-btn ap-btn--primary">Ladda preview</button>
+                            <a id="champion-poster-fb-dl" href="#" download="ama_totalstallning_champion_fb.png" class="ap-btn ap-btn--sm hidden">Ladda ner Facebook</a>
+                            <a id="champion-poster-story-dl" href="#" download="ama_totalstallning_champion_story.png" class="ap-btn ap-btn--sm hidden">Ladda ner Story</a>
+                            <button type="button" onclick="copyChampionCaption()" class="ap-btn ap-btn--sm">Kopiera FB-text</button>
+                            <a href="/finished_series" target="_blank" class="ap-btn ap-btn--sm ap-btn--ghost">Öppna Fantasy-arkiv</a>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-4 mb-3">
+                            <div>
+                                <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Facebook</p>
+                                <img id="champion-poster-fb-img" alt="Champion Facebook preview"
+                                     class="w-full rounded-lg border border-gray-700 bg-black/40 min-h-[120px] object-contain" />
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Story</p>
+                                <img id="champion-poster-story-img" alt="Champion Story preview"
+                                     class="w-full max-w-xs mx-auto rounded-lg border border-gray-700 bg-black/40 min-h-[120px] object-contain" />
+                            </div>
+                        </div>
+                        <textarea id="champion-poster-caption" rows="8" readonly
+                                  class="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-700 text-sm text-gray-200 font-mono"
+                                  placeholder="FB-caption laddas med preview…"></textarea>
+                        <p id="champion-poster-status" class="text-xs text-gray-500 mt-2"></p>
+                    </article>
+                </div>
+
+                <div class="ap-hub-grid">
+                    <article class="ap-hub-card">
+                        <div>
+                            <p class="ap-hub-card__eyebrow">1 · Tippa</p>
+                            <h3 class="ap-hub-card__title">Arkivera AMA &amp; nollställ tippa</h3>
+                        </div>
+                        <p class="ap-hub-card__desc">
+                            Fryser Totalställning + SX/MX/SMX i Fantasy-arkivet och nollställer AMA tippa-poäng
+                            (WSX / MXGP / MXON orörda). Arkiverar även säsongsteam om du behåller default.
+                        </p>
+                        <div class="ap-hub-card__actions">
+                            <button type="button" onclick="archiveAmaSeasonAndReset()" class="ap-btn ap-btn--primary">Stäng säsong &amp; nollställ</button>
+                        </div>
+                    </article>
+
+                    <article class="ap-hub-card">
+                        <div>
+                            <p class="ap-hub-card__eyebrow">2 · Säsongsteam</p>
+                            <h3 class="ap-hub-card__title">Arkivera &amp; nollställ lag</h3>
+                        </div>
+                        <p class="ap-hub-card__desc">
+                            Live-lag just nu: <strong id="season-team-sasong-count" class="text-cyan-300">–</strong>.
+                            Snapshot till arkiv, sedan tomt — alla bygger om inför 2027.
+                        </p>
+                        <div class="ap-hub-card__actions">
+                            <button type="button" onclick="checkSeasonTeams()" class="ap-btn ap-btn--sm">Visa lag</button>
+                            <button type="button" onclick="archiveAndResetSeasonTeams()" class="ap-btn ap-btn--primary">Arkivera &amp; nollställ</button>
+                        </div>
+                    </article>
+
+                    <article class="ap-hub-card">
+                        <div>
+                            <p class="ap-hub-card__eyebrow">3 · Ligor</p>
+                            <h3 class="ap-hub-card__title">Nollställ ligapoäng</h3>
+                        </div>
+                        <p class="ap-hub-card__desc">
+                            Sätter <code>total_points = 0</code> på alla ligor. Medlemmar och lagstruktur sparas.
+                            Tippa-highscore i ligor följer CompetitionScore (nollas när AMA tippa arkiveras).
+                        </p>
+                        <div class="ap-hub-card__actions">
+                            <button type="button" onclick="resetAllLeaguePoints()" class="ap-btn ap-btn--primary">Nollställ alla ligor</button>
+                            <a href="/admin/leagues" class="ap-btn ap-btn--sm">Hantera ligor</a>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </div>
+
         <!-- Announcements Section -->
         <div id="announcements" class="section-panel hidden">
             <div class="section-card rounded-lg p-6 mb-6">
@@ -1794,6 +1899,20 @@
                 </div>
 
                 <div class="ap-hub-grid">
+                    <article class="ap-hub-card">
+                        <div>
+                            <p class="ap-hub-card__eyebrow">AMA 2026</p>
+                            <h3 class="ap-hub-card__title">Säsongsslut</h3>
+                        </div>
+                        <p class="ap-hub-card__desc">
+                            Champion-poster, Fantasy-arkiv, tippa-nollställning, säsongsteam och ligor —
+                            samlat under fliken <strong>Säsongsslut</strong>.
+                        </p>
+                        <div class="ap-hub-card__actions">
+                            <button type="button" onclick="showSection('sasongsslut')" class="ap-btn ap-btn--primary">Öppna Säsongsslut</button>
+                        </div>
+                    </article>
+
                     <article class="ap-hub-card">
                         <div>
                             <p class="ap-hub-card__eyebrow">Säsong</p>
@@ -2262,6 +2381,123 @@
                 }
             } catch (error) {
                 alert('❌ Error: ' + error.message);
+            }
+        }
+
+        async function archiveAmaSeasonAndReset() {
+            const year = prompt('AMA-år att stänga:', '2026');
+            if (year === null) return;
+            const y = parseInt(year, 10);
+            if (!y) {
+                alert('Ogiltigt år');
+                return;
+            }
+            const withTeams = confirm(
+                `Även arkivera & nollställa säsongsteam nu?\n\n` +
+                `OK = tippa + säsongsteam\nAvbryt = bara tippa/totalställning (säsongsteam nollställs separat)`
+            );
+            let label = `SMX ${y}`;
+            if (withTeams) {
+                const typed = prompt('Säsongsteam-etikett:', label);
+                if (typed === null) return;
+                label = (typed || label).trim() || label;
+            }
+            if (!confirm(
+                `Stäng AMA ${y}?\n\n` +
+                `• Fryser Totalställning (SX+MX+SMX) i Fantasy-arkivet\n` +
+                `• Arkiverar tippa-poäng per serie\n` +
+                `• Nollställer AMA CompetitionScore (WSX/MXGP/MXON orörda)\n` +
+                (withTeams
+                    ? `• Arkiverar & nollställer säsongsteam («${label}»)\n\n`
+                    : `• Säsongsteam lämnas orörda\n\n`) +
+                `Detta går inte att ångra enkelt.`
+            )) {
+                return;
+            }
+            try {
+                const response = await fetch('/admin/archive_ama_season_and_reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        year: y,
+                        reset_tippa_scores: true,
+                        archive_season_teams: withTeams,
+                        season_team_label: label,
+                    }),
+                });
+                const result = await response.json();
+                if (response.ok && result.ok) {
+                    alert('✅ ' + result.message + (result.finished_series_url ? `\n\nArkiv: ${result.finished_series_url}` : ''));
+                    if (typeof loadVisitStats === 'function') loadVisitStats();
+                } else {
+                    alert('❌ ' + (result.error || 'Kunde inte stänga säsong'));
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        async function loadChampionPosterPreview() {
+            const yearEl = document.getElementById('champion-poster-year');
+            const status = document.getElementById('champion-poster-status');
+            const year = parseInt((yearEl && yearEl.value) || '2026', 10) || 2026;
+            if (status) status.textContent = 'Laddar…';
+            try {
+                const metaRes = await fetch(`/admin/api/season-champion-poster?year=${year}`);
+                const meta = await metaRes.json();
+                if (!metaRes.ok) {
+                    throw new Error(meta.error || 'Kunde inte hämta totalställning');
+                }
+                const caption = document.getElementById('champion-poster-caption');
+                if (caption) caption.value = meta.caption || '';
+
+                const fbUrl = `/admin/api/season-champion-poster.png?year=${year}&layout=facebook&t=${Date.now()}`;
+                const storyUrl = `/admin/api/season-champion-poster.png?year=${year}&layout=story&t=${Date.now()}`;
+                const fbImg = document.getElementById('champion-poster-fb-img');
+                const storyImg = document.getElementById('champion-poster-story-img');
+                const fbDl = document.getElementById('champion-poster-fb-dl');
+                const storyDl = document.getElementById('champion-poster-story-dl');
+                if (fbImg) fbImg.src = fbUrl;
+                if (storyImg) storyImg.src = storyUrl;
+                if (fbDl) {
+                    fbDl.href = fbUrl;
+                    fbDl.download = `ama_${year}_totalstallning_champion_fb.png`;
+                    fbDl.classList.remove('hidden');
+                }
+                if (storyDl) {
+                    storyDl.href = storyUrl;
+                    storyDl.download = `ama_${year}_totalstallning_champion_story.png`;
+                    storyDl.classList.remove('hidden');
+                }
+                const champ = meta.champion || {};
+                if (status) {
+                    status.textContent =
+                        `Champion: ${champ.display_name || '?'} (${champ.total_points || 0}p) · ` +
+                        `${meta.total_users || 0} tippare` +
+                        (meta.from_archive ? ' · från arkiv' : ' · live poäng');
+                }
+            } catch (error) {
+                if (status) status.textContent = 'Fel: ' + error.message;
+                alert('❌ ' + error.message);
+            }
+        }
+
+        async function copyChampionCaption() {
+            const el = document.getElementById('champion-poster-caption');
+            const text = (el && el.value) || '';
+            if (!text.trim()) {
+                alert('Ladda preview först så caption genereras.');
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(text);
+                alert('✅ FB-text kopierad');
+            } catch (e) {
+                if (el) {
+                    el.focus();
+                    el.select();
+                }
+                alert('Kunde inte kopiera automatiskt — markera texten och kopiera manuellt.');
             }
         }
 
@@ -3263,6 +3499,8 @@
                     stEl.textContent = n;
                     const toolsEl = document.getElementById('season-team-tools-count');
                     if (toolsEl) toolsEl.textContent = n;
+                    const sasongEl = document.getElementById('season-team-sasong-count');
+                    if (sasongEl) sasongEl.textContent = n;
                 }
             } catch (error) {
                 console.error('season team count', error);
