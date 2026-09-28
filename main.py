@@ -1221,8 +1221,8 @@ def _tippa_mxon_page_data() -> dict:
     faq = [
         {
             "q": "Hur tippar jag MXoN / Motocross of Nations?",
-            "a": "Skapa gratis konto, välj Motocross of Nations (MXON), öppna tippa och rangordna topp 5 nationer innan deadline (före Race 1).",
-            "a_plain": "Skapa gratis konto, välj Motocross of Nations (MXON), öppna tippa och rangordna topp 5 nationer innan deadline (före Race 1).",
+            "a": "Skapa gratis konto, välj Motocross of Nations (MXON), öppna tippa och rangordna topp 5 nationer innan deadline (före lördagens MXGP-kval).",
+            "a_plain": "Skapa gratis konto, välj Motocross of Nations (MXON), öppna tippa och rangordna topp 5 nationer innan deadline (före lördagens MXGP-kval).",
         },
         {
             "q": "Vad tippar man i MXoN jämfört med vanlig MXGP?",
@@ -1231,8 +1231,8 @@ def _tippa_mxon_page_data() -> dict:
         },
         {
             "q": "När är Motocross of Nations 2026?",
-            "a": "MXoN 2026 körs i Ernée, Frankrike. Race-dagen är söndag 4 oktober 2026; tippa låses före Race 1. Se alltid exakt deadline i appen.",
-            "a_plain": "MXoN 2026 körs i Ernée, Frankrike. Race-dagen är söndag 4 oktober 2026; tippa låses före Race 1. Se alltid exakt deadline i appen.",
+            "a": "MXoN 2026 körs i Ernée, Frankrike (2–4 oktober). Tippa låses före lördagens MXGP-kval (~14:30 lokal tid). Race-dagen är söndag 4 oktober (Race 1 ~13:10). Se alltid exakt deadline i appen.",
+            "a_plain": "MXoN 2026 körs i Ernée, Frankrike (2–4 oktober). Tippa låses före lördagens MXGP-kval (~14:30 lokal tid). Race-dagen är söndag 4 oktober (Race 1 ~13:10). Se alltid exakt deadline i appen.",
         },
         {
             "q": "Kostar det att tippa Motocross of Nations?",
@@ -1286,7 +1286,7 @@ def _tippa_mxon_page_data() -> dict:
             "<strong class=\"text-white\">Skapa konto</strong> — gratis på mx-fantasy.se.",
             "<strong class=\"text-white\">Välj Motocross of Nations (MXON)</strong> på startsidan.",
             "<strong class=\"text-white\">Öppna tippa</strong> och rangordna dina topp 5 nationer.",
-            "<strong class=\"text-white\">Spara innan deadline</strong> (före Race 1 på söndagen).",
+            "<strong class=\"text-white\">Spara innan deadline</strong> (före MXGP-kval lördag).",
             "<strong class=\"text-white\">Följ MXoN-leaderboard</strong> när resultaten är inne.",
         ],
         "faq": faq,
@@ -2274,7 +2274,7 @@ def _race_prep_start_label(comp: Competition | None) -> str | None:
             "Canadian GP": "19:30",
         }.get((comp.name or "").strip())
     if not hhmm and (getattr(comp, "series", None) or "").upper() == "MXON":
-        hhmm = "14:30"  # MXGP Qual (provisional)
+        hhmm = "14:30"  # MXGP Qual lör, lokal tid (Motoclub Ernée 2026)
     if not hhmm:
         return None
     tz = (getattr(comp, "timezone", None) or "").strip()

@@ -21,11 +21,12 @@ from models import (
 )
 
 # Speedweek / FIM provisional entry list (Ernée 2026), Sep 2026.
+# USA MXGP: Julien Beaumer replaces Chance Hymas (post pre-entry update).
 # TBA seats marked with rider name "TBA" / is_tba=True.
 # `no` = official plate numbers (MXGP, MX2, OPEN) from FIM entry list.
 MXON_2026_ERNEE_TEAMS: list[dict[str, Any]] = [
     {"code": "AUS", "name": "Australia", "mxgp": "Jed Beaton", "mx2": "Alex Larwood", "open": "Aaron Tanti", "no": (1, 2, 3)},
-    {"code": "USA", "name": "United States", "mxgp": "Chance Hymas", "mx2": "Levi Kitchen", "open": "Cooper Webb", "no": (4, 5, 6)},
+    {"code": "USA", "name": "United States", "mxgp": "Julien Beaumer", "mx2": "Levi Kitchen", "open": "Cooper Webb", "no": (4, 5, 6)},
     {"code": "FRA", "name": "France", "mxgp": "Romain Febvre", "mx2": "Mathis Valin", "open": "Tom Vialle", "no": (7, 8, 9)},
     {"code": "BEL", "name": "Belgium", "mxgp": "Lucas Coenen", "mx2": "Sacha Coenen", "open": "Liam Everts", "no": (10, 11, 12)},
     {"code": "SLO", "name": "Slovenia", "mxgp": "Tim Gajser", "mx2": "Jaka Peklaj", "open": "Jan Pancar", "no": (13, 14, 15)},
@@ -47,7 +48,7 @@ MXON_2026_ERNEE_TEAMS: list[dict[str, Any]] = [
     {"code": "CAN", "name": "Canada", "mxgp": "Tanner Ward", "mx2": "Dylan Rempel", "open": "Dylan Wright", "no": (64, 65, 66)},
     {"code": "FIN", "name": "Finland", "mxgp": "Emil Weckman", "mx2": "Saku Mansikkamäki", "open": "Jere Haavisto", "no": (67, 68, 69)},
     {"code": "CHI", "name": "Chile", "mxgp": "Benjamin Garib", "mx2": "Nicolas Israel", "open": "Cesar Paine Diaz", "no": (70, 71, 72)},
-    {"code": "IRL", "name": "Ireland", "mxgp": "Lennox Cambridge", "mx2": "Glenn McCormick", "open": "Jason Meara", "no": (85, 86, 87)},
+    {"code": "IRL", "name": "Ireland", "mxgp": "Lennox Dickinson", "mx2": "Glenn McCormick", "open": "Jason Meara", "no": (85, 86, 87)},
     {"code": "LAM", "name": "FIM Latin America", "mxgp": "Joaquin Poli", "mx2": "Carlos Badiali", "open": "Fabricio Chacon", "no": (88, 89, 90)},
     {"code": "MAR", "name": "Morocco", "mxgp": "Maxime Simon", "mx2": "Saad Soulimani", "open": "Noam Jayal", "no": (91, 92, 93)},
     {"code": "MEX", "name": "Mexico", "mxgp": "Jorge Israel Rubalcava", "mx2": "Fernando Velazquez", "open": "Erick Ismael Vasquez Diaz", "no": (97, 98, 99)},
@@ -106,8 +107,12 @@ AERIAL_IMAGE_REL = "images/mxon/ernee_aerial.jpg"
 # annars kan man tippa efter att ha sett kvalresultat.
 MXON_QUAL_DATE = date(2026, 10, 3)
 MXON_RACE_DATE = date(2026, 10, 4)
-# Provisional (samma som Ernée 2023): första MXGP Qual Heat 14:30 lokal tid
+# Officiellt program Motoclub Ernée 2026 (lokal tid Europe/Paris):
+#   Lör: MXGP Qual 14:30 · MX2 Qual 15:30 · OPEN Qual 16:30
+#   Sön: Race 1 13:10 · Race 2 14:40 · Race 3 16:08
+# (Racer X TV-listan är USA-tid — använd inte den för tippa-deadline.)
 MXON_QUAL_START = time(14, 30)
+MXON_RACE1_START = time(13, 10)
 
 
 def _set_competition_start_time(comp: Competition, value: time) -> None:
@@ -459,7 +464,7 @@ def ensure_mxon_2026(*, attach_track_image: bool = True) -> dict:
     if hasattr(comp, "timezone"):
         comp.timezone = "Europe/Paris"
     db.session.flush()
-    # MXGP Qual ~14:30 → picks deadline 12:30 lokal (samma −2h-regel som övriga serier)
+    # MXGP Qual 14:30 lokal → picks deadline 12:30 (samma −2h-regel som övriga serier)
     _set_competition_start_time(comp, MXON_QUAL_START)
 
     nations_created = 0

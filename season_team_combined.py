@@ -68,7 +68,7 @@ def season_team_promo_copy(*, combined: bool | None = None) -> dict[str, str | l
     if combined is None:
         combined = season_team_combined_live()
     how = [
-        "Välj 2×450 + 2×250 inom 2 M budget",
+        "Välj 2×450 + 2×250 inom 2 milj budget",
         "Dina förare ger poäng varje race efter placering",
         "Byte kostar 50 tippa-poäng per förare",
         "Gäller SX, MX och SMX — inte WSX",
