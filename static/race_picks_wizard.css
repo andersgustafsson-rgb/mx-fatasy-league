@@ -773,6 +773,25 @@
   text-align: center;
 }
 
+/* MXoN klassfavoriter: MXGP/MX2/OPEN need a wider label column than 1–5 ranks */
+.wizard-summary-pos--class {
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  min-width: 0;
+  width: 100%;
+  text-align: left;
+  padding-right: 0.2rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.picks-summary--mxon .wizard-summary-col:last-child .wizard-summary-slot {
+  grid-template-columns: 3.15rem 2.25rem minmax(0, 1fr);
+  gap: 0.4rem;
+}
+
 .wizard-summary-slot--p1 .wizard-summary-pos { color: #fbbf24; }
 .wizard-summary-slot--p2 .wizard-summary-pos { color: #cbd5e1; }
 .wizard-summary-slot--p3 .wizard-summary-pos { color: #d97706; }
