@@ -1323,6 +1323,20 @@
   const competitionId = {{ competition.id|tojson }};
   const competitionName = {{ competition.name|tojson }};
   const competitionSeries = {{ competition.series|tojson }};
+  // Remember series so homepage Aktuellt Race shows these picks after tippa
+  try {
+    const _homeCode = (function (s) {
+      const u = String(s || '').trim().toUpperCase();
+      if (u === 'SUPERCROSS' || u === 'SX') return 'SX';
+      if (u === 'MOTOCROSS' || u === 'MX') return 'MX';
+      if (u === 'SMX' || u.indexOf('SMX') === 0) return 'SMX';
+      if (u === 'WSX') return 'WSX';
+      if (u === 'MXON' || u === 'MXON') return 'MXON';
+      if (u === 'MXGP') return 'MXGP';
+      return u || null;
+    })(competitionSeries);
+    if (_homeCode) localStorage.setItem('home_selected_series', _homeCode);
+  } catch (_) {}
   const isWSXSeries = competitionSeries === 'WSX';
   const isMXGPSeries = String(competitionSeries || '').toUpperCase() === 'MXGP';
   const isSMXSeries = competitionSeries === 'SMX';

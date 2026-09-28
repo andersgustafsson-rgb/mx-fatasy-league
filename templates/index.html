@@ -2914,15 +2914,16 @@
                   <h2 data-i18n="home.current_race">Aktuellt Race</h2>
                 </div>
                 <div class="home-ui-panel__body flex flex-col flex-1 min-h-0">
-          {% if upcoming_race %}
-                <p id="sidebar-race-name" class="text-base sm:text-lg font-semibold break-words text-white mb-1">{{ upcoming_race.name }}</p>
+                <p id="sidebar-race-empty" class="text-gray-300{% if upcoming_race %} hidden{% endif %}" data-i18n="home.no_races">Inga races planerade just nu.</p>
+                <div id="sidebar-race-content"{% if not upcoming_race %} class="hidden"{% endif %}>
+                <p id="sidebar-race-name" class="text-base sm:text-lg font-semibold break-words text-white mb-1">{% if upcoming_race %}{{ upcoming_race.name }}{% endif %}</p>
                 <p id="sidebar-race-date" class="text-sm sm:text-base text-gray-300 mb-4">
-            {{ upcoming_race.event_date.strftime('%Y-%m-%d') if upcoming_race.event_date else '' }}
+            {% if upcoming_race and upcoming_race.event_date %}{{ upcoming_race.event_date.strftime('%Y-%m-%d') }}{% endif %}
           </p>
                 
-                <!-- Picks Status -->
+                <!-- Picks Status (always in DOM so JS can fill after series switch) -->
                 <div id="home-sidebar-picks-status">
-                {% if picks_status in ('has_picks', 'partial_picks') %}
+                {% if upcoming_race and picks_status in ('has_picks', 'partial_picks') %}
                   <div class="mb-3">
                     {% set is_complete = picks_status == 'has_picks' %}
                     {% set is_partial = picks_status == 'partial_picks' %}
@@ -2953,7 +2954,7 @@
                       {% endif %}
                     </p>
                   </div>
-                {% elif picks_status == "no_picks" %}
+                {% elif upcoming_race and picks_status == "no_picks" %}
                   <div class="mb-4">
                     <div class="flex items-center gap-2 mb-3">
                       <span class="text-orange-300">{{ mx_icon("alert", "mx-icon--lg") }}</span>
@@ -2972,9 +2973,7 @@
                   </div>
                 {% endif %}
                 </div>
-            {% else %}
-                <p class="text-gray-300">Inga races planerade just nu.</p>
-            {% endif %}
+                </div>
                 </div>
               </div>
 
@@ -4449,18 +4448,26 @@
     }
 
     function resolveHomeSeriesSelection(seriesList) {
+      const list = Array.isArray(seriesList) ? seriesList : [];
       const validCodes = new Set(
-        (Array.isArray(seriesList) ? seriesList : [])
+        list
           .map((s) => s.series_code || seriesNameToCode(s.name))
           .filter(Boolean)
       );
-      const nextActive = resolveDefaultHomeSeries(seriesList);
-      // Inloggad: alltid serien med nästa aktiva race överst + vald
+      const nextActive = resolveDefaultHomeSeries(list);
+      let preferred = null;
+      try { preferred = localStorage.getItem('home_selected_series'); } catch (_) {}
+      // Keep the series the user last viewed/tipped if it still has an upcoming race
+      // (e.g. WSX picks → home should not jump to nearer MXON).
+      if (preferred && validCodes.has(preferred)) {
+        const prefRow = list.find(
+          (s) => (s.series_code || seriesNameToCode(s.name)) === preferred
+        );
+        if (prefRow && prefRow.next_race) return preferred;
+      }
       if (window.__MX_LOGGED_IN__) {
         return validCodes.has(nextActive) ? nextActive : 'SX';
       }
-      let preferred = null;
-      try { preferred = localStorage.getItem('home_selected_series'); } catch (_) {}
       if (preferred === 'WSX' && validCodes.has('WSX')) return 'WSX';
       if (preferred === 'MXON' && validCodes.has('MXON')) return 'MXON';
       if (preferred === 'MXGP' && validCodes.has('MXGP')) return 'MXGP';
@@ -4545,6 +4552,13 @@
       });
     }
     
+    function setSidebarRaceVisibility(hasRace) {
+      const emptyEl = document.getElementById('sidebar-race-empty');
+      const contentEl = document.getElementById('sidebar-race-content');
+      if (emptyEl) emptyEl.classList.toggle('hidden', !!hasRace);
+      if (contentEl) contentEl.classList.toggle('hidden', !hasRace);
+    }
+
     async function fetchRealCountdownData() {
       try {
         const seriesQ = homeSelectedSeries ? `&series=${encodeURIComponent(homeSelectedSeries)}` : '';
@@ -4558,6 +4572,7 @@
           document.getElementById('real-deadline-countdown').textContent = '--:--:--';
           updateRaceHeroMeta(null);
           updateRaceDayWeather(null);
+          setSidebarRaceVisibility(false);
           if (data.series) {
             homeSelectedSeries = data.series;
             markSelectedSeriesCard(data.series);
@@ -4573,6 +4588,7 @@
         }
         
         // Update race name (hero + sidebar)
+        setSidebarRaceVisibility(true);
         document.getElementById('real-countdown-race-name').textContent = data.next_race.name;
         const sidebarName = document.getElementById('sidebar-race-name');
         if (sidebarName) sidebarName.textContent = data.next_race.name;
@@ -4605,6 +4621,7 @@
         document.getElementById('real-deadline-countdown').textContent = '--:--:--';
         updateRaceHeroMeta(null);
         updateRaceDayWeather(null);
+        setSidebarRaceVisibility(false);
       }
     }
 
