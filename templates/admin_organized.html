@@ -1606,10 +1606,11 @@
 
                 <div class="rounded-lg border border-amber-500/30 bg-amber-950/20 px-4 py-3 mb-5 text-sm text-amber-100/90">
                     <strong class="text-amber-300">Ordning:</strong>
-                    1) Ladda ner champion-poster &amp; posta på FB ·
-                    2) Arkivera tippa / totalställning ·
-                    3) Nollställ säsongsteam ·
-                    4) Nollställ ligapoäng
+                    1) Champion-poster ·
+                    2) Arkivera tippa ·
+                    3) Ladda 2027-priser ·
+                    4) Nollställ säsongsteam ·
+                    5) Nollställ ligapoäng
                 </div>
 
                 <div class="ap-hub-grid mb-6">
@@ -1669,7 +1670,22 @@
 
                     <article class="ap-hub-card">
                         <div>
-                            <p class="ap-hub-card__eyebrow">2 · Säsongsteam</p>
+                            <p class="ap-hub-card__eyebrow">2 · Priser</p>
+                            <h3 class="ap-hub-card__title">Ladda säsongsteam-priser 2027</h3>
+                        </div>
+                        <p class="ap-hub-card__desc">
+                            Skriver in godkänd lista (topp 500–600k, Coenen 500k, budget 1,5M) på AMA 450/250.
+                            Övriga AMA-förare → 100k. WSX/MXGP orörda. Gör <strong>före</strong> någon bygger nytt lag.
+                        </p>
+                        <div class="ap-hub-card__actions">
+                            <button type="button" onclick="applySeasonTeamPrices2027(true)" class="ap-btn ap-btn--sm">Dry-run</button>
+                            <button type="button" onclick="applySeasonTeamPrices2027(false)" class="ap-btn ap-btn--primary">Ladda priser</button>
+                        </div>
+                    </article>
+
+                    <article class="ap-hub-card">
+                        <div>
+                            <p class="ap-hub-card__eyebrow">3 · Säsongsteam</p>
                             <h3 class="ap-hub-card__title">Arkivera &amp; nollställ lag</h3>
                         </div>
                         <p class="ap-hub-card__desc">
@@ -1684,7 +1700,7 @@
 
                     <article class="ap-hub-card">
                         <div>
-                            <p class="ap-hub-card__eyebrow">3 · Ligor</p>
+                            <p class="ap-hub-card__eyebrow">4 · Ligor</p>
                             <h3 class="ap-hub-card__title">Nollställ ligapoäng</h3>
                         </div>
                         <p class="ap-hub-card__desc">

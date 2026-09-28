@@ -26243,6 +26243,40 @@ def archive_and_reset_season_teams():
         return jsonify({"error": str(e)}), 500
 
 
+@app.post("/admin/season_teams/apply_prices_2027")
+def apply_season_team_prices_2027_endpoint():
+    """Load approved post-SMX 2027 season-team prices onto AMA 450/250 riders."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    dry_run = bool(body.get("dry_run"))
+    set_default = body.get("set_default_for_unlisted", True)
+    if isinstance(set_default, str):
+        set_default = set_default.strip().lower() not in ("0", "false", "no")
+
+    try:
+        from season_team_prices_2027 import apply_season_team_prices_2027
+
+        result = apply_season_team_prices_2027(
+            set_default_for_unlisted=set_default,
+            dry_run=dry_run,
+        )
+        verb = "Skulle uppdatera" if dry_run else "Uppdaterade"
+        result["message"] = (
+            f"{verb} {result['updated_count']} namngivna + "
+            f"{result['defaulted_count']} övriga → {result['default_price']:,}. "
+            f"Budget {result['budget']:,}."
+        )
+        if result["missing_names"]:
+            result["message"] += f" Saknas i DB: {len(result['missing_names'])} namn."
+        return jsonify(result)
+    except Exception as e:
+        db.session.rollback()
+        print(f"apply_season_team_prices_2027: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.post("/admin/archive_ama_season_and_reset")
 def archive_ama_season_and_reset():
     """
