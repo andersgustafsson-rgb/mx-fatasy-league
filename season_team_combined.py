@@ -74,9 +74,8 @@ def season_team_promo_copy(*, combined: bool | None = None) -> dict[str, str | l
         "Gäller SX, MX och SMX — inte WSX",
     ]
     reset_notice = (
-        "Skapar du lag nu är det för att öva och vara redo. "
-        "Efter SMX Finals 2026 arkiveras och nollställs alla säsongsteam — "
-        "då väljer alla om inför SMX-säsongen 2027."
+        "Detta är laget som gäller för 2027-säsongen — inte ett test. "
+        "Bygg nu så är du redo när SX/MX/SMX drar igång."
     )
     if combined:
         return {
@@ -95,13 +94,12 @@ def season_team_promo_copy(*, combined: bool | None = None) -> dict[str, str | l
         }
     return {
         "eyebrow": "SMX 2027",
-        "title": "Säsongsteam ger extra poäng till highscore",
+        "title": "Dags att bygga lag inför 2027-säsongen",
         "body": (
-            "Bygg ett lag som får poäng varje race. "
-            "Från SMX-säsongen 2027 räknas teampoäng in i highscoren — skapa laget redan nu. "
-            "Efter SMX Finals 2026 nollställs alla lag och du väljer om."
+            "Säsongsteam är nollställda. Skapa ditt lag nu — det är laget som gäller "
+            "när AMA-säsongen 2027 startar, och teampoäng räknas då in i highscoren."
         ),
-        "how": how + ["Efter SMX 2026: lag arkiveras — alla bygger om inför 2027"],
+        "how": how + ["Teampoäng räknas i highscoren från 2027"],
         "notice": reset_notice,
         "read_more": "Läs mer i manualen",
         "cta": "Skapa säsongsteam",

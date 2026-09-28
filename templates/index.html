@@ -2406,7 +2406,6 @@
                 <button type="button" id="tab-season-team-btn"
                   class="tab-btn rp-tab-btn tab-season-team-btn{% if season_team_promo_live and is_logged_in and not my_team %} stw-promo-glow{% endif %}" data-tab="season-team"
                   {% if season_team_promo_live and is_logged_in and not my_team and season_team_promo_copy %}data-promo-hint="{{ season_team_promo_copy.tab_hint }}"{% endif %}
-                  {% if upcoming_race and upcoming_race.series == 'WSX' %}disabled title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}
                   {% if is_logged_in and my_team %}data-i18n="tab.team"{% else %}data-i18n="tab.team.create"{% endif %}>
                   {% if is_logged_in and my_team %}Säsongsteam{% else %}Skapa säsongsteam{% endif %}
                 </button>
@@ -2512,7 +2511,6 @@
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="leagues" data-i18n="tab.leagues">Ligor</button>
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page tab-season-team-btn{% if season_team_promo_live and not my_team %} stw-promo-glow{% endif %}" data-tab="season-team"
                 {% if season_team_promo_live and not my_team and season_team_promo_copy %}data-promo-hint="{{ season_team_promo_copy.tab_hint }}"{% endif %}
-                {% if upcoming_race and upcoming_race.series == 'WSX' %}disabled title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}
                 {% if is_logged_in and my_team %}data-i18n="tab.team"{% else %}data-i18n="tab.team.create"{% endif %}>
                 {% if is_logged_in and my_team %}Säsongsteam{% else %}Skapa säsongsteam{% endif %}
               </button>
@@ -2542,7 +2540,6 @@
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="leagues" data-i18n="tab.leagues">Ligor</button>
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page tab-season-team-btn{% if season_team_promo_live %} stw-promo-glow{% endif %}" data-tab="season-team"
                 {% if season_team_promo_live and season_team_promo_copy %}data-promo-hint="{{ season_team_promo_copy.tab_hint }}"{% endif %}
-                {% if upcoming_race and upcoming_race.series == 'WSX' %}disabled title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}
                 data-i18n="tab.team.create">Skapa säsongsteam</button>
               <a href="{{ url_for('manual_page') }}" class="home-sidebar-foot__btn home-sidebar-foot__page" target="_blank" rel="noopener" data-i18n="tab.manual">Manual</a>
               <button type="button" class="tab-btn home-sidebar-foot__btn settings-btn" data-tab="settings" data-i18n="tab.settings">Inställningar</button>
@@ -2823,8 +2820,7 @@
                 <div class="home-panel__tiles grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3.5">
                   {% if is_logged_in and my_team %}
                   <a href="{{ url_for('season_team_page') }}" id="quick-action-season-team"
-                     class="home-inner-tile home-action-tile--team{% if upcoming_race and upcoming_race.series == 'WSX' %} home-inner-tile--muted{% endif %}"
-                     {% if upcoming_race and upcoming_race.series == 'WSX' %}aria-disabled="true" title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}>
+                     class="home-inner-tile home-action-tile--team">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     </span>
@@ -2832,8 +2828,7 @@
                   </a>
                   {% else %}
                   <a href="{{ url_for('season_team_builder') }}" id="quick-action-season-team"
-                     class="home-inner-tile home-action-tile--team home-action-tile--create{% if season_team_promo_live %} stw-promo-glow{% endif %}{% if upcoming_race and upcoming_race.series == 'WSX' %} home-inner-tile--muted{% endif %}"
-                     {% if upcoming_race and upcoming_race.series == 'WSX' %}aria-disabled="true" title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}>
+                     class="home-inner-tile home-action-tile--team home-action-tile--create{% if season_team_promo_live %} stw-promo-glow{% endif %}">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                     </span>
@@ -4378,7 +4373,6 @@
     }
 
     function updateAmaOnlyHomeUi() {
-      const isTippaOnly = isTippaOnlyHomeSeries(homeSelectedSeries);
       const isMXON = homeSelectedSeries === 'MXON';
       const seriesQ = homeSelectedSeries
         ? `?series=${encodeURIComponent(homeSelectedSeries)}`
@@ -4389,31 +4383,6 @@
       if (lbResultsLink) lbResultsLink.href = '/race_results' + seriesQ;
       const scoresLink = document.getElementById('quick-action-my-scores');
       if (scoresLink) scoresLink.href = '/my_scores' + seriesQ;
-
-      const teamTile = document.getElementById('quick-action-season-team');
-      if (teamTile) {
-        teamTile.classList.toggle('home-inner-tile--muted', isTippaOnly);
-        if (isTippaOnly) {
-          teamTile.setAttribute('aria-disabled', 'true');
-          teamTile.setAttribute('title', 'Säsongsteam gäller bara SX, MX och SMX');
-        } else {
-          teamTile.removeAttribute('aria-disabled');
-          teamTile.removeAttribute('title');
-        }
-      }
-      const teamTabs = document.querySelectorAll('.tab-season-team-btn');
-      teamTabs.forEach((teamTab) => {
-        teamTab.disabled = isTippaOnly;
-        if (isTippaOnly) {
-          teamTab.setAttribute('title', 'Säsongsteam gäller bara SX, MX och SMX');
-          if (teamTab.classList.contains('active')) {
-            const raceTab = document.querySelector('.tab-btn[data-tab="race-info"]');
-            if (raceTab) raceTab.click();
-          }
-        } else {
-          teamTab.removeAttribute('title');
-        }
-      });
 
       // MXoN: dim AMA-centric panels (weekly feats, power rankings, spotlight)
       const weeklyPanel = document.getElementById('weekly-fun-panel');
