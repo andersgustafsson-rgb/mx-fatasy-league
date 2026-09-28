@@ -1,6 +1,6 @@
 """Proposed season-team rider prices for post-SMX 2026 reset → SMX 2027.
 
-Budget: 1_500_000 for 2×450 + 2×250.
+Budget: 2_000_000 for 2×450 + 2×250.
 Design: top riders 500–600k so you cannot roster all elites.
 Basis: AMA Combined SX+MX 2026 + SMX playoff form
        + MXGP/MX2 2026 for Coenen brothers (AMA 2027 arrivals).
@@ -106,7 +106,7 @@ SEASON_TEAM_PRICES_2027: dict[str, int] = {
 }
 
 DEFAULT_PRICE = 100_000  # everyone else who raced SX/MX/SMX (and other AMA roster)
-BUDGET = 1_500_000
+BUDGET = 2_000_000
 DEPTH_PRICE = 100_000  # Combined standings ~31–50 / field fillers
 
 # Extra Combined SX+MX names (beyond playoff top-30) so the full published

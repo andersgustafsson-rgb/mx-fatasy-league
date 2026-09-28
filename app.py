@@ -644,6 +644,16 @@ def save_season_team():
     if c450 != 2 or c250 != 2:
         return jsonify({"message": "Regel: 2 x 450cc och 2 x 250cc krävs"}), 400
 
+    SEASON_TEAM_BUDGET = 2_000_000
+    total_price = sum(int(r.price or 0) for r in riders)
+    if total_price > SEASON_TEAM_BUDGET:
+        return jsonify({
+            "message": (
+                f"Över budget: {total_price:,} / {SEASON_TEAM_BUDGET:,} "
+                "(max 2 000 000)"
+            ).replace(",", " ")
+        }), 400
+
     uid = session["user_id"]
     team = SeasonTeam.query.filter_by(user_id=uid).first()
     if not team:

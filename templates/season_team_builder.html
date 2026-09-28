@@ -421,7 +421,7 @@
             </div>
             <div class="stw-rule">
               <span class="kicker">Budget</span>
-              <strong>1,5 M</strong>
+              <strong>2 M</strong>
               <span class="desc">Maxpris för hela laget</span>
             </div>
             <div class="stw-rule">
@@ -466,7 +466,7 @@
           <div class="stw-budget" id="budget-bar">
             <div>
               <div class="label">Budget kvar</div>
-              <div class="val" id="budget-val">1 500 000</div>
+              <div class="val" id="budget-val">2 000 000</div>
             </div>
             <div class="text-right">
               <div class="slots" id="slot-val">0 / 2</div>
@@ -521,7 +521,7 @@
     const originalTeamName = {% if has_existing_team %}{{ existing_team.team_name | tojson | safe }}{% else %}""{% endif %};
     window.promotionOffers = {{ mx_promotion_offers | default([]) | tojson | safe }};
 
-    const TOTAL_BUDGET = 1500000;
+    const TOTAL_BUDGET = 2000000;
     const CREATE_STEPS = ["intro", "pick450", "pick250", "confirm"];
     const EDIT_STEPS = ["roster", "pickSwap", "confirm"];
 
@@ -800,7 +800,11 @@
           return name.includes(q) || brand.includes(q) || num.includes(q);
         });
       }
-      filtered = [...filtered].sort((a, b) => (a.rider_number || 999) - (b.rider_number || 999));
+      filtered = [...filtered].sort((a, b) => {
+        const pd = (b.price || 0) - (a.price || 0);
+        if (pd !== 0) return pd;
+        return (a.name || "").localeCompare(b.name || "", "sv");
+      });
       if (!filtered.length) {
         box.innerHTML = `<div class="col-span-full text-center text-sm text-slate-500 py-8">Inga träffar</div>`;
         return;

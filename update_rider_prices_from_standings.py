@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Update rider prices based on previous year's point standings
-Prices are set to balance the 1,500,000 budget for 4 riders (2x450cc + 2x250cc)
+Prices are set to balance the 2,000,000 budget for 4 riders (2x450cc + 2x250cc)
 Average price per rider: ~375,000
 """
 
@@ -23,8 +23,8 @@ except ImportError:
 
 def calculate_price_for_budget(position: int, points: int, class_name: str, total_riders_in_class: int = 30):
     """
-    Calculate price based on position, optimized for 1.5M budget
-    Budget: 1,500,000 kr for 4 riders (2x450cc + 2x250cc)
+    Calculate price based on position, optimized for 2M budget
+    Budget: 2,000,000 kr for 4 riders (2x450cc + 2x250cc)
     Average: ~375,000 kr per rider
     
     Strategy:

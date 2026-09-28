@@ -1,5 +1,5 @@
 @echo off
-REM MX Fantasy League — lokal utveckling (samma app som Render: main.py)
+REM MX Fantasy League - lokal utveckling (samma app som Render: main.py)
 chcp 65001 >nul
 cd /d "%~dp0"
 title MX Fantasy League (lokal)
@@ -16,7 +16,7 @@ set HOST=127.0.0.1
 set PORT=5000
 set DATABASE_URL=sqlite:///fantasy_mx_local.db
 set RENDER=
-REM Visuell preview av säsongsteam-promo (glow/CTA). Combined: SEASON_TEAM_COMBINED_LIVE=1
+REM Visuell preview av sasongsteam-promo (glow/CTA). Combined: SEASON_TEAM_COMBINED_LIVE=1
 set SEASON_TEAM_PROMO_LIVE=1
 
 set PY=py -3
@@ -71,7 +71,7 @@ echo   Stopp:  Ctrl+C i detta fonster
 echo.
 
 timeout /t 2 /nobreak >nul
-REM Oppna Chrome explicit — undvik AVG Secure Browser som ofta kaper start "" http://...
+REM Oppna Chrome explicit - undvik AVG Secure Browser som ofta kaper start "" http://...
 set "LOCAL_URL=http://127.0.0.1:%PORT%/"
 if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" (
   start "" "%ProgramFiles%\Google\Chrome\Application\chrome.exe" "%LOCAL_URL%"
@@ -80,7 +80,7 @@ if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" (
 ) else if exist "%LocalAppData%\Google\Chrome\Application\chrome.exe" (
   start "" "%LocalAppData%\Google\Chrome\Application\chrome.exe" "%LOCAL_URL%"
 ) else (
-  echo Kunde inte hitta Chrome — oppna manuellt: %LOCAL_URL%
+  echo Kunde inte hitta Chrome - oppna manuellt: %LOCAL_URL%
 )
 
 "%PY%" main.py

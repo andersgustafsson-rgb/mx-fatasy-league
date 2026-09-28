@@ -12968,6 +12968,16 @@ def save_season_team():
         if c450 != 2 or c250 != 2:
             return jsonify({"message": "Regel: 2 x 450cc och 2 x 250cc krävs"}), 400
 
+        SEASON_TEAM_BUDGET = 2_000_000
+        total_price = sum(int(r.price or 0) for r in riders)
+        if total_price > SEASON_TEAM_BUDGET:
+            return jsonify({
+                "message": (
+                    f"Över budget: {total_price:,} / {SEASON_TEAM_BUDGET:,} "
+                    "(max 2 000 000)"
+                ).replace(",", " ")
+            }), 400
+
         uid = session["user_id"]
         team = SeasonTeam.query.filter_by(user_id=uid).first()
         is_team_change = False
@@ -27572,7 +27582,7 @@ def update_rider_prices():
         updated_riders = []
         
         def calculate_price_for_budget(position: int, points: int, class_name: str):
-            """Calculate price optimized for 1.5M budget (4 riders: 2x450cc + 2x250cc)"""
+            """Calculate price optimized for 2M budget (4 riders: 2x450cc + 2x250cc)"""
             if class_name == '450cc':
                 if position == 1:
                     return 450000
