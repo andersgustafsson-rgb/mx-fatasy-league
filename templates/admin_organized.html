@@ -2407,13 +2407,14 @@
 
         async function applySeasonTeamPrices2027(dryRun) {
             const isDry = !!dryRun;
-            const label = isDry ? 'Testa först (ingen sparning)' : 'Ladda 2027-priser på riktigt';
+            const label = isDry ? 'Testa forst (ingen sparning)' : 'Ladda 2027-priser pa riktigt';
             if (!window.confirm(
                 label + '?\n\n' +
-                '- Namngivna forare fran season_team_prices_2027.py\n' +
-                '- Ovriga AMA 450/250 -> 100 000\n' +
+                '- ALLA forare som kort SX, MX eller SMX-playoffs far pris\n' +
+                '- Namngivna (elite/lista) -> tier-pris fran season_team_prices_2027.py\n' +
+                '- Ovriga som kort -> 100 000\n' +
                 '- WSX / MXGP ororda\n\n' +
-                (isDry ? 'Bara visar vad som skulle andras.' : 'Gor detta INNAN folk bygger nya sasonsteam.')
+                (isDry ? 'Bara visar hur manga som skulle andras.' : 'Gor detta INNAN folk bygger nya sasonsteam.')
             )) {
                 return;
             }
