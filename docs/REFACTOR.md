@@ -17,7 +17,7 @@ Mål: tunnare `main.py`, logik i `services/` och routes i `app/routes/`.
 | 1 | **Scoring helpers** → `services/scoring.py` | ✅ Klar | Pure helpers flyttade; `main.py` importerar dem |
 | 2 | **`calculate_scores`** → `services/scoring.py` | ✅ Klar | Hela tippa-beräkningen ute ur `main.py` |
 | 3 | Deadlines / countdown | ✅ Klar | `is_picks_locked` + schedule/time helpers → `services/picks_lock.py` |
-| 4 | Results-import (WSX/CSV/entry) | Väntar | Importflöden i service |
+| 4 | Results-import (WSX/CSV/entry) | ✅ Klar | Parse/match/WSX helpers → `services/results_import.py` |
 | 5 | Kundmail / Zendesk | Väntar | — |
 | 6 | SEO tippa-sidor → public blueprint | Väntar | — |
 
@@ -40,3 +40,7 @@ Flyttat utan beroenden på Flask-request:
 ## Skiva 3 ✅
 
 `is_picks_locked`, `get_current_time`, `_competition_race_schedule` (+ små helpers) ligger i `services/picks_lock.py`. Countdown-**routes** stannar i `main.py`. Re-export från `main` så alla call sites oförändrade.
+
+## Skiva 4 ✅
+
+Bulk-parse, rider-match, WSX clear/upsert, entry-CSV (`parse_csv_simple`) → `services/results_import.py`. Admin-**routes** stannar i `main.py` (anropar samma helpers via re-export).
