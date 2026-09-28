@@ -1003,3 +1003,209 @@
 .wizard-step--complete .wizard-step-hero p {
   color: #6ee7b7;
 }
+
+/* Season team under picks overview */
+.st-under-picks-wrap {
+  margin-top: 0.85rem;
+}
+
+.st-under-picks {
+  margin-top: 0.75rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  background: linear-gradient(135deg, rgba(8, 47, 73, 0.55), rgba(15, 23, 42, 0.85));
+}
+
+.st-under-picks--compact {
+  margin-top: 0.65rem;
+  padding: 0.7rem 0.75rem;
+}
+
+.st-under-picks__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+
+.st-under-picks__eyebrow {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #67e8f9;
+}
+
+.st-under-picks__title {
+  margin: 0.15rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1.2;
+}
+
+.st-under-picks__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+
+.st-under-picks__pts {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #6ee7b7;
+}
+
+.st-under-picks__link {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #67e8f9;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.st-under-picks__link:hover {
+  color: #a5f3fc;
+}
+
+.st-under-picks__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .st-under-picks__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.st-under-picks__card {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.65rem;
+  background: rgba(2, 6, 23, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.st-under-picks__photo {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  object-fit: cover;
+  object-position: top center;
+  flex-shrink: 0;
+  background: #1e293b;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.st-under-picks--compact .st-under-picks__photo {
+  width: 2.15rem;
+  height: 2.15rem;
+}
+
+.st-under-picks__body {
+  min-width: 0;
+}
+
+.st-under-picks__name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.st-under-picks__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+}
+
+.st-under-picks__class {
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+}
+
+.st-under-picks__class--450 {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fdba74;
+}
+
+.st-under-picks__class--250 {
+  background: rgba(234, 179, 8, 0.18);
+  color: #fde68a;
+}
+
+.st-under-picks__num {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.st-under-picks--missing {
+  border-color: rgba(251, 191, 36, 0.45);
+  background: linear-gradient(135deg, rgba(69, 26, 3, 0.55), rgba(15, 23, 42, 0.9));
+}
+
+.st-under-picks__eyebrow--warn {
+  color: #fbbf24;
+}
+
+.st-under-picks__missing-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.st-under-picks__missing-copy {
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+
+.st-under-picks__missing-text {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #e2e8f0;
+}
+
+.st-under-picks__missing-text strong {
+  color: #fde68a;
+  font-weight: 800;
+}
+
+.st-under-picks__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.55rem;
+  background: #fbbf24;
+  color: #0f172a;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.st-under-picks__cta:hover {
+  background: #fcd34d;
+  color: #0f172a;
+}

@@ -789,7 +789,7 @@
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
   <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=5"></script>
   <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=mxgp-kval-1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=st-missing-cta-1">
 </head>
 <body class="text-gray-200 font-sans min-h-screen">
   <div class="race-picks-shell mx-auto p-3 sm:p-4 md:p-6 max-w-7xl">
@@ -1121,6 +1121,18 @@
     </header>
 
     <div id="wizard-picks-summary" class="wizard-picks-summary" aria-live="polite"></div>
+
+    {% set _series_u = (competition.series or '')|upper %}
+    {% if is_logged_in and not is_wsx and not is_mxgp and _series_u not in ('WSX', 'MXON', 'MXGP') %}
+    <div id="season-team-under-picks-wrap" class="st-under-picks-wrap">
+      {% if has_season_team and season_team_riders %}
+      {% include 'partials/season_team_under_picks.html' %}
+      {% else %}
+      {% set show_missing_cta = true %}
+      {% include 'partials/season_team_under_picks.html' %}
+      {% endif %}
+    </div>
+    {% endif %}
 
     <div id="wizard-step-3-forms" class="wizard-step-3-forms{% if initial_picks_status and initial_picks_status.icon == '✅' %} is-collapsed{% endif %}">
     <div class="mt-2">

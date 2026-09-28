@@ -1,0 +1,61 @@
+{# Season-team strip under race picks / home summary.
+   With riders: roster. Without: urgent CTA (set show_missing_cta=true).
+   Expects: season_team_riders, optional season_team_meta, optional compact, optional show_missing_cta #}
+{% set _riders = season_team_riders | default([]) %}
+{% set _meta = season_team_meta | default(none) %}
+{% set _compact = compact | default(false) %}
+{% set _missing = show_missing_cta | default(false) %}
+
+{% if _riders and _riders|length > 0 %}
+<section class="st-under-picks{% if _compact %} st-under-picks--compact{% endif %}" aria-label="Ditt säsongsteam">
+  <div class="st-under-picks__head">
+    <div class="st-under-picks__titles">
+      <p class="st-under-picks__eyebrow">Säsongsteam</p>
+      <h3 class="st-under-picks__title">
+        {% if _meta and _meta.team_name %}{{ _meta.team_name }}{% else %}Ditt lag{% endif %}
+      </h3>
+    </div>
+    <div class="st-under-picks__actions">
+      {% if _meta and _meta.total_points is not none %}
+      <span class="st-under-picks__pts tabular-nums">{{ _meta.total_points }}p</span>
+      {% endif %}
+      <a href="{{ url_for('season_team_page') }}" class="st-under-picks__link">Öppna lag →</a>
+    </div>
+  </div>
+  <div class="st-under-picks__grid">
+    {% for r in _riders %}
+    <article class="st-under-picks__card">
+      <img
+        class="st-under-picks__photo"
+        src="{{ r.portrait_url or (url_for('rider_portrait', rider_id=r.id) if r.id else '') }}"
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onerror="this.style.visibility='hidden'"
+      />
+      <div class="st-under-picks__body">
+        <div class="st-under-picks__name">{{ r.name }}</div>
+        <div class="st-under-picks__meta">
+          <span class="st-under-picks__class{% if r.class and '450' in r.class %} st-under-picks__class--450{% else %} st-under-picks__class--250{% endif %}">{{ r.class or '—' }}</span>
+          {% if r.number is not none %}<span class="st-under-picks__num">#{{ r.number }}</span>{% endif %}
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% elif _missing %}
+<section class="st-under-picks st-under-picks--missing{% if _compact %} st-under-picks--compact{% endif %}" aria-label="Skapa säsongsteam">
+  <div class="st-under-picks__missing-row">
+    <div class="st-under-picks__missing-copy">
+      <p class="st-under-picks__eyebrow st-under-picks__eyebrow--warn">OBS · säsongsteam saknas</p>
+      <h3 class="st-under-picks__title">Poäng går förlorade utan lag</h3>
+      <p class="st-under-picks__missing-text">
+        Tippa räknas som vanligt — men utan säsongsteam får du <strong>0p</strong> från förarna varje race.
+        2×450 + 2×250, 2 milj budget. Skapa laget innan start.
+      </p>
+    </div>
+    <a href="{{ url_for('season_team_builder') }}" class="st-under-picks__cta">Skapa säsongsteam →</a>
+  </div>
+</section>
+{% endif %}

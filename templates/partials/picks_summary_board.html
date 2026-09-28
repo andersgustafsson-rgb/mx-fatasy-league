@@ -107,3 +107,20 @@
     </div>
   </div>
 </div>
+
+{% if team_riders and team_riders|length > 0 %}
+{% set _st_series = ((upcoming_race.series if upcoming_race is defined and upcoming_race else '') or '')|upper %}
+{% if _st_series not in ('WSX', 'MXON', 'MXGP') %}
+{% set season_team_riders = team_riders %}
+{% set season_team_meta = {'team_name': my_team.team_name if my_team else none, 'total_points': my_team.total_points if my_team else 0} %}
+{% set compact = true %}
+{% include 'partials/season_team_under_picks.html' %}
+{% endif %}
+{% elif is_logged_in is defined and is_logged_in %}
+{% set _st_series = ((upcoming_race.series if upcoming_race is defined and upcoming_race else '') or '')|upper %}
+{% if _st_series not in ('WSX', 'MXON', 'MXGP') %}
+{% set compact = true %}
+{% set show_missing_cta = true %}
+{% include 'partials/season_team_under_picks.html' %}
+{% endif %}
+{% endif %}

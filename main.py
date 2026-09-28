@@ -4901,6 +4901,7 @@ def _index_impl():
                         "brand": (r.bike_brand or "").lower(),
                         "class": r.class_name,
                         "image_url": r.image_url or None,
+                        "portrait_url": f"/rider_portrait/{int(r.id)}",
                     }
                     for r in rs
                 ]
@@ -9618,13 +9619,9 @@ def build_season_team_competition_points(user_id: int) -> tuple[dict | None, str
                     points = calculate_rider_points_for_position(result.position)
                     comp_points += points
                     rider_breakdown.append(
-                        {
-                            "rider_name": rider.name if rider else f"Rider {rider_id}",
-                            "rider_number": rider.rider_number if rider else None,
-                            "class_name": rider.class_name if rider else None,
-                            "position": result.position,
-                            "points": points,
-                        }
+                        _season_team_breakdown_row(
+                            rider, rider_id, position=result.position, points=points
+                        )
                     )
 
             if comp.series == "SMX" or comp.series is None:
@@ -9691,6 +9688,61 @@ def _season_team_riders_for_user(user_id: int):
         .all()
     )
     return team, riders
+
+
+def _season_team_riders_ui(user_id: int) -> tuple[object | None, list[dict]]:
+    """Roster for compact UI strips (picks overview, home)."""
+    team, riders = _season_team_riders_for_user(user_id)
+    if not team:
+        return None, []
+
+    def _sort_key(r: Rider):
+        cls = (r.class_name or "").lower()
+        class_rank = 0 if "450" in cls else 1
+        return (class_rank, -(r.price or 0), (r.name or "").lower())
+
+    out: list[dict] = []
+    for r in sorted(riders, key=_sort_key):
+        portrait = _rider_portrait_payload(r)
+        portrait_url = (portrait.get("portrait_url") or "").strip()
+        if not portrait_url or "/static/brand_logos/" in portrait_url:
+            portrait_url = f"/rider_portrait/{int(r.id)}"
+        out.append(
+            {
+                "id": int(r.id),
+                "name": r.name,
+                "number": r.rider_number,
+                "class": r.class_name or "",
+                "brand": (r.bike_brand or "").lower(),
+                "image_url": portrait.get("image_url") or r.image_url,
+                "portrait_url": portrait_url,
+                "team_name": team.team_name,
+                "total_points": int(team.total_points or 0),
+            }
+        )
+    return team, out
+
+
+def _season_team_breakdown_row(rider: Rider | None, rider_id: int, *, position, points: int) -> dict:
+    """One rider line for season-team competition details (incl. portrait)."""
+    portrait_url = f"/rider_portrait/{int(rider_id)}"
+    if rider:
+        try:
+            payload = _rider_portrait_payload(rider)
+            p = (payload.get("portrait_url") or "").strip()
+            if p and "/static/brand_logos/" not in p:
+                portrait_url = p
+        except Exception:
+            pass
+    return {
+        "rider_id": int(rider_id),
+        "rider_name": rider.name if rider else f"Rider {rider_id}",
+        "rider_number": rider.rider_number if rider else None,
+        "class_name": rider.class_name if rider else None,
+        "position": position,
+        "points": int(points or 0),
+        "portrait_url": portrait_url,
+    }
 
 
 @app.route("/season_team")
@@ -9800,24 +9852,17 @@ def get_season_team_competition_details(competition_id: int):
             rider = Rider.query.get(rider_id)
             points = calculate_rider_points_for_position(result.position)
             total_points += points
-            
-            breakdown.append({
-                "rider_name": rider.name if rider else f"Rider {rider_id}",
-                "rider_number": rider.rider_number if rider else None,
-                "class_name": rider.class_name if rider else None,
-                "position": result.position,
-                "points": points
-            })
+            breakdown.append(
+                _season_team_breakdown_row(
+                    rider, rider_id, position=result.position, points=points
+                )
+            )
         else:
             rider = Rider.query.get(rider_id)
             if rider:
-                breakdown.append({
-                    "rider_name": rider.name,
-                    "rider_number": rider.rider_number,
-                    "class_name": rider.class_name,
-                    "position": None,
-                    "points": 0
-                })
+                breakdown.append(
+                    _season_team_breakdown_row(rider, rider_id, position=None, points=0)
+                )
     
     # Check for bonus
     bonus_points = 0
@@ -12660,13 +12705,22 @@ def race_picks_page(competition_id):
         }
 
     has_season_team = False
+    season_team_riders: list[dict] = []
+    season_team_meta = None
     if is_logged_in:
         try:
-            has_season_team = (
-                SeasonTeam.query.filter_by(user_id=int(session["user_id"])).first() is not None
-            )
+            st, st_riders = _season_team_riders_ui(int(session["user_id"]))
+            has_season_team = st is not None
+            season_team_riders = st_riders
+            if st:
+                season_team_meta = {
+                    "team_name": st.team_name,
+                    "total_points": int(st.total_points or 0),
+                }
         except Exception:
             has_season_team = False
+            season_team_riders = []
+            season_team_meta = None
 
     return render_template(
         "race_picks.html",
@@ -12696,6 +12750,8 @@ def race_picks_page(competition_id):
         initial_wizard_step=initial_wizard_step,
         is_logged_in=is_logged_in,
         has_season_team=has_season_team,
+        season_team_riders=season_team_riders,
+        season_team_meta=season_team_meta,
         invite_share=(
             _build_invite_share_payload(
                 session.get("username") or "",
