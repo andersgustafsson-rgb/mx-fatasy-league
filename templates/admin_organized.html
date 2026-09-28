@@ -1714,7 +1714,7 @@
                             och visa −50 på AMA. Detta raderar bara de raderna — race-poäng orörda.
                         </p>
                         <div class="ap-hub-card__actions">
-                            <button type="button" onclick="clearSeasonTeamTransferPenalties()" class="ap-btn ap-btn--primary">Rensa bytessstraff</button>
+                            <button type="button" id="btn-clear-transfer-penalties" class="ap-btn ap-btn--primary">Rensa bytessstraff</button>
                         </div>
                     </article>
 
@@ -2473,7 +2473,30 @@
                     applySeasonTeamPrices2027(false);
                 });
             }
+            var clearPenBtn = document.getElementById('btn-clear-transfer-penalties');
+            if (clearPenBtn) {
+                clearPenBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    if (typeof window.clearSeasonTeamTransferPenalties === 'function') {
+                        window.clearSeasonTeamTransferPenalties();
+                    } else {
+                        alert('Funktionen laddades inte — hard-refresha admin (Ctrl+F5).');
+                    }
+                });
+            }
         });
+        if (document.readyState !== 'loading') {
+            var clearPenBtn2 = document.getElementById('btn-clear-transfer-penalties');
+            if (clearPenBtn2 && !clearPenBtn2.dataset.bound) {
+                clearPenBtn2.dataset.bound = '1';
+                clearPenBtn2.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    if (typeof window.clearSeasonTeamTransferPenalties === 'function') {
+                        window.clearSeasonTeamTransferPenalties();
+                    }
+                });
+            }
+        }
 
         async function archiveAmaSeasonAndReset() {
             const year = prompt('AMA-år att stänga:', '2026');
@@ -2527,6 +2550,30 @@
                 alert('❌ Error: ' + error.message);
             }
         }
+
+        async function clearSeasonTeamTransferPenalties() {
+            if (!confirm(
+                'Radera alla säsongsteam-bytessstraff (−50-rader utan competition_id)?\n\n' +
+                'Race-poäng (WSX/AMA/MXoN) rörs inte.'
+            )) {
+                return;
+            }
+            try {
+                const response = await fetch('/admin/clear_season_team_transfer_penalties', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                const result = await response.json();
+                if (response.ok && result.ok) {
+                    alert('✅ ' + (result.message || `Raderade ${result.deleted || 0} rader.`));
+                } else {
+                    alert('❌ ' + (result.error || 'Kunde inte rensa'));
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+        window.clearSeasonTeamTransferPenalties = clearSeasonTeamTransferPenalties;
 
         async function loadChampionPosterPreview() {
             const yearEl = document.getElementById('champion-poster-year');
