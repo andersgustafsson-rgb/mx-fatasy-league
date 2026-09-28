@@ -159,6 +159,10 @@ const els = {
   btnDownload: document.getElementById("btnDownload"),
   btnExportExcel: document.getElementById("btnExportExcel"),
   chartBgSelect: document.getElementById("chartBgSelect"),
+  overtimeChartBgSelect: document.getElementById("overtimeChartBgSelect"),
+  sickManualChartBgSelect: document.getElementById("sickManualChartBgSelect"),
+  overtimeChartSizeBox: document.getElementById("overtimeChartSizeBox"),
+  sickManualChartSizeBox: document.getElementById("sickManualChartSizeBox"),
   btnDownloadAllSlides: document.getElementById("btnDownloadAllSlides"),
   chartSizeBox: document.getElementById("chartSizeBox"),
   chartSlideControls: document.getElementById("chartSlideControls"),
@@ -517,7 +521,11 @@ function renderOvertimeChart() {
     const ttl = rows.length ? `Övertid per månad — jämför år (staplar: ${rows.length})` : "Övertid per månad — jämför år";
     c.options.plugins.title.text = ttl;
     if (els.overtimeTitlePreview) els.overtimeTitlePreview.textContent = ttl;
-    c.update();
+    if (c.options.plugins.tidrapportValueLabels) {
+      c.options.plugins.tidrapportValueLabels.pad = 10;
+      c.options.plugins.tidrapportValueLabels.rotateVertical = true;
+    }
+    applyChartThemeToInstance(c);
     return;
   }
 
@@ -544,8 +552,12 @@ function renderOvertimeChart() {
   const ttl = rows.length ? `Övertid per månad (manuell) · Staplar: ${rows.length}` : "Övertid per månad (manuell)";
   c.options.plugins.title.text = ttl;
   c.options.plugins.tidrapportValueLabels.enabled = true;
+  if (c.options.plugins.tidrapportValueLabels) {
+    c.options.plugins.tidrapportValueLabels.pad = 10;
+    c.options.plugins.tidrapportValueLabels.rotateVertical = true;
+  }
   if (els.overtimeTitlePreview) els.overtimeTitlePreview.textContent = ttl;
-  c.update();
+  applyChartThemeToInstance(c);
 }
 
 function setOvertimeStatus(msg) {
@@ -934,7 +946,7 @@ function renderSickManualChart() {
   if (els.sickManualTitlePreview) {
     els.sickManualTitlePreview.textContent = rows.length ? `${ttl} · Totalt: ${totalHours.toFixed(2)} h` : ttl;
   }
-  c.update();
+  applyChartThemeToInstance(c);
   try {
     c.resize();
   } catch (_) {
@@ -2470,6 +2482,22 @@ function drawChartValueText(ctx, txt, x, y, vertical) {
 }
 
 (() => {
+  if (typeof Chart === "undefined" || window.__tidrapport_canvas_bg_plugin) return;
+  window.__tidrapport_canvas_bg_plugin = true;
+  Chart.register({
+    id: "tidrapportCanvasBg",
+    beforeDraw(chartInstance) {
+      const bg = (typeof getChartTheme === "function" ? getChartTheme() : null)?.bg || "#0f172a";
+      const { ctx } = chartInstance;
+      ctx.save();
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, chartInstance.width, chartInstance.height);
+      ctx.restore();
+    },
+  });
+})();
+
+(() => {
   if (typeof Chart === "undefined" || window.__tidrapport_merge_bar_plugin) return;
   window.__tidrapport_merge_bar_plugin = true;
   Chart.register({
@@ -3144,7 +3172,7 @@ const CHART_THEMES = {
     title: "#0f172a",
     tick: "#334155",
     label: "#0f172a",
-    labelStroke: "rgba(255, 255, 255, 0.85)",
+    labelStroke: "rgba(255, 255, 255, 0.95)",
     grid: "rgba(100,116,139,0.25)",
     gridSoft: "rgba(100,116,139,0.15)",
     cardBg: "#f8fafc",
@@ -3159,7 +3187,7 @@ const CHART_THEMES = {
     title: "#0f172a",
     tick: "#334155",
     label: "#0f172a",
-    labelStroke: "rgba(241, 245, 249, 0.9)",
+    labelStroke: "rgba(241, 245, 249, 0.95)",
     grid: "rgba(100,116,139,0.22)",
     gridSoft: "rgba(100,116,139,0.12)",
     cardBg: "#ffffff",
@@ -3172,7 +3200,13 @@ const CHART_THEMES = {
 };
 
 function getChartThemeId() {
-  const raw = (els.chartBgSelect?.value || localStorage.getItem(CHART_BG_KEY) || "dark").trim();
+  const raw = (
+    els.chartBgSelect?.value ||
+    els.overtimeChartBgSelect?.value ||
+    els.sickManualChartBgSelect?.value ||
+    localStorage.getItem(CHART_BG_KEY) ||
+    "dark"
+  ).trim();
   return CHART_THEMES[raw] ? raw : "dark";
 }
 
@@ -3198,18 +3232,27 @@ function applyChartThemeToInstance(c) {
   } catch (_) {}
 }
 
+function _setChartBoxTheme(boxEl, themeId, theme) {
+  if (!boxEl) return;
+  boxEl.style.backgroundColor = theme.bg;
+  boxEl.style.borderColor = themeId === "dark" ? "" : "#cbd5e1";
+}
+
 function applyChartBackgroundUi() {
   const id = getChartThemeId();
   const t = getChartTheme();
   try {
     localStorage.setItem(CHART_BG_KEY, id);
   } catch (_) {}
-  if (els.chartBgSelect && els.chartBgSelect.value !== id) els.chartBgSelect.value = id;
-  if (els.chartSizeBox) {
-    els.chartSizeBox.style.backgroundColor = t.bg;
-    els.chartSizeBox.style.borderColor = id === "dark" ? "" : "#cbd5e1";
+  for (const sel of [els.chartBgSelect, els.overtimeChartBgSelect, els.sickManualChartBgSelect]) {
+    if (sel && sel.value !== id) sel.value = id;
   }
+  _setChartBoxTheme(els.chartSizeBox, id, t);
+  _setChartBoxTheme(els.overtimeChartSizeBox, id, t);
+  _setChartBoxTheme(els.sickManualChartSizeBox, id, t);
   if (chart) applyChartThemeToInstance(chart);
+  if (overtimeChart) applyChartThemeToInstance(overtimeChart);
+  if (sickManualChart) applyChartThemeToInstance(sickManualChart);
 }
 
 function exportVisibleTableExcel() {
@@ -4873,11 +4916,21 @@ els.btnExportExcel?.addEventListener("click", () => {
 els.chartBgSelect?.addEventListener("change", () => {
   applyChartBackgroundUi();
 });
+els.overtimeChartBgSelect?.addEventListener("change", () => {
+  if (els.chartBgSelect) els.chartBgSelect.value = els.overtimeChartBgSelect.value;
+  applyChartBackgroundUi();
+});
+els.sickManualChartBgSelect?.addEventListener("change", () => {
+  if (els.chartBgSelect) els.chartBgSelect.value = els.sickManualChartBgSelect.value;
+  applyChartBackgroundUi();
+});
 
 try {
   const savedBg = localStorage.getItem(CHART_BG_KEY);
-  if (savedBg && CHART_THEMES[savedBg] && els.chartBgSelect) {
-    els.chartBgSelect.value = savedBg;
+  if (savedBg && CHART_THEMES[savedBg]) {
+    for (const sel of [els.chartBgSelect, els.overtimeChartBgSelect, els.sickManualChartBgSelect]) {
+      if (sel) sel.value = savedBg;
+    }
   }
   applyChartBackgroundUi();
 } catch (_) {}
