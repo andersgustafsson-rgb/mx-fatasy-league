@@ -19629,12 +19629,32 @@ def get_season_team_leaderboard():
 
 @app.get("/get_season_teams_browse")
 def get_season_teams_browse():
-    """Andras säsongsteam med roster — ingen highscore-vy."""
+    """Sök andras säsongsteam (username / display / lagnamn) — ingen lång lista."""
+    raw_q = (request.args.get("q") or "").strip()
+    if len(raw_q) < 2:
+        total = SeasonTeam.query.count()
+        exclude_id = session.get("user_id")
+        if exclude_id is not None:
+            try:
+                total = SeasonTeam.query.filter(SeasonTeam.user_id != int(exclude_id)).count()
+            except (TypeError, ValueError):
+                pass
+        return jsonify({"teams": [], "need_query": True, "total_teams": int(total or 0)})
+
+    like = f"%{raw_q}%"
     exclude_id = session.get("user_id")
     q = (
         db.session.query(SeasonTeam, User)
         .join(User, User.id == SeasonTeam.user_id)
+        .filter(
+            db.or_(
+                User.username.ilike(like),
+                User.display_name.ilike(like),
+                SeasonTeam.team_name.ilike(like),
+            )
+        )
         .order_by(SeasonTeam.team_name.asc(), User.username.asc())
+        .limit(12)
     )
     if exclude_id is not None:
         try:
@@ -19663,7 +19683,7 @@ def get_season_teams_browse():
                 ],
             }
         )
-    return jsonify({"teams": out})
+    return jsonify({"teams": out, "need_query": False, "query": raw_q})
 
 
 @app.get("/user/<string:username>")

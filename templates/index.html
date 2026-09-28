@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
   <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=7"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=st-browse-others-1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=st-browse-search-1">
   {% if is_logged_in %}
   <script src="{{ url_for('static', filename='home_picks_portraits.js') }}?v=3" defer></script>
   {% endif %}
@@ -3385,11 +3385,20 @@
                 <div>
                   <p class="text-[11px] font-bold uppercase tracking-wider text-cyan-300/90 mb-0.5">Säsongsteam</p>
                   <h2 class="text-lg sm:text-xl font-bold text-slate-100">Andras lag</h2>
-                  <p class="text-sm text-slate-400 mt-1">Titta på roster — ingen highscore här.</p>
+                  <p class="text-sm text-slate-400 mt-1">Sök användare eller lagnamn — ingen lång lista.</p>
                 </div>
               </div>
+              <label class="sr-only" for="season-teams-browse-q">Sök lag</label>
+              <input
+                id="season-teams-browse-q"
+                type="search"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Sök användare eller lagnamn…"
+                class="w-full rounded-lg bg-slate-950 border border-slate-600 text-slate-100 text-sm px-3 py-2.5 mb-3 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/50"
+              />
               <div id="season-teams-browse-list" class="space-y-3">
-                <p class="text-sm text-slate-500 text-center py-4">Laddar lag…</p>
+                <p class="text-sm text-slate-500 text-center py-4">Skriv minst 2 tecken för att söka.</p>
               </div>
             </div>
             {% endif %}
@@ -4310,59 +4319,96 @@
       return 'SX';
     }
 
-    async function fetchSeasonTeamsBrowse() {
+    let _seasonTeamsBrowseTimer = null;
+    let _seasonTeamsBrowseReq = 0;
+
+    function renderSeasonTeamsBrowseCards(teams) {
+      const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+      return teams.map((t) => {
+        const owner = t.display_name || t.username || '';
+        const title = t.team_name || owner;
+        const riders = Array.isArray(t.riders) ? t.riders : [];
+        const portraits = riders.slice(0, 4).map((r) => {
+          const src = r.portrait_url || (r.id ? `/rider_portrait/${r.id}` : '');
+          const label = r.number != null ? `#${r.number}` : '';
+          return `<div class="st-browse-rider" title="${_escHome(r.name || '')}">
+            <img src="${_escHome(src)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'" />
+            <span>${_escHome(label)}</span>
+          </div>`;
+        }).join('');
+        return `<a href="/season_team/view/${t.user_id}" class="st-browse-card">
+          <div class="st-browse-card__head">
+            <div class="min-w-0">
+              <div class="st-browse-card__title">${_escHome(title)}</div>
+              <div class="st-browse-card__sub">${_escHome(owner)}</div>
+            </div>
+            <span class="st-browse-card__cta">${isEn ? 'Open →' : 'Visa lag →'}</span>
+          </div>
+          <div class="st-browse-card__riders">${portraits || '<span class="text-xs text-slate-500">Inga förare</span>'}</div>
+        </a>`;
+      }).join('');
+    }
+
+    async function fetchSeasonTeamsBrowse(query) {
       const el = document.getElementById('season-teams-browse-list');
       if (!el) return;
-      el.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Laddar lag…</p>';
+      const q = String(query ?? document.getElementById('season-teams-browse-q')?.value || '').trim();
+      const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+      if (q.length < 2) {
+        el.innerHTML = `<p class="text-sm text-slate-500 text-center py-4">${isEn ? 'Type at least 2 characters to search.' : 'Skriv minst 2 tecken för att söka.'}</p>`;
+        return;
+      }
+      const reqId = ++_seasonTeamsBrowseReq;
+      el.innerHTML = `<p class="text-sm text-slate-500 text-center py-4">${isEn ? 'Searching…' : 'Söker…'}</p>`;
       try {
-        const res = await fetch('/get_season_teams_browse');
+        const res = await fetch(`/get_season_teams_browse?q=${encodeURIComponent(q)}`);
         const data = await res.json();
+        if (reqId !== _seasonTeamsBrowseReq) return;
         const teams = Array.isArray(data.teams) ? data.teams : [];
         if (!teams.length) {
-          el.innerHTML = '<p class="text-sm text-slate-400 text-center py-4">Inga andra säsongsteam ännu.</p>';
+          el.innerHTML = `<p class="text-sm text-slate-400 text-center py-4">${isEn ? 'No teams matched.' : 'Inga lag matchade.'}</p>`;
           return;
         }
-        const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
-        el.innerHTML = teams.map((t) => {
-          const owner = t.display_name || t.username || '';
-          const title = t.team_name || owner;
-          const riders = Array.isArray(t.riders) ? t.riders : [];
-          const portraits = riders.slice(0, 4).map((r) => {
-            const src = r.portrait_url || (r.id ? `/rider_portrait/${r.id}` : '');
-            const label = r.number != null ? `#${r.number}` : '';
-            return `<div class="st-browse-rider" title="${_escHome(r.name || '')}">
-              <img src="${_escHome(src)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'" />
-              <span>${_escHome(label)}</span>
-            </div>`;
-          }).join('');
-          return `<a href="/season_team/view/${t.user_id}" class="st-browse-card">
-            <div class="st-browse-card__head">
-              <div class="min-w-0">
-                <div class="st-browse-card__title">${_escHome(title)}</div>
-                <div class="st-browse-card__sub">${_escHome(owner)}${t.team_name ? '' : ''}</div>
-              </div>
-              <span class="st-browse-card__cta">${isEn ? 'Open →' : 'Visa lag →'}</span>
-            </div>
-            <div class="st-browse-card__riders">${portraits || '<span class="text-xs text-slate-500">Inga förare</span>'}</div>
-          </a>`;
-        }).join('');
+        el.innerHTML = renderSeasonTeamsBrowseCards(teams);
       } catch (e) {
+        if (reqId !== _seasonTeamsBrowseReq) return;
         console.warn('fetchSeasonTeamsBrowse', e);
-        el.innerHTML = '<p class="text-sm text-rose-300 text-center py-4">Kunde inte hämta lag.</p>';
+        el.innerHTML = `<p class="text-sm text-rose-300 text-center py-4">${isEn ? 'Could not search teams.' : 'Kunde inte söka lag.'}</p>`;
       }
+    }
+
+    function bindSeasonTeamsBrowseSearch() {
+      const input = document.getElementById('season-teams-browse-q');
+      if (!input || input.dataset.bound === '1') return;
+      input.dataset.bound = '1';
+      input.addEventListener('input', () => {
+        clearTimeout(_seasonTeamsBrowseTimer);
+        _seasonTeamsBrowseTimer = setTimeout(() => fetchSeasonTeamsBrowse(input.value), 220);
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          clearTimeout(_seasonTeamsBrowseTimer);
+          fetchSeasonTeamsBrowse(input.value);
+        }
+      });
     }
 
     function openOthersSeasonTeams() {
       const tabBtn = document.querySelector('.tab-btn[data-tab="season-team"]:not([disabled])');
       if (tabBtn) tabBtn.click();
-      fetchSeasonTeamsBrowse();
+      bindSeasonTeamsBrowseSearch();
       setTimeout(() => {
         const el = document.getElementById('andras-lag');
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const input = document.getElementById('season-teams-browse-q');
+        if (input) {
+          input.focus();
+          fetchSeasonTeamsBrowse(input.value);
+        }
       }, 80);
     }
     window.openOthersSeasonTeams = openOthersSeasonTeams;
-    // Back-compat for older onclick / hash handlers
     window.openSeasonTeamLeaderboard = openOthersSeasonTeams;
 
     function seriesNextRaceSortKey(serie) {
@@ -5689,6 +5735,7 @@
           loadMyLeagues();
         } else if (targetTab === 'season-team') {
           fetchSeasonTeamStats();
+          bindSeasonTeamsBrowseSearch();
           fetchSeasonTeamsBrowse();
         }
 
