@@ -16,7 +16,7 @@ Mål: tunnare `main.py`, logik i `services/` och routes i `app/routes/`.
 |---|--------|--------|-----------|
 | 1 | **Scoring helpers** → `services/scoring.py` | ✅ Klar | Pure helpers flyttade; `main.py` importerar dem |
 | 2 | **`calculate_scores`** → `services/scoring.py` | ✅ Klar | Hela tippa-beräkningen ute ur `main.py` |
-| 3 | Deadlines / countdown | Väntar | `is_picks_locked` + countdown helpers |
+| 3 | Deadlines / countdown | ✅ Klar | `is_picks_locked` + schedule/time helpers → `services/picks_lock.py` |
 | 4 | Results-import (WSX/CSV/entry) | Väntar | Importflöden i service |
 | 5 | Kundmail / Zendesk | Väntar | — |
 | 6 | SEO tippa-sidor → public blueprint | Väntar | — |
@@ -36,3 +36,7 @@ Flyttat utan beroenden på Flask-request:
 ## Skiva 2 ✅
 
 `calculate_scores(comp_id)` ligger i `services/scoring.py`. Post-hooks (säsongsteam, ligor, challenges, homepage-cache) lazy-importeras från `main` vid anrop så vi undviker cirkulär import. Call sites i `main.py` oförändrade via re-export.
+
+## Skiva 3 ✅
+
+`is_picks_locked`, `get_current_time`, `_competition_race_schedule` (+ små helpers) ligger i `services/picks_lock.py`. Countdown-**routes** stannar i `main.py`. Re-export från `main` så alla call sites oförändrade.
