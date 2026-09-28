@@ -223,7 +223,7 @@ def build_hype_poster_data(competition_id: int) -> dict[str, Any]:
         except Exception:
             pass
     elif series == "MXON":
-        location_line = "Ernée · Circuit Raymond Demy · kval lör · race sön"
+        location_line = "Ernée · Circuit Raymond Demy"
 
     hero = None
     try:
@@ -455,6 +455,65 @@ def _paint_cinematic_backdrop(width: int, height: int, data: dict[str, Any], acc
     return out.convert("RGB")
 
 
+def _mxon_flag_filenames() -> list[str]:
+    """Featured nations for MXoN hype strip (host + favourites + Sverige)."""
+    return ["fr.png", "us.png", "be.png", "au.png", "se.png", "es.png", "it.png"]
+
+
+def _paste_mxon_flag_row(
+    img,
+    *,
+    x0: int,
+    y: int,
+    x1: int,
+    flag_h: int = 34,
+) -> int:
+    """Draw a nations flag strip with gold rim + slight stagger. Returns y below row."""
+    from pathlib import Path
+
+    from PIL import Image, ImageDraw as _ID
+
+    files = _mxon_flag_filenames()
+    gap = 12
+    flag_w = int(flag_h * 1.6)
+    total = len(files) * flag_w + (len(files) - 1) * gap
+    span = max(1, x1 - x0)
+    bx = x0 + max(0, (span - total) // 2)
+    flags_dir = Path("static") / "images" / "mxon" / "flags"
+    max_bottom = y
+    for i, name in enumerate(files):
+        path = flags_dir / name
+        fx = bx + i * (flag_w + gap)
+        # slight vertical stagger for energy
+        fy = y + (3 if i % 2 else 0)
+        if not path.is_file():
+            continue
+        try:
+            flag = Image.open(path).convert("RGBA")
+            flag = flag.resize((flag_w, flag_h), Image.Resampling.LANCZOS)
+            # Soft drop shadow
+            shadow = Image.new("RGBA", (flag_w + 8, flag_h + 8), (0, 0, 0, 0))
+            sd = _ID.Draw(shadow)
+            sd.rounded_rectangle([2, 3, flag_w + 6, flag_h + 6], radius=5, fill=(0, 0, 0, 170))
+            img.paste(shadow, (fx - 3, fy - 1), shadow)
+            # Gold plate behind flag
+            plate = Image.new("RGBA", (flag_w + 6, flag_h + 6), (0, 0, 0, 0))
+            pd = _ID.Draw(plate)
+            pd.rounded_rectangle(
+                [0, 0, flag_w + 5, flag_h + 5],
+                radius=4,
+                fill=(20, 28, 44, 230),
+                outline=(250, 204, 21, 240),
+                width=2,
+            )
+            img.paste(plate, (fx - 3, fy - 3), plate)
+            img.paste(flag, (fx, fy), flag)
+            max_bottom = max(max_bottom, fy + flag_h)
+        except Exception:
+            continue
+    return max_bottom + 16
+
+
 def _draw_title_card(
     img,
     draw,
@@ -472,9 +531,11 @@ def _draw_title_card(
         MUTED,
         WHITE,
         _draw_styled_text,
+        _font_height,
         _load_display_font,
         _load_font_px,
         _plain_draw_text,
+        _wrap_text_width,
     )
 
     x0, y0, x1, y1 = box
@@ -483,6 +544,8 @@ def _draw_title_card(
     draw.rectangle([x0 + 18, y0, x1 - 18, y0 + 4], fill=GOLD)
 
     y = y0 + (20 if compact else 24)
+    series_u = (data.get("series_code") or data.get("series") or "").upper().replace("Ó", "O")
+    is_mxon = "MXON" in series_u
 
     series = _plain_draw_text(data.get("series") or "RACE")
     _draw_styled_text(
@@ -498,40 +561,66 @@ def _draw_title_card(
     race_name = _plain_draw_text(data.get("race_name") or "Nästa race")
     max_size = 40 if compact else (52 if not story else 56)
     wrap_w = 16 if story else (26 if compact else 30)
+    rf = _load_display_font(max_size, bold=True)
+    lines = textwrap.wrap(race_name.upper(), width=wrap_w)
     for size in (max_size, max_size - 8, max_size - 14, 32):
         rf = _load_display_font(size, bold=True)
         lines = textwrap.wrap(race_name.upper(), width=wrap_w)
         if len(lines) <= (3 if story else 2):
             break
+    line_step = _font_height(rf) + 10  # room for stroke/glow under display font
     for line in lines[: (3 if story else 2)]:
         if story:
             _draw_styled_text(draw, ((x0 + x1) // 2, y), line, rf, WHITE, anchor="mt")
         else:
             _draw_styled_text(draw, (x0 + pad, y), line, rf, WHITE, anchor="lt")
-        y += size + 2
+        y += line_step
 
-    meta_bits = []
-    if data.get("event_date_display"):
-        meta_bits.append(str(data["event_date_display"]))
-    if data.get("location_line") and not story:
-        meta_bits.append(str(data["location_line"]))
-    when = data.get("deadline_display") or data.get("race_start_display") or ""
-    if when:
-        meta_bits.append(f"Deadline {when}")
-    meta_line = "  ·  ".join(_plain_draw_text(b) for b in meta_bits if b)
-    if meta_line:
-        y += 8
-        anchor = "mt" if story else "lt"
-        pos = ((x0 + x1) // 2, y) if story else (x0 + pad, y)
-        _draw_styled_text(
-            draw,
-            pos,
-            meta_line,
-            _load_font_px(15 if compact else 18, bold=True),
-            GOLD,
-            anchor=anchor,
-        )
-        y += 28 if compact else 32
+    # Meta — keep short; wrap by pixel width so it never collides with title
+    meta_font = _load_font_px(14 if compact else 16, bold=True)
+    meta_lines: list[str] = []
+    if is_mxon:
+        date_bit = str(data.get("event_date_display") or "").strip()
+        loc_bit = "Ernée · Circuit Raymond Demy"
+        when = data.get("deadline_display") or data.get("race_start_display") or ""
+        line1 = " · ".join(_plain_draw_text(b) for b in (date_bit, loc_bit) if b)
+        line2_bits = ["kval lör · race sön"]
+        if when:
+            line2_bits.append(f"Deadline {when}")
+        line2 = " · ".join(_plain_draw_text(b) for b in line2_bits if b)
+        if line1:
+            meta_lines.append(line1)
+        if line2:
+            meta_lines.append(line2)
+    else:
+        meta_bits = []
+        if data.get("event_date_display"):
+            meta_bits.append(str(data["event_date_display"]))
+        if data.get("location_line") and not story:
+            meta_bits.append(str(data["location_line"]))
+        when = data.get("deadline_display") or data.get("race_start_display") or ""
+        if when:
+            meta_bits.append(f"Deadline {when}")
+        meta_line = "  ·  ".join(_plain_draw_text(b) for b in meta_bits if b)
+        if meta_line:
+            max_meta_w = (x1 - x0) - pad * 2
+            meta_lines = _wrap_text_width(meta_line, meta_font, max_meta_w) or [meta_line]
+
+    if meta_lines:
+        y += 6
+        for ml in meta_lines[:3]:
+            anchor = "mt" if story else "lt"
+            pos = ((x0 + x1) // 2, y) if story else (x0 + pad, y)
+            _draw_styled_text(draw, pos, ml, meta_font, GOLD, anchor=anchor)
+            y += _font_height(meta_font) + 8
+
+    # MXoN: nations flag strip
+    if is_mxon and not compact:
+        y += 4
+        if story:
+            y = _paste_mxon_flag_row(img, x0=x0 + pad, y=y, x1=x1 - pad, flag_h=40)
+        else:
+            y = _paste_mxon_flag_row(img, x0=x0 + pad, y=y, x1=x1 - pad, flag_h=32)
 
     # Divider
     draw.line([(x0 + pad, y), (x1 - pad, y)], fill=(accent[0] // 2, accent[1] // 2, accent[2] // 2), width=2)
@@ -639,23 +728,34 @@ def _draw_title_card(
         else:
             # Side CTA aligned with countdown boxes
             mid = by + box_h // 2
-            _draw_styled_text(draw, (cta_x0, mid - 28), hook, _load_font_px(16 if compact else 18, bold=True), WHITE, anchor="lt")
-            btn_h = 48 if compact else 54
-            draw.rounded_rectangle([cta_x0, mid - 2, cta_x1, mid - 2 + btn_h], radius=14, fill=accent)
+            hook_y = by + 4
             _draw_styled_text(
                 draw,
-                ((cta_x0 + cta_x1) // 2, mid - 2 + btn_h // 2),
-                "TIPPA NU · mx-fantasy.se",
-                _load_display_font(17 if compact else 19, bold=True),
-                (8, 15, 30),
-                anchor="mm",
+                (cta_x0, hook_y),
+                hook,
+                _load_font_px(16 if compact else 18, bold=True),
+                WHITE,
+                anchor="lt",
             )
             _draw_styled_text(
                 draw,
-                ((x0 + x1) // 2, y1 - 20),
+                (cta_x0, hook_y + 26),
                 sub,
-                _load_font_px(13 if compact else 14, bold=True),
+                _load_font_px(12 if compact else 13, bold=True),
                 MUTED,
+                anchor="lt",
+            )
+            btn_h = 48 if compact else 54
+            btn_top = by + box_h - btn_h
+            if btn_top < hook_y + 48:
+                btn_top = hook_y + 48
+            draw.rounded_rectangle([cta_x0, btn_top, cta_x1, btn_top + btn_h], radius=14, fill=accent)
+            _draw_styled_text(
+                draw,
+                ((cta_x0 + cta_x1) // 2, btn_top + btn_h // 2),
+                "TIPPA NU · mx-fantasy.se",
+                _load_display_font(17 if compact else 19, bold=True),
+                (8, 15, 30),
                 anchor="mm",
             )
 
@@ -725,7 +825,7 @@ def _render_landscape(data: dict[str, Any], width: int, height: int, *, compact:
     series_u = (data.get("series_code") or data.get("series") or "").upper().replace("Ó", "O")
     panel_h = 285 if compact else 305
     if "MXON" in series_u and not compact:
-        panel_h = 330
+        panel_h = 390  # title + 2 meta lines + flag strip + countdown
     panel_top = height - margin - panel_h
     _draw_title_card(
         img,
