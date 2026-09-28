@@ -2,11 +2,12 @@
 
 Budget: 1_500_000 for 2×450 + 2×250.
 Design: top riders 500–600k so you cannot roster all elites.
-Basis: AMA Combined SX+MX 2026 + SMX playoff form (through Playoff 2)
+Basis: AMA Combined SX+MX 2026 + SMX playoff form
        + MXGP/MX2 2026 for Coenen brothers (AMA 2027 arrivals).
 
-Load later via admin/script matching Rider.name (case-insensitive).
-Do NOT apply until you confirm this list.
+Apply via admin Säsongsslut → Ladda priser:
+  EVERY rider with SX / MX / SMX CompetitionResult gets a price
+  (named tiers or DEFAULT_PRICE). Also covers remaining AMA 450/250 roster.
 """
 from __future__ import annotations
 
@@ -104,15 +105,85 @@ SEASON_TEAM_PRICES_2027: dict[str, int] = {
     "Devin Simonson": 180_000,
 }
 
-DEFAULT_PRICE = 100_000  # everyone else when loading
+DEFAULT_PRICE = 100_000  # everyone else who raced SX/MX/SMX (and other AMA roster)
 BUDGET = 1_500_000
+DEPTH_PRICE = 100_000  # Combined standings ~31–50 / field fillers
 
-# AMA season-team classes only (do not touch WSX / MXGP / MXoN rosters)
+# Extra Combined SX+MX names (beyond playoff top-30) so the full published
+# top-50 lists are covered explicitly — same as DEFAULT but listed on purpose.
+_COMBINED_DEPTH_450 = [
+    "Lorenzo Locurcio",
+    "Dean Wilson",
+    "Jed Beaton",
+    "Mark Fineis",
+    # Lucas Coenen already in main map at 500k
+    # Antonio/Tony Cairoli already in main map
+    "Mitchell Oldenburg",
+    "Kevin Moranz",
+    "Roan Van De Moosdijk",
+    "Dante Oliveira",
+    "Stephen Rubini",
+    "Jeremy Hand",
+    # Devin Simonson is 250 in main map
+    "Justin Rodbell",
+    "Kyle Webster",
+    "Cole Thompson",
+    "Hamden Hudson",
+    "Jack Chambers",
+    "Cade Clason",
+    "Tristan Lane",
+]
+_COMBINED_DEPTH_250 = [
+    "Derek Kelley",
+    # Cameron McAdoo already in main map
+    # Sacha Coenen already in main map at 500k
+    "Joshua Varize",
+    "Gavin Towers",
+    "Deacon Denno",
+    "Kyle Peters",
+    "Luke Neese",
+    "Luke Clout",
+    "Cullin Park",
+    "Brodie Connolly",
+    "Robbie Wageman",
+    "Crockett Myers",
+    "Izaih Clark",
+    "Carson Wood",
+    "Landon Gibson",
+    "Alex Larwood",
+    "Enzo Temmerman",
+]
+
+for _n in _COMBINED_DEPTH_450 + _COMBINED_DEPTH_250:
+    SEASON_TEAM_PRICES_2027.setdefault(_n, DEPTH_PRICE)
+
+# AMA season-team classes (do not touch WSX / MXGP / MXoN rosters)
 _AMA_SEASON_TEAM_CLASSES = frozenset({"450cc", "250cc"})
+_AMA_RESULT_SERIES = frozenset({"SX", "MX", "SMX"})
 
 
 def _norm_name(name: str) -> str:
     return " ".join((name or "").casefold().split())
+
+
+def _riders_who_raced_ama_season():
+    """All Rider rows that have CompetitionResult in SX, MX or SMX playoffs."""
+    from models import Competition, CompetitionResult, Rider, db
+
+    raced_ids = {
+        rid
+        for (rid,) in (
+            db.session.query(CompetitionResult.rider_id)
+            .join(Competition, Competition.id == CompetitionResult.competition_id)
+            .filter(db.func.upper(Competition.series).in_(tuple(_AMA_RESULT_SERIES)))
+            .distinct()
+            .all()
+        )
+        if rid
+    }
+    if not raced_ids:
+        return []
+    return Rider.query.filter(Rider.id.in_(raced_ids)).all()
 
 
 def apply_season_team_prices_2027(
@@ -121,9 +192,11 @@ def apply_season_team_prices_2027(
     dry_run: bool = False,
 ) -> dict:
     """
-    Write SEASON_TEAM_PRICES_2027 onto Rider.price for AMA 450/250.
-    Matches Rider.name case-insensitively (aliases in the price map included).
-    Unlisted AMA riders → DEFAULT_PRICE when set_default_for_unlisted=True.
+    Set Rider.price for EVERYONE who raced SX / MX / SMX playoffs (plus any
+    remaining AMA 450/250 roster rows used by season-team builder).
+
+    Named list → tiered prices. Everyone else who raced → DEFAULT_PRICE.
+    Does not change WSX / MXGP / MXoN-only riders.
     """
     from models import Rider, db
 
@@ -133,16 +206,39 @@ def apply_season_team_prices_2027(
     unchanged: list[dict] = []
     defaulted: list[dict] = []
 
-    riders = Rider.query.filter(Rider.class_name.in_(tuple(_AMA_SEASON_TEAM_CLASSES))).all()
+    raced = _riders_who_raced_ama_season()
+    raced_ids = {r.id for r in raced}
+
+    # Also include AMA class roster (builder pool) even if a row somehow lacks results
+    roster = Rider.query.filter(Rider.class_name.in_(tuple(_AMA_SEASON_TEAM_CLASSES))).all()
+    by_id: dict[int, object] = {r.id: r for r in raced}
+    for r in roster:
+        by_id.setdefault(r.id, r)
+
+    riders = list(by_id.values())
     already_default = 0
+    skipped_non_ama = 0
+
     for rider in riders:
+        cls = (rider.class_name or "").strip()
+        # Never retarget WSX/MXGP class rows even if they somehow appear in results
+        if cls and cls not in _AMA_SEASON_TEAM_CLASSES:
+            skipped_non_ama += 1
+            continue
+
         key = _norm_name(rider.name)
         if key in price_by_norm:
             new_price = int(price_by_norm[key])
             matched_keys.add(key)
             if int(rider.price or 0) == new_price:
                 unchanged.append(
-                    {"id": rider.id, "name": rider.name, "class": rider.class_name, "price": new_price}
+                    {
+                        "id": rider.id,
+                        "name": rider.name,
+                        "class": rider.class_name,
+                        "price": new_price,
+                        "raced": rider.id in raced_ids,
+                    }
                 )
                 continue
             old = int(rider.price or 0)
@@ -155,6 +251,7 @@ def apply_season_team_prices_2027(
                     "class": rider.class_name,
                     "old_price": old,
                     "new_price": new_price,
+                    "raced": rider.id in raced_ids,
                 }
             )
         elif set_default_for_unlisted:
@@ -171,17 +268,14 @@ def apply_season_team_prices_2027(
                     "class": rider.class_name,
                     "old_price": old,
                     "new_price": DEFAULT_PRICE,
+                    "raced": rider.id in raced_ids,
                 }
             )
 
-    # Price-map names with no Rider row (typos / not in DB yet)
-    # Skip pure aliases when a canonical spelling already matched
     alias_of = {
         "freddie noren": "fredrik noren",
         "tony cairoli": "antonio cairoli",
         "nicholas romano": "nick romano",
-        "ryder difrancesco": "ryder difrancesco",
-        "cameron mcadoo": "cameron mcadoo",
     }
     missing = []
     for n in SEASON_TEAM_PRICES_2027:
@@ -189,10 +283,7 @@ def apply_season_team_prices_2027(
         if nk in matched_keys:
             continue
         canon = alias_of.get(nk, nk)
-        if canon in matched_keys or _norm_name(canon) in matched_keys:
-            continue
-        # another alias key may have matched under different spelling
-        if any(_norm_name(m) == nk for m in matched_keys):
+        if canon in matched_keys:
             continue
         missing.append(n)
     missing = sorted(set(missing))
@@ -201,7 +292,6 @@ def apply_season_team_prices_2027(
         db.session.commit()
 
     named_matched = len(updated) + len(unchanged)
-    total_ama = len(riders)
     priced_total = named_matched + len(defaulted) + already_default
 
     return {
@@ -209,13 +299,15 @@ def apply_season_team_prices_2027(
         "dry_run": dry_run,
         "budget": BUDGET,
         "default_price": DEFAULT_PRICE,
-        "total_ama_riders": total_ama,
+        "raced_sx_mx_smx": len(raced),
+        "total_ama_riders": len(riders) - skipped_non_ama,
         "named_matched": named_matched,
         "updated_count": len(updated),
         "unchanged_count": len(unchanged),
         "defaulted_count": len(defaulted),
         "already_default_count": already_default,
         "priced_total": priced_total,
+        "skipped_non_ama": skipped_non_ama,
         "missing_names": missing,
         "updated": updated[:40],
         "defaulted": defaulted[:40],

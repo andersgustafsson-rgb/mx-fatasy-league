@@ -26262,13 +26262,16 @@ def apply_season_team_prices_2027_endpoint():
             set_default_for_unlisted=set_default,
             dry_run=dry_run,
         )
-        verb = "Skulle satta" if dry_run else "Satte"
+        verb = "TEST — skulle satta" if dry_run else "Satte"
+        raced_n = result.get("raced_sx_mx_smx", 0)
         result["message"] = (
-            f"{verb} priser pa alla {result.get('total_ama_riders', 0)} AMA-forare (450/250). "
-            f"Namngivna SMX-lista: {result.get('named_matched', 0)} "
-            f"({result['updated_count']} andras, {result.get('unchanged_count', 0)} redan ratt). "
-            f"Ovriga: {result['defaulted_count']} → {result['default_price']:,}"
-            f" + {result.get('already_default_count', 0)} redan pa default. "
+            f"{verb} pris pa ALLA som kort SX/MX/SMX: {raced_n} forare med resultat. "
+            f"Totalt prissatta (inkl roster): {result.get('priced_total', 0)}. "
+            f"Namngivna: {result.get('named_matched', 0)} "
+            f"({result['updated_count']} andras). "
+            f"Ovriga kortare/roster → {result['default_price']:,} "
+            f"({result['defaulted_count']} andras, "
+            f"{result.get('already_default_count', 0)} redan). "
             f"Budget {result['budget']:,}."
         )
         if result["missing_names"]:
