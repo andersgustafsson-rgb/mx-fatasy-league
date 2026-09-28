@@ -4352,7 +4352,7 @@
     async function fetchSeasonTeamsBrowse(query) {
       const el = document.getElementById('season-teams-browse-list');
       if (!el) return;
-      const q = String(query ?? document.getElementById('season-teams-browse-q')?.value || '').trim();
+      const q = String(query ?? (document.getElementById('season-teams-browse-q')?.value || '')).trim();
       const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
       if (q.length < 2) {
         el.innerHTML = `<p class="text-sm text-slate-500 text-center py-4">${isEn ? 'Type at least 2 characters to search.' : 'Skriv minst 2 tecken för att söka.'}</p>`;
