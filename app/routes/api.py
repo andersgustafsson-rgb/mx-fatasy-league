@@ -102,15 +102,22 @@ bp = Blueprint('api', __name__, url_prefix='/api')
 
 @bp.get("/users/<string:username>/latest_points")
 def user_latest_points(username: str):
-	"""Public: senaste körda tävlingens totalpoäng för användaren."""
+	"""Public: senaste körda tävlingens totalpoäng för användaren.
+
+	Optional ?series=SX|MX|SMX|WSX|MXON|MXGP scopes the result:
+	- WSX / MXON / MXGP → exact competition.series
+	- SX / MX / SMX → AMA tippa chain (SX+MX+SMX)
+	"""
 	try:
 		user = User.query.filter_by(username=username).first()
 		if not user:
 			return jsonify({"ok": False, "error": "user_not_found"}), 404
 
 		uid = int(user.id)
+		series_raw = (request.args.get("series") or "").strip().upper().replace(" ", "")
+		if series_raw.startswith("MXO"):
+			series_raw = "MXON"
 
-		# Competitions with any results = "körda"
 		comp_ids_with_results = {
 			row[0]
 			for row in db.session.query(CompetitionResult.competition_id).distinct().all()
@@ -119,7 +126,6 @@ def user_latest_points(username: str):
 		if not comp_ids_with_results:
 			return jsonify({"ok": True, "latest": None})
 
-		# Latest CompetitionScore row per competition for user
 		scores = CompetitionScore.query.filter(
 			CompetitionScore.user_id == uid,
 			CompetitionScore.competition_id.in_(list(comp_ids_with_results)),
@@ -135,7 +141,22 @@ def user_latest_points(username: str):
 			return jsonify({"ok": True, "latest": None})
 
 		comps = Competition.query.filter(Competition.id.in_(list(latest_by_comp.keys()))).all()
-		# latest by event_date (fallback to id)
+
+		ama_series = {"SX", "MX", "SMX", "SUPERCROSS", "MOTOCROSS"}
+		tippa_only = {"WSX", "MXON", "MXGP"}
+		if series_raw in tippa_only:
+			comps = [
+				c
+				for c in comps
+				if (getattr(c, "series", None) or "").strip().upper() == series_raw
+			]
+		elif series_raw in ama_series:
+			comps = [
+				c
+				for c in comps
+				if (getattr(c, "series", None) or "").strip().upper() in ama_series
+			]
+
 		comps_sorted = sorted(
 			comps,
 			key=lambda c: (
@@ -155,8 +176,11 @@ def user_latest_points(username: str):
 				"latest": {
 					"competition_id": int(latest_comp.id),
 					"name": latest_comp.name,
-					"event_date": latest_comp.event_date.isoformat() if latest_comp.event_date else None,
+					"event_date": latest_comp.event_date.isoformat()
+					if latest_comp.event_date
+					else None,
 					"points": int(s.total_points or 0) if s else 0,
+					"series": getattr(latest_comp, "series", None),
 				},
 			}
 		)

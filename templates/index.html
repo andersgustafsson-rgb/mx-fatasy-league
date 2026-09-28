@@ -2474,7 +2474,7 @@
               </a>
               <div class="home-sidebar-points">
                 <div class="home-sidebar-points__labels">
-                  <span>SMX poäng</span>
+                  <span id="welcome-points-label">SMX poäng</span>
                   <span><span id="welcome-points-val" class="tabular-nums">{{ user_total_points or 0 }}</span><span class="home-sidebar-points__sep"> / </span><span id="welcome-points-leader" class="home-sidebar-points__muted tabular-nums">—</span></span>
                 </div>
                 <div class="home-sidebar-points__track" aria-hidden="true">
@@ -3661,6 +3661,85 @@
       }
     }
 
+    function applyWelcomeSidebarPoints(leaderboard, labelText) {
+      try {
+        const labelEl = document.getElementById('welcome-points-label');
+        if (labelEl && labelText) labelEl.textContent = labelText;
+
+        const currentUsername = (window.currentUsername || '').toString().trim().toLowerCase();
+        if (!currentUsername || !Array.isArray(leaderboard)) {
+          loadWelcomeLatestRace();
+          return;
+        }
+        const me = leaderboard.find(
+          (r) => (r.username || '').toString().trim().toLowerCase() === currentUsername
+        );
+        const leader = leaderboard[0];
+        const leaderPts = Number(leader?.total_points || 0);
+        const myPts = me ? Number(me.total_points || 0) : 0;
+
+        const chip = document.getElementById('welcome-rank-chip');
+        if (chip) {
+          if (me) {
+            chip.textContent = `#${me.rank || '—'}`;
+            chip.classList.remove('hidden');
+            window._meLeaderboardRow = me;
+          } else {
+            chip.textContent = '#—';
+            chip.classList.add('hidden');
+          }
+        }
+
+        const ptsVal = document.getElementById('welcome-points-val');
+        const ptsLeader = document.getElementById('welcome-points-leader');
+        const ptsFill = document.getElementById('welcome-points-fill');
+        if (ptsVal) ptsVal.textContent = myPts.toLocaleString('sv-SE');
+        if (ptsLeader) ptsLeader.textContent = leaderPts > 0 ? leaderPts.toLocaleString('sv-SE') : '—';
+        if (ptsFill) {
+          ptsFill.style.width =
+            leaderPts > 0 ? Math.min(100, Math.round((myPts / leaderPts) * 100)) + '%' : '0%';
+        }
+
+        loadWelcomeLatestRace();
+
+        // Achievements/tier badge only meaningful on AMA board for now
+        if (!isTippaOnlyHomeSeries(homeSelectedSeries)) {
+          void (async () => {
+            try {
+              const r3 = await fetch(
+                `/api/users/${encodeURIComponent(window.currentUsername)}/achievements`
+              );
+              const d3 = await r3.json();
+              const tierBadge = document.getElementById('welcome-tier-badge');
+              if (tierBadge && r3.ok && d3 && d3.ok && Array.isArray(d3.badges)) {
+                const tierOrder = { Brons: 1, Silver: 2, Guld: 3 };
+                let best = null;
+                for (const b of d3.badges) {
+                  const t = b && b.tier ? String(b.tier) : '';
+                  if (!t) continue;
+                  const v = tierOrder[t] || 0;
+                  if (!best || v > best.v) best = { t, v, title: b.title || '' };
+                }
+                tierBadge.classList.remove('home-sidebar-tier--silver', 'home-sidebar-tier--gold');
+                if (best) {
+                  tierBadge.textContent = best.t.toUpperCase();
+                  tierBadge.classList.remove('hidden');
+                  if (best.t === 'Silver') tierBadge.classList.add('home-sidebar-tier--silver');
+                  if (best.t === 'Guld') tierBadge.classList.add('home-sidebar-tier--gold');
+                  tierBadge.title = `Din högsta achievement-nivå.${best.title ? ` Högsta badge: ${best.title}` : ''}`;
+                } else {
+                  tierBadge.textContent = '—';
+                  tierBadge.classList.add('hidden');
+                }
+              }
+            } catch (_e) {}
+          })();
+        }
+      } catch (e) {
+        console.warn('welcome chips: leaderboard parse failed', e);
+      }
+    }
+
     async function fetchSeasonLeaderboard() {
       const c = document.getElementById("season-leaderboard-list");
       const titleEl = document.getElementById("home-fantasy-lb-title");
@@ -3752,66 +3831,14 @@
           titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>Total highscore</span></span>`;
         }
 
-        // Populate header chips for current user only on AMA leaderboard
-        if (!isTippaOnly) {
-          try {
-            const currentUsername = (window.currentUsername || '').toString().trim().toLowerCase();
-            if (currentUsername) {
-              const me = leaderboard.find(r => (r.username || '').toString().trim().toLowerCase() === currentUsername);
-              if (me) {
-                window._meLeaderboardRow = me;
-                const chip = document.getElementById('welcome-rank-chip');
-                if (chip) {
-                  chip.textContent = `#${me.rank || '—'}`;
-                  chip.classList.remove('hidden');
-                }
-
-                const leader = leaderboard[0];
-                const leaderPts = Number(leader?.total_points || 0);
-                const myPts = Number(me.total_points || 0);
-                const ptsVal = document.getElementById('welcome-points-val');
-                const ptsLeader = document.getElementById('welcome-points-leader');
-                const ptsFill = document.getElementById('welcome-points-fill');
-                if (ptsVal) ptsVal.textContent = myPts.toLocaleString('sv-SE');
-                if (ptsLeader) ptsLeader.textContent = leaderPts > 0 ? leaderPts.toLocaleString('sv-SE') : '—';
-                if (ptsFill) {
-                  ptsFill.style.width = leaderPts > 0 ? Math.min(100, Math.round((myPts / leaderPts) * 100)) + '%' : '0%';
-                }
-
-                loadWelcomeLatestRace();
-
-                try {
-                  const r3 = await fetch(`/api/users/${encodeURIComponent(window.currentUsername)}/achievements`);
-                  const d3 = await r3.json();
-                  const tierBadge = document.getElementById('welcome-tier-badge');
-                  if (tierBadge && r3.ok && d3 && d3.ok && Array.isArray(d3.badges)) {
-                    const tierOrder = {'Brons': 1, 'Silver': 2, 'Guld': 3};
-                    let best = null;
-                    for (const b of d3.badges) {
-                      const t = b && b.tier ? String(b.tier) : '';
-                      if (!t) continue;
-                      const v = tierOrder[t] || 0;
-                      if (!best || v > best.v) best = {t, v, title: b.title || ''};
-                    }
-                    tierBadge.classList.remove('home-sidebar-tier--silver', 'home-sidebar-tier--gold');
-                    if (best) {
-                      tierBadge.textContent = best.t.toUpperCase();
-                      tierBadge.classList.remove('hidden');
-                      if (best.t === 'Silver') tierBadge.classList.add('home-sidebar-tier--silver');
-                      if (best.t === 'Guld') tierBadge.classList.add('home-sidebar-tier--gold');
-                      tierBadge.title = `Din högsta achievement-nivå.${best.title ? ` Högsta badge: ${best.title}` : ''}`;
-                    } else {
-                      tierBadge.textContent = '—';
-                      tierBadge.classList.add('hidden');
-                    }
-                  }
-                } catch (e) {}
-              }
-            }
-          } catch (e) {
-            console.warn('welcome chips: leaderboard parse failed', e);
-          }
-        }
+        const pointsLabel = isMXON
+          ? 'MXoN poäng'
+          : isMXGP
+            ? 'MXGP poäng'
+            : isWSX
+              ? 'WSX poäng'
+              : 'SMX poäng';
+        applyWelcomeSidebarPoints(leaderboard, pointsLabel);
 
         if (requestId !== window.seasonLeaderboardRequestId) return;
         seasonLeaderboardExpanded = false;
@@ -6753,7 +6780,10 @@
       const uname = (window.currentUsername || '').toString().trim();
       if (!latestLine || !uname) return;
       try {
-        const r2 = await fetch(`/api/users/${encodeURIComponent(uname)}/latest_points`);
+        const seriesQ = homeSelectedSeries
+          ? `?series=${encodeURIComponent(homeSelectedSeries)}`
+          : '';
+        const r2 = await fetch(`/api/users/${encodeURIComponent(uname)}/latest_points${seriesQ}`);
         const d2 = await r2.json().catch(() => ({}));
         if (latestLine && r2.ok && d2 && d2.ok && d2.latest) {
           const pts = Number(d2.latest.points || 0);

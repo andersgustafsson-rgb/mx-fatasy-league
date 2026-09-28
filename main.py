@@ -5267,10 +5267,16 @@ def _index_impl():
 
     if is_logged_in:
         try:
-            # Get all scores for this user
-            user_scores = CompetitionScore.query.filter_by(user_id=uid).all()
-            user_total_points = sum(score.total_points or 0 for score in user_scores)
-            races_participated = len([s for s in user_scores if s.total_points and s.total_points > 0])
+            # AMA tippa only (same as highscore) — never mix WSX/MXON into sidebar SSR
+            user_total_points = _user_pick_total_points(uid)
+            user_scores = (
+                CompetitionScore.query.filter_by(user_id=uid)
+                .filter(CompetitionScore.competition_id.isnot(None))
+                .all()
+            )
+            races_participated = len(
+                [s for s in user_scores if s.total_points and s.total_points > 0]
+            )
         except Exception as e:
             print(f"Error calculating user statistics: {e}")
             user_total_points = 0
