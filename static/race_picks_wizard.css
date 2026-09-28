@@ -1209,3 +1209,75 @@
   background: #fcd34d;
   color: #0f172a;
 }
+
+/* Browse others' season teams (not a highscore) */
+.st-browse-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.65);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.st-browse-card:hover {
+  border-color: rgba(34, 211, 238, 0.45);
+  background: rgba(8, 47, 73, 0.45);
+}
+.st-browse-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+.st-browse-card__title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-browse-card__sub {
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.st-browse-card__cta {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #67e8f9;
+}
+.st-browse-card__riders {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+.st-browse-rider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.st-browse-rider img {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 999px;
+  object-fit: cover;
+  object-position: top center;
+  background: #1e293b;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+.st-browse-rider span {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+}

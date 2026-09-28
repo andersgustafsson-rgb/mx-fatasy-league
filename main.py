@@ -19627,6 +19627,45 @@ def get_season_team_leaderboard():
     return jsonify(result)
 
 
+@app.get("/get_season_teams_browse")
+def get_season_teams_browse():
+    """Andras säsongsteam med roster — ingen highscore-vy."""
+    exclude_id = session.get("user_id")
+    q = (
+        db.session.query(SeasonTeam, User)
+        .join(User, User.id == SeasonTeam.user_id)
+        .order_by(SeasonTeam.team_name.asc(), User.username.asc())
+    )
+    if exclude_id is not None:
+        try:
+            q = q.filter(SeasonTeam.user_id != int(exclude_id))
+        except (TypeError, ValueError):
+            pass
+
+    out = []
+    for team, user in q.all():
+        _, riders_ui = _season_team_riders_ui(int(user.id))
+        out.append(
+            {
+                "user_id": int(user.id),
+                "username": user.username,
+                "display_name": user.display_name or None,
+                "team_name": team.team_name or None,
+                "riders": [
+                    {
+                        "id": r["id"],
+                        "name": r["name"],
+                        "number": r["number"],
+                        "class": r["class"],
+                        "portrait_url": r.get("portrait_url") or f"/rider_portrait/{r['id']}",
+                    }
+                    for r in riders_ui
+                ],
+            }
+        )
+    return jsonify({"teams": out})
+
+
 @app.get("/user/<string:username>")
 def user_stats_page(username: str):
     user = User.query.filter_by(username=username).first_or_404()

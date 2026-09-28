@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
   <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=7"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=st-missing-cta-1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=st-browse-others-1">
   {% if is_logged_in %}
   <script src="{{ url_for('static', filename='home_picks_portraits.js') }}?v=3" defer></script>
   {% endif %}
@@ -3328,6 +3328,7 @@
                       <a href="{{ url_for('season_team_builder') }}" class="rp-btn rp-btn--primary flex-1 min-w-[8rem]">Byt förare</a>
                       <a href="{{ url_for('season_team_page') }}" class="rp-btn rp-btn--accent flex-1 min-w-[8rem]">Poäng per tävling</a>
                     </div>
+                    <a href="{{ url_for('index') }}#andras-lag" class="rp-btn rp-btn--block rp-btn--accent mt-2" onclick="if(typeof openOthersSeasonTeams==='function'){openOthersSeasonTeams();return false;}">Se andras lag</a>
                   </div>
                 {% else %}
                   <div id="season-team-create-cta" class="rounded-xl border border-cyan-500/30 bg-gradient-to-br from-slate-900 via-slate-800 to-cyan-950/40 p-5 sm:p-6 text-center">
@@ -3355,7 +3356,7 @@
                     <a href="{{ url_for('season_team_builder') }}" class="rp-btn rp-btn--block rp-btn--primary">Kom igång</a>
                     {% endif %}
                     {% if is_logged_in %}
-                    <a href="{{ url_for('index') }}#leaderboard" class="rp-btn rp-btn--block rp-btn--accent mt-2" onclick="if(typeof openSeasonTeamLeaderboard==='function'){openSeasonTeamLeaderboard();return false;}">Se andras lag / topplista</a>
+                    <a href="{{ url_for('index') }}#andras-lag" class="rp-btn rp-btn--block rp-btn--accent mt-2" onclick="if(typeof openOthersSeasonTeams==='function'){openOthersSeasonTeams();return false;}">Se andras lag</a>
                     {% endif %}
                   </div>
                   <div id="season-team-has-team-fallback" class="hidden rounded-xl border border-green-300/50 dark:border-green-700/50 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950/40 p-5 sm:p-6 text-center">
@@ -3363,6 +3364,7 @@
                     <p class="text-sm text-slate-400 mb-4">Du har redan ett lag — öppna det för roster och poäng.</p>
                     <a href="{{ url_for('season_team_page') }}" class="rp-btn rp-btn--block rp-btn--primary">Öppna mitt lag</a>
                     <a href="{{ url_for('season_team_builder') }}" class="rp-btn rp-btn--block rp-btn--accent mt-2">Byt förare</a>
+                    <a href="{{ url_for('index') }}#andras-lag" class="rp-btn rp-btn--block rp-btn--accent mt-2" onclick="if(typeof openOthersSeasonTeams==='function'){openOthersSeasonTeams();return false;}">Se andras lag</a>
                   </div>
                 {% endif %}
               </div>
@@ -3376,6 +3378,21 @@
                 </div>
               </div>
             </div>
+
+            {% if is_logged_in %}
+            <div id="andras-lag" class="mt-2 mb-6 rounded-xl border border-slate-600/50 bg-slate-900/50 p-4 sm:p-5">
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <p class="text-[11px] font-bold uppercase tracking-wider text-cyan-300/90 mb-0.5">Säsongsteam</p>
+                  <h2 class="text-lg sm:text-xl font-bold text-slate-100">Andras lag</h2>
+                  <p class="text-sm text-slate-400 mt-1">Titta på roster — ingen highscore här.</p>
+                </div>
+              </div>
+              <div id="season-teams-browse-list" class="space-y-3">
+                <p class="text-sm text-slate-500 text-center py-4">Laddar lag…</p>
+              </div>
+            </div>
+            {% endif %}
           </div>
 
           <!-- Settings Tab -->
@@ -4293,19 +4310,60 @@
       return 'SX';
     }
 
-    async function openSeasonTeamLeaderboard() {
-      const tabBtn = document.querySelector('.tab-btn[data-tab="leaderboard"]:not([disabled])');
-      if (tabBtn) tabBtn.click();
-      if (isTippaOnlyHomeSeries(homeSelectedSeries)) {
-        await selectHomeSeries(resolveAmaHomeSeries());
-      }
-      const el = document.getElementById('season-team-leaderboard-list');
+    async function fetchSeasonTeamsBrowse() {
+      const el = document.getElementById('season-teams-browse-list');
       if (!el) return;
-      const panel = el.closest('.home-ui-panel') || el;
-      panel.style.display = '';
-      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.innerHTML = '<p class="text-sm text-slate-500 text-center py-4">Laddar lag…</p>';
+      try {
+        const res = await fetch('/get_season_teams_browse');
+        const data = await res.json();
+        const teams = Array.isArray(data.teams) ? data.teams : [];
+        if (!teams.length) {
+          el.innerHTML = '<p class="text-sm text-slate-400 text-center py-4">Inga andra säsongsteam ännu.</p>';
+          return;
+        }
+        const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+        el.innerHTML = teams.map((t) => {
+          const owner = t.display_name || t.username || '';
+          const title = t.team_name || owner;
+          const riders = Array.isArray(t.riders) ? t.riders : [];
+          const portraits = riders.slice(0, 4).map((r) => {
+            const src = r.portrait_url || (r.id ? `/rider_portrait/${r.id}` : '');
+            const label = r.number != null ? `#${r.number}` : '';
+            return `<div class="st-browse-rider" title="${_escHome(r.name || '')}">
+              <img src="${_escHome(src)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'" />
+              <span>${_escHome(label)}</span>
+            </div>`;
+          }).join('');
+          return `<a href="/season_team/view/${t.user_id}" class="st-browse-card">
+            <div class="st-browse-card__head">
+              <div class="min-w-0">
+                <div class="st-browse-card__title">${_escHome(title)}</div>
+                <div class="st-browse-card__sub">${_escHome(owner)}${t.team_name ? '' : ''}</div>
+              </div>
+              <span class="st-browse-card__cta">${isEn ? 'Open →' : 'Visa lag →'}</span>
+            </div>
+            <div class="st-browse-card__riders">${portraits || '<span class="text-xs text-slate-500">Inga förare</span>'}</div>
+          </a>`;
+        }).join('');
+      } catch (e) {
+        console.warn('fetchSeasonTeamsBrowse', e);
+        el.innerHTML = '<p class="text-sm text-rose-300 text-center py-4">Kunde inte hämta lag.</p>';
+      }
     }
-    window.openSeasonTeamLeaderboard = openSeasonTeamLeaderboard;
+
+    function openOthersSeasonTeams() {
+      const tabBtn = document.querySelector('.tab-btn[data-tab="season-team"]:not([disabled])');
+      if (tabBtn) tabBtn.click();
+      fetchSeasonTeamsBrowse();
+      setTimeout(() => {
+        const el = document.getElementById('andras-lag');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
+    }
+    window.openOthersSeasonTeams = openOthersSeasonTeams;
+    // Back-compat for older onclick / hash handlers
+    window.openSeasonTeamLeaderboard = openOthersSeasonTeams;
 
     function seriesNextRaceSortKey(serie) {
       const uc = serie && serie.under_construction ? 10000 : 0;
@@ -5631,6 +5689,7 @@
           loadMyLeagues();
         } else if (targetTab === 'season-team') {
           fetchSeasonTeamStats();
+          fetchSeasonTeamsBrowse();
         }
 
         if (sourceButton && sourceButton.closest('#home-sidebar-body') && window.matchMedia('(max-width: 639px)').matches) {
@@ -5651,8 +5710,8 @@
       const openHashTab = () => {
         const hashTab = (location.hash || '').replace(/^#/, '');
         if (!hashTab) return;
-        if (hashTab === 'leaderboard' && typeof openSeasonTeamLeaderboard === 'function') {
-          openSeasonTeamLeaderboard();
+        if ((hashTab === 'andras-lag' || hashTab === 'leaderboard') && typeof openOthersSeasonTeams === 'function') {
+          openOthersSeasonTeams();
           return;
         }
         const hashBtn = document.querySelector(`.tab-btn[data-tab="${hashTab}"]:not([disabled])`);
