@@ -1678,8 +1678,12 @@
                             Övriga AMA-förare → 100k. WSX/MXGP orörda. Gör <strong>före</strong> någon bygger nytt lag.
                         </p>
                         <div class="ap-hub-card__actions">
-                            <button type="button" onclick="applySeasonTeamPrices2027(true)" class="ap-btn ap-btn--sm">Dry-run</button>
-                            <button type="button" onclick="applySeasonTeamPrices2027(false)" class="ap-btn ap-btn--primary">Ladda priser</button>
+                            <button type="button" id="btn-season-prices-dry" class="ap-btn ap-btn--sm">
+                                Testa först (sparar inte)
+                            </button>
+                            <button type="button" id="btn-season-prices-apply" class="ap-btn ap-btn--primary">
+                                Ladda priser
+                            </button>
                         </div>
                     </article>
 
@@ -2399,6 +2403,60 @@
                 alert('❌ Error: ' + error.message);
             }
         }
+
+        async function applySeasonTeamPrices2027(dryRun) {
+            const isDry = !!dryRun;
+            const label = isDry ? 'Testa först (ingen sparning)' : 'Ladda 2027-priser på riktigt';
+            if (!window.confirm(
+                label + '?\n\n' +
+                '- Namngivna forare fran season_team_prices_2027.py\n' +
+                '- Ovriga AMA 450/250 -> 100 000\n' +
+                '- WSX / MXGP ororda\n\n' +
+                (isDry ? 'Bara visar vad som skulle andras.' : 'Gor detta INNAN folk bygger nya sasonsteam.')
+            )) {
+                return;
+            }
+            try {
+                const response = await fetch('/admin/season_teams/apply_prices_2027', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        dry_run: isDry,
+                        set_default_for_unlisted: true,
+                    }),
+                });
+                const result = await response.json().catch(function () { return {}; });
+                if (response.ok && result.ok) {
+                    var extra = '';
+                    if (result.missing_names && result.missing_names.length) {
+                        extra = '\n\nSaknas i DB (forsta 15):\n' + result.missing_names.slice(0, 15).join(', ');
+                    }
+                    window.alert((isDry ? 'TEST: ' : '') + (result.message || 'OK') + extra);
+                } else {
+                    window.alert('Fel: ' + (result.error || ('HTTP ' + response.status)));
+                }
+            } catch (error) {
+                window.alert('Fel: ' + (error && error.message ? error.message : error));
+            }
+        }
+        window.applySeasonTeamPrices2027 = applySeasonTeamPrices2027;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var dryBtn = document.getElementById('btn-season-prices-dry');
+            var applyBtn = document.getElementById('btn-season-prices-apply');
+            if (dryBtn) {
+                dryBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    applySeasonTeamPrices2027(true);
+                });
+            }
+            if (applyBtn) {
+                applyBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    applySeasonTeamPrices2027(false);
+                });
+            }
+        });
 
         async function archiveAmaSeasonAndReset() {
             const year = prompt('AMA-år att stänga:', '2026');
