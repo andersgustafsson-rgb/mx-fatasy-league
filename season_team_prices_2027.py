@@ -134,6 +134,7 @@ def apply_season_team_prices_2027(
     defaulted: list[dict] = []
 
     riders = Rider.query.filter(Rider.class_name.in_(tuple(_AMA_SEASON_TEAM_CLASSES))).all()
+    already_default = 0
     for rider in riders:
         key = _norm_name(rider.name)
         if key in price_by_norm:
@@ -158,6 +159,7 @@ def apply_season_team_prices_2027(
             )
         elif set_default_for_unlisted:
             if int(rider.price or 0) == DEFAULT_PRICE:
+                already_default += 1
                 continue
             old = int(rider.price or 0)
             if not dry_run:
@@ -173,21 +175,47 @@ def apply_season_team_prices_2027(
             )
 
     # Price-map names with no Rider row (typos / not in DB yet)
-    missing = sorted(
-        {n for n, p in SEASON_TEAM_PRICES_2027.items() if _norm_name(n) not in matched_keys}
-    )
+    # Skip pure aliases when a canonical spelling already matched
+    alias_of = {
+        "freddie noren": "fredrik noren",
+        "tony cairoli": "antonio cairoli",
+        "nicholas romano": "nick romano",
+        "ryder difrancesco": "ryder difrancesco",
+        "cameron mcadoo": "cameron mcadoo",
+    }
+    missing = []
+    for n in SEASON_TEAM_PRICES_2027:
+        nk = _norm_name(n)
+        if nk in matched_keys:
+            continue
+        canon = alias_of.get(nk, nk)
+        if canon in matched_keys or _norm_name(canon) in matched_keys:
+            continue
+        # another alias key may have matched under different spelling
+        if any(_norm_name(m) == nk for m in matched_keys):
+            continue
+        missing.append(n)
+    missing = sorted(set(missing))
 
     if not dry_run and (updated or defaulted):
         db.session.commit()
+
+    named_matched = len(updated) + len(unchanged)
+    total_ama = len(riders)
+    priced_total = named_matched + len(defaulted) + already_default
 
     return {
         "ok": True,
         "dry_run": dry_run,
         "budget": BUDGET,
         "default_price": DEFAULT_PRICE,
+        "total_ama_riders": total_ama,
+        "named_matched": named_matched,
         "updated_count": len(updated),
-        "defaulted_count": len(defaulted),
         "unchanged_count": len(unchanged),
+        "defaulted_count": len(defaulted),
+        "already_default_count": already_default,
+        "priced_total": priced_total,
         "missing_names": missing,
         "updated": updated[:40],
         "defaulted": defaulted[:40],
