@@ -25732,10 +25732,20 @@ def archive_ama_season_and_reset():
 
         db.session.flush()
 
+        deleted_scores_total = 0
+        deleted_penalties = 0
         if reset_tippa and ama_comp_ids:
             deleted_scores_total = CompetitionScore.query.filter(
                 CompetitionScore.competition_id.in_(ama_comp_ids)
             ).delete(synchronize_session=False)
+
+        # Season-team transfer penalties live on competition_id=NULL rows.
+        # Wipe them with tippa reset and/or team archive so the new season starts at 0.
+        if reset_tippa or archive_teams:
+            deleted_penalties = CompetitionScore.query.filter(
+                CompetitionScore.competition_id.is_(None)
+            ).delete(synchronize_session=False)
+            deleted_scores_total += int(deleted_penalties or 0)
 
         team_result = None
         if archive_teams:
@@ -25766,7 +25776,9 @@ def archive_ama_season_and_reset():
             f"{total_users} spelare i totalställningen.",
         ]
         if reset_tippa:
-            msg_parts.append(f"{deleted_scores_total} CompetitionScore raderade (AMA).")
+            msg_parts.append(f"{deleted_scores_total} CompetitionScore raderade (AMA tippa + bytessstraff).")
+            if deleted_penalties:
+                msg_parts.append(f"Varav {deleted_penalties} säsongsteam-bytessstraff.")
         if team_result:
             msg_parts.append(
                 f"Säsongsteam: {team_result['archived_teams']} arkiverade som «{team_label}»."
@@ -25781,6 +25793,7 @@ def archive_ama_season_and_reset():
                 "ama_total_users": total_users,
                 "ama_total_series_id": total_series.id,
                 "deleted_competition_scores": deleted_scores_total,
+                "deleted_transfer_penalties": deleted_penalties,
                 "season_teams": team_result,
                 "finished_series_url": url_for("finished_ama_year_page", year=year),
             }
@@ -25790,6 +25803,32 @@ def archive_ama_season_and_reset():
         import traceback
         print(f"archive_ama_season_and_reset: {e}")
         print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/admin/clear_season_team_transfer_penalties")
+def clear_season_team_transfer_penalties():
+    """Wipe leftover season-team transfer penalties (competition_id NULL).
+
+    Safe after AMA season reset / team wipe — old −50 rows must not carry into 2027.
+    Does not touch race CompetitionScore (AMA or tippa-only).
+    """
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        deleted = CompetitionScore.query.filter(
+            CompetitionScore.competition_id.is_(None)
+        ).delete(synchronize_session=False)
+        db.session.commit()
+        return jsonify(
+            {
+                "ok": True,
+                "deleted": int(deleted or 0),
+                "message": f"Raderade {int(deleted or 0)} bytessstraff (−50-rader).",
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 
