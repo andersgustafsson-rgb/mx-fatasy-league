@@ -10,6 +10,7 @@ from flask import (
 	Response,
 	current_app,
 	jsonify,
+	make_response,
 	redirect,
 	render_template,
 	request,
@@ -236,123 +237,6 @@ def trojtryck_export():
 		mimetype="image/png",
 		headers={"Content-Disposition": f'attachment; filename="{filename}"'},
 	)
-
-
-@bp.get("/kundmail")
-def kundmail_page():
-	if "user_id" not in session:
-		return redirect("/login")
-
-	return render_template("kundmail.html", username=session.get("username") or "")
-
-
-@bp.post("/api/kundmail/translate")
-def kundmail_translate():
-	if "user_id" not in session:
-		return jsonify({"error": "Unauthorized"}), 401
-
-	data = request.get_json(silent=True) or {}
-	subject = (data.get("subject") or "").strip()
-	body = (data.get("body") or "").strip()
-	source = (data.get("from") or "sv").strip().lower()
-	target = (data.get("to") or "da").strip().lower()
-
-	if not subject and not body:
-		return jsonify({"error": "Ingen text att översätta"}), 400
-
-	try:
-		from rider_bio_translate import translate_text
-
-		return jsonify({
-			"success": True,
-			"subject": translate_text(subject, source=source, target=target) if subject else "",
-			"body": translate_text(body, source=source, target=target) if body else "",
-		})
-	except Exception as e:
-		print(f"kundmail translate error: {e}")
-		return jsonify({"error": "Översättning misslyckades"}), 500
-
-
-@bp.get("/api/kundmail/zendesk_status")
-def kundmail_zendesk_status():
-	if "user_id" not in session:
-		return jsonify({"error": "Unauthorized"}), 401
-	from zendesk_service import resolve_assignee, zendesk_configured
-
-	username = (session.get("username") or "").strip()
-	display_name = ""
-	try:
-		from models import User
-
-		user = User.query.get(int(session["user_id"]))
-		if user:
-			username = user.username or username
-			display_name = (user.display_name or "").strip()
-	except Exception:
-		pass
-
-	assignee = resolve_assignee(username=username, display_name=display_name or None)
-	return jsonify({
-		"configured": zendesk_configured(),
-		"subdomain": (os.getenv("ZENDESK_SUBDOMAIN") or "").strip() or None,
-		"fantasy_username": username or None,
-		"assignee_name": assignee.get("name"),
-		"assignee_id": assignee.get("id"),
-	})
-
-
-@bp.post("/api/kundmail/zendesk_ticket")
-def kundmail_zendesk_ticket():
-	"""Create a new Zendesk ticket from kundmail (subject/body/requester)."""
-	if "user_id" not in session:
-		return jsonify({"error": "Unauthorized"}), 401
-
-	data = request.get_json(silent=True) or {}
-	subject = (data.get("subject") or "").strip()
-	body = (data.get("body") or "").strip()
-	requester_email = (data.get("requester_email") or data.get("email") or "").strip()
-	requester_name = (data.get("requester_name") or data.get("customer_name") or "").strip()
-	order_number = (data.get("order_number") or "").strip()
-	template_id = (data.get("template_id") or "").strip() or None
-	case_type = (data.get("case_type") or "").strip() or None
-	notify_requester = bool(data.get("notify_requester", True))
-	solve = bool(data.get("solve", True))
-
-	is_return = data.get("is_return", None)
-	if isinstance(is_return, str):
-		is_return = is_return.strip().lower() in ("1", "true", "yes", "ja")
-
-	fantasy_username = (session.get("username") or "").strip()
-	fantasy_display_name = ""
-	try:
-		from models import User
-
-		user = User.query.get(int(session["user_id"]))
-		if user:
-			fantasy_username = user.username or fantasy_username
-			fantasy_display_name = (user.display_name or "").strip()
-	except Exception:
-		pass
-
-	from zendesk_service import create_support_ticket
-
-	result = create_support_ticket(
-		subject=subject,
-		body=body,
-		requester_email=requester_email,
-		requester_name=requester_name or None,
-		order_number=order_number or None,
-		template_id=template_id,
-		case_type=case_type,
-		is_return=is_return if isinstance(is_return, bool) else None,
-		notify_requester=notify_requester,
-		solve=solve,
-		tags=["kundmail"],
-		fantasy_username=fantasy_username or None,
-		fantasy_display_name=fantasy_display_name or None,
-	)
-	status = 200 if result.get("ok") else 400
-	return jsonify(result), status
 
 
 def _require_login():
@@ -854,3 +738,143 @@ def api_barniva_workspace_put(kind: str):
 		db.session.rollback()
 		print(f"ERROR barniva workspace put {kind_u}: {e}")
 		return jsonify({"error": "Kunde inte spara workspace"}), 500
+
+
+# -------------------------------------------------
+# SEO: robots / sitemap / tippa-landing / om / manual
+# -------------------------------------------------
+
+@bp.get("/robots.txt")
+def robots_txt():
+	"""Tell search engines which pages to crawl."""
+	from public_url import get_public_base_url
+
+	base = get_public_base_url()
+	body = (
+		"User-agent: *\n"
+		"Allow: /\n"
+		"Disallow: /admin\n"
+		"Disallow: /api/\n"
+		f"Sitemap: {base}/sitemap.xml\n"
+		f"# AI agents: {base}/llms.txt\n"
+	)
+	resp = make_response(body)
+	resp.headers["Content-Type"] = "text/plain; charset=utf-8"
+	return resp
+
+
+@bp.get("/llms.txt")
+def llms_txt():
+	"""Curated reading list for AI agents (optional; complements sitemap)."""
+	from public_url import get_public_base_url
+	from services.seo_tippa import _llms_txt_body
+
+	resp = make_response(_llms_txt_body(get_public_base_url()))
+	resp.headers["Content-Type"] = "text/plain; charset=utf-8"
+	return resp
+
+
+@bp.get("/sitemap.xml")
+def sitemap_xml():
+	"""Sitemap with public pages for Google."""
+	from datetime import date as _date
+
+	from public_url import get_public_base_url
+
+	base = get_public_base_url()
+	today = _date.today().isoformat()
+	urls = [
+		("/", "weekly", "1.0"),
+		("/om", "weekly", "0.95"),
+		("/tippa-supercross", "weekly", "0.9"),
+		("/tippa-motocross", "weekly", "0.9"),
+		("/tippa-smx", "weekly", "0.9"),
+		("/tippa-wsx", "weekly", "0.9"),
+		("/tippa-mxgp", "weekly", "0.9"),
+		("/tippa-mxon", "weekly", "0.9"),
+		("/start", "weekly", "0.9"),
+		("/manual", "monthly", "0.85"),
+		("/llms.txt", "monthly", "0.4"),
+		("/register", "monthly", "0.7"),
+		("/login", "monthly", "0.5"),
+		("/privacy", "yearly", "0.3"),
+		("/terms", "yearly", "0.3"),
+		("/contact", "yearly", "0.4"),
+	]
+	parts = [
+		'<?xml version="1.0" encoding="UTF-8"?>',
+		'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+	]
+	for path, freq, prio in urls:
+		parts.append("  <url>")
+		parts.append(f"    <loc>{base}{path}</loc>")
+		parts.append(f"    <lastmod>{today}</lastmod>")
+		parts.append(f"    <changefreq>{freq}</changefreq>")
+		parts.append(f"    <priority>{prio}</priority>")
+		parts.append("  </url>")
+	parts.append("</urlset>")
+	resp = make_response("\n".join(parts) + "\n")
+	resp.headers["Content-Type"] = "application/xml; charset=utf-8"
+	return resp
+
+
+@bp.get("/om")
+def about_game_page():
+	"""SEO landing: vad spelet är, hur det funkar, FAQ (svenska)."""
+	return render_template("om_spelet.html")
+
+
+@bp.route("/manual")
+def manual_page():
+	"""Manual page for the game."""
+	is_logged_in = "user_id" in session
+	username = session.get("username", "Gäst") if is_logged_in else "Gäst"
+	return render_template("manual.html", is_logged_in=is_logged_in, username=username)
+
+
+@bp.get("/tippa-supercross")
+def tippa_supercross_page():
+	"""SEO: hur man tippar Supercross / fantasy SX."""
+	from services.seo_tippa import _tippa_supercross_page_data
+
+	return render_template("tippa_serie.html", page=_tippa_supercross_page_data())
+
+
+@bp.get("/tippa-motocross")
+def tippa_motocross_page():
+	"""SEO: hur man tippar motocross / fantasy MX."""
+	from services.seo_tippa import _tippa_motocross_page_data
+
+	return render_template("tippa_serie.html", page=_tippa_motocross_page_data())
+
+
+@bp.get("/tippa-smx")
+def tippa_smx_page():
+	"""SEO: hur man tippar SMX / SuperMotocross."""
+	from services.seo_tippa import _tippa_smx_page_data
+
+	return render_template("tippa_serie.html", page=_tippa_smx_page_data())
+
+
+@bp.get("/tippa-wsx")
+def tippa_wsx_page():
+	"""SEO: hur man tippar WSX / World Supercross."""
+	from services.seo_tippa import _tippa_wsx_page_data
+
+	return render_template("tippa_serie.html", page=_tippa_wsx_page_data())
+
+
+@bp.get("/tippa-mxgp")
+def tippa_mxgp_page():
+	"""SEO: hur man tippar MXGP / FIM Motocross World Championship."""
+	from services.seo_tippa import _tippa_mxgp_page_data
+
+	return render_template("tippa_serie.html", page=_tippa_mxgp_page_data())
+
+
+@bp.get("/tippa-mxon")
+def tippa_mxon_page():
+	"""SEO: hur man tippar MXoN / Motocross of Nations."""
+	from services.seo_tippa import _tippa_mxon_page_data
+
+	return render_template("tippa_serie.html", page=_tippa_mxon_page_data())
