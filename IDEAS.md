@@ -17,7 +17,7 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 | 6b | **Säsongsteam: se över förarpriser** | ✅ Klart att ladda | Ark `season_team_prices_2027.py` (topp 500–600k, Coenen 500k). Admin **Säsongsslut** → «Ladda priser» (`POST /admin/season_teams/apply_prices_2027`). Bollades/godkänt 25 sep 2026. |
 | 6c | **Säsongsteam → Combined highscore + promo** | 🛠️ Klart att flippa | **Beslut 25 sep:** Total = Tippa + Säsongsteam (variant A). −50 vid byte stannar på tippa. **Flagor** `SEASON_TEAM_PROMO_LIVE` / `SEASON_TEAM_COMBINED_LIVE`. Promo live nu (räknas ej ännu). **Efter SMX Finals 2026:** `POST /admin/archive_ama_season_and_reset` — fryser Totalställning (SX+MX+SMX) i Fantasy-arkivet, arkiverar tippa per serie, nollställer AMA CompetitionScore, arkiverar+nollställer säsongsteam. Combined flippa inför SMX 2027. Ligor = tippa-only. |
 | 7 | **SMX trackmaps / venues** | Delvis gjort | Kartor + posters från playoffs-sidan i `static/trackmaps/smx/` (Columbus, Carson, Ridgedale). Kopplade via `trackmap_utils`. |
-| 8 | **Städa / strukturera kodbasen** | ✅ Klar (plan) | Plan: `docs/REFACTOR.md`. **Skiva 1–6 ✅** — alla planerade skivor klara. |
+| 8 | **Städa / strukturera kodbasen** | 🚧 Pågår | Plan: `docs/REFACTOR.md`. **Skiva 1–7 ✅**. Nästa: CSV-upload/entry eller auth-blueprint. |
 | 9 | **Social login (Google först)** | ✅ Live | OAuth + knappar fanns. **29 sep 2026:** OAuth-client i Google Cloud (MX Fantasy) + `GOOGLE_CLIENT_ID`/`SECRET` på Render — consent-skärm testad OK. |
 
 ---

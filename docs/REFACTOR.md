@@ -20,6 +20,7 @@ Mål: tunnare `main.py`, logik i `services/` och routes i `app/routes/`.
 | 4 | Results-import (WSX/CSV/entry) | ✅ Klar | Parse/match/WSX helpers → `services/results_import.py` |
 | 5 | Kundmail / Zendesk | ✅ Klar | Routes → `app/routes/kundmail.py`; services fanns redan |
 | 6 | SEO tippa-sidor → public blueprint | ✅ Klar | Helpers → `services/seo_tippa.py`; routes → `public` |
+| 7 | Dubbletter + bulk/WSX import-routes | ✅ Klar | Tidrapport/reminders-dubbletter bort; import-routes → `results_admin` |
 
 ## Skiva 1 ✅
 
@@ -55,4 +56,11 @@ Kundmail-sidan + API (`/kundmail`, translate, checklist, zendesk_status/ticket) 
 SEO-sidor (`/om`, `/manual`, `/tippa-*`, robots/llms/sitemap) → `app/routes/public.py`.  
 Siddata → `services/seo_tippa.py`. `url_for('manual_page')` m.m. bevaras via endpoint-alias i `main.py`.
 
-**Planen är klar** (skiva 1–6). Vidare städning = nya skivor om/när det behövs.
+## Skiva 7 ✅
+
+1. **Dubbletter bort:** `/tidrapport` + `/api/reminders*` + cron i `main.py` (fanns redan i `public.py`).
+2. **Bulk/WSX import-routes** → `app/routes/results_admin.py`  
+   (`fetch_racerx_results`, `bulk_preview/import`, WSX official fetch/import/sync, `clear_competition_class_results`).  
+   Anropar `services/results_import` + lazy `main`-helpers (ingen beteendeförändring).
+
+**Nästa kandidater:** CSV entry/results upload-routes; auth → egen blueprint; league challenges → service.
