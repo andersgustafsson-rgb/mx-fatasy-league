@@ -3084,7 +3084,7 @@
                 </div>
                 <div class="home-ui-panel__body">
                 <p id="power-ranking-sub" class="text-xs text-gray-400 mb-2"></p>
-                <p class="text-[11px] text-gray-500 mb-3 leading-relaxed">
+                <p id="power-ranking-blurb" class="text-[11px] text-gray-500 mb-3 leading-relaxed">
                   Jämförelsetal utifrån <strong class="text-gray-400">senaste resultat</strong> och <strong class="text-gray-400">spelarnas picks</strong> till aktuell tävling — inte odds eller spel.
                 </p>
                 <div id="power-ranking-body" class="text-sm text-gray-100 space-y-4"></div>
@@ -4560,15 +4560,11 @@
       const scoresLink = document.getElementById('quick-action-my-scores');
       if (scoresLink) scoresLink.href = '/my_scores' + seriesQ;
 
-      // MXoN: dim AMA-centric panels (weekly feats, power rankings, spotlight)
+      // MXoN: dim AMA-centric panels (weekly feats, spotlight); power wrap reused for crowd ranking
       const weeklyPanel = document.getElementById('weekly-fun-panel');
       if (weeklyPanel) weeklyPanel.classList.toggle('home-ui-panel--dimmed', isMXON);
       const weeklyNote = document.getElementById('weekly-fun-mxon-note');
       if (weeklyNote) weeklyNote.classList.toggle('hidden', !isMXON);
-      const powerWrap = document.getElementById('power-ranking-wrap');
-      if (powerWrap) {
-        if (isMXON) powerWrap.classList.add('hidden');
-      }
       const spotlight = document.getElementById('rider-spotlight-section');
       if (spotlight && isMXON) spotlight.classList.add('hidden');
     }
@@ -6616,7 +6612,7 @@
       if (!rows || rows.length === 0) {
         return `<p class="text-xs text-gray-500">${label}: ingen data ännu.</p>`;
       }
-      const medals = [mxIcon('medal',{className:'mx-icon--warn'}), mxIcon('medal',{className:'mx-icon--muted'}), mxIcon('medal',{className:'mx-icon--muted'})];
+      const medals = [mxIcon('medal',{className:'mx-icon--gold'}), mxIcon('medal',{className:'mx-icon--silver'}), mxIcon('medal',{className:'mx-icon--bronze'})];
       let h = `<div class="text-xs font-bold text-yellow-400/90 mb-2 uppercase tracking-wide">${label}</div><div class="space-y-2">`;
       rows.forEach((r, i) => {
         const m = medals[i] || `${r.rank}.`;
@@ -6646,9 +6642,14 @@
       const wrap = document.getElementById('power-ranking-wrap');
       const body = document.getElementById('power-ranking-body');
       const sub = document.getElementById('power-ranking-sub');
+      const blurb = document.getElementById('power-ranking-blurb');
       if (!wrap || !body || !sub) return;
       if (!data || !data.ok) {
         wrap.classList.add('hidden');
+        return;
+      }
+      if (data.kind === 'mxon_crowd') {
+        applyMxonCrowdRankingData(data);
         return;
       }
       wrap.classList.remove('hidden');
@@ -6660,6 +6661,10 @@
           : (c.series === 'MXGP')
             ? 'MXGP power rankings'
             : 'Nya power rankings';
+      }
+      if (blurb) {
+        blurb.innerHTML =
+          'Jämförelsetal utifrån <strong class="text-gray-400">senaste resultat</strong> och <strong class="text-gray-400">spelarnas picks</strong> till aktuell tävling — inte odds eller spel.';
       }
       const scopeLabel = data.form_scope_label ? String(data.form_scope_label) : '';
       const lockedLbl = data.crowd_picks_locked ? 'låsta' : 'öppna';
@@ -6686,9 +6691,113 @@
       body.innerHTML = html;
     }
 
+    function applyMxonCrowdRankingData(data) {
+      const wrap = document.getElementById('power-ranking-wrap');
+      const body = document.getElementById('power-ranking-body');
+      const sub = document.getElementById('power-ranking-sub');
+      const blurb = document.getElementById('power-ranking-blurb');
+      if (!wrap || !body || !sub) return;
+      if (!data || !data.ok || !data.has_tips) {
+        wrap.classList.add('hidden');
+        return;
+      }
+      wrap.classList.remove('hidden');
+      const c = data.competition || {};
+      const titleEl = document.getElementById('power-ranking-title');
+      if (titleEl) titleEl.textContent = 'MXoN power rankings';
+      if (blurb) {
+        blurb.innerHTML =
+          'Vilka nationer tippar folk högst — och klassfavoriter — utifrån <strong class="text-gray-400">alla tipp</strong>. Ordning bara, ingen statistik.';
+      }
+      const lockedLbl = data.picks_locked ? 'låsta' : 'öppna';
+      sub.textContent = [c.name || 'Motocross of Nations', 'MXoN', `tips ${lockedLbl}`]
+        .filter(Boolean).join(' · ');
+
+      const medals = [
+        mxIcon('medal', { className: 'mx-icon--gold' }),
+        mxIcon('medal', { className: 'mx-icon--silver' }),
+        mxIcon('medal', { className: 'mx-icon--bronze' }),
+      ];
+      let html = '';
+      const nations = data.nations || [];
+      if (nations.length) {
+        html += '<div class="text-[11px] font-bold text-yellow-400/90 mb-1.5 uppercase tracking-wide">Nationer — tipparnas topp</div>';
+        // Single column — ranking reads top→bottom (not zigzag across cols)
+        html += '<div class="space-y-1 mb-3 max-w-md">';
+        nations.forEach((n, i) => {
+          const m = medals[i] || `<span class="text-gray-500 text-xs font-bold tabular-nums">${n.rank || i + 1}</span>`;
+          const flag = n.flag_url
+            ? `<img src="${n.flag_url}" alt="" class="w-6 h-4 object-cover rounded-sm border border-gray-600 shrink-0" loading="lazy" />`
+            : (n.flag_emoji
+              ? `<span class="text-base shrink-0 w-6 text-center leading-none">${n.flag_emoji}</span>`
+              : `<span class="w-6 h-4 rounded-sm bg-gray-700 shrink-0"></span>`);
+          html += `
+            <div class="flex items-center gap-2 rounded-md bg-gray-800/80 border border-gray-700/70 px-2.5 py-1.5">
+              <span class="text-sm shrink-0 w-5 text-center leading-none">${m}</span>
+              ${flag}
+              <span class="text-sm font-semibold text-white truncate">${_escapeHtml(n.name || n.code || '—')}</span>
+            </div>`;
+        });
+        html += '</div>';
+      }
+
+      const classes = data.classes || {};
+      const classOrder = ['mxgp', 'mx2', 'open'];
+      const classCards = classOrder
+        .map((k) => classes[k])
+        .filter(Boolean);
+      if (classCards.length) {
+        html += '<div class="text-[11px] font-bold text-yellow-400/90 mb-1.5 uppercase tracking-wide">Klassfavoriter</div>';
+        html += '<div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 max-w-3xl">';
+        classCards.forEach((cl) => {
+          const flag = cl.flag_url
+            ? `<img src="${cl.flag_url}" alt="" class="w-5 h-3.5 object-cover rounded-sm border border-gray-600 shrink-0" loading="lazy" />`
+            : '';
+          const riderPrimary = cl.is_tba
+            ? 'TBA'
+            : (cl.rider_number != null
+              ? `#${cl.rider_number} ${_escapeHtml(cl.rider_name || '')}`
+              : _escapeHtml(cl.rider_name || '—'));
+          const nationSecondary = _escapeHtml(cl.name || cl.code || '');
+          html += `
+            <div class="rounded-md bg-gray-800/80 border border-gray-700/70 px-2.5 py-1.5">
+              <div class="text-[10px] font-bold text-cyan-300/90 uppercase tracking-wide mb-0.5">${_escapeHtml(cl.class_label || cl.class_name)}</div>
+              <div class="font-semibold text-white text-sm truncate leading-snug">${riderPrimary}</div>
+              <div class="flex items-center gap-1.5 mt-0.5 min-w-0">
+                ${flag}
+                <span class="text-[11px] text-gray-400 truncate">${nationSecondary}</span>
+              </div>
+            </div>`;
+        });
+        html += '</div>';
+      }
+
+      if (data.method) {
+        html += `<p class="text-[10px] text-gray-600 pt-2 border-t border-gray-700/80 mt-2.5 max-w-3xl">${_escapeHtml(data.method)}</p>`;
+      }
+      body.innerHTML = html;
+    }
+
     async function fetchPowerRanking() {
       if (homeSelectedSeries === 'MXON') {
-        applyPowerRankingData(null);
+        const params = new URLSearchParams();
+        const liveCompId = window._homeCountdownCompetitionId;
+        if (liveCompId) params.set('competition_id', String(liveCompId));
+        const qs = params.toString();
+        const url = '/api/mxon_crowd_ranking' + (qs ? `?${qs}` : '');
+        try {
+          const res = await mxFetchTimed('mxon_crowd_ranking', url);
+          const data = await res.json();
+          if (homeSelectedSeries !== 'MXON') return;
+          if (res.status !== 200) {
+            applyPowerRankingData(null);
+            return;
+          }
+          applyPowerRankingData(data);
+        } catch (e) {
+          console.warn('mxon_crowd_ranking', e);
+          applyPowerRankingData(null);
+        }
         return;
       }
       const params = new URLSearchParams();
@@ -6905,14 +7014,20 @@
         }
       }
 
-      // SSR power ranking is AMA-default — skip paint when WSX is preferred
+      // SSR power ranking is AMA-default — skip paint for tippa-only series
       if (
         homeSelectedSeries !== 'WSX'
+        && homeSelectedSeries !== 'MXON'
+        && homeSelectedSeries !== 'MXGP'
         && window.__MX_POWER_RANKING__
         && window.__MX_POWER_RANKING__.ok
       ) {
         applyPowerRankingData(window.__MX_POWER_RANKING__);
-      } else if (homeSelectedSeries !== 'WSX') {
+      } else if (
+        homeSelectedSeries !== 'WSX'
+        && homeSelectedSeries !== 'MXON'
+        && homeSelectedSeries !== 'MXGP'
+      ) {
         setTimeout(fetchPowerRanking, 2500);
       }
 

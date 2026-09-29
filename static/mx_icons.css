@@ -72,6 +72,9 @@
 .mx-icon--muted { color: #94a3b8; }
 .mx-icon--ok { color: #34d399; }
 .mx-icon--warn { color: #fbbf24; }
+.mx-icon--gold { color: #fbbf24; }
+.mx-icon--silver { color: #e8eef7; filter: drop-shadow(0 0 1px rgba(148, 163, 184, 0.9)); }
+.mx-icon--bronze { color: #d97706; filter: drop-shadow(0 0 1px rgba(180, 83, 9, 0.55)); }
 .mx-icon--danger { color: #f87171; }
 .mx-icon--info { color: #67e8f9; }
 .mx-icon--accent { color: #67e8f9; }

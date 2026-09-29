@@ -908,3 +908,106 @@ def fantasy_mxon_leaderboard_for_year(year: int = 2026) -> list[dict]:
             }
         )
     return out
+
+
+def build_mxon_crowd_ranking(competition_id: int) -> dict[str, Any]:
+    """
+    Crowd consensus for MXoN tippa — ranked nations + class favorites.
+    No pick counts or percentages in the payload (power-ranking style order only).
+    Nation rank weight: #1=5 … #5=1 across all tippers.
+    """
+    from collections import defaultdict
+
+    comp_id = int(competition_id)
+    comp = Competition.query.get(comp_id)
+    if not comp or (comp.series or "").upper() != "MXON":
+        return {"ok": False, "error": "not_mxon"}
+
+    try:
+        from services.picks_lock import is_picks_locked
+
+        locked = bool(is_picks_locked(comp))
+    except Exception:
+        locked = False
+
+    weight = {1: 5, 2: 4, 3: 3, 4: 2, 5: 1}
+    scores: dict[int, float] = defaultdict(float)
+    for p in MxonNationPick.query.filter_by(competition_id=comp_id).all():
+        pos = int(p.position or 0)
+        w = weight.get(pos)
+        if w:
+            scores[int(p.nation_id)] += w
+
+    nation_ids = list(scores.keys())
+    nations = (
+        {n.id: n for n in MxonNation.query.filter(MxonNation.id.in_(nation_ids)).all()}
+        if nation_ids
+        else {}
+    )
+    ranked_nations = sorted(scores.items(), key=lambda x: (-x[1], x[0]))
+    nations_out = []
+    for i, (nid, _score) in enumerate(ranked_nations[:10], 1):
+        n = nations.get(nid)
+        if not n:
+            continue
+        code = (n.code or "").strip()
+        nations_out.append(
+            {
+                "rank": i,
+                "nation_id": nid,
+                "code": code or None,
+                "name": n.name,
+                "flag_url": flag_image_url(code) if code else None,
+                "flag_emoji": n.flag_emoji,
+            }
+        )
+
+    class_counts: dict[str, dict[int, int]] = {
+        k: defaultdict(int) for k in MXON_CLASS_KEYS
+    }
+    for p in MxonClassPick.query.filter_by(competition_id=comp_id).all():
+        key = (p.class_name or "").strip().lower()
+        if key not in class_counts:
+            continue
+        class_counts[key][int(p.nation_id)] += 1
+
+    classes_out: dict[str, dict | None] = {}
+    for key in MXON_CLASS_KEYS:
+        counts = class_counts[key]
+        if not counts:
+            classes_out[key] = None
+            continue
+        top_nid = sorted(counts.items(), key=lambda x: (-x[1], x[0]))[0][0]
+        n = MxonNation.query.get(top_nid)
+        code = (n.code if n else "") or ""
+        seat = rider_seat_for_nation(int(top_nid), key) if n else {}
+        classes_out[key] = {
+            "class_name": key,
+            "class_label": MXON_CLASS_LABELS.get(key, key.upper()),
+            "nation_id": top_nid,
+            "code": code or None,
+            "name": n.name if n else None,
+            "flag_url": flag_image_url(code) if code else None,
+            "rider_name": (seat or {}).get("rider_name"),
+            "rider_number": (seat or {}).get("rider_number"),
+            "is_tba": bool((seat or {}).get("is_tba")),
+        }
+
+    return {
+        "ok": True,
+        "kind": "mxon_crowd",
+        "competition": {
+            "id": comp.id,
+            "name": comp.name,
+            "series": "MXON",
+            "event_date": comp.event_date.isoformat() if comp.event_date else None,
+        },
+        "picks_locked": locked,
+        "has_tips": bool(nations_out) or any(classes_out.values()),
+        "nations": nations_out,
+        "classes": classes_out,
+        "method": (
+            "Rangordning utifrån tipparnas topp 5 (viktat #1–#5) och vanligaste "
+            "klassfavorit — utan antal. Inte odds."
+        ),
+    }

@@ -568,6 +568,22 @@ def inject_public_base_url():
     return {"public_base_url": get_public_base_url()}
 
 
+def _is_local_dev_mark() -> bool:
+    """True when running outside Render/production — mark browser tabs as local."""
+    if os.getenv("RENDER"):
+        return False
+    if (os.getenv("FLASK_ENV") or "").strip().lower() == "production":
+        return False
+    if (os.getenv("MX_LOCAL_MARK") or "").strip().lower() in ("0", "false", "no", "off"):
+        return False
+    return True
+
+
+@app.context_processor
+def inject_local_dev_mark():
+    return {"is_local_dev": _is_local_dev_mark()}
+
+
 @app.context_processor
 def inject_google_oauth_flags():
     from google_oauth import google_oauth_configured
@@ -660,7 +676,20 @@ except Exception:
 @app.get("/favicon.ico")
 def favicon():
     """Serve favicon at root without redirect — Google prefers a direct 200."""
-    from flask import send_from_directory, make_response
+    from flask import send_from_directory, make_response, Response
+
+    # Local: bright lime "L" so the browser tab is obviously not production.
+    if _is_local_dev_mark():
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
+            '<rect width="32" height="32" rx="7" fill="#84cc16"/>'
+            '<text x="16" y="22.5" text-anchor="middle" '
+            'font-family="Arial Black,Arial,sans-serif" font-weight="900" '
+            'font-size="17" fill="#14532d">L</text></svg>'
+        )
+        resp = make_response(Response(svg, mimetype="image/svg+xml"))
+        resp.headers["Cache-Control"] = "no-store, max-age=0"
+        return resp
 
     resp = make_response(
         send_from_directory(app.static_folder, "images/mx_fantasy_favicon.png")
@@ -668,6 +697,68 @@ def favicon():
     resp.headers["Content-Type"] = "image/png"
     resp.headers["Cache-Control"] = "public, max-age=604800"
     return resp
+
+
+@app.after_request
+def _mark_local_dev_html(response):
+    """
+    Make local tabs unmistakable: [LOKAL] title prefix + lime corner badge.
+    Skipped on Render / production. Opt out with MX_LOCAL_MARK=0.
+    """
+    if not _is_local_dev_mark():
+        return response
+    ctype = (response.headers.get("Content-Type") or "").lower()
+    if "text/html" not in ctype:
+        return response
+    # Always try — skip only when body cannot be read/rewritten.
+    try:
+        if getattr(response, "direct_passthrough", False):
+            response.direct_passthrough = False
+        raw = response.get_data()
+        if not raw:
+            return response
+        charset = getattr(response, "charset", None) or "utf-8"
+        html = raw.decode(charset, "replace")
+        if "mx-local-dev-badge" in html:
+            return response
+
+        inject_head = (
+            '<meta name="theme-color" content="#84cc16" />'
+            '<link rel="icon" href="/favicon.ico" type="image/svg+xml" />'
+            "<script>(function(){try{"
+            "var t=document.title||'';"
+            "if(t&&t.indexOf('[LOKAL]')!==0)document.title='[LOKAL] '+t;"
+            "document.documentElement.classList.add('mx-local-dev');"
+            "}catch(e){}})();</script>"
+            "<style>"
+            ".mx-local-dev-badge{position:fixed;top:12px;right:-32px;z-index:2147483646;"
+            "transform:rotate(45deg);background:#84cc16;color:#14532d;"
+            "font:800 10px/1 system-ui,Segoe UI,sans-serif;letter-spacing:.14em;"
+            "padding:5px 40px;pointer-events:none;"
+            "box-shadow:0 2px 10px rgba(0,0,0,.35)}"
+            "@media (max-width:640px){.mx-local-dev-badge{font-size:9px;top:10px;right:-36px}}"
+            "</style>"
+        )
+        inject_body = '<div class="mx-local-dev-badge" aria-hidden="true">LOKAL</div>'
+
+        lower = html.lower()
+        head_i = lower.rfind("</head>")
+        if head_i != -1:
+            html = html[:head_i] + inject_head + html[head_i:]
+            lower = html.lower()
+        body_i = lower.rfind("</body>")
+        if body_i != -1:
+            html = html[:body_i] + inject_body + html[body_i:]
+        else:
+            html = html + inject_body
+
+        response.set_data(html.encode("utf-8"))
+        response.headers["Content-Type"] = "text/html; charset=utf-8"
+        # Drop stale length so Werkzeug recalculates.
+        response.headers.pop("Content-Length", None)
+    except Exception as e:
+        print(f"local_dev_mark skip: {type(e).__name__}: {e}")
+    return response
 
 
 @app.get("/sw.js")
@@ -8018,6 +8109,31 @@ def api_power_ranking():
         return jsonify(build_power_ranking_payload(target))
     except Exception as e:
         print(f"power_ranking error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.get("/api/mxon_crowd_ranking")
+def api_mxon_crowd_ranking():
+    """
+    MXoN crowd consensus: ranked nations + class favorites from tips.
+    No pick counts — order only (power-ranking style).
+    Query: competition_id=… optional
+    """
+    try:
+        from mxon_fantasy import build_mxon_crowd_ranking
+
+        comp_id = request.args.get("competition_id", type=int)
+        target = _resolve_power_ranking_competition(comp_id, series="MXON")
+        if not target:
+            return jsonify({"ok": False, "error": "no_competition"}), 404
+        payload = build_mxon_crowd_ranking(int(target.id))
+        if not payload.get("ok"):
+            return jsonify(payload), 404
+        return jsonify(payload)
+    except Exception as e:
+        print(f"mxon_crowd_ranking error: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"ok": False, "error": str(e)}), 500
