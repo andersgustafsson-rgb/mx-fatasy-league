@@ -31,7 +31,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, SeasonTeamArchive, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, QualifyingPick, QualifyingResult, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, MxonCompetitionOut, BarnivaSchemaWorkspace, BarnivaSchemaWorkspaceVersion, rider_query_for_list_ui
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, SeasonTeamArchive, LeagueSeasonArchive, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, QualifyingPick, QualifyingResult, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, MxonCompetitionOut, BarnivaSchemaWorkspace, BarnivaSchemaWorkspaceVersion, rider_query_for_list_ui
 from services.scoring import (
     calculate_race_pick_points,
     calculate_rider_points_for_position,
@@ -5572,10 +5572,15 @@ def api_leagues_leaderboard():
 
 def _user_pick_total_points(user_id: int) -> int:
     """Total pick points (AMA only), deduped per competition — tippa + transfer penalties only."""
+    return int(sum(s.total_points or 0 for s in _user_ama_competition_scores(user_id)))
+
+
+def _user_ama_competition_scores(user_id: int) -> list:
+    """Live AMA tippa CompetitionScore rows for user (one per competition / NULL penalty)."""
     all_scores = (
         db.session.query(CompetitionScore)
         .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
-        .filter(CompetitionScore.user_id == user_id)
+        .filter(CompetitionScore.user_id == int(user_id))
         .filter(ama_competition_clause())
         .all()
     )
@@ -5585,7 +5590,7 @@ def _user_pick_total_points(user_id: int) -> int:
         prev = scores_by_comp.get(comp_id)
         if prev is None or score.score_id > prev.score_id:
             scores_by_comp[comp_id] = score
-    return int(sum(s.total_points or 0 for s in scores_by_comp.values()))
+    return list(scores_by_comp.values())
 
 
 def _user_season_team_points(user_id: int) -> int:
@@ -8539,7 +8544,15 @@ def league_detail_page(league_id):
     )
 
     season_leaderboard = summary["standings"]
-    
+
+    season_archives = []
+    try:
+        from league_season_archive import list_archives_for_league
+
+        season_archives = list_archives_for_league(int(league_id))
+    except Exception as e:
+        print(f"league_detail archives: {e}")
+
     # Get pending requests if user is league creator
     pending_requests = []
     is_creator = league.creator_id == session["user_id"]
@@ -8579,6 +8592,7 @@ def league_detail_page(league_id):
         pending_requests=pending_requests,
         is_creator=is_creator,
         current_user_id=uid,
+        season_archives=season_archives,
     )
 
 
@@ -10402,37 +10416,35 @@ def profile_page():
                 break
     except Exception as e:
         print(f"profile_page rank: {e}")
-    
-    # Beräkna statistik
-    competitions_played = CompetitionScore.query.filter_by(user_id=user.id).count()
-    
-    # Beräkna separata poängsummor
-    user_scores = CompetitionScore.query.filter_by(user_id=user.id).all()
+
+    # Live AMA tippa only (same scope as highscore after season reset — not WSX/MXON archive).
+    user_scores = _user_ama_competition_scores(user.id)
+    competitions_played = sum(1 for s in user_scores if s.competition_id is not None)
     total_race_points = sum(score.race_points or 0 for score in user_scores)
     total_holeshot_points = sum(score.holeshot_points or 0 for score in user_scores)
     total_wildcard_points = sum(score.wildcard_points or 0 for score in user_scores)
-    
-    # Hitta bästa placering (lägsta position i leaderboard)
+
     best_position = None
     if competitions_played > 0:
         best_positions = []
-        
         for score in user_scores:
-            # Hitta användarens placering i denna tävling
-            all_scores_for_comp = CompetitionScore.query.filter_by(competition_id=score.competition_id).order_by(CompetitionScore.total_points.desc()).all()
+            if score.competition_id is None:
+                continue
+            all_scores_for_comp = (
+                CompetitionScore.query.filter_by(competition_id=score.competition_id)
+                .order_by(CompetitionScore.total_points.desc())
+                .all()
+            )
             position = 1
             for i, s in enumerate(all_scores_for_comp):
                 if s.user_id == user.id:
                     position = i + 1
                     break
             best_positions.append(position)
-        
         if best_positions:
             best_position = min(best_positions)
-    
+
     needs_email = not (getattr(user, "email", None) or "").strip()
-    print(f"DEBUG: Rendering profile template with user: {user.username}")
-    print(f"DEBUG: Total points breakdown - Race: {total_race_points}, Holeshot: {total_holeshot_points}, Wildcard: {total_wildcard_points}")
     return render_template(
         "profile.html",
         user=user,
@@ -11147,6 +11159,78 @@ def finished_ama_year_page(year):
         db.session.rollback()
         flash("Fel vid laddning av totalställning.", "error")
         return redirect(url_for("finished_series_page"))
+
+
+@app.get("/finished_series/ama/<int:year>/leagues")
+def finished_ama_year_leagues_page(year: int):
+    """Archived league winners / standings for an AMA tippa season."""
+    if "user_id" not in session:
+        return _redirect_to_login()
+    try:
+        from league_season_archive import (
+            get_archive_for_year,
+            parse_archive_payload,
+            ensure_league_season_archives_table,
+        )
+
+        ensure_league_season_archives_table()
+        row = get_archive_for_year(year)
+        leagues = parse_archive_payload(row)
+        return render_template(
+            "finished_ama_leagues.html",
+            year=year,
+            archive=row,
+            leagues=leagues,
+            current_user_id=session.get("user_id"),
+        )
+    except Exception as e:
+        print(f"finished_ama_year_leagues_page: {e}")
+        flash("Kunde inte ladda ligaarkivet.", "error")
+        return redirect(url_for("finished_ama_year_page", year=year))
+
+
+@app.post("/admin/leagues/archive_from_finished/<int:year>")
+def admin_archive_leagues_from_finished(year: int):
+    """Backfill league season archive from FinishedSeriesStats (after a wipe without freeze)."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        from league_season_archive import (
+            build_league_archive_payload_from_finished,
+            save_league_season_archive,
+        )
+
+        ama = _build_ama_year_total(year)
+        if not ama or not ama.get("all_users"):
+            return jsonify({"error": f"Ingen AMA-totalställning i arkivet för {year}"}), 400
+        points_by_user = {
+            int(u["user_id"]): int(u.get("total_points") or 0)
+            for u in ama["all_users"]
+            if u.get("user_id") is not None
+        }
+        payload = build_league_archive_payload_from_finished(points_by_user=points_by_user)
+        row = save_league_season_archive(
+            season_year=year,
+            label=f"AMA {year}",
+            leagues_payload=payload,
+            source="finished_stats",
+            replace_existing=True,
+        )
+        db.session.commit()
+        return jsonify(
+            {
+                "ok": True,
+                "year": year,
+                "archive_id": row.id,
+                "league_count": row.league_count,
+                "source": row.source,
+                "url": url_for("finished_ama_year_leagues_page", year=year),
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
+        print(f"admin_archive_leagues_from_finished: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/series/<int:series_id>")
@@ -24422,6 +24506,34 @@ def archive_ama_season_and_reset():
 
         db.session.flush()
 
+        # Freeze league standings BEFORE wiping CompetitionScore
+        league_archive_info = None
+        try:
+            from league_season_archive import (
+                build_league_archive_payload_live,
+                save_league_season_archive,
+            )
+
+            league_payload = build_league_archive_payload_live(
+                pick_points_fn=_user_pick_total_points
+            )
+            league_arch = save_league_season_archive(
+                season_year=year,
+                label=f"AMA {year}",
+                leagues_payload=league_payload,
+                source="live",
+                replace_existing=True,
+            )
+            for lg in League.query.all():
+                lg.total_points = 0
+            league_archive_info = {
+                "archive_id": league_arch.id,
+                "league_count": league_arch.league_count,
+                "label": league_arch.label,
+            }
+        except Exception as league_arch_err:
+            print(f"league season archive skipped: {league_arch_err}")
+
         deleted_scores_total = 0
         deleted_penalties = 0
         if reset_tippa and ama_comp_ids:
@@ -24473,6 +24585,10 @@ def archive_ama_season_and_reset():
             msg_parts.append(
                 f"Säsongsteam: {team_result['archived_teams']} arkiverade som «{team_label}»."
             )
+        if league_archive_info:
+            msg_parts.append(
+                f"Ligor: {league_archive_info['league_count']} arkiverade som «{league_archive_info['label']}»."
+            )
 
         return jsonify(
             {
@@ -24485,6 +24601,7 @@ def archive_ama_season_and_reset():
                 "deleted_competition_scores": deleted_scores_total,
                 "deleted_transfer_penalties": deleted_penalties,
                 "season_teams": team_result,
+                "league_archive": league_archive_info,
                 "finished_series_url": url_for("finished_ama_year_page", year=year),
             }
         )
@@ -26400,35 +26517,43 @@ def view_user_profile(user_id):
         except Exception as e:
             print(f"Error getting user picks: {e}")
         
-        # Get user's race results for profile
+        # Live AMA tippa only (same as own profile / highscore after season reset)
+        ama_scores = _user_ama_competition_scores(user_id)
         race_results = []
         total_points = 0
         total_race_points = 0
         total_holeshot_points = 0
         total_wildcard_points = 0
-        competitions = Competition.query.order_by(Competition.event_date).all()
-        for competition in competitions:
-            score = CompetitionScore.query.filter_by(user_id=user_id, competition_id=competition.id).first()
-            has_results = CompetitionResult.query.filter_by(competition_id=competition.id).first() is not None
-            if score or has_results:
-                rp = int(score.race_points or 0) if score else 0
-                hp = int(score.holeshot_points or 0) if score else 0
-                wp = int(getattr(score, "wildcard_points", 0) or 0) if score else 0
-                tp = int(score.total_points or 0) if score else 0
-                race_results.append({
-                    'competition': competition,
-                    'points': tp,
-                    'race_points': rp,
-                    'holeshot_points': hp,
-                    'wildcard_points': wp,
-                    'has_results': has_results
-                })
-                if score:
-                    total_points += tp
-                    total_race_points += rp
-                    total_holeshot_points += hp
-                    total_wildcard_points += wp
-        race_results.sort(key=lambda x: x['competition'].event_date, reverse=True)
+        for score in ama_scores:
+            if score.competition_id is None:
+                continue
+            competition = Competition.query.get(score.competition_id)
+            if not competition:
+                continue
+            rp = int(score.race_points or 0)
+            hp = int(score.holeshot_points or 0)
+            wp = int(getattr(score, "wildcard_points", 0) or 0)
+            tp = int(score.total_points or 0)
+            has_results = (
+                CompetitionResult.query.filter_by(competition_id=competition.id).first()
+                is not None
+            )
+            race_results.append({
+                "competition": competition,
+                "points": tp,
+                "race_points": rp,
+                "holeshot_points": hp,
+                "wildcard_points": wp,
+                "has_results": has_results,
+            })
+            total_points += tp
+            total_race_points += rp
+            total_holeshot_points += hp
+            total_wildcard_points += wp
+        race_results.sort(
+            key=lambda x: x["competition"].event_date or date.min,
+            reverse=True,
+        )
 
         tippa_points, team_points, highscore_total = _user_highscore_total(user_id)
 

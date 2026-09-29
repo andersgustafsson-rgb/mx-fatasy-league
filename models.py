@@ -242,6 +242,21 @@ class SeasonTeamArchive(db.Model):
     payload = db.Column(db.Text, nullable=False)  # JSON: teams + riders + points
 
 
+class LeagueSeasonArchive(db.Model):
+    """Frozen league standings for one AMA tippa season (before score wipe)."""
+    __tablename__ = "league_season_archives"
+    id = db.Column(db.Integer, primary_key=True)
+    season_year = db.Column(db.Integer, nullable=False, index=True)
+    label = db.Column(db.String(80), nullable=False)  # e.g. "AMA 2026"
+    archived_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    league_count = db.Column(db.Integer, nullable=False, default=0)
+    source = db.Column(db.String(32), nullable=False, default="live")  # live | finished_stats
+    payload = db.Column(db.Text, nullable=False)  # JSON: leagues + standings
+    __table_args__ = (
+        db.UniqueConstraint("season_year", "label", name="uq_league_season_archive_year_label"),
+    )
+
+
 class SeasonTeamRider(db.Model):
     __tablename__ = "season_team_riders"
     entry_id = db.Column(db.Integer, primary_key=True)

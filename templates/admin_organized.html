@@ -1732,6 +1732,23 @@
                             <a href="/admin/leagues" class="ap-btn ap-btn--sm">Hantera ligor</a>
                         </div>
                     </article>
+
+                    <article class="ap-hub-card">
+                        <div>
+                            <p class="ap-hub-card__eyebrow">4b · Ligaarkiv</p>
+                            <h3 class="ap-hub-card__title">Bygg ligaarkiv från tippa-arkiv</h3>
+                        </div>
+                        <p class="ap-hub-card__desc">
+                            Om säsongen redan nollställts utan liga-snapshot: återskapa medlemsställningar
+                            per liga från Fantasy-arkivets AMA-total (t.ex. 2026). Nästa säsongsslut
+                            sparar automatiskt innan wipe.
+                        </p>
+                        <div class="ap-hub-card__actions">
+                            <button type="button" id="btn-archive-leagues-2026" class="ap-btn ap-btn--primary">Arkivera ligor 2026</button>
+                            <a href="/finished_series/ama/2026/leagues" class="ap-btn ap-btn--sm">Visa ligaarkiv</a>
+                        </div>
+                        <p id="archive-leagues-status" class="text-xs text-slate-400 mt-2"></p>
+                    </article>
                 </div>
             </div>
         </div>
@@ -2494,6 +2511,25 @@
                         window.clearSeasonTeamTransferPenalties();
                     } else {
                         alert('Funktionen laddades inte — hard-refresha admin (Ctrl+F5).');
+                    }
+                });
+            }
+            var archLgBtn = document.getElementById('btn-archive-leagues-2026');
+            if (archLgBtn) {
+                archLgBtn.addEventListener('click', async function (e) {
+                    e.preventDefault();
+                    var status = document.getElementById('archive-leagues-status');
+                    if (!confirm('Bygg ligaarkiv 2026 från tippa-arkivet? Skriver över befintligt ligaarkiv för 2026 om det finns.')) return;
+                    if (status) status.textContent = 'Arbetar…';
+                    try {
+                        var res = await fetch('/admin/leagues/archive_from_finished/2026', { method: 'POST', credentials: 'same-origin' });
+                        var data = await res.json();
+                        if (!res.ok || !data.ok) throw new Error((data && data.error) || res.statusText);
+                        if (status) status.textContent = 'Klart: ' + data.league_count + ' ligor. Öppna arkivet.';
+                        if (data.url) window.open(data.url, '_blank');
+                    } catch (err) {
+                        if (status) status.textContent = 'Fel: ' + (err && err.message ? err.message : err);
+                        alert('Kunde inte arkivera ligor: ' + (err && err.message ? err.message : err));
                     }
                 });
             }

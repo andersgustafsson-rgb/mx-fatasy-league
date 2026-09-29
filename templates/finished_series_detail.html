@@ -350,6 +350,12 @@
         {% if is_ama_total|default(false) %}
         <p class="text-gray-400">Motocross + Supercross + SMX Playoffs · {{ total_users }} deltagare · {{ ama_total_competitions|default(0) }} tävlingar</p>
         <p class="text-gray-500 text-sm mt-2 max-w-xl mx-auto">Samma poäng som summerats på live-highscoren under säsongen.</p>
+        <p class="mt-3">
+          <a href="{{ url_for('finished_ama_year_leagues_page', year=series.year) }}"
+             class="inline-flex text-sm font-bold text-amber-200 hover:text-amber-100 border border-amber-500/35 rounded-lg px-4 py-2 bg-amber-950/30">
+            Ligavinnare {{ series.year }} →
+          </a>
+        </p>
         {% else %}
         <p class="text-gray-400">Slutlig statistik · {{ total_users }} deltagare · {{ competitions|length }} tävlingar</p>
         {% endif %}
