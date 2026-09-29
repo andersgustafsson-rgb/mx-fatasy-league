@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MXoN Power Ranking Poster — Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            background-attachment: fixed;
+        }
+        .cyberpunk-header { font-family: 'Orbitron', monospace; text-shadow: 0 0 10px rgba(250, 204, 21, 0.55); }
+        .section-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 2px solid #facc15;
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.18);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+            color: #0f172a;
+            font-weight: 700;
+        }
+        .btn-primary:hover { filter: brightness(1.08); }
+        .btn-secondary {
+            background: #374151;
+            color: #f9fafb;
+            border: 1px solid #4b5563;
+        }
+        .btn-secondary:hover { background: #4b5563; }
+        .btn-warm {
+            background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+            color: #0f172a;
+            font-weight: 700;
+        }
+        .preview-img {
+            width: 100%;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(250, 204, 21, 0.35);
+            background: #0f172a;
+            min-height: 10rem;
+            object-fit: contain;
+        }
+        .preview-img--story {
+            max-width: 280px;
+            margin: 0 auto;
+            display: block;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-gray-100">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="text-center mb-8">
+            <h1 class="cyberpunk-header text-3xl md:text-4xl font-bold text-yellow-300 mb-2">MXoN POWER RANKING</h1>
+            <p class="text-gray-300">Crowd ranking-poster för Facebook — tipparnas topp 5 + klassfavoriter</p>
+            <div class="mt-4 flex flex-wrap justify-center gap-3">
+                <a href="/admin" class="btn-secondary px-5 py-2 rounded-lg inline-block">← Admin</a>
+                <a href="/admin/hype-poster" class="btn-secondary px-5 py-2 rounded-lg inline-block">Hype Studio</a>
+                <a href="/" class="btn-secondary px-5 py-2 rounded-lg inline-block">Hem</a>
+            </div>
+        </div>
+
+        <div class="section-card rounded-lg p-6 mb-6">
+            <div class="flex flex-wrap items-end gap-4">
+                <div class="flex-1 min-w-[12rem]">
+                    <label class="block text-sm text-gray-300 mb-1">Competition id (valfritt)</label>
+                    <input id="comp-id" type="number" placeholder="Auto = senaste MXoN"
+                        class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white" />
+                </div>
+                <button type="button" id="btn-refresh" class="btn-primary px-5 py-2.5 rounded-lg">Generera poster</button>
+                <a id="btn-dl-fb" class="btn-warm px-5 py-2.5 rounded-lg inline-block opacity-50 pointer-events-none" download="mxon_power_ranking_fb.png">Ladda ner Facebook</a>
+                <a id="btn-dl-story" class="btn-warm px-5 py-2.5 rounded-lg inline-block opacity-50 pointer-events-none" download="mxon_power_ranking_story.png">Ladda ner Story</a>
+            </div>
+            <p id="status-msg" class="text-sm text-gray-400 mt-3"></p>
+            <p id="meta-line" class="text-sm text-emerald-300/90 mt-1 hidden"></p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="section-card rounded-lg p-6">
+                <h2 class="text-xl font-bold text-yellow-300 mb-4">Facebook (1620×900)</h2>
+                <img id="preview-fb" class="preview-img" alt="MXoN power ranking Facebook preview" />
+            </div>
+            <div class="section-card rounded-lg p-6">
+                <h2 class="text-xl font-bold text-yellow-300 mb-4">Story (1080×1920)</h2>
+                <img id="preview-story" class="preview-img preview-img--story" alt="MXoN power ranking Story preview" />
+            </div>
+        </div>
+
+        <div class="section-card rounded-lg p-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <h2 class="text-xl font-bold text-yellow-300">Facebook-text</h2>
+                <button type="button" id="btn-copy" class="btn-secondary px-4 py-2 rounded-lg" disabled>Kopiera text</button>
+            </div>
+            <textarea id="caption-text" rows="14" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm" placeholder="Generera för att få caption…"></textarea>
+            <p class="text-xs text-gray-500 mt-2">Klistra in tillsammans med PNG:en i Facebook-inlägget.</p>
+        </div>
+    </div>
+
+    <script>
+        const compId = document.getElementById('comp-id');
+        const btnRefresh = document.getElementById('btn-refresh');
+        const btnDlFb = document.getElementById('btn-dl-fb');
+        const btnDlStory = document.getElementById('btn-dl-story');
+        const btnCopy = document.getElementById('btn-copy');
+        const previewFb = document.getElementById('preview-fb');
+        const previewStory = document.getElementById('preview-story');
+        const captionText = document.getElementById('caption-text');
+        const statusMsg = document.getElementById('status-msg');
+        const metaLine = document.getElementById('meta-line');
+        let fbBlobUrl = null;
+        let storyBlobUrl = null;
+
+        function qs(extra) {
+            const p = new URLSearchParams(extra || {});
+            const id = (compId.value || '').trim();
+            if (id) p.set('competition_id', id);
+            p.set('t', String(Date.now()));
+            return p.toString();
+        }
+
+        function enableDl(el, url, name) {
+            el.href = url;
+            el.download = name;
+            el.classList.remove('opacity-50', 'pointer-events-none');
+        }
+
+        async function loadPoster() {
+            statusMsg.textContent = 'Genererar…';
+            metaLine.classList.add('hidden');
+            btnCopy.disabled = true;
+            try {
+                const metaRes = await fetch('/admin/api/mxon-power-ranking-poster?' + qs());
+                const meta = await metaRes.json();
+                if (!metaRes.ok) throw new Error(meta.error || 'Kunde inte hämta data');
+
+                captionText.value = meta.caption || '';
+                btnCopy.disabled = !captionText.value;
+                metaLine.textContent = [
+                    meta.competition_name,
+                    meta.picks_locked ? 'tips låsta' : 'tips öppna',
+                    (meta.nations || []).length + ' nationer',
+                ].filter(Boolean).join(' · ');
+                metaLine.classList.remove('hidden');
+                if (meta.competition_id && !compId.value) {
+                    compId.value = meta.competition_id;
+                }
+
+                const [fbRes, storyRes] = await Promise.all([
+                    fetch('/admin/api/mxon-power-ranking-poster.png?' + qs({ layout: 'facebook' })),
+                    fetch('/admin/api/mxon-power-ranking-poster.png?' + qs({ layout: 'story' })),
+                ]);
+                if (!fbRes.ok) {
+                    const err = await fbRes.json().catch(() => ({}));
+                    throw new Error(err.error || 'Facebook PNG misslyckades');
+                }
+                if (!storyRes.ok) {
+                    const err = await storyRes.json().catch(() => ({}));
+                    throw new Error(err.error || 'Story PNG misslyckades');
+                }
+
+                const fbBlob = await fbRes.blob();
+                const storyBlob = await storyRes.blob();
+                if (fbBlobUrl) URL.revokeObjectURL(fbBlobUrl);
+                if (storyBlobUrl) URL.revokeObjectURL(storyBlobUrl);
+                fbBlobUrl = URL.createObjectURL(fbBlob);
+                storyBlobUrl = URL.createObjectURL(storyBlob);
+                previewFb.src = fbBlobUrl;
+                previewStory.src = storyBlobUrl;
+                enableDl(btnDlFb, fbBlobUrl, 'mxon_power_ranking_fb.png');
+                enableDl(btnDlStory, storyBlobUrl, 'mxon_power_ranking_story.png');
+                statusMsg.textContent = 'Klart — ladda ner eller kopiera text.';
+            } catch (e) {
+                statusMsg.textContent = 'Fel: ' + (e.message || e);
+                console.error(e);
+            }
+        }
+
+        btnRefresh.addEventListener('click', loadPoster);
+        btnCopy.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(captionText.value || '');
+                statusMsg.textContent = 'Caption kopierad.';
+            } catch (_) {
+                captionText.select();
+                statusMsg.textContent = 'Markera och kopiera manuellt (Ctrl+C).';
+            }
+        });
+
+        loadPoster();
+    </script>
+</body>
+</html>
