@@ -38,11 +38,13 @@ MXON_2026_ERNEE_TEAMS: list[dict[str, Any]] = [
     {"code": "JPN", "name": "Japan", "mxgp": "Kainosuke Oshiro", "mx2": "Haruki Yokoyama", "open": "Yuki Okura", "no": (31, 32, 33)},
     {"code": "BRA", "name": "Brazil", "mxgp": "Fabio Santos", "mx2": "TBA", "open": "Enzo Lopes", "no": (34, 35, 36)},
     {"code": "EST", "name": "Estonia", "mxgp": "Jorgen-Matthias Talviku", "mx2": "Sebastian Leok", "open": "Harri Kullas", "no": (37, 38, 39)},
-    {"code": "RSA", "name": "South Africa", "mxgp": "Tristan Purdon", "mx2": "Camden McLellan", "open": "Slade Smith", "no": (40, 41, 42)},
+    # 22 Sep: Purdon out → Smith MXGP, Trey Cox OPEN (mxgpresults.com)
+    {"code": "RSA", "name": "South Africa", "mxgp": "Slade Smith", "mx2": "Camden McLellan", "open": "Trey Cox", "no": (40, 41, 42)},
     {"code": "GER", "name": "Germany", "mxgp": "Tom Koch", "mx2": "Valentin Kees", "open": "Noah Ludwig", "no": (43, 44, 45)},
     {"code": "GBR", "name": "Great Britain", "mxgp": "Taylor Hammal", "mx2": "Ben Mustoe", "open": "Ben Watson", "no": (46, 47, 48)},
     {"code": "NOR", "name": "Norway", "mxgp": "Kevin Horgmo", "mx2": "Pelle Gundersen", "open": "Hakon Osterhagen", "no": (52, 53, 54)},
-    {"code": "NED", "name": "Netherlands", "mxgp": "TBA", "mx2": "Roan van de Moosdijk", "open": "Jeffrey Herlings", "no": (55, 56, 57)},
+    # 21 Sep: Roan → MXGP, Coldenhoff MX2 (mxgpresults.com)
+    {"code": "NED", "name": "Netherlands", "mxgp": "Roan van de Moosdijk", "mx2": "Glenn Coldenhoff", "open": "Jeffrey Herlings", "no": (55, 56, 57)},
     {"code": "DEN", "name": "Denmark", "mxgp": "Mads Fredsoe", "mx2": "Nicolai Skovbjerg", "open": "Mikkel Haarup", "no": (58, 59, 60)},
     {"code": "AUT", "name": "Austria", "mxgp": "Michael Kratzer", "mx2": "Ricardo Bauer", "open": "Michael Sandner", "no": (61, 62, 63)},
     {"code": "CAN", "name": "Canada", "mxgp": "Tanner Ward", "mx2": "Dylan Rempel", "open": "Dylan Wright", "no": (64, 65, 66)},
@@ -54,7 +56,8 @@ MXON_2026_ERNEE_TEAMS: list[dict[str, Any]] = [
     {"code": "MEX", "name": "Mexico", "mxgp": "Jorge Israel Rubalcava", "mx2": "Fernando Velazquez", "open": "Erick Ismael Vasquez Diaz", "no": (97, 98, 99)},
     {"code": "ISL", "name": "Iceland", "mxgp": "Ingvar Sverrir Einarsson", "mx2": "Eric Mani Gudmundsson", "open": "Tristan Berg Arason", "no": (100, 101, 102)},
     {"code": "UKR", "name": "Ukraine", "mxgp": "Roman Morozov", "mx2": "Vasyl Kurosh", "open": "Mykhailo Vasko", "no": (103, 104, 105)},
-    {"code": "CZE", "name": "Czech Republic", "mxgp": "Petr Rathousky", "mx2": "Julius Mikula", "open": "Vaclav Kovar", "no": (115, 116, 117)},
+    # 25 Sep: Widerwill MX2 (mxgpresults.com)
+    {"code": "CZE", "name": "Czech Republic", "mxgp": "Petr Rathousky", "mx2": "David Widerwill", "open": "Vaclav Kovar", "no": (115, 116, 117)},
     {"code": "CRO", "name": "Croatia", "mxgp": "Matija Kelava", "mx2": "Simun Ivandic", "open": "Matej Jaros", "no": (118, 119, 120)},
     {"code": "SVK", "name": "Slovakia", "mxgp": "Tomas Kohut", "mx2": "Jaroslav Katrinak", "open": "Pavol Repcak", "no": (121, 122, 123)},
     {"code": "LTU", "name": "Lithuania", "mxgp": "Domantas Jazdauskas", "mx2": "Marius Adomaitis", "open": "Erlandas Mackonis", "no": (124, 125, 126)},
