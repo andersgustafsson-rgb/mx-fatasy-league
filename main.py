@@ -702,7 +702,7 @@ def favicon():
 @app.after_request
 def _mark_local_dev_html(response):
     """
-    Make local tabs unmistakable: [LOKAL] title prefix + lime corner badge.
+    Make local tabs unmistakable: [LOKAL] title prefix + lime badge.
     Skipped on Render / production. Opt out with MX_LOCAL_MARK=0.
     """
     if not _is_local_dev_mark():
@@ -722,6 +722,7 @@ def _mark_local_dev_html(response):
         if "mx-local-dev-badge" in html:
             return response
 
+        # Bottom-left LOKAL pill — must not cover nav / Pit Lane tabs.
         inject_head = (
             '<meta name="theme-color" content="#84cc16" />'
             '<link rel="icon" href="/favicon.ico" type="image/svg+xml" />'
@@ -731,18 +732,18 @@ def _mark_local_dev_html(response):
             "document.documentElement.classList.add('mx-local-dev');"
             "}catch(e){}})();</script>"
             "<style>"
-            ".mx-local-dev-badge{position:fixed;top:12px;right:-32px;z-index:2147483646;"
-            "transform:rotate(45deg);background:#84cc16;color:#14532d;"
-            "font:800 10px/1 system-ui,Segoe UI,sans-serif;letter-spacing:.14em;"
-            "padding:5px 40px;pointer-events:none;"
-            "box-shadow:0 2px 10px rgba(0,0,0,.35)}"
-            "@media (max-width:640px){.mx-local-dev-badge{font-size:9px;top:10px;right:-36px}}"
+            ".mx-local-dev-badge{position:fixed;left:10px;bottom:10px;z-index:9000;"
+            "background:#84cc16;color:#14532d;"
+            "font:800 10px/1 system-ui,Segoe UI,sans-serif;letter-spacing:.12em;"
+            "padding:7px 10px;border-radius:6px;pointer-events:none !important;"
+            "box-shadow:0 2px 10px rgba(0,0,0,.35);opacity:.92}"
             "</style>"
         )
         inject_body = '<div class="mx-local-dev-badge" aria-hidden="true">LOKAL</div>'
 
         lower = html.lower()
-        head_i = lower.rfind("</head>")
+        # FIRST </head> only — admin email previews embed full HTML docs later in <script>.
+        head_i = lower.find("</head>")
         if head_i != -1:
             html = html[:head_i] + inject_head + html[head_i:]
             lower = html.lower()

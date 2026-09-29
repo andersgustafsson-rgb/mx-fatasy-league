@@ -1,8 +1,8 @@
-"""Render MXoN crowd power-ranking posters (Facebook + Story).
+"""Render power-ranking posters (Facebook + Story) for any series.
 
-Usage (repo root, with app context / local DB that has tips):
-  py -3 scripts/render_mxon_power_ranking_poster.py
+Usage:
   py -3 scripts/render_mxon_power_ranking_poster.py --competition-id 76
+  py -3 scripts/render_mxon_power_ranking_poster.py --competition-id 70
 """
 from __future__ import annotations
 
@@ -16,32 +16,42 @@ if str(ROOT) not in sys.path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Render MXoN power ranking posters")
+    parser = argparse.ArgumentParser(description="Render power ranking posters")
     parser.add_argument("--competition-id", type=int, default=None)
     args = parser.parse_args()
 
     from main import app
     from mxon_power_ranking_poster_service import (
-        build_mxon_power_ranking_poster_data,
-        render_mxon_power_ranking_poster_png,
+        build_power_ranking_poster_data,
+        render_power_ranking_poster_png,
     )
 
     out_dir = ROOT / "static" / "posters"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     with app.app_context():
-        data = build_mxon_power_ranking_poster_data(args.competition_id)
-        fb = render_mxon_power_ranking_poster_png(data, layout="facebook")
-        story = render_mxon_power_ranking_poster_png(data, layout="story")
+        data = build_power_ranking_poster_data(args.competition_id)
+        fb = render_power_ranking_poster_png(data, layout="facebook")
+        story = render_power_ranking_poster_png(data, layout="story")
         caption = data.get("caption") or ""
+        series = (data.get("series") or "race").lower()
+        kind = data.get("kind") or "ranking"
+        comp_id = data.get("competition_id") or "x"
 
-    fb_path = out_dir / "mxon_power_ranking_fb.png"
-    story_path = out_dir / "mxon_power_ranking_story.png"
-    caption_path = out_dir / "mxon_power_ranking_caption.txt"
+    stem = f"power_ranking_{series}_{comp_id}"
+    fb_path = out_dir / f"{stem}_fb.png"
+    story_path = out_dir / f"{stem}_story.png"
+    caption_path = out_dir / f"{stem}_caption.txt"
+    if kind == "mxon_crowd":
+        fb_path = out_dir / "mxon_power_ranking_fb.png"
+        story_path = out_dir / "mxon_power_ranking_story.png"
+        caption_path = out_dir / "mxon_power_ranking_caption.txt"
+
     fb_path.write_bytes(fb)
     story_path.write_bytes(story)
     caption_path.write_text(caption, encoding="utf-8")
 
+    print(f"kind={kind} series={data.get('series')} comp={comp_id}")
     print(f"Wrote {fb_path} ({len(fb)} bytes)")
     print(f"Wrote {story_path} ({len(story)} bytes)")
     print(f"Wrote {caption_path}")

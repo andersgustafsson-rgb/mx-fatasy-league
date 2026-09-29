@@ -615,6 +615,7 @@ def hype_poster_png():
 
 
 @bp.route("/admin/mxon-power-ranking-poster")
+@bp.route("/admin/power-ranking-poster")
 @login_required
 def mxon_power_ranking_poster_page():
 	if not is_admin_user():
@@ -623,45 +624,47 @@ def mxon_power_ranking_poster_page():
 
 
 @bp.get("/admin/api/mxon-power-ranking-poster")
+@bp.get("/admin/api/power-ranking-poster")
 @login_required
 def mxon_power_ranking_poster_api():
-	"""JSON: MXoN crowd power ranking + FB caption."""
+	"""JSON: power ranking poster data + FB caption (any series)."""
 	if not is_admin_user():
 		return jsonify({"error": "Unauthorized"}), 401
 	comp_id = request.args.get("competition_id", type=int)
 	try:
-		from mxon_power_ranking_poster_service import build_mxon_power_ranking_poster_data
+		from mxon_power_ranking_poster_service import build_power_ranking_poster_data
 
-		data = build_mxon_power_ranking_poster_data(comp_id)
+		data = build_power_ranking_poster_data(comp_id)
 		return jsonify(data)
 	except ValueError as e:
 		return jsonify({"error": str(e)}), 404
 	except Exception as e:
-		current_app.logger.exception("mxon_power_ranking_poster_api failed: %s", e)
+		current_app.logger.exception("power_ranking_poster_api failed: %s", e)
 		return jsonify({"error": str(e) or type(e).__name__}), 500
 
 
 @bp.get("/admin/api/mxon-power-ranking-poster.png")
+@bp.get("/admin/api/power-ranking-poster.png")
 @login_required
 def mxon_power_ranking_poster_png():
-	"""PNG: MXoN crowd power rankings — layout=facebook|story."""
+	"""PNG: power rankings — layout=facebook|story. competition_id required for non-MXoN."""
 	if not is_admin_user():
 		return jsonify({"error": "Unauthorized"}), 401
 	comp_id = request.args.get("competition_id", type=int)
 	layout = (request.args.get("layout") or "facebook").strip().lower()
 	try:
 		from mxon_power_ranking_poster_service import (
-			build_mxon_power_ranking_poster_data,
-			render_mxon_power_ranking_poster_png,
+			build_power_ranking_poster_data,
+			render_power_ranking_poster_png,
 		)
 
-		data = build_mxon_power_ranking_poster_data(comp_id)
-		png = render_mxon_power_ranking_poster_png(data, layout=layout)
+		data = build_power_ranking_poster_data(comp_id)
+		png = render_power_ranking_poster_png(data, layout=layout)
 		return Response(png, mimetype="image/png")
 	except ValueError as e:
 		return jsonify({"error": str(e)}), 404
 	except Exception as e:
-		current_app.logger.exception("mxon_power_ranking_poster_png failed: %s", e)
+		current_app.logger.exception("power_ranking_poster_png failed: %s", e)
 		return jsonify({"error": str(e) or type(e).__name__}), 500
 
 
