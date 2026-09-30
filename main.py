@@ -9344,8 +9344,8 @@ def season_team_page():
     user_id = session["user_id"]
     team, riders = _season_team_riders_for_user(user_id)
 
-    user_scores = CompetitionScore.query.filter_by(user_id=user_id).all()
-    user_total_points = sum(score.total_points or 0 for score in user_scores)
+    # Same AMA tippa total as swap cost / highscore (excludes WSX/MXON/MXGP leftovers).
+    user_total_points = _user_pick_total_points(user_id)
 
     return render_template(
         "season_team.html",
@@ -12728,14 +12728,11 @@ def save_season_team():
             )
             penalty_points = riders_changed * 50  # 50 points per changed rider
             
-            # Check if user has enough points for the penalty
+            # Check if user has enough AMA tippa points for the penalty
+            # (same pool as get_user_total_points / highscore — not WSX/MXON/MXGP)
             if penalty_points > 0:
-                user_scores = CompetitionScore.query.filter_by(user_id=uid).all()
-                total_race_points = sum(score.race_points or 0 for score in user_scores)
-                total_holeshot_points = sum(score.holeshot_points or 0 for score in user_scores)
-                total_wildcard_points = sum(score.wildcard_points or 0 for score in user_scores)
-                user_total_points = total_race_points + total_holeshot_points + total_wildcard_points
-                
+                user_total_points = _user_pick_total_points(uid)
+
                 if user_total_points < penalty_points:
                     return jsonify({
                         "message": f"Du har inte tillräckligt med poäng! Du har {user_total_points} poäng men behöver {penalty_points} poäng för att byta {riders_changed} förare."
@@ -17553,269 +17550,254 @@ def admin_update_qualifying():
 
 @app.post("/admin/archive_wsx_and_reset_points")
 def archive_wsx_and_reset_points():
-    """Archive WSX user statistics and reset points for SX season"""
+    """Archive one WSX season tippa into FinishedSeriesStats, then wipe those CompetitionScores.
+
+    JSON optional: { "year": 2025 }. Default 2025 — never touches other WSX years (e.g. 2026).
+    """
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
-    
+
     try:
-        from datetime import datetime
         from collections import defaultdict
-        
-        # Get WSX series
-        wsx_series = Series.query.filter_by(name='WSX', year=2025).first()
+
+        data = request.get_json(silent=True) or {}
+        year = int(data.get("year") or 2025)
+
+        wsx_series = Series.query.filter_by(name="WSX", year=year).first()
         if not wsx_series:
-            return jsonify({"error": "WSX 2025 serie hittades inte"}), 400
-        
-        # Get all WSX competitions
-        wsx_competitions = Competition.query.filter_by(series='WSX').all()
-        
+            return jsonify({"error": f"WSX {year} serie hittades inte"}), 400
+
+        wsx_competitions = _wsx_competitions_for_year(year)
         if not wsx_competitions:
-            return jsonify({"error": "Inga WSX-tävlingar hittades"}), 400
-        
-        # Get all WSX competition IDs
+            return jsonify({"error": f"Inga WSX {year}-tävlingar hittades"}), 400
+
         wsx_comp_ids = [comp.id for comp in wsx_competitions]
-        
-        # Get all CompetitionScore entries for WSX competitions
+
+        # Guard: refuse if request would include another year's series_id
+        other_year_hits = [
+            c
+            for c in wsx_competitions
+            if c.series_id
+            and Series.query.filter(
+                Series.id == c.series_id, Series.year != year
+            ).first()
+        ]
+        if other_year_hits:
+            return jsonify({
+                "error": f"Säkerhetsstopp: {len(other_year_hits)} tävlingar tillhör annan WSX-säsong"
+            }), 400
+
         wsx_scores = CompetitionScore.query.filter(
             CompetitionScore.competition_id.in_(wsx_comp_ids)
         ).all()
-        
-        # Group scores by user and calculate totals
-        user_stats = defaultdict(lambda: {
-            'username': '',
-            'display_name': '',
-            'total_points': 0,
-            'race_points': 0,
-            'holeshot_points': 0,
-            'wildcard_points': 0,
-            'competitions_participated': 0,
-            'competition_details': []
-        })
-        
+
+        # Dedupe per (user, competition) — keep highest score_id
+        best: dict[tuple[int, int], CompetitionScore] = {}
         for score in wsx_scores:
+            key = (int(score.user_id), int(score.competition_id))
+            prev = best.get(key)
+            if prev is None or int(score.score_id or 0) > int(prev.score_id or 0):
+                best[key] = score
+
+        user_stats = defaultdict(
+            lambda: {
+                "username": "",
+                "display_name": "",
+                "total_points": 0,
+                "race_points": 0,
+                "holeshot_points": 0,
+                "wildcard_points": 0,
+                "competitions_participated": 0,
+                "competition_details": [],
+            }
+        )
+
+        for score in best.values():
             user = User.query.get(score.user_id)
             if not user:
                 continue
-            
-            user_stats[score.user_id]['username'] = user.username
-            user_stats[score.user_id]['display_name'] = getattr(user, 'display_name', None) or user.username
-            user_stats[score.user_id]['total_points'] += score.total_points or 0
-            user_stats[score.user_id]['race_points'] += score.race_points or 0
-            user_stats[score.user_id]['holeshot_points'] += score.holeshot_points or 0
-            user_stats[score.user_id]['wildcard_points'] += score.wildcard_points or 0
-            user_stats[score.user_id]['competitions_participated'] += 1
-            
-            # Get competition name
+            st = user_stats[score.user_id]
+            st["username"] = user.username
+            st["display_name"] = getattr(user, "display_name", None) or user.username
+            st["total_points"] += score.total_points or 0
+            st["race_points"] += score.race_points or 0
+            st["holeshot_points"] += score.holeshot_points or 0
+            st["wildcard_points"] += score.wildcard_points or 0
+            st["competitions_participated"] += 1
             comp = Competition.query.get(score.competition_id)
-            comp_name = comp.name if comp else f"Competition {score.competition_id}"
-            user_stats[score.user_id]['competition_details'].append({
-                'competition': comp_name,
-                'total_points': score.total_points or 0,
-                'race_points': score.race_points or 0,
-                'holeshot_points': score.holeshot_points or 0,
-                'wildcard_points': score.wildcard_points or 0
+            st["competition_details"].append({
+                "competition": comp.name if comp else f"Competition {score.competition_id}",
+                "total_points": score.total_points or 0,
+                "race_points": score.race_points or 0,
+                "holeshot_points": score.holeshot_points or 0,
+                "wildcard_points": score.wildcard_points or 0,
             })
-        
-        # Convert to list and sort by total points
-        stats_list = []
-        for user_id, stats in user_stats.items():
-            stats_list.append({
-                'user_id': user_id,
-                **stats
-            })
-        
-        stats_list.sort(key=lambda x: x['total_points'], reverse=True)
-        
-        # Create archive summary
+
+        stats_list = [{"user_id": uid, **stats} for uid, stats in user_stats.items()]
+        stats_list.sort(key=lambda x: x["total_points"], reverse=True)
+
         archive_summary = {
-            'archived_at': datetime.now().isoformat(),
-            'series': 'WSX',
-            'year': 2025,
-            'total_competitions': len(wsx_competitions),
-            'competition_names': [comp.name for comp in wsx_competitions],
-            'total_users': len(stats_list),
-            'users_with_points': len([s for s in stats_list if s['total_points'] > 0]),
-            'top_10': stats_list[:10],
-            'all_users': stats_list
+            "archived_at": datetime.now().isoformat(),
+            "series": "WSX",
+            "year": year,
+            "series_id": wsx_series.id,
+            "total_competitions": len(wsx_competitions),
+            "competition_names": [comp.name for comp in wsx_competitions],
+            "competition_ids": wsx_comp_ids,
+            "total_users": len(stats_list),
+            "users_with_points": len([s for s in stats_list if s["total_points"] > 0]),
+            "top_10": stats_list[:10],
+            "all_users": stats_list,
         }
-        
-        # Print statistics to console/log
+
         print("=" * 80)
-        print("WSX 2025 STATISTIK - ARKIVERAD")
+        print(f"WSX {year} STATISTIK - ARKIVERAD")
         print("=" * 80)
-        print(f"Arkiverad: {archive_summary['archived_at']}")
-        print(f"Antal tävlingar: {archive_summary['total_competitions']}")
-        print(f"Tävlingar: {', '.join(archive_summary['competition_names'])}")
-        print(f"Totalt antal användare: {archive_summary['total_users']}")
+        print(f"Tävlingar ({len(wsx_competitions)}): {', '.join(archive_summary['competition_names'])}")
         print(f"Användare med poäng: {archive_summary['users_with_points']}")
-        print("\n" + "-" * 80)
-        print("TOP 10 ANVÄNDARE:")
-        print("-" * 80)
-        for i, user_stat in enumerate(archive_summary['top_10'], 1):
-            print(f"{i}. {user_stat['display_name']} ({user_stat['username']})")
-            print(f"   Totalt: {user_stat['total_points']} poäng")
-            print(f"   Race: {user_stat['race_points']}, Holeshot: {user_stat['holeshot_points']}, Wildcard: {user_stat['wildcard_points']}")
-            print(f"   Tävlingar deltagit: {user_stat['competitions_participated']}")
-            print()
-        
-        print("-" * 80)
-        print("ALLA ANVÄNDARE:")
-        print("-" * 80)
-        for i, user_stat in enumerate(stats_list, 1):
-            print(f"{i}. {user_stat['display_name']} ({user_stat['username']}) - {user_stat['total_points']} poäng")
-        print("=" * 80)
-        
-        # IMPORTANT: Save statistics to FinishedSeriesStats BEFORE deleting CompetitionScore
-        print(f"\n💾 Sparar statistik till FinishedSeriesStats för serie_id={wsx_series.id}...")
-        archived_count = 0
-        
-        # Delete any existing archive entries for this series (in case of re-archive)
-        FinishedSeriesStats.query.filter_by(series_id=wsx_series.id).delete()
-        
-        for user_id, stats in user_stats.items():
-            archive_entry = FinishedSeriesStats(
-                series_id=wsx_series.id,
-                user_id=user_id,
-                total_points=stats['total_points'],
-                race_points=stats['race_points'],
-                holeshot_points=stats['holeshot_points'],
-                wildcard_points=stats['wildcard_points'],
-                competitions_participated=stats['competitions_participated']
+        for i, user_stat in enumerate(archive_summary["top_10"][:5], 1):
+            print(
+                f"  {i}. {user_stat['display_name']}: {user_stat['total_points']} p"
             )
-            db.session.add(archive_entry)
-            archived_count += 1
-        
-        db.session.flush()  # Flush to ensure archive is saved before deletion
-        print(f"✅ Sparade {archived_count} användarstatistik i FinishedSeriesStats")
-        
-        # IMPORTANT: Only delete CompetitionScore (user picks scores), NOT CompetitionResult (rider race results)
-        # CompetitionResult entries must be kept so that WSX championship leaderboard can still show rider results
+
+        write_payload = {
+            uid: {
+                "total_points": st["total_points"],
+                "race_points": st["race_points"],
+                "holeshot_points": st["holeshot_points"],
+                "wildcard_points": st["wildcard_points"],
+                "competitions_participated": st["competitions_participated"],
+            }
+            for uid, st in user_stats.items()
+        }
+        archived_count = _write_finished_series_stats(wsx_series.id, write_payload)
+        db.session.flush()
+
         deleted_count = CompetitionScore.query.filter(
             CompetitionScore.competition_id.in_(wsx_comp_ids)
-        ).delete()
-        
-        # Verify CompetitionResult entries are NOT deleted (they should remain)
+        ).delete(synchronize_session=False)
+
         remaining_results = CompetitionResult.query.filter(
             CompetitionResult.competition_id.in_(wsx_comp_ids)
         ).count()
-        print(f"✅ Behöll {remaining_results} CompetitionResult entries (förarnas resultat) för WSX-tävlingar")
-        
+
+        # Mark season finished in Fantasy-arkiv listing
+        try:
+            wsx_series.is_active = False
+            if getattr(wsx_series, "end_date", None) is None:
+                last = max(
+                    (c.event_date for c in wsx_competitions if c.event_date),
+                    default=None,
+                )
+                if last:
+                    wsx_series.end_date = last
+        except Exception:
+            pass
+
         db.session.commit()
-        
-        print(f"\n✅ Raderade {deleted_count} CompetitionScore entries (användarnas poäng) för WSX-tävlingar")
-        print(f"✅ Behöll {remaining_results} CompetitionResult entries (förarnas resultat) för WSX championship")
-        print("✅ WSX-statistik arkiverad och användarpoäng nollställda för SX-säsongen")
-        
+
+        print(
+            f"✅ WSX {year}: arkiverade {archived_count} users, "
+            f"raderade {deleted_count} CompetitionScore, "
+            f"behöll {remaining_results} CompetitionResult"
+        )
+
         return jsonify({
             "success": True,
-            "message": f"WSX-statistik arkiverad! {deleted_count} poängposter raderade.",
-            "archive_summary": archive_summary
+            "message": (
+                f"WSX {year} arkiverad! {deleted_count} tippa-poängposter raderade. "
+                f"WSX {year + 1 if year == 2025 else 'andra år'} orörd."
+            ),
+            "archive_summary": archive_summary,
+            "archived_users": archived_count,
+            "deleted_scores": deleted_count,
+            "kept_results": remaining_results,
         })
-        
+
     except Exception as e:
         import traceback
-        error_trace = traceback.format_exc()
+
         print(f"ERROR in archive_wsx_and_reset_points: {e}")
-        print(f"ERROR traceback: {error_trace}")
+        print(traceback.format_exc())
         db.session.rollback()
         return jsonify({"error": f"Fel vid arkivering: {str(e)}"}), 500
 
 
 @app.post("/admin/restore_wsx_points")
 def restore_wsx_points():
-    """Restore WSX points by recalculating from picks and results, then archive properly"""
+    """Recalculate tippa for one WSX year from picks/results, then refresh FinishedSeriesStats.
+
+    Does NOT delete CompetitionScore. JSON optional: { "year": 2025 }.
+    """
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
-    
+
     try:
-        from datetime import datetime
         from collections import defaultdict
-        
-        # Get WSX series
-        wsx_series = Series.query.filter_by(name='WSX', year=2025).first()
+
+        data = request.get_json(silent=True) or {}
+        year = int(data.get("year") or 2025)
+
+        wsx_series = Series.query.filter_by(name="WSX", year=year).first()
         if not wsx_series:
-            return jsonify({"error": "WSX 2025 serie hittades inte"}), 400
-        
-        # Get all WSX competitions
-        wsx_competitions = Competition.query.filter_by(series='WSX').all()
-        
+            return jsonify({"error": f"WSX {year} serie hittades inte"}), 400
+
+        wsx_competitions = _wsx_competitions_for_year(year)
         if not wsx_competitions:
-            return jsonify({"error": "Inga WSX-tävlingar hittades"}), 400
-        
-        # Get all WSX competition IDs
+            return jsonify({"error": f"Inga WSX {year}-tävlingar hittades"}), 400
+
         wsx_comp_ids = [comp.id for comp in wsx_competitions]
-        
-        print(f"🔄 Återställer WSX-poäng för {len(wsx_competitions)} tävlingar...")
-        
-        # Recalculate scores for each WSX competition
+        print(f"🔄 Återställer WSX {year}-poäng för {len(wsx_competitions)} tävlingar...")
+
         restored_count = 0
         for comp_id in wsx_comp_ids:
-            print(f"🔄 Räknar om poäng för tävling {comp_id}...")
             try:
                 calculate_scores(comp_id)
                 restored_count += 1
             except Exception as e:
                 print(f"⚠️ Fel vid räkning för tävling {comp_id}: {e}")
-        
+
         db.session.commit()
-        print(f"✅ Återställde poäng för {restored_count} tävlingar")
-        
-        # Now get all restored scores and archive them properly
+
         wsx_scores = CompetitionScore.query.filter(
             CompetitionScore.competition_id.in_(wsx_comp_ids)
         ).all()
-        
-        # Group scores by user and calculate totals
-        user_stats = defaultdict(lambda: {
-            'total_points': 0,
-            'race_points': 0,
-            'holeshot_points': 0,
-            'wildcard_points': 0,
-            'competitions_participated': 0
-        })
-        
+
+        user_stats = defaultdict(
+            lambda: {
+                "total_points": 0,
+                "race_points": 0,
+                "holeshot_points": 0,
+                "wildcard_points": 0,
+                "competitions_participated": 0,
+            }
+        )
         for score in wsx_scores:
-            user_stats[score.user_id]['total_points'] += score.total_points or 0
-            user_stats[score.user_id]['race_points'] += score.race_points or 0
-            user_stats[score.user_id]['holeshot_points'] += score.holeshot_points or 0
-            user_stats[score.user_id]['wildcard_points'] += score.wildcard_points or 0
-            user_stats[score.user_id]['competitions_participated'] += 1
-        
-        # Delete any existing archive entries for this series
-        FinishedSeriesStats.query.filter_by(series_id=wsx_series.id).delete()
-        
-        # Save to archive
-        archived_count = 0
-        for user_id, stats in user_stats.items():
-            archive_entry = FinishedSeriesStats(
-                series_id=wsx_series.id,
-                user_id=user_id,
-                total_points=stats['total_points'],
-                race_points=stats['race_points'],
-                holeshot_points=stats['holeshot_points'],
-                wildcard_points=stats['wildcard_points'],
-                competitions_participated=stats['competitions_participated']
-            )
-            db.session.add(archive_entry)
-            archived_count += 1
-        
+            user_stats[score.user_id]["total_points"] += score.total_points or 0
+            user_stats[score.user_id]["race_points"] += score.race_points or 0
+            user_stats[score.user_id]["holeshot_points"] += score.holeshot_points or 0
+            user_stats[score.user_id]["wildcard_points"] += score.wildcard_points or 0
+            user_stats[score.user_id]["competitions_participated"] += 1
+
+        archived_count = _write_finished_series_stats(wsx_series.id, dict(user_stats))
         db.session.commit()
-        
-        print(f"✅ Arkiverade {archived_count} användarstatistik i FinishedSeriesStats")
-        print(f"✅ WSX-poäng återställda och arkiverade!")
-        
+
         return jsonify({
             "success": True,
-            "message": f"WSX-poäng återställda! {restored_count} tävlingar räknade om, {archived_count} användarstatistik arkiverade.",
+            "message": (
+                f"WSX {year}: {restored_count} tävlingar omräknade, "
+                f"{archived_count} användare i arkivet."
+            ),
+            "year": year,
             "restored_competitions": restored_count,
-            "archived_users": archived_count
+            "archived_users": archived_count,
         })
-        
+
     except Exception as e:
         import traceback
-        error_trace = traceback.format_exc()
+
         print(f"ERROR in restore_wsx_points: {e}")
-        print(f"ERROR traceback: {error_trace}")
+        print(traceback.format_exc())
         db.session.rollback()
         return jsonify({"error": f"Fel vid återställning: {str(e)}"}), 500
 

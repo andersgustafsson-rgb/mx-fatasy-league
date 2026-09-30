@@ -1982,14 +1982,15 @@
                     <article class="ap-hub-card">
                         <div>
                             <p class="ap-hub-card__eyebrow">Säsong</p>
-                            <h3 class="ap-hub-card__title">WSX arkiv</h3>
+                            <h3 class="ap-hub-card__title">WSX arkiv 2025</h3>
                         </div>
                         <p class="ap-hub-card__desc">
-                            Arkivera WSX-statistik och nollställ poäng så AMA kan ta vid, eller återställ WSX-poäng från picks och resultat.
+                            Arkivera <strong>WSX 2025</strong> tippa till Fantasy-arkivet och radera bara de poängraderna.
+                            <strong>WSX 2026 lämnas orörd.</strong>
                         </p>
                         <div class="ap-hub-card__actions">
-                            <button type="button" onclick="archiveWsxAndResetPoints()" class="ap-btn ap-btn--primary">Arkivera &amp; nollställ</button>
-                            <button type="button" onclick="restoreWsxPoints()" class="ap-btn ap-btn--sm">Återställ WSX-poäng</button>
+                            <button type="button" onclick="archiveWsxAndResetPoints()" class="ap-btn ap-btn--primary">Arkivera WSX 2025</button>
+                            <button type="button" onclick="restoreWsxPoints()" class="ap-btn ap-btn--sm">Återställ WSX 2025-poäng</button>
                         </div>
                     </article>
 
@@ -2357,10 +2358,12 @@
         }
 
         async function archiveWsxAndResetPoints() {
-            if (confirm('⚠️ Detta kommer att:\n\n1. Skapa statistik för alla användare från WSX 2025\n2. Radera alla CompetitionScore entries för WSX-tävlingar\n3. Nollställa poängen så att SX-säsongen kan ta vid\n\nStatistik skrivs ut i konsolen/loggen.\n\nFortsätt?')) {
+            if (confirm('Arkivera WSX 2025 tippa?\n\n• Sparar statistik i Fantasy-arkivet\n• Raderar CompetitionScore för WSX 2025\n• WSX 2026 lämnas orörd\n\nFortsätt?')) {
                 try {
                     const response = await fetch('/admin/archive_wsx_and_reset_points', {
-                        method: 'POST'
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ year: 2025 }),
                     });
                     const result = await response.json();
                     if (result.success) {
@@ -2368,18 +2371,18 @@
                         if (result.archive_summary) {
                             const summary = result.archive_summary;
                             message += `📊 Statistik:\n`;
+                            message += `- År: ${summary.year}\n`;
                             message += `- Antal tävlingar: ${summary.total_competitions}\n`;
                             message += `- Totalt antal användare: ${summary.total_users}\n`;
                             message += `- Användare med poäng: ${summary.users_with_points}\n\n`;
                             message += `🏆 Top 3:\n`;
-                            summary.top_10.slice(0, 3).forEach((user, i) => {
+                            (summary.top_10 || []).slice(0, 3).forEach((user, i) => {
                                 message += `${i + 1}. ${user.display_name}: ${user.total_points} poäng\n`;
                             });
-                            message += `\nSe konsolen/loggen för fullständig statistik.`;
                         }
                         alert(message);
                     } else {
-                        alert('❌ Error: ' + result.error);
+                        alert('❌ Error: ' + (result.error || 'okänt'));
                     }
                 } catch (error) {
                     alert('❌ Error: ' + error.message);
@@ -2388,10 +2391,12 @@
         }
 
         async function restoreWsxPoints() {
-            if (confirm('🔄 Detta kommer att:\n\n1. Räknar om WSX-poäng från picks och resultat för alla WSX-tävlingar\n2. Återställer CompetitionScore entries\n3. Arkiverar statistik korrekt i FinishedSeriesStats\n\nDetta används om poängen redan har raderats men picks och resultat finns kvar.\n\nFortsätt?')) {
+            if (confirm('Återställ WSX 2025-poäng från picks/resultat och uppdatera arkivet?\n\nRaderar inte live-poäng. WSX 2026 orörd.\n\nFortsätt?')) {
                 try {
                     const response = await fetch('/admin/restore_wsx_points', {
-                        method: 'POST'
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ year: 2025 }),
                     });
                     const result = await response.json();
                     if (result.success) {
