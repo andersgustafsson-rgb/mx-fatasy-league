@@ -1,245 +1,447 @@
 {% from 'includes/mx_icon.html' import mx_icon %}
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark" />
   <title>Mina Ligor - MX Fantasy League</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="/static/rp-buttons.css?v=btn-clean-2" rel="stylesheet">
+  <script>tailwind.config = { darkMode: 'class' };</script>
   <link href="/static/mx_icons.css?v=size-lock-2" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
   <style>
+    :root {
+      --lg-bg: #0b1220;
+      --lg-panel: rgba(15, 23, 42, 0.72);
+      --lg-line: rgba(148, 163, 184, 0.22);
+      --lg-cyan: #22d3ee;
+      --lg-ok: #34d399;
+      --lg-amber: #fbbf24;
+    }
+    * { box-sizing: border-box; }
     body {
-      font-family: 'Rajdhani', sans-serif;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+      margin: 0;
+      min-height: 100vh;
+      font-family: "DM Sans", system-ui, sans-serif;
+      color: #e2e8f0;
+      background:
+        radial-gradient(1100px 560px at 8% -12%, rgba(34, 211, 238, 0.13), transparent 55%),
+        radial-gradient(900px 480px at 100% 0%, rgba(167, 139, 250, 0.10), transparent 50%),
+        linear-gradient(180deg, #0b1220 0%, #111827 48%, #0b1220 100%);
       background-attachment: fixed;
     }
-    .cyberpunk-header {
-      font-family: 'Orbitron', monospace;
-      text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+    .lg-display {
+      font-family: "Bebas Neue", Impact, sans-serif;
+      letter-spacing: 0.04em;
+      line-height: 0.95;
     }
-    .cyberpunk-card {
-      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-      border: 2px solid #22d3ee;
-      box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+    .lg-shell {
+      width: 100%;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 1rem 1rem 3rem;
     }
-    .neon-text { text-shadow: 0 0 10px rgba(34, 211, 238, 0.8); }
-    .cyberpunk-button {
-      background: linear-gradient(45deg, #22d3ee, #06b6d4);
-      border: 1px solid #22d3ee;
-      box-shadow: 0 0 15px rgba(34, 211, 238, 0.4);
-      transition: all 0.3s ease;
+    @media (min-width: 640px) { .lg-shell { padding: 1.5rem 1.5rem 3.5rem; } }
+    .lg-top {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;
+      margin-bottom: 1.25rem;
     }
-    .cyberpunk-button:hover {
-      box-shadow: 0 0 25px rgba(34, 211, 238, 0.6);
-      transform: translateY(-1px);
+    .lg-top h1 {
+      margin: 0;
+      font-size: clamp(1.85rem, 7vw, 2.85rem);
+      color: #f8fafc;
     }
-    .league-card {
-      background: linear-gradient(160deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%);
-      border: 1px solid rgba(251, 191, 36, 0.28);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-      transition: all 0.25s ease;
+    .lg-top .sub {
+      margin: 0.35rem 0 0;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+    .lg-chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.55rem 0.85rem; border-radius: 0.65rem;
+      border: 1px solid var(--lg-line); background: rgba(30, 41, 59, 0.75);
+      color: #cbd5e1; font-size: 0.8rem; font-weight: 650; text-decoration: none;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      cursor: pointer;
+    }
+    .lg-chip:hover {
+      background: rgba(51, 65, 85, 0.9);
+      border-color: rgba(34, 211, 238, 0.35);
+      color: #fff;
+    }
+    .lg-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
+      padding: 0.7rem 1rem; border-radius: 0.7rem;
+      font-size: 0.85rem; font-weight: 700; text-decoration: none;
+      border: 1px solid transparent; cursor: pointer;
+      transition: filter 0.15s, transform 0.15s, background 0.15s, border-color 0.15s;
+    }
+    .lg-btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .lg-btn--primary {
+      background: linear-gradient(135deg, #0891b2, #0e7490);
+      color: #fff; border-color: rgba(34, 211, 238, 0.4);
+    }
+    .lg-btn--ghost {
+      background: rgba(30, 41, 59, 0.75);
+      border-color: var(--lg-line); color: #e2e8f0;
+    }
+    .lg-btn--ghost:hover { border-color: rgba(34, 211, 238, 0.35); }
+    .lg-btn--danger {
+      background: transparent;
+      border-color: rgba(248, 113, 113, 0.35);
+      color: #fca5a5;
+    }
+    .lg-btn--danger:hover { background: rgba(127, 29, 29, 0.35); border-color: rgba(248, 113, 113, 0.55); }
+    .lg-btn--danger-solid {
+      background: rgba(127, 29, 29, 0.55);
+      border-color: rgba(248, 113, 113, 0.35);
+      color: #fecaca;
+    }
+    .lg-btn--danger-solid:hover { background: rgba(153, 27, 27, 0.7); }
+    .lg-panel {
+      border: 1px solid var(--lg-line);
+      border-radius: 1.15rem;
+      background: var(--lg-panel);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
       overflow: hidden;
     }
-    .league-card:hover {
-      border-color: rgba(251, 191, 36, 0.55);
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 24px rgba(251, 191, 36, 0.12);
-      transform: translateY(-3px);
+    .lg-panel-inner { padding: 1.2rem 1.1rem 1.4rem; }
+    @media (min-width: 640px) { .lg-panel-inner { padding: 1.55rem 1.6rem 1.75rem; } }
+    .lg-flash {
+      border: 1px solid var(--lg-line);
+      border-radius: 0.9rem;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1rem;
+      text-align: center;
+      font-size: 0.9rem;
+      background: rgba(15, 23, 42, 0.65);
     }
-    .league-card__banner {
+    .lg-flash--ok { border-color: rgba(52, 211, 153, 0.4); color: #a7f3d0; background: rgba(6, 78, 59, 0.25); }
+    .lg-flash--err { border-color: rgba(248, 113, 113, 0.4); color: #fecaca; background: rgba(127, 29, 29, 0.25); }
+    .lg-tab-bar {
+      display: flex; flex-wrap: wrap; gap: 0.45rem;
+      margin-bottom: 1.25rem;
+    }
+    .lg-tab-btn {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.55rem 0.9rem; min-height: 2.35rem;
+      border-radius: 0.65rem;
+      border: 1px solid var(--lg-line);
+      background: rgba(30, 41, 59, 0.65);
+      color: #94a3b8;
+      font-size: 0.8rem; font-weight: 650;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .lg-tab-btn:hover {
+      border-color: rgba(34, 211, 238, 0.35);
+      color: #e2e8f0;
+      background: rgba(51, 65, 85, 0.85);
+    }
+    .lg-tab-btn.active {
+      background: rgba(8, 145, 178, 0.22);
+      border-color: rgba(34, 211, 238, 0.55);
+      color: #ecfeff;
+    }
+    .lg-tab-panel { display: none; }
+    .lg-tab-panel.active { display: block; animation: lgIn 0.35s ease both; }
+    @keyframes lgIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+    .lg-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    @media (min-width: 1024px) { .lg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .lg-card {
+      border: 1px solid var(--lg-line);
+      border-radius: 1.1rem;
+      background: rgba(15, 23, 42, 0.72);
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .lg-card:hover {
+      border-color: rgba(34, 211, 238, 0.35);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
+    }
+    .lg-card__banner {
       position: relative;
-      height: 7.5rem;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
-      border-bottom: 1px solid rgba(251, 191, 36, 0.15);
+      display: block;
+      height: 7.25rem;
+      background:
+        linear-gradient(160deg, rgba(8, 47, 73, 0.45), rgba(15, 23, 42, 0.95));
+      border-bottom: 1px solid var(--lg-line);
+      text-decoration: none;
     }
-    .league-card__banner img {
+    .lg-card__banner img {
       width: 100%;
       height: 100%;
-      object-fit: contain;
-      padding: 0.5rem;
+      object-fit: cover;
     }
-    .league-card__rank {
+    .lg-card__banner-ph {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(103, 232, 249, 0.55);
+      pointer-events: none;
+    }
+    .lg-card__rank {
       position: absolute;
-      top: 0.65rem;
-      left: 0.65rem;
-      font-family: 'Orbitron', monospace;
-      font-weight: 800;
-      font-size: 0.7rem;
-      letter-spacing: 0.04em;
-      padding: 0.3rem 0.55rem;
-      border-radius: 0.4rem;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      top: 0.65rem; left: 0.65rem;
+      font-size: 0.7rem; font-weight: 750;
+      letter-spacing: 0.02em;
+      padding: 0.28rem 0.5rem;
+      border-radius: 0.45rem;
+      border: 1px solid var(--lg-line);
+      background: rgba(15, 23, 42, 0.82);
+      color: #e2e8f0;
       backdrop-filter: blur(6px);
     }
-    .league-card__rank--1 { background: rgba(234, 179, 8, 0.25); color: #fde68a; border-color: rgba(250, 204, 21, 0.45); }
-    .league-card__rank--2 { background: rgba(34, 211, 238, 0.2); color: #a5f3fc; border-color: rgba(34, 211, 238, 0.4); }
-    .league-card__rank--3 { background: rgba(74, 222, 128, 0.18); color: #bbf7d0; border-color: rgba(74, 222, 128, 0.35); }
-    .league-card__rank--n { background: rgba(15, 23, 42, 0.75); color: #e2e8f0; }
-    .league-card__body { padding: 1rem 1.1rem 1.1rem; }
-    .league-card__position {
-      border-radius: 0.55rem;
-      border: 1px solid rgba(251, 191, 36, 0.22);
-      background: rgba(251, 191, 36, 0.07);
+    .lg-card__rank--1 { color: #fde68a; border-color: rgba(251, 191, 36, 0.35); background: rgba(69, 26, 3, 0.55); }
+    .lg-card__rank--2 { color: #a5f3fc; border-color: rgba(34, 211, 238, 0.35); background: rgba(8, 47, 73, 0.6); }
+    .lg-card__rank--3 { color: #bbf7d0; border-color: rgba(52, 211, 153, 0.35); background: rgba(6, 78, 59, 0.45); }
+    .lg-card__body { padding: 1rem 1.05rem 1.1rem; }
+    .lg-card__title {
+      font-weight: 750; font-size: 1.05rem; color: #f8fafc;
+      text-decoration: none; display: block; line-height: 1.25;
+    }
+    .lg-card__title:hover { color: #67e8f9; }
+    .lg-card__meta { margin: 0.3rem 0 0; font-size: 0.75rem; color: #94a3b8; }
+    .lg-card__meta code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #67e8f9; font-size: 0.72rem; font-weight: 650;
+    }
+    .lg-card__pts {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 1.35rem; letter-spacing: 0.03em;
+      color: var(--lg-amber); line-height: 1;
+    }
+    .lg-card__status {
+      margin: 0.75rem 0;
       padding: 0.55rem 0.7rem;
-      font-size: 0.82rem;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(251, 191, 36, 0.18);
+      background: rgba(251, 191, 36, 0.06);
+      font-size: 0.8rem;
       line-height: 1.4;
       color: #fde68a;
-      margin-bottom: 0.75rem;
     }
-    .league-card__lb-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-      padding: 0.35rem 0.5rem;
+    .lg-card__status .muted { color: rgba(253, 230, 138, 0.75); font-size: 0.72rem; }
+    .lg-mini-lb {
+      border-radius: 0.65rem;
+      border: 1px solid var(--lg-line);
+      background: rgba(2, 6, 23, 0.4);
+      padding: 0.3rem;
+      margin-bottom: 0.85rem;
+    }
+    .lg-mini-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+      padding: 0.38rem 0.5rem;
       border-radius: 0.4rem;
       font-size: 0.8rem;
     }
-    .league-card__lb-row--me {
-      background: rgba(251, 191, 36, 0.12);
-      border: 1px solid rgba(251, 191, 36, 0.25);
+    .lg-mini-row--me {
+      background: rgba(34, 211, 238, 0.1);
+      border: 1px solid rgba(34, 211, 238, 0.22);
     }
-    .league-mini-lb {
-      border-radius: 0.55rem;
-      border: 1px solid rgba(55, 65, 81, 0.7);
-      background: rgba(3, 7, 18, 0.45);
-      padding: 0.35rem;
-      margin-bottom: 0.85rem;
+    .lg-mini-row .name { color: #cbd5e1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lg-mini-row--me .name { color: #ecfeff; font-weight: 700; }
+    .lg-mini-row .rank { color: #64748b; font-weight: 800; width: 1.1rem; display: inline-block; }
+    .lg-mini-row .pts { color: #94a3b8; font-variant-numeric: tabular-nums; font-weight: 700; }
+    .lg-mini-row--me .pts { color: #67e8f9; }
+    .lg-card__actions {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
     }
-    .invite-code {
-      background: linear-gradient(45deg, #1e293b, #334155);
-      border: 1px solid #22d3ee;
-      color: #22d3ee;
-      font-family: 'Orbitron', monospace;
+    .lg-card__actions .lg-btn--primary { flex: 1; min-width: 7rem; }
+    .lg-empty {
+      text-align: center;
+      padding: 2.25rem 1.25rem;
     }
-    .league-tab-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
+    .lg-empty .icon { color: rgba(103, 232, 249, 0.55); margin-bottom: 0.75rem; display: flex; justify-content: center; }
+    .lg-empty h3 {
+      margin: 0 0 0.4rem;
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 1.6rem; letter-spacing: 0.04em; color: #f8fafc;
     }
-    .league-tab-btn {
-      padding: 0.5rem 0.9rem;
-      min-height: 2.25rem;
-      border-radius: 0.5rem;
-      font-size: 0.8rem;
-      font-weight: 600;
-      border: 1px solid rgba(34, 211, 238, 0.25);
-      background: rgba(15, 23, 42, 0.7);
-      color: #a5f3fc;
-      cursor: pointer;
-      transition: all 0.15s ease;
+    .lg-empty p { margin: 0 0 1.1rem; color: #94a3b8; font-size: 0.9rem; }
+    .lg-form-title {
+      margin: 0 0 1.1rem;
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 1.55rem; letter-spacing: 0.04em; color: #f8fafc;
+      display: flex; align-items: center; gap: 0.4rem;
     }
-    .league-tab-btn:hover { border-color: rgba(34, 211, 238, 0.5); background: rgba(8, 145, 178, 0.15); }
-    .league-tab-btn.active {
-      background: linear-gradient(135deg, #0891b2, #2563eb);
-      border-color: rgba(34, 211, 238, 0.6);
-      color: #fff;
-      box-shadow: 0 0 12px rgba(34, 211, 238, 0.35);
+    .lg-label {
+      display: block; margin-bottom: 0.4rem;
+      font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8;
     }
-    .league-tab-panel { display: none; }
-    .league-tab-panel.active { display: block; }
-    .lb-panel {
-      border-radius: 0.75rem;
-      border: 1px solid rgba(167, 139, 250, 0.35);
-      background: rgba(139, 92, 246, 0.05);
-      padding: 0.75rem;
+    .lg-input {
+      width: 100%;
+      padding: 0.75rem 0.9rem;
+      border-radius: 0.7rem;
+      border: 1px solid var(--lg-line);
+      background: rgba(2, 6, 23, 0.55);
+      color: #f1f5f9;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
     }
-    .lb-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      border-radius: 0.5rem;
-      border: 1px solid rgba(55, 65, 81, 0.7);
-      background: rgba(3, 7, 18, 0.5);
-      padding: 0.5rem 0.75rem;
+    .lg-input:focus { border-color: rgba(34, 211, 238, 0.5); }
+    .lg-input--code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      text-transform: uppercase;
+      color: #67e8f9; letter-spacing: 0.06em;
     }
-    .rank-1 { color: #fde047; }
-    .rank-2 { color: #67e8f9; }
-    .rank-3 { color: #86efac; }
-    .rank-n { color: #9ca3af; }
-    .pts-1 { color: #fef08a; }
-    .pts-2 { color: #a5f3fc; }
-    .pts-3 { color: #bbf7d0; }
-    .pts-n { color: #e5e7eb; }
+    .lg-form { display: grid; gap: 1rem; max-width: 28rem; margin: 0 auto; }
+    .lg-form-wrap { max-width: 28rem; margin: 0 auto; }
+    .lg-explore-meta {
+      display: flex; gap: 1rem; font-size: 0.8rem; margin: 0.65rem 0 1rem;
+    }
+    .lg-explore-meta .m { color: #67e8f9; }
+    .lg-explore-meta .p { color: var(--lg-amber); font-weight: 700; }
+    .lg-badge {
+      flex: 1; text-align: center;
+      padding: 0.65rem 0.75rem; border-radius: 0.65rem;
+      font-size: 0.8rem; font-weight: 700;
+      border: 1px solid var(--lg-line);
+    }
+    .lg-badge--ok { background: rgba(6, 78, 59, 0.35); color: #a7f3d0; border-color: rgba(52, 211, 153, 0.3); }
+    .lg-badge--wait { background: rgba(69, 26, 3, 0.4); color: #fde68a; border-color: rgba(251, 191, 36, 0.3); }
+    .lg-lb-hint {
+      text-align: center; font-size: 0.8rem; color: #94a3b8; margin: 0 0 1rem;
+    }
+    .lg-lb-list { display: grid; gap: 0.4rem; }
+    .lg-lb-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+      border-radius: 0.65rem;
+      border: 1px solid var(--lg-line);
+      background: rgba(2, 6, 23, 0.4);
+      padding: 0.65rem 0.85rem;
+    }
+    .lg-lb-row a {
+      color: #f1f5f9; font-weight: 650; font-size: 0.9rem;
+      text-decoration: none;
+    }
+    .lg-lb-row a:hover { color: #67e8f9; }
+    .lg-lb-row .sub { font-size: 0.7rem; color: #64748b; margin-top: 0.15rem; }
+    .lg-lb-row .rank {
+      font-weight: 800; font-variant-numeric: tabular-nums;
+      width: 1.5rem; color: #64748b;
+    }
+    .lg-lb-row .rank.is-1 { color: #fde68a; }
+    .lg-lb-row .rank.is-2 { color: #a5f3fc; }
+    .lg-lb-row .rank.is-3 { color: #bbf7d0; }
+    .lg-lb-row .pts {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 1.15rem; letter-spacing: 0.02em;
+      color: #cbd5e1;
+    }
+    .lg-lb-row .pts.is-1 { color: #fde68a; }
+    .lg-lb-row .pts.is-2 { color: #a5f3fc; }
+    .lg-lb-row .pts.is-3 { color: #bbf7d0; }
+    .lg-modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 50;
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .lg-modal-backdrop.is-open { display: flex; }
+    .lg-modal {
+      width: 100%; max-width: 26rem;
+      border: 1px solid var(--lg-line);
+      border-radius: 1.1rem;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      padding: 1.25rem;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    }
+    .lg-modal h3 {
+      margin: 0 0 0.5rem;
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 1.45rem; letter-spacing: 0.04em; color: #f8fafc;
+    }
+    .lg-modal p { margin: 0 0 0.85rem; font-size: 0.875rem; color: #94a3b8; }
+    .lg-modal p strong { color: #67e8f9; }
   </style>
-<script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
+  <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
 </head>
-<body class="text-gray-100 min-h-screen">
-  <div class="container mx-auto p-3 sm:p-4 md:p-8 max-w-5xl">
+<body>
+  <div class="lg-shell">
 
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 gap-4">
+    <div class="lg-top">
       <header>
-        <h1 class="cyberpunk-header text-3xl sm:text-4xl md:text-5xl font-bold text-cyan-400 mb-1">MINA LIGOR</h1>
-        <p class="text-cyan-300/90 text-sm sm:text-base">Inloggad som <span class="text-cyan-400 font-bold">{{ username }}</span></p>
+        <h1 class="lg-display">Mina ligor</h1>
+        <p class="sub">Inloggad som <strong style="color:#e2e8f0">{{ username }}</strong></p>
       </header>
-      <a href="{{ url_for('index') }}"
-         class="cyberpunk-button text-white font-bold py-2.5 px-5 rounded-lg text-sm self-start shrink-0">
-        {{ mx_icon('zap') }} Tillbaka
-      </a>
+      <a href="{{ url_for('index') }}" class="lg-chip">← Hem</a>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="cyberpunk-card p-4 rounded-lg mb-6 text-center {{ 'border-green-400 bg-green-900/20' if category == 'success' else 'border-red-400 bg-red-900/20' }}">
+          <div class="lg-flash {% if category == 'success' %}lg-flash--ok{% else %}lg-flash--err{% endif %}">
             {{ message }}
           </div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
-    <div class="league-tab-bar" role="tablist">
-      <button type="button" class="league-tab-btn{% if initial_tab == 'mine' %} active{% endif %}" data-tab="mine" role="tab">{{ mx_icon('trophy') }} Mina ligor</button>
-      <button type="button" class="league-tab-btn{% if initial_tab == 'create' %} active{% endif %}" data-tab="create" role="tab">{{ mx_icon('rocket') }} Skapa</button>
-      <button type="button" class="league-tab-btn{% if initial_tab == 'join' %} active{% endif %}" data-tab="join" role="tab">{{ mx_icon('user-plus') }} Anslut</button>
-      <button type="button" class="league-tab-btn{% if initial_tab == 'explore' %} active{% endif %}" data-tab="explore" role="tab">{{ mx_icon('sparkles') }} Utforska</button>
-      <button type="button" class="league-tab-btn{% if initial_tab == 'leaderboard' %} active{% endif %}" data-tab="leaderboard" role="tab">{{ mx_icon('flag') }} Leaderboard</button>
+    <div class="lg-tab-bar" role="tablist">
+      <button type="button" class="lg-tab-btn{% if initial_tab == 'mine' %} active{% endif %}" data-tab="mine" role="tab">{{ mx_icon('trophy') }} Mina ligor</button>
+      <button type="button" class="lg-tab-btn{% if initial_tab == 'create' %} active{% endif %}" data-tab="create" role="tab">{{ mx_icon('rocket') }} Skapa</button>
+      <button type="button" class="lg-tab-btn{% if initial_tab == 'join' %} active{% endif %}" data-tab="join" role="tab">{{ mx_icon('user-plus') }} Anslut</button>
+      <button type="button" class="lg-tab-btn{% if initial_tab == 'explore' %} active{% endif %}" data-tab="explore" role="tab">{{ mx_icon('sparkles') }} Utforska</button>
+      <button type="button" class="lg-tab-btn{% if initial_tab == 'leaderboard' %} active{% endif %}" data-tab="leaderboard" role="tab">{{ mx_icon('flag') }} Leaderboard</button>
     </div>
 
     <!-- Mina ligor -->
-    <div id="tab-mine" class="league-tab-panel{% if initial_tab == 'mine' %} active{% endif %}" role="tabpanel">
+    <div id="tab-mine" class="lg-tab-panel{% if initial_tab == 'mine' %} active{% endif %}" role="tabpanel">
       {% if my_league_cards %}
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="lg-grid">
           {% for card in my_league_cards %}
             {% set league = card.league %}
             {% set rank = card.my_rank %}
             {% set total = card.member_count %}
-            <article class="league-card rounded-xl">
-              <a href="{{ url_for('league_detail_page', league_id=league.id) }}" class="block league-card__banner group">
+            <article class="lg-card">
+              <a href="{{ url_for('league_detail_page', league_id=league.id) }}" class="lg-card__banner">
                 {% if league.image_url %}
                   <img src="{{ url_for('league_image', league_id=league.id) }}" alt=""
                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                 {% endif %}
-                <div class="{% if league.image_url %}hidden {% endif %}absolute inset-0 flex flex-col items-center justify-center text-cyan-400/80 pointer-events-none">
+                <div class="lg-card__banner-ph{% if league.image_url %} hidden{% endif %}" {% if league.image_url %}style="display:none"{% endif %}>
                   {{ mx_icon('trophy', 'mx-icon--2xl') }}
                 </div>
                 {% if rank and total %}
-                  <span class="league-card__rank {% if rank == 1 %}league-card__rank--1{% elif rank == 2 %}league-card__rank--2{% elif rank == 3 %}league-card__rank--3{% else %}league-card__rank--n{% endif %}">
+                  <span class="lg-card__rank {% if rank == 1 %}lg-card__rank--1{% elif rank == 2 %}lg-card__rank--2{% elif rank == 3 %}lg-card__rank--3{% else %}{% endif %}">
                     #{{ rank }} av {{ total }}
                   </span>
                 {% endif %}
               </a>
 
-              <div class="league-card__body">
-                <div class="flex items-start justify-between gap-2 mb-2">
+              <div class="lg-card__body">
+                <div class="flex items-start justify-between gap-2 mb-1">
                   <div class="min-w-0">
-                    <a href="{{ url_for('league_detail_page', league_id=league.id) }}"
-                       class="font-bold text-lg text-white hover:text-yellow-200 transition-colors truncate block">
+                    <a href="{{ url_for('league_detail_page', league_id=league.id) }}" class="lg-card__title truncate">
                       {{ league.name }}
                     </a>
-                    <p class="text-xs text-gray-400 mt-0.5">{{ card.member_count }} medlemmar · kod <span class="font-mono text-cyan-300">{{ league.invite_code }}</span></p>
+                    <p class="lg-card__meta">{{ card.member_count }} medlemmar · kod <code>{{ league.invite_code }}</code></p>
                   </div>
-                  <span class="shrink-0 text-sm font-black tabular-nums text-yellow-300">{{ card.my_points or 0 }}p</span>
+                  <span class="lg-card__pts shrink-0">{{ card.my_points or 0 }}p</span>
                 </div>
 
                 {% if rank and total %}
-                  <div class="league-card__position">
+                  <div class="lg-card__status">
                     {% if rank == 1 %}
                       Du leder ligan · <strong>{{ card.my_points }} p</strong>
-                      {% if card.gap_below %}<br><span class="text-yellow-200/80 text-xs">{{ card.gap_below }} p före nästa</span>{% endif %}
+                      {% if card.gap_below %}<br><span class="muted">{{ card.gap_below }} p före nästa</span>{% endif %}
                     {% elif card.gap_above and card.rival_name %}
                       <strong>{{ card.gap_above }} p</strong> efter {{ card.rival_name }}
                     {% else %}
@@ -247,44 +449,39 @@
                     {% endif %}
                   </div>
                 {% else %}
-                  <div class="league-card__position text-yellow-200/70">Inga poäng registrerade ännu.</div>
+                  <div class="lg-card__status"><span class="muted">Inga poäng registrerade ännu.</span></div>
                 {% endif %}
 
                 {% if card.standings %}
-                  <div class="league-mini-lb">
+                  <div class="lg-mini-lb">
                     {% for row in card.standings[:4] %}
-                      <div class="league-card__lb-row{% if row.is_me %} league-card__lb-row--me{% endif %}">
-                        <span class="truncate {% if row.is_me %}text-yellow-200 font-bold{% else %}text-gray-200{% endif %}">
-                          <span class="text-gray-500 font-black tabular-nums w-4 inline-block">{{ row.rank }}.</span>
+                      <div class="lg-mini-row{% if row.is_me %} lg-mini-row--me{% endif %}">
+                        <span class="name truncate">
+                          <span class="rank">{{ row.rank }}.</span>
                           {{ row.display_name }}
                         </span>
-                        <span class="tabular-nums font-bold {% if row.is_me %}text-yellow-300{% else %}text-gray-300{% endif %}">{{ row.total_points }}p</span>
+                        <span class="pts">{{ row.total_points }}p</span>
                       </div>
                     {% endfor %}
                     {% if card.standings|length > 4 %}
-                      <p class="text-[10px] text-gray-500 text-center pt-1">+{{ card.standings|length - 4 }} till</p>
+                      <p class="text-center text-[10px] text-slate-500 pt-1">+{{ card.standings|length - 4 }} till</p>
                     {% endif %}
                   </div>
                 {% endif %}
 
-                <div class="flex flex-wrap gap-2">
-                  <a href="{{ url_for('league_detail_page', league_id=league.id) }}"
-                     class="cyberpunk-button text-white font-bold px-4 py-2 rounded-lg text-sm flex-1 text-center min-w-[7rem]">
+                <div class="lg-card__actions">
+                  <a href="{{ url_for('league_detail_page', league_id=league.id) }}" class="lg-btn lg-btn--primary">
                     Öppna liga →
                   </a>
                   {% if league.creator_id != session["user_id"] %}
                   <form action="{{ url_for('leave_league', league_id=league.id) }}" method="POST"
                         onsubmit="return confirm('Vill du lämna denna liga?');">
-                    <button type="submit" class="border border-red-400/60 text-red-400 hover:bg-red-500/20 font-semibold px-3 py-2 rounded-lg text-sm transition">
-                      Lämna
-                    </button>
+                    <button type="submit" class="lg-btn lg-btn--danger">Lämna</button>
                   </form>
                   {% else %}
                   <form action="{{ url_for('delete_league', league_id=league.id) }}" method="POST"
                         onsubmit="return confirm('Radera ligan permanent?');">
-                    <button type="submit" class="bg-red-800/80 hover:bg-red-700 text-white font-bold px-3 py-2 rounded-lg text-sm">
-                      Ta bort
-                    </button>
+                    <button type="submit" class="lg-btn lg-btn--danger-solid">Ta bort</button>
                   </form>
                   {% endif %}
                 </div>
@@ -293,124 +490,122 @@
           {% endfor %}
         </div>
       {% else %}
-        <div class="cyberpunk-card p-10 rounded-xl text-center">
-          <div class="mb-3 text-cyan-400 flex justify-center">{{ mx_icon('trophy', 'mx-icon--2xl') }}</div>
-          <p class="text-xl text-cyan-300 font-medium mb-2">Du är inte med i någon liga än</p>
-          <p class="text-cyan-400/80 mb-5 text-sm">Skapa en egen eller anslut med inbjudningskod.</p>
-          <div class="flex flex-wrap justify-center gap-2">
-            <button type="button" class="cyberpunk-button text-white font-bold py-2 px-4 rounded-lg text-sm" data-switch-tab="create">{{ mx_icon('rocket') }} Skapa liga</button>
-            <button type="button" class="cyberpunk-button text-white font-bold py-2 px-4 rounded-lg text-sm" data-switch-tab="join">{{ mx_icon('user-plus') }} Anslut</button>
+        <div class="lg-panel">
+          <div class="lg-empty">
+            <div class="icon">{{ mx_icon('trophy', 'mx-icon--2xl') }}</div>
+            <h3>Ingen liga ännu</h3>
+            <p>Skapa en egen eller anslut med inbjudningskod.</p>
+            <div class="flex flex-wrap justify-center gap-2">
+              <button type="button" class="lg-btn lg-btn--primary" data-switch-tab="create">{{ mx_icon('rocket') }} Skapa liga</button>
+              <button type="button" class="lg-btn lg-btn--ghost" data-switch-tab="join">{{ mx_icon('user-plus') }} Anslut</button>
+            </div>
           </div>
         </div>
       {% endif %}
     </div>
 
     <!-- Skapa -->
-    <div id="tab-create" class="league-tab-panel{% if initial_tab == 'create' %} active{% endif %}" role="tabpanel">
-      <div class="cyberpunk-card p-6 sm:p-8 rounded-xl max-w-lg mx-auto">
-        <h2 class="text-2xl font-bold text-cyan-400 neon-text mb-6">{{ mx_icon('rocket') }} Skapa en ny liga</h2>
-        <form action="{{ url_for('create_league') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
-          <div>
-            <label for="league_name" class="block mb-2 text-sm font-semibold text-cyan-300">Namn på ligan</label>
-            <input type="text" name="league_name" id="league_name" required
-                   class="w-full p-3 border-2 border-cyan-400/50 rounded-lg bg-slate-800 text-white focus:border-cyan-300 focus:outline-none"
-                   placeholder="T.ex. Mina Vänner Liga">
-          </div>
-          <div>
-            <label for="league_image" class="block mb-2 text-sm font-semibold text-cyan-300">Ligabild (valfritt)</label>
-            <input type="file" name="league_image" id="league_image" accept="image/*"
-                   class="w-full p-3 border-2 border-cyan-400/50 rounded-lg bg-slate-800 text-white text-sm">
-          </div>
-          <button type="submit" class="w-full cyberpunk-button text-white font-bold py-3 px-6 rounded-lg">
-            Skapa liga
-          </button>
-        </form>
+    <div id="tab-create" class="lg-tab-panel{% if initial_tab == 'create' %} active{% endif %}" role="tabpanel">
+      <div class="lg-panel lg-form-wrap">
+        <div class="lg-panel-inner">
+          <h2 class="lg-form-title">{{ mx_icon('rocket') }} Skapa liga</h2>
+          <form action="{{ url_for('create_league') }}" method="POST" enctype="multipart/form-data" class="lg-form" style="margin:0;max-width:none">
+            <div>
+              <label for="league_name" class="lg-label">Namn på ligan</label>
+              <input type="text" name="league_name" id="league_name" required class="lg-input"
+                     placeholder="T.ex. Mina Vänner Liga">
+            </div>
+            <div>
+              <label for="league_image" class="lg-label">Ligabild (valfritt)</label>
+              <input type="file" name="league_image" id="league_image" accept="image/*" class="lg-input text-sm">
+            </div>
+            <button type="submit" class="lg-btn lg-btn--primary w-full">Skapa liga</button>
+          </form>
+        </div>
       </div>
     </div>
 
     <!-- Anslut -->
-    <div id="tab-join" class="league-tab-panel{% if initial_tab == 'join' %} active{% endif %}" role="tabpanel">
-      <div class="cyberpunk-card p-6 sm:p-8 rounded-xl max-w-lg mx-auto">
-        <h2 class="text-2xl font-bold text-cyan-400 neon-text mb-6">{{ mx_icon('user-plus') }} Anslut till en liga</h2>
-        <form action="{{ url_for('join_league') }}" method="POST" class="space-y-5">
-          <div>
-            <label for="invite_code" class="block mb-2 text-sm font-semibold text-cyan-300">Inbjudningskod</label>
-            <input type="text" name="invite_code" id="invite_code" required
-                   class="w-full p-3 border-2 border-cyan-400/50 rounded-lg bg-slate-800 text-cyan-400 font-mono uppercase focus:border-cyan-300 focus:outline-none"
-                   placeholder="T.EX. A7B3F">
-          </div>
-          <button type="submit" class="w-full cyberpunk-button text-white font-bold py-3 px-6 rounded-lg">
-            Anslut
-          </button>
-        </form>
+    <div id="tab-join" class="lg-tab-panel{% if initial_tab == 'join' %} active{% endif %}" role="tabpanel">
+      <div class="lg-panel lg-form-wrap">
+        <div class="lg-panel-inner">
+          <h2 class="lg-form-title">{{ mx_icon('user-plus') }} Anslut till liga</h2>
+          <form action="{{ url_for('join_league') }}" method="POST" class="lg-form" style="margin:0;max-width:none">
+            <div>
+              <label for="invite_code" class="lg-label">Inbjudningskod</label>
+              <input type="text" name="invite_code" id="invite_code" required
+                     class="lg-input lg-input--code" placeholder="T.EX. A7B3F">
+            </div>
+            <button type="submit" class="lg-btn lg-btn--primary w-full">Anslut</button>
+          </form>
+        </div>
       </div>
     </div>
 
     <!-- Utforska -->
-    <div id="tab-explore" class="league-tab-panel{% if initial_tab == 'explore' %} active{% endif %}" role="tabpanel">
+    <div id="tab-explore" class="lg-tab-panel{% if initial_tab == 'explore' %} active{% endif %}" role="tabpanel">
       {% if public_leagues %}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="lg-grid">
           {% for league_data in public_leagues %}
             {% set league = league_data[0] %}
             {% set member_count = league_data[1] %}
-            <div class="league-card p-5 rounded-xl">
-              <h3 class="font-bold text-lg text-white mb-1">{{ league.name }}</h3>
+            <div class="lg-card" style="padding:1.05rem 1.1rem 1.15rem">
+              <h3 class="lg-card__title" style="cursor:default">{{ league.name }}</h3>
               {% if league.description %}
-                <p class="text-cyan-300/80 text-sm mb-3 line-clamp-2">{{ league.description }}</p>
+                <p class="lg-card__meta" style="margin-top:0.45rem">{{ league.description }}</p>
               {% endif %}
-              <div class="flex gap-4 text-sm mb-4">
-                <span class="text-cyan-400">{{ member_count }} medlemmar</span>
-                <span class="text-yellow-400">{{ league.total_points or 0 }} p</span>
+              <div class="lg-explore-meta">
+                <span class="m">{{ member_count }} medlemmar</span>
+                <span class="p">{{ league.total_points or 0 }} p</span>
               </div>
-              <div class="flex gap-2">
+              <div class="lg-card__actions">
                 {% if league.id in user_league_ids %}
-                  <span class="flex-1 text-center bg-green-800/40 text-green-300 font-semibold py-2 px-3 rounded text-sm">{{ mx_icon('check-circle') }} Medlem</span>
+                  <span class="lg-badge lg-badge--ok">{{ mx_icon('check-circle') }} Medlem</span>
                 {% elif league.id in pending_league_ids %}
-                  <span class="flex-1 text-center bg-yellow-800/40 text-yellow-300 font-semibold py-2 px-3 rounded text-sm">{{ mx_icon('hourglass') }} Väntar</span>
+                  <span class="lg-badge lg-badge--wait">{{ mx_icon('hourglass') }} Väntar</span>
                 {% else %}
                   <button type="button" onclick="requestJoinLeague({{ league.id }}, {{ league.name|tojson }})"
-                          class="flex-1 cyberpunk-button text-white font-bold py-2 px-3 rounded text-sm">
-                    Ansök
-                  </button>
+                          class="lg-btn lg-btn--primary" style="flex:1">Ansök</button>
                 {% endif %}
                 <a href="{{ url_for('league_detail_page', league_id=league.id) }}"
-                   class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded text-sm text-center">
-                  Visa
-                </a>
+                   class="lg-btn lg-btn--ghost" style="flex:1">Visa</a>
               </div>
             </div>
           {% endfor %}
         </div>
       {% else %}
-        <div class="cyberpunk-card p-10 rounded-xl text-center">
-          <p class="text-cyan-300">Inga publika ligor ännu.</p>
-          <button type="button" class="mt-4 cyberpunk-button text-white font-bold py-2 px-4 rounded-lg text-sm" data-switch-tab="create">Skapa första ligan</button>
+        <div class="lg-panel">
+          <div class="lg-empty">
+            <h3>Inga publika ligor</h3>
+            <p>Skapa den första ligan så syns den här.</p>
+            <button type="button" class="lg-btn lg-btn--primary" data-switch-tab="create">Skapa liga</button>
+          </div>
         </div>
       {% endif %}
     </div>
 
     <!-- Leaderboard -->
-    <div id="tab-leaderboard" class="league-tab-panel{% if initial_tab == 'leaderboard' %} active{% endif %}" role="tabpanel">
-      <div class="cyberpunk-card p-4 sm:p-6 rounded-xl">
-        <p class="text-cyan-300/70 text-sm mb-4 text-center">Liga-poäng beräknas automatiskt efter varje race</p>
-        <div class="lb-panel">
-          <div class="space-y-1">
+    <div id="tab-leaderboard" class="lg-tab-panel{% if initial_tab == 'leaderboard' %} active{% endif %}" role="tabpanel">
+      <div class="lg-panel">
+        <div class="lg-panel-inner">
+          <p class="lg-lb-hint">Liga-poäng beräknas automatiskt efter varje race</p>
+          <div class="lg-lb-list">
             {% if league_leaderboard %}
               {% for row in league_leaderboard %}
                 {% set i = loop.index0 %}
-                <div class="lb-row">
+                <div class="lg-lb-row">
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2 min-w-0">
-                      <span class="font-black tabular-nums w-6 shrink-0 {% if i == 0 %}rank-1{% elif i == 1 %}rank-2{% elif i == 2 %}rank-3{% else %}rank-n{% endif %}">{{ loop.index }}.</span>
-                      <a href="{{ url_for('league_detail_page', league_id=row.id) }}" class="text-white font-semibold text-sm truncate hover:text-purple-200">{{ row.name }}</a>
+                      <span class="rank {% if i == 0 %}is-1{% elif i == 1 %}is-2{% elif i == 2 %}is-3{% endif %}">{{ loop.index }}.</span>
+                      <a href="{{ url_for('league_detail_page', league_id=row.id) }}" class="truncate">{{ row.name }}</a>
                     </div>
-                    <div class="text-[10px] text-gray-400 pl-8">{{ row.member_count }} medlemmar{% if not row.is_public %} · privat{% endif %}</div>
+                    <div class="sub" style="padding-left:1.5rem">{{ row.member_count }} medlemmar{% if not row.is_public %} · privat{% endif %}</div>
                   </div>
-                  <span class="font-black tabular-nums text-sm {% if i == 0 %}pts-1{% elif i == 1 %}pts-2{% elif i == 2 %}pts-3{% else %}pts-n{% endif %}">{{ row.total_points }}p</span>
+                  <span class="pts {% if i == 0 %}is-1{% elif i == 1 %}is-2{% elif i == 2 %}is-3{% endif %}">{{ row.total_points }}p</span>
                 </div>
               {% endfor %}
             {% else %}
-              <p class="text-gray-400 text-center py-4 text-sm">Inga ligor med poäng ännu.</p>
+              <p class="text-center text-slate-500 text-sm py-6">Inga ligor med poäng ännu.</p>
             {% endif %}
           </div>
         </div>
@@ -419,17 +614,16 @@
   </div>
 
   <!-- Ansökningsmodal -->
-  <div id="requestModal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-4">
-    <div class="cyberpunk-card p-6 rounded-xl max-w-md w-full">
-      <h3 class="text-xl font-bold text-cyan-400 mb-3">Ansök om medlemskap</h3>
-      <p class="text-gray-300 mb-4 text-sm">Till: <span id="leagueName" class="font-bold text-cyan-400"></span></p>
+  <div id="requestModal" class="lg-modal-backdrop">
+    <div class="lg-modal">
+      <h3>Ansök om medlemskap</h3>
+      <p>Till: <strong id="leagueName"></strong></p>
       <form id="requestForm">
-        <textarea id="requestMessage" name="message" rows="3"
-                  class="w-full p-3 border border-cyan-400/50 rounded-lg bg-slate-800 text-white text-sm mb-4 focus:outline-none focus:border-cyan-300"
+        <textarea id="requestMessage" name="message" rows="3" class="lg-input mb-4"
                   placeholder="Meddelande (valfritt)…"></textarea>
         <div class="flex gap-2">
-          <button type="submit" class="flex-1 cyberpunk-button text-white font-bold py-2 px-4 rounded text-sm">Skicka</button>
-          <button type="button" onclick="closeRequestModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded text-sm">Avbryt</button>
+          <button type="submit" class="lg-btn lg-btn--primary flex-1">Skicka</button>
+          <button type="button" onclick="closeRequestModal()" class="lg-btn lg-btn--ghost flex-1">Avbryt</button>
         </div>
       </form>
     </div>
@@ -439,10 +633,10 @@
     let currentLeagueId = null;
 
     function switchLeagueTab(tabId) {
-      document.querySelectorAll('.league-tab-btn').forEach((btn) => {
+      document.querySelectorAll('.lg-tab-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.tab === tabId);
       });
-      document.querySelectorAll('.league-tab-panel').forEach((panel) => {
+      document.querySelectorAll('.lg-tab-panel').forEach((panel) => {
         panel.classList.toggle('active', panel.id === 'tab-' + tabId);
       });
       const url = new URL(window.location.href);
@@ -450,7 +644,7 @@
       history.replaceState(null, '', url.pathname + url.search);
     }
 
-    document.querySelectorAll('.league-tab-btn').forEach((btn) => {
+    document.querySelectorAll('.lg-tab-btn').forEach((btn) => {
       btn.addEventListener('click', () => switchLeagueTab(btn.dataset.tab));
     });
     document.querySelectorAll('[data-switch-tab]').forEach((btn) => {
@@ -460,11 +654,11 @@
     function requestJoinLeague(leagueId, leagueName) {
       currentLeagueId = leagueId;
       document.getElementById('leagueName').textContent = leagueName;
-      document.getElementById('requestModal').classList.remove('hidden');
+      document.getElementById('requestModal').classList.add('is-open');
     }
 
     function closeRequestModal() {
-      document.getElementById('requestModal').classList.add('hidden');
+      document.getElementById('requestModal').classList.remove('is-open');
       document.getElementById('requestForm').reset();
       currentLeagueId = null;
     }
