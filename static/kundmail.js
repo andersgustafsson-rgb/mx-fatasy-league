@@ -1006,22 +1006,31 @@ Vill du vänta tills produkten finns i lager igen, eller föredrar du att vi avb
     case "utgatt": {
       const alt = cleanStr(extras.alternativeProduct);
       body = `${intro}Vi måste tyvärr meddela att ${prod} har utgått ur vårt sortiment och inte kommer tillbaka i lager.`;
-      if (extras.cancelOrder) {
-        if (extras.shipRestOfOrder) {
-          body += `
+      // shipRestOfOrder = vi stryker artikeln (frågar inte). cancelOrder = avbryt hela ordern.
+      if (extras.shipRestOfOrder) {
+        body += `
 
 Vi stryker därför ${prod} från ordern och skickar övriga artiklar så snart de är klara.`;
-          if (alt) {
-            body += ` Om du vill beställa ett alternativ kan vi rekommendera ${alt}.`;
-          }
-        } else {
-          body += `
+        if (alt) {
+          body += ` Om du vill beställa ett alternativ kan vi rekommendera ${alt}.`;
+        }
+      } else if (extras.cancelOrder) {
+        body += `
 
 Därför avbryter vi ${orderRef}.`;
-          if (alt) {
-            body += ` Som tips kan vi rekommendera ${alt} om du vill titta på ett alternativ.`;
-          }
+        if (alt) {
+          body += ` Som tips kan vi rekommendera ${alt} om du vill titta på ett alternativ.`;
         }
+      } else if (alt) {
+        body += `
+
+Som alternativ kan vi rekommendera ${alt}. Säg till om du vill att vi hjälper dig med en ersättning eller avbryter ordern.`;
+      } else {
+        body += `
+
+Hör av dig om du vill avbryta ordern eller om vi kan hjälpa dig hitta ett alternativ.`;
+      }
+      if (extras.shipRestOfOrder || extras.cancelOrder) {
         if (extras.refundNote === "auto") {
           body += `
 
@@ -1031,22 +1040,6 @@ Eventuell betalning återbetalas automatiskt till samma betalningsmetod inom nå
 
 Vi återbetalar beloppet manuellt och återkommer när återbetalningen är genomförd.`;
         }
-      } else if (extras.shipRestOfOrder) {
-        body += `
-
-Om du har fler artiklar i samma order kan vi tyvärr inte dela upp leveransen. Vill du att vi stryker ${prod} och skickar övriga artiklar i ordern, eller vill du avbryta hela ordern?`;
-        if (alt) {
-          body += ` Som alternativ kan vi rekommendera ${alt} om du vill byta artikel i stället.`;
-        }
-        body += ` Återkom gärna med vad som passar dig bäst.`;
-      } else if (alt) {
-        body += `
-
-Som alternativ kan vi rekommendera ${alt}. Säg till om du vill att vi hjälper dig med en ersättning eller avbryter ordern.`;
-      } else {
-        body += `
-
-Hör av dig om du vill avbryta ordern eller om vi kan hjälpa dig hitta ett alternativ.`;
       }
       body += `\n\n${outro}`;
       break;
@@ -1291,22 +1284,30 @@ Vil du vente, til produktet er på lager igen, eller foretrækker du, at vi annu
     case "utgatt": {
       const alt = cleanStr(extras.alternativeProduct);
       body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udgået af vores sortiment og ikke kommer tilbage på lager.`;
-      if (extras.cancelOrder) {
-        if (extras.shipRestOfOrder) {
-          body += `
+      if (extras.shipRestOfOrder) {
+        body += `
 
 Vi stryger derfor ${prod} fra ordren og sender de øvrige varer, så snart de er klar.`;
-          if (alt) {
-            body += ` Hvis du gerne vil bestille et alternativ, kan vi anbefale ${alt}.`;
-          }
-        } else {
-          body += `
+        if (alt) {
+          body += ` Hvis du gerne vil bestille et alternativ, kan vi anbefale ${alt}.`;
+        }
+      } else if (extras.cancelOrder) {
+        body += `
 
 Derfor annullerer vi ${orderRef}.`;
-          if (alt) {
-            body += ` Som tip kan vi anbefale ${alt}, hvis du vil kigge på et alternativ.`;
-          }
+        if (alt) {
+          body += ` Som tip kan vi anbefale ${alt}, hvis du vil kigge på et alternativ.`;
         }
+      } else if (alt) {
+        body += `
+
+Som alternativ kan vi anbefale ${alt}. Sig til, hvis du ønsker hjælp til en erstatning eller annullering af ordren.`;
+      } else {
+        body += `
+
+Kontakt os, hvis du ønsker at annullere ordren, eller hvis vi kan hjælpe med at finde et alternativ.`;
+      }
+      if (extras.shipRestOfOrder || extras.cancelOrder) {
         if (extras.refundNote === "auto") {
           body += `
 
@@ -1316,22 +1317,6 @@ Eventuel betaling tilbagebetales automatisk til samme betalingsmetode inden for 
 
 Vi tilbagebetaler beløbet manuelt og vender tilbage, når tilbagebetalingen er gennemført.`;
         }
-      } else if (extras.shipRestOfOrder) {
-        body += `
-
-Hvis du har flere varer i samme ordre, kan vi desværre ikke dele leveringen. Vil du have os til at stryge ${prod} og sende de øvrige varer i ordren, eller vil du annullere hele ordren?`;
-        if (alt) {
-          body += ` Som alternativ kan vi anbefale ${alt}, hvis du vil skifte vare i stedet.`;
-        }
-        body += ` Vend gerne tilbage med, hvad der passer dig bedst.`;
-      } else if (alt) {
-        body += `
-
-Som alternativ kan vi anbefale ${alt}. Sig til, hvis du ønsker hjælp til en erstatning eller annullering af ordren.`;
-      } else {
-        body += `
-
-Kontakt os, hvis du ønsker at annullere ordren, eller hvis vi kan hjælpe med at finde et alternativ.`;
       }
       body += `\n\n${outro}`;
       break;
@@ -1576,22 +1561,30 @@ Would you like to wait until the product is back in stock, or would you prefer t
     case "utgatt": {
       const alt = cleanStr(extras.alternativeProduct);
       body = `${intro}We regret to inform you that ${prod} has been discontinued and will not return to stock.`;
-      if (extras.cancelOrder) {
-        if (extras.shipRestOfOrder) {
-          body += `
+      if (extras.shipRestOfOrder) {
+        body += `
 
 We are therefore removing ${prod} from the order and will ship the remaining items as soon as they are ready.`;
-          if (alt) {
-            body += ` If you would like to order an alternative, we can recommend ${alt}.`;
-          }
-        } else {
-          body += `
+        if (alt) {
+          body += ` If you would like to order an alternative, we can recommend ${alt}.`;
+        }
+      } else if (extras.cancelOrder) {
+        body += `
 
 We are therefore cancelling ${orderRef}.`;
-          if (alt) {
-            body += ` As a tip, we can recommend ${alt} if you would like to look at an alternative.`;
-          }
+        if (alt) {
+          body += ` As a tip, we can recommend ${alt} if you would like to look at an alternative.`;
         }
+      } else if (alt) {
+        body += `
+
+As an alternative we can recommend ${alt}. Let us know if you would like help with a replacement or if we should cancel the order.`;
+      } else {
+        body += `
+
+Please get in touch if you would like to cancel the order or if we can help you find an alternative.`;
+      }
+      if (extras.shipRestOfOrder || extras.cancelOrder) {
         if (extras.refundNote === "auto") {
           body += `
 
@@ -1601,22 +1594,6 @@ Any payment will be refunded automatically to the same payment method within a f
 
 We will refund the amount manually and get back to you once the refund has been completed.`;
         }
-      } else if (extras.shipRestOfOrder) {
-        body += `
-
-If you have other items in the same order, we unfortunately cannot split the shipment. Would you like us to remove ${prod} and send the remaining items, or cancel the entire order?`;
-        if (alt) {
-          body += ` As an alternative we can recommend ${alt} if you would like to swap the item.`;
-        }
-        body += ` Please let us know what works best for you.`;
-      } else if (alt) {
-        body += `
-
-As an alternative we can recommend ${alt}. Let us know if you would like help with a replacement or if we should cancel the order.`;
-      } else {
-        body += `
-
-Please get in touch if you would like to cancel the order or if we can help you find an alternative.`;
       }
       body += `\n\n${outro}`;
       break;
