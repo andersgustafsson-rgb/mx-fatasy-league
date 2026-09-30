@@ -6758,7 +6758,7 @@
       if (titleEl) titleEl.textContent = 'MXoN power rankings';
       if (blurb) {
         blurb.innerHTML =
-          'Vilka nationer tippar folk högst — och klassfavoriter — utifrån <strong class="text-gray-400">alla tipp</strong>. Ordning bara, ingen statistik.';
+          'Vilka nationer tippar folk högst — och klassfavoriter — utifrån <strong class="text-gray-400">alla tipp</strong>. Procent = andel av tippvikten / klassrösterna.';
       }
       const lockedLbl = data.picks_locked ? 'låsta' : 'öppna';
       sub.textContent = [c.name || 'Motocross of Nations', 'MXoN', `tips ${lockedLbl}`]
@@ -6772,7 +6772,7 @@
       let html = '';
       const nations = data.nations || [];
       if (nations.length) {
-        html += '<div class="text-[11px] font-bold text-yellow-400/90 mb-1.5 uppercase tracking-wide">Nationer — tipparnas topp</div>';
+        html += '<div class="text-[11px] font-bold text-cyan-300/90 mb-1.5 uppercase tracking-wide">Nationer — tipparnas topp</div>';
         // Single column — ranking reads top→bottom (not zigzag across cols)
         html += '<div class="space-y-1 mb-3 max-w-md">';
         nations.forEach((n, i) => {
@@ -6782,11 +6782,15 @@
             : (n.flag_emoji
               ? `<span class="text-base shrink-0 w-6 text-center leading-none">${n.flag_emoji}</span>`
               : `<span class="w-6 h-4 rounded-sm bg-gray-700 shrink-0"></span>`);
+          const pct = (n.strength_pct != null)
+            ? `<span class="shrink-0 text-cyan-300 font-black tabular-nums text-sm">${n.strength_pct}%</span>`
+            : '';
           html += `
             <div class="flex items-center gap-2 rounded-md bg-gray-800/80 border border-gray-700/70 px-2.5 py-1.5">
               <span class="text-sm shrink-0 w-5 text-center leading-none">${m}</span>
               ${flag}
-              <span class="text-sm font-semibold text-white truncate">${_escapeHtml(n.name || n.code || '—')}</span>
+              <span class="text-sm font-semibold text-white truncate flex-1 min-w-0">${_escapeHtml(n.name || n.code || '—')}</span>
+              ${pct}
             </div>`;
         });
         html += '</div>';
@@ -6798,7 +6802,7 @@
         .map((k) => classes[k])
         .filter(Boolean);
       if (classCards.length) {
-        html += '<div class="text-[11px] font-bold text-yellow-400/90 mb-1.5 uppercase tracking-wide">Klassfavoriter</div>';
+        html += '<div class="text-[11px] font-bold text-cyan-300/90 mb-1.5 uppercase tracking-wide">Klassfavoriter</div>';
         html += '<div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 max-w-3xl">';
         classCards.forEach((cl) => {
           const flag = cl.flag_url
@@ -6810,9 +6814,15 @@
               ? `#${cl.rider_number} ${_escapeHtml(cl.rider_name || '')}`
               : _escapeHtml(cl.rider_name || '—'));
           const nationSecondary = _escapeHtml(cl.name || cl.code || '');
+          const pct = (cl.strength_pct != null)
+            ? `<span class="text-cyan-300 font-black tabular-nums text-xs">${cl.strength_pct}%</span>`
+            : '';
           html += `
             <div class="rounded-md bg-gray-800/80 border border-gray-700/70 px-2.5 py-1.5">
-              <div class="text-[10px] font-bold text-cyan-300/90 uppercase tracking-wide mb-0.5">${_escapeHtml(cl.class_label || cl.class_name)}</div>
+              <div class="flex items-center justify-between gap-2 mb-0.5">
+                <div class="text-[10px] font-bold text-cyan-300/90 uppercase tracking-wide">${_escapeHtml(cl.class_label || cl.class_name)}</div>
+                ${pct}
+              </div>
               <div class="font-semibold text-white text-sm truncate leading-snug">${riderPrimary}</div>
               <div class="flex items-center gap-1.5 mt-0.5 min-w-0">
                 ${flag}

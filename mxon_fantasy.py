@@ -924,7 +924,7 @@ def fantasy_mxon_leaderboard_for_year(year: int = 2026) -> list[dict]:
 def build_mxon_crowd_ranking(competition_id: int) -> dict[str, Any]:
     """
     Crowd consensus for MXoN tippa — ranked nations + class favorites.
-    No pick counts or percentages in the payload (power-ranking style order only).
+    Includes strength_pct (share of tip weight / class votes) — no tipper counts.
     Nation rank weight: #1=5 … #5=1 across all tippers.
     """
     from collections import defaultdict
@@ -955,9 +955,10 @@ def build_mxon_crowd_ranking(competition_id: int) -> dict[str, Any]:
         if nation_ids
         else {}
     )
+    total_score = float(sum(scores.values())) or 1.0
     ranked_nations = sorted(scores.items(), key=lambda x: (-x[1], x[0]))
     nations_out = []
-    for i, (nid, _score) in enumerate(ranked_nations[:10], 1):
+    for i, (nid, score) in enumerate(ranked_nations[:10], 1):
         n = nations.get(nid)
         if not n:
             continue
@@ -970,6 +971,7 @@ def build_mxon_crowd_ranking(competition_id: int) -> dict[str, Any]:
                 "name": n.name,
                 "flag_url": flag_image_url(code) if code else None,
                 "flag_emoji": n.flag_emoji,
+                "strength_pct": int(round(100.0 * float(score) / total_score)),
             }
         )
 
@@ -988,7 +990,8 @@ def build_mxon_crowd_ranking(competition_id: int) -> dict[str, Any]:
         if not counts:
             classes_out[key] = None
             continue
-        top_nid = sorted(counts.items(), key=lambda x: (-x[1], x[0]))[0][0]
+        top_nid, top_votes = sorted(counts.items(), key=lambda x: (-x[1], x[0]))[0]
+        class_total = int(sum(counts.values())) or 1
         n = MxonNation.query.get(top_nid)
         code = (n.code if n else "") or ""
         seat = rider_seat_for_nation(int(top_nid), key) if n else {}
@@ -1002,6 +1005,7 @@ def build_mxon_crowd_ranking(competition_id: int) -> dict[str, Any]:
             "rider_name": (seat or {}).get("rider_name"),
             "rider_number": (seat or {}).get("rider_number"),
             "is_tba": bool((seat or {}).get("is_tba")),
+            "strength_pct": int(round(100.0 * int(top_votes) / class_total)),
         }
 
     return {
@@ -1018,7 +1022,7 @@ def build_mxon_crowd_ranking(competition_id: int) -> dict[str, Any]:
         "nations": nations_out,
         "classes": classes_out,
         "method": (
-            "Rangordning utifrån tipparnas topp 5 (viktat #1–#5) och vanligaste "
-            "klassfavorit — utan antal. Inte odds."
+            "Nation-% = andel av tipparnas viktade topp 5 (#1–#5). "
+            "Klass-% = andel av tippen på den favoriten. Inte odds."
         ),
     }
