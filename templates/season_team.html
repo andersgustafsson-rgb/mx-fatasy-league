@@ -386,14 +386,14 @@
 
           {% if is_own_team | default(true) %}
           <div class="st-actions">
-            <a class="st-btn st-btn--ghost" href="#poang-per-tavling">Visa poänghistorik</a>
+            <button type="button" class="st-btn st-btn--ghost" id="btn-scroll-points">Visa poänghistorik</button>
             <a class="st-btn st-btn--primary" href="{{ url_for('season_team_builder') }}">Ändra team →</a>
           </div>
           {% endif %}
         </div>
       </section>
 
-      <section class="st-panel" id="poang-per-tavling" style="animation-delay:0.08s">
+      <section class="st-panel" id="poang-per-tavling" style="animation-delay:0.08s; scroll-margin-top: 1rem;">
         <div class="st-panel-inner">
           <h3 class="st-section-title">Poäng per tävling</h3>
           <div class="st-tip">
