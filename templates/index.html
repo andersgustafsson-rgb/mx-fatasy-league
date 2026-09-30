@@ -1448,7 +1448,7 @@
       margin-top: 0;
       scroll-margin-top: 0.75rem;
     }
-    /* Season-team promo: soft cyan pulse when user has no team */
+    /* Promo glow: season team (no team) + leagues (not in any league) */
     @keyframes stwPromoPulse {
       0%, 100% {
         box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.35), 0 0 10px rgba(34, 211, 238, 0.12);
@@ -1459,7 +1459,8 @@
         border-color: rgba(103, 232, 249, 0.75);
       }
     }
-    .tab-season-team-btn.stw-promo-glow {
+    .tab-season-team-btn.stw-promo-glow,
+    .tab-leagues-btn.stw-promo-glow {
       position: relative;
       animation: stwPromoPulse 2.4s ease-in-out infinite;
       color: #e0f2fe !important;
@@ -1471,7 +1472,8 @@
       animation: stwPromoPulse 2.4s ease-in-out infinite;
       border-color: rgba(34, 211, 238, 0.55);
     }
-    .tab-season-team-btn.stw-promo-glow::after {
+    .tab-season-team-btn.stw-promo-glow::after,
+    .tab-leagues-btn.stw-promo-glow::after {
       content: attr(data-promo-hint);
       display: block;
       font-size: 0.58rem;
@@ -1484,7 +1486,8 @@
       margin-top: 0.1rem;
     }
     @media (prefers-reduced-motion: reduce) {
-      .tab-season-team-btn.stw-promo-glow { animation: none; }
+      .tab-season-team-btn.stw-promo-glow,
+      .tab-leagues-btn.stw-promo-glow { animation: none; }
     }
     .home-sidebar-card {
       margin-top: 0.75rem;
@@ -2420,7 +2423,8 @@
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="leaderboard"><span class="sm:hidden" data-i18n="tab.leaderboard.short">Toppl.</span><span class="hidden sm:inline" data-i18n="tab.leaderboard">Topplista</span></button>
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="stats" data-i18n="tab.stats">Statistik</button>
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="games" data-i18n="tab.games">Spel</button>
-                <button type="button" class="tab-btn rp-tab-btn" data-tab="leagues" data-i18n="tab.leagues">Ligor</button>
+                <button type="button" class="tab-btn rp-tab-btn tab-leagues-btn{% if is_logged_in and not user_has_league %} stw-promo-glow{% endif %}" data-tab="leagues" data-i18n="tab.leagues"
+                  {% if is_logged_in and not user_has_league %}data-promo-hint="Gå med"{% endif %}>Ligor</button>
                 <button type="button" id="tab-season-team-btn"
                   class="tab-btn rp-tab-btn tab-season-team-btn{% if season_team_promo_live and is_logged_in and not my_team %} stw-promo-glow{% endif %}" data-tab="season-team"
                   {% if season_team_promo_live and is_logged_in and not my_team and season_team_promo_copy %}data-promo-hint="{{ season_team_promo_copy.tab_hint }}"{% endif %}
@@ -2526,7 +2530,8 @@
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="leaderboard" data-i18n="tab.leaderboard">Topplista</button>
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="stats" data-i18n="tab.stats">Statistik</button>
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="games" data-i18n="tab.games">Spel</button>
-              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="leagues" data-i18n="tab.leagues">Ligor</button>
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page tab-leagues-btn{% if not user_has_league %} stw-promo-glow{% endif %}" data-tab="leagues" data-i18n="tab.leagues"
+                {% if not user_has_league %}data-promo-hint="Gå med"{% endif %}>Ligor</button>
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page tab-season-team-btn{% if season_team_promo_live and not my_team %} stw-promo-glow{% endif %}" data-tab="season-team"
                 {% if season_team_promo_live and not my_team and season_team_promo_copy %}data-promo-hint="{{ season_team_promo_copy.tab_hint }}"{% endif %}
                 {% if is_logged_in and my_team %}data-i18n="tab.team"{% else %}data-i18n="tab.team.create"{% endif %}>
@@ -2752,6 +2757,21 @@
               {% if season_team_promo_copy.notice %}
               <p class="mt-3 pt-3 border-t border-white/10 text-xs sm:text-sm text-amber-200/90 leading-relaxed">{{ season_team_promo_copy.notice }}</p>
               {% endif %}
+            </div>
+            {% endif %}
+            {% if is_logged_in and not user_has_league %}
+            <div id="league-promo-home-banner" class="mb-6 rounded-xl border border-emerald-400/40 bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 p-4 sm:p-5 shadow-lg shadow-emerald-500/10">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div class="min-w-0 flex-1">
+                  <p class="text-[11px] font-bold uppercase tracking-wider text-emerald-300 mb-1">Ligor</p>
+                  <p class="text-base sm:text-lg font-bold text-white leading-snug">Utmana kompisarna i en liga</p>
+                  <p class="text-sm text-slate-300 mt-1.5 leading-relaxed">Skapa en egen liga eller gå med via inbjudningskod — se vem som tippar bäst.</p>
+                </div>
+                <div class="shrink-0 flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <a href="{{ url_for('leagues_page', tab='create') }}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-900 font-extrabold text-sm transition">Skapa liga →</a>
+                  <a href="{{ url_for('leagues_page', tab='join') }}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-lg border border-emerald-400/40 text-emerald-200 hover:bg-emerald-500/10 font-bold text-sm transition">Anslut</a>
+                </div>
+              </div>
             </div>
             {% endif %}
             {% if upcoming_race %}
@@ -3612,6 +3632,14 @@
       return parts.join(' · ');
     }
 
+    function setLeaguePromoGlow(on) {
+      document.querySelectorAll('.tab-leagues-btn').forEach((btn) => {
+        btn.classList.toggle('stw-promo-glow', !!on);
+        if (on) btn.setAttribute('data-promo-hint', 'Gå med');
+        else btn.removeAttribute('data-promo-hint');
+      });
+    }
+
     async function loadMyLeagues() {
       const container = document.getElementById('my-leagues-container');
       if (!container) return;
@@ -3630,45 +3658,60 @@
         }
 
         if (!data.leagues || data.leagues.length === 0) {
+          setLeaguePromoGlow(true);
           container.innerHTML = `
-            <div class="text-center py-6 space-y-4">
-              <p class="text-gray-400">${data.message || 'Du är inte medlem i någon liga ännu.'}</p>
+            <div class="rounded-xl border border-cyan-400/40 bg-gradient-to-br from-cyan-950/50 via-slate-900 to-slate-900 p-5 sm:p-6 text-center">
+              <p class="text-[11px] font-bold uppercase tracking-wider text-cyan-300/90 mb-1">Ligor</p>
+              <p class="text-lg font-bold text-white mb-1">Utmana kompisarna</p>
+              <p class="text-sm text-slate-400 mb-4 leading-relaxed">${data.message || 'Du är inte med i någon liga ännu. Skapa en egen eller gå med via kod.'}</p>
               <div class="flex flex-wrap justify-center gap-2">
-                <a href="{{ url_for('leagues_page') }}" class="rp-btn rp-btn--accent">Skapa eller gå med i en liga</a>
-                <a href="{{ url_for('browse_leagues') }}" class="rp-btn rp-btn--secondary">Utforska publika ligor</a>
+                <a href="{{ url_for('leagues_page', tab='create') }}" class="rp-btn rp-btn--primary">Skapa liga</a>
+                <a href="{{ url_for('leagues_page', tab='join') }}" class="rp-btn rp-btn--accent">Anslut med kod</a>
+                <a href="{{ url_for('leagues_page', tab='explore') }}" class="rp-btn rp-btn--secondary">Utforska</a>
               </div>
             </div>`;
           return;
         }
 
+        setLeaguePromoGlow(false);
         let html = '<div class="grid grid-cols-1 xl:grid-cols-2 gap-4">';
         data.leagues.forEach((league) => {
           const standings = league.standings || [];
           let rowsHtml = '';
           standings.slice(0, 5).forEach((row) => {
             const name = row.display_name || row.username || '—';
-            const meClass = row.is_me ? ' font-bold text-yellow-200' : '';
-            rowsHtml += homeLbRow(row.rank, `<span class="${meClass}">${name}</span>`, row.total_points);
+            const meClass = row.is_me ? 'font-bold text-cyan-200' : 'text-slate-200';
+            const ptsClass = row.is_me ? 'text-cyan-300' : 'text-slate-400';
+            rowsHtml += `
+              <div class="leaderboard-entry home-lb-row">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-slate-500 font-black tabular-nums w-6 shrink-0">${row.rank}.</span>
+                    <div class="min-w-0 ${meClass} text-sm truncate">${name}</div>
+                  </div>
+                </div>
+                <span class="${ptsClass} font-bold tabular-nums whitespace-nowrap text-sm">${row.total_points}p</span>
+              </div>`;
           });
           if (standings.length > 5) {
-            rowsHtml += `<p class="text-xs text-gray-400 text-center pt-1">+${standings.length - 5} till i ligan</p>`;
+            rowsHtml += `<p class="text-xs text-slate-500 text-center pt-1">+${standings.length - 5} till i ligan</p>`;
           }
 
           html += `
             <div class="league-home-card">
               <div class="flex items-start justify-between gap-3 mb-3">
                 <div class="min-w-0">
-                  <a href="/leagues/${league.league_id}" class="text-lg font-bold text-yellow-300 hover:text-yellow-200 transition-colors truncate block">
+                  <a href="/leagues/${league.league_id}" class="text-lg font-bold text-slate-100 hover:text-cyan-300 transition-colors truncate block">
                     ${league.name}
                   </a>
-                  <p class="text-xs text-gray-400 mt-0.5">${league.member_count} medlemmar</p>
+                  <p class="text-xs text-slate-500 mt-0.5">${league.member_count} medlemmar</p>
                 </div>
-                <a href="/leagues/${league.league_id}" class="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-bold shadow transition">
+                <a href="/leagues/${league.league_id}" class="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-700/90 hover:bg-cyan-600 text-white text-sm font-bold border border-cyan-400/30 transition">
                   Öppna <span aria-hidden="true">→</span>
                 </a>
               </div>
               <div class="league-home-position mb-3">${leaguePositionSummary(league)}</div>
-              ${standings.length ? homeLbPanel(rowsHtml, 'gold') : '<p class="text-sm text-gray-400 text-center py-2">Inga poäng ännu.</p>'}
+              ${standings.length ? `<div class="space-y-1">${rowsHtml}</div>` : '<p class="text-sm text-slate-500 text-center py-2">Inga poäng ännu.</p>'}
             </div>`;
         });
         html += '</div>';

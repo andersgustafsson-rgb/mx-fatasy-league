@@ -4210,6 +4210,7 @@ def index():
                     new_bulletin_posts=0,
                     latest_post_author=None,
                     league_requests_count=0,
+                    user_has_league=False,
                     picks_status="no_picks",
                     picks_locked=True,
                     home_pick_portraits={},
@@ -4449,6 +4450,7 @@ def _index_impl():
     picks_status = "no_picks"
     picks_locked = True
     league_requests_count = 0
+    user_has_league = False
     
     needs_email = False
     if is_logged_in:
@@ -4771,6 +4773,17 @@ def _index_impl():
         print(f"Error checking league requests: {e}")
         league_requests_count = 0
 
+    try:
+        if is_logged_in and uid is not None:
+            user_has_league = (
+                LeagueMembership.query.filter_by(user_id=int(uid)).first() is not None
+            )
+        else:
+            user_has_league = False
+    except Exception as e:
+        print(f"Error checking league membership: {e}")
+        user_has_league = False
+
     # Get admin announcement message (popup + Pit Lane historik)
     admin_message = None
     admin_message_priority = None
@@ -4908,6 +4921,7 @@ def _index_impl():
         new_bulletin_posts=new_bulletin_posts,
         latest_post_author=latest_post_author,
         league_requests_count=league_requests_count if is_logged_in else 0,
+        user_has_league=bool(user_has_league) if is_logged_in else False,
         picks_status=picks_status,
         picks_locked=picks_locked,
         home_pick_portraits=home_pick_portraits if is_logged_in else {},
