@@ -738,10 +738,50 @@ except Exception as e:
     print(f"force_dark register skip: {type(e).__name__}: {e}")
 
 
+@app.post("/local/api/sync-prod-db")
+def local_sync_prod_db():
+    """
+    LOKAL only: copy Render Postgres → local SQLite (read-only against prod).
+    Never available on Render / production.
+    """
+    if not _is_local_dev_mark():
+        return jsonify({"error": "Not found"}), 404
+    if not is_admin_user():
+        return jsonify({"error": "Admin required"}), 401
+
+    full = False
+    try:
+        data = request.get_json(silent=True) or {}
+        full = bool(data.get("full"))
+    except Exception:
+        pass
+
+    try:
+        # Import by path so we don't rely on scripts/ being a package.
+        import importlib.util
+
+        sync_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "scripts",
+            "sync_production_to_local.py",
+        )
+        spec = importlib.util.spec_from_file_location("sync_production_to_local", sync_path)
+        if spec is None or spec.loader is None:
+            return jsonify({"error": "Sync-script saknas"}), 500
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        result = mod.run_sync(skip_blobs=not full, app=app, db=db, log=True)
+        status = 200 if result.get("ok") else 400
+        return jsonify(result), status
+    except Exception as e:
+        print(f"local_sync_prod_db failed: {type(e).__name__}: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @app.after_request
 def _mark_local_dev_html(response):
     """
-    Make local tabs unmistakable: [LOKAL] title prefix + lime badge.
+    Make local tabs unmistakable: [LOKAL] title prefix + lime badge + sync button.
     Skipped on Render / production. Opt out with MX_LOCAL_MARK=0.
     """
     if not _is_local_dev_mark():
@@ -761,7 +801,7 @@ def _mark_local_dev_html(response):
         if "mx-local-dev-badge" in html:
             return response
 
-        # Bottom-left LOKAL pill — must not cover nav / Pit Lane tabs.
+        # Bottom-left LOKAL panel — sync DB from prod (local only).
         inject_head = (
             '<meta name="theme-color" content="#84cc16" />'
             '<link rel="icon" href="/favicon.ico" type="image/svg+xml" />'
@@ -773,12 +813,55 @@ def _mark_local_dev_html(response):
             "<style>"
             ".mx-local-dev-badge{position:fixed;left:10px;bottom:10px;z-index:9000;"
             "background:#84cc16;color:#14532d;"
-            "font:800 10px/1 system-ui,Segoe UI,sans-serif;letter-spacing:.12em;"
-            "padding:7px 10px;border-radius:6px;pointer-events:none !important;"
-            "box-shadow:0 2px 10px rgba(0,0,0,.35);opacity:.92}"
+            "font:700 11px/1.25 system-ui,Segoe UI,sans-serif;"
+            "padding:8px 10px;border-radius:8px;"
+            "box-shadow:0 2px 10px rgba(0,0,0,.35);opacity:.96;"
+            "display:flex;flex-direction:column;gap:6px;max-width:200px}"
+            ".mx-local-dev-badge .mx-local-dev-title{font-weight:900;letter-spacing:.12em;"
+            "font-size:10px}"
+            ".mx-local-dev-badge button{appearance:none;border:0;cursor:pointer;"
+            "background:#14532d;color:#ecfccb;font:700 11px/1 system-ui,Segoe UI,sans-serif;"
+            "padding:7px 8px;border-radius:6px;text-align:left}"
+            ".mx-local-dev-badge button:hover{background:#052e16}"
+            ".mx-local-dev-badge button:disabled{opacity:.6;cursor:wait}"
+            ".mx-local-dev-badge .mx-local-dev-status{font-size:10px;font-weight:600;"
+            "color:#14532d;opacity:.9;min-height:1.2em}"
             "</style>"
+            "<script>(function(){"
+            "function ready(fn){if(document.readyState!=='loading')fn();"
+            "else document.addEventListener('DOMContentLoaded',fn);}"
+            "ready(function(){"
+            "var btn=document.getElementById('mx-local-sync-btn');"
+            "var st=document.getElementById('mx-local-sync-status');"
+            "if(!btn)return;"
+            "btn.addEventListener('click',async function(){"
+            "if(!confirm('Skriv över lokal databas med senaste från prod?\\n\\n"
+            "Läs-only mot prod. Lokal data ersätts.'))return;"
+            "btn.disabled=true;if(st)st.textContent='Synkar… (kan ta 1–2 min)';"
+            "try{"
+            "var res=await fetch('/local/api/sync-prod-db',{"
+            "method:'POST',headers:{'Content-Type':'application/json'},"
+            "credentials:'same-origin',body:JSON.stringify({full:false})});"
+            "var data=await res.json().catch(function(){return {};});"
+            "if(!res.ok||!data.ok){"
+            "if(st)st.textContent=data.error||('Fel '+res.status);"
+            "btn.disabled=false;return;}"
+            "if(st)st.textContent='Klart: '+data.users+' users, '+data.competitions+' races. Ladda om.';"
+            "setTimeout(function(){location.reload();},1200);"
+            "}catch(e){if(st)st.textContent='Fel: '+(e&&e.message||e);btn.disabled=false;}"
+            "});"
+            "});"
+            "})();</script>"
         )
-        inject_body = '<div class="mx-local-dev-badge" aria-hidden="true">LOKAL</div>'
+        inject_body = (
+            '<div class="mx-local-dev-badge" role="region" aria-label="Lokal utvecklingsmiljö">'
+            '<div class="mx-local-dev-title">LOKAL</div>'
+            '<button type="button" id="mx-local-sync-btn" title="Kopiera prod-databasen till lokal">'
+            "Synka DB från prod"
+            "</button>"
+            '<div class="mx-local-dev-status" id="mx-local-sync-status"></div>'
+            "</div>"
+        )
 
         lower = html.lower()
         # FIRST </head> only — admin email previews embed full HTML docs later in <script>.
