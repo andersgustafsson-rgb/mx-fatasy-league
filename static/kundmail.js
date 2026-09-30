@@ -204,7 +204,7 @@ const UI = {
     },
     usa_forsening: {
       label: "USA-leverans — störningar",
-      description: "Produkt från USA försenad. Valfritt skickdatum + alternativ. Erbjud vänta, byt eller avboka.",
+      description: "Info om försening från USA. Valfritt skickdatum. Inget avbokningsval — ordern behålls.",
       fields: {
         newDeliveryDate: { label: "Beräknat skickdatum (valfritt)" },
         alternativeProduct: { label: "Alternativ produkt (valfritt)" },
@@ -1085,7 +1085,7 @@ Vi gör vårt bästa för att leverera så snart som möjligt och återkommer n�
       const when = formatLocaleDate(extras.newDeliveryDate);
       const alt = cleanStr(extras.alternativeProduct);
       const link = cleanStr(extras.productLink);
-      body = `${intro}Vi behöver tyvärr meddela dig om en leveransförsening på ${prod}${orderNo ? ` i ${orderRef}` : ""}.
+      body = `${intro}Vi vill informera dig om att leveransen av ${prod}${orderNo ? ` i ${orderRef}` : ""} blir något försenad.
 
 Produkten skickas från USA, och just nu förekommer störningar i sändningarna därifrån. Det gör att leveranstiden blir längre än vanligt.`;
       body += when
@@ -1093,24 +1093,15 @@ Produkten skickas från USA, och just nu förekommer störningar i sändningarna
         : ` Vi återkommer med mer information så snart vi har ett säkrare datum.`;
       body += `
 
-Du kan välja hur du vill gå vidare:`;
+Vi behåller ordern och skickar så snart varan är på väg. Du behöver inte göra något just nu.`;
       if (alt) {
         body += `
 
-1. Vänta — vi behåller ordern och skickar så snart varan är på väg.
-2. Byt till alternativ — vi kan erbjuda ${alt} som ersättning.`;
-        if (link) body += `\n   Du hittar produkten här: ${link}`;
-        body += `
-3. Avboka — vi avbryter raden/ordern och du får pengarna tillbaka enligt gällande betalningssätt.`;
-      } else {
-        body += `
-
-1. Vänta — vi behåller ordern och skickar så snart varan är på väg.
-2. Avboka — vi avbryter raden/ordern och du får pengarna tillbaka enligt gällande betalningssätt.`;
+Skulle du vilja titta på ett liknande alternativ finns ${alt}.`;
+        if (link) body += ` Du hittar produkten här: ${link}`;
+        body += ` Hör av dig om du hellre vill byta — annars skickar vi originalordern som planerat.`;
       }
       body += `
-
-Svara gärna på detta mail med vilket alternativ som passar dig bäst. Vi hjälper dig vidare så fort vi hör från dig.
 
 ${outro}`;
       break;
@@ -1370,7 +1361,7 @@ Vi gør vores bedste for at levere så hurtigt som muligt og vender tilbage, nå
       const when = formatLocaleDate(extras.newDeliveryDate);
       const alt = cleanStr(extras.alternativeProduct);
       const link = cleanStr(extras.productLink);
-      body = `${intro}Vi er desværre nødt til at meddele dig om en leveringsforsinkelse på ${prod}${orderNo ? ` i ${orderRef}` : ""}.
+      body = `${intro}Vi vil gerne informere dig om, at leveringen af ${prod}${orderNo ? ` i ${orderRef}` : ""} bliver lidt forsinket.
 
 Produktet sendes fra USA, og der er i øjeblikket forstyrrelser i forsendelserne derfra. Det betyder, at leveringstiden bliver længere end normalt.`;
       body += when
@@ -1378,24 +1369,15 @@ Produktet sendes fra USA, og der er i øjeblikket forstyrrelser i forsendelserne
         : ` Vi vender tilbage med mere information, så snart vi har en mere sikker dato.`;
       body += `
 
-Du kan vælge, hvordan du vil gå videre:`;
+Vi beholder ordren og sender, så snart varen er på vej. Du behøver ikke gøre noget lige nu.`;
       if (alt) {
         body += `
 
-1. Vent — vi beholder ordren og sender, så snart varen er på vej.
-2. Skift til alternativ — vi kan tilbyde ${alt} som erstatning.`;
-        if (link) body += `\n   Du finder produktet her: ${link}`;
-        body += `
-3. Annullér — vi annullerer linjen/ordren, og du får pengene tilbage efter gældende betalingsmetode.`;
-      } else {
-        body += `
-
-1. Vent — vi beholder ordren og sender, så snart varen er på vej.
-2. Annullér — vi annullerer linjen/ordren, og du får pengene tilbage efter gældende betalingsmetode.`;
+Hvis du hellere vil kigge på et lignende alternativ, findes ${alt}.`;
+        if (link) body += ` Du finder produktet her: ${link}`;
+        body += ` Skriv gerne, hvis du hellere vil skifte — ellers sender vi originalordren som planlagt.`;
       }
       body += `
-
-Svar gerne på denne mail med, hvilket alternativ der passer dig bedst. Vi hjælper dig videre, så snart vi hører fra dig.
 
 ${outro}`;
       break;
@@ -1655,7 +1637,7 @@ We are doing our best to deliver as soon as possible and will update you when we
       const when = formatLocaleDate(extras.newDeliveryDate);
       const alt = cleanStr(extras.alternativeProduct);
       const link = cleanStr(extras.productLink);
-      body = `${intro}We need to let you know about a delivery delay for ${prod}${orderNo ? ` on ${orderRef}` : ""}.
+      body = `${intro}We wanted to let you know that delivery of ${prod}${orderNo ? ` on ${orderRef}` : ""} will be slightly delayed.
 
 This item ships from the USA, and there are currently disruptions to shipments from there. As a result, delivery is taking longer than usual.`;
       body += when
@@ -1663,24 +1645,15 @@ This item ships from the USA, and there are currently disruptions to shipments f
         : ` We will update you with more information as soon as we have a more reliable date.`;
       body += `
 
-You can choose how you would like to proceed:`;
+We are keeping the order and will ship as soon as the item is on its way. You do not need to do anything right now.`;
       if (alt) {
         body += `
 
-1. Wait — we keep the order and ship as soon as the item is on its way.
-2. Switch to an alternative — we can offer ${alt} as a replacement.`;
-        if (link) body += `\n   You can find the product here: ${link}`;
-        body += `
-3. Cancel — we cancel the line/order and refund you according to your payment method.`;
-      } else {
-        body += `
-
-1. Wait — we keep the order and ship as soon as the item is on its way.
-2. Cancel — we cancel the line/order and refund you according to your payment method.`;
+If you would rather look at a similar option, we have ${alt}.`;
+        if (link) body += ` You can find the product here: ${link}`;
+        body += ` Just reply if you would prefer to switch — otherwise we will ship the original order as planned.`;
       }
       body += `
-
-Please reply to this email with the option that suits you best. We will help you as soon as we hear from you.
 
 ${outro}`;
       break;
