@@ -63,6 +63,13 @@ const TEMPLATE_DEFS = [
     ],
   },
   {
+    id: "delager",
+    fields: [
+      { id: "stockQty", type: "text", required: true },
+      { id: "orderedQty", type: "text" },
+    ],
+  },
+  {
     id: "alternativ",
     fields: [
       { id: "alternativeProduct", type: "text", required: true },
@@ -130,6 +137,7 @@ const REPLY_DEFAULTS = {
   utgatt: false,
   forsening: false,
   usa_forsening: false,
+  delager: false,
   alternativ: false,
   avbokad: false,
   prisandring: false,
@@ -209,6 +217,15 @@ const UI = {
         newDeliveryDate: { label: "Beräknat skickdatum (valfritt)" },
         alternativeProduct: { label: "Alternativ produkt (valfritt)" },
         productLink: { label: "Länk till alternativ (valfritt)" },
+      },
+    },
+    delager: {
+      label: "Begränsat lager (antal)",
+      description:
+        "Bara X st kvar. Kunden väljer: ta det som finns, stryk artikeln/ordern, eller skicka övriga varor.",
+      fields: {
+        stockQty: { label: "Antal i lager", placeholder: "t.ex. 1" },
+        orderedQty: { label: "Beställt antal (valfritt)", placeholder: "t.ex. 3" },
       },
     },
     alternativ: {
@@ -312,6 +329,7 @@ const MAIL_I18N = {
       utgatt: "Produkt utgått",
       forsening: "Produkt försenad",
       usa_forsening: "Leverans från USA",
+      delager: "Begränsat lager",
       alternativ: "Alternativ produkt",
       avbokad: "Order avbruten",
       prisandring: "Prisändring",
@@ -350,6 +368,7 @@ const MAIL_I18N = {
       utgatt: "Produkt udgået",
       forsening: "Produkt forsinket",
       usa_forsening: "Levering fra USA",
+      delager: "Begrænset lager",
       alternativ: "Alternativt produkt",
       avbokad: "Ordre annulleret",
       prisandring: "Prisændring",
@@ -388,6 +407,7 @@ const MAIL_I18N = {
       utgatt: "Product discontinued",
       forsening: "Delivery delayed",
       usa_forsening: "USA shipping delay",
+      delager: "Limited stock",
       alternativ: "Alternative product",
       avbokad: "Order cancelled",
       prisandring: "Price change",
@@ -1106,6 +1126,26 @@ Skulle du vilja titta på ett liknande alternativ finns ${alt}.`;
 ${outro}`;
       break;
     }
+    case "delager": {
+      const stock = cleanStr(extras.stockQty) || "X";
+      const ordered = cleanStr(extras.orderedQty);
+      body = `${intro}Vi vill informera dig om att lagret på ${prod} är begränsat just nu.`;
+      body += ordered
+        ? ` Du har beställt ${ordered} st, men vi har endast ${stock} st tillgängliga.`
+        : ` Vi har endast ${stock} st tillgängliga.`;
+      body += `
+
+Hur vill du att vi går vidare?
+
+1. Ta det som finns — vi skickar ${stock} st och återbetalar eventuell mellanskillnad enligt gällande betalningssätt.
+2. Stryk artikeln/ordern — vi tar bort ${prod} (eller avbryter ordern) och återbetalar enligt gällande betalningssätt.
+3. Skicka övriga varor nu — om ordern innehåller fler produkter skickar vi dem utan att vänta. Säg till om ${prod} ska skickas delvis (${stock} st) eller strykas.
+
+Svara gärna på detta mail med vilket alternativ som passar dig bäst, så hjälper vi dig vidare.
+
+${outro}`;
+      break;
+    }
     case "alternativ": {
       const alt = cleanStr(extras.alternativeProduct);
       const link = cleanStr(extras.productLink);
@@ -1382,6 +1422,26 @@ Hvis du hellere vil kigge på et lignende alternativ, findes ${alt}.`;
 ${outro}`;
       break;
     }
+    case "delager": {
+      const stock = cleanStr(extras.stockQty) || "X";
+      const ordered = cleanStr(extras.orderedQty);
+      body = `${intro}Vi vil gerne informere dig om, at lagerbeholdningen af ${prod} er begrænset lige nu.`;
+      body += ordered
+        ? ` Du har bestilt ${ordered} stk., men vi har kun ${stock} stk. tilgængelige.`
+        : ` Vi har kun ${stock} stk. tilgængelige.`;
+      body += `
+
+Hvordan vil du gerne, at vi går videre?
+
+1. Tag det, der er — vi sender ${stock} stk. og tilbagebetaler en eventuel difference efter gældende betalingsmetode.
+2. Stryg varen/ordren — vi fjerner ${prod} (eller annullerer ordren) og tilbagebetaler efter gældende betalingsmetode.
+3. Send øvrige varer — hvis ordren indeholder flere produkter, sender vi dem nu, og ${prod} stryges eller sendes delvist efter dit valg ovenfor.
+
+Svar gerne på denne mail med, hvilket alternativ der passer dig bedst, så hjælper vi dig videre.
+
+${outro}`;
+      break;
+    }
     case "alternativ": {
       const alt = cleanStr(extras.alternativeProduct);
       const link = cleanStr(extras.productLink);
@@ -1654,6 +1714,26 @@ If you would rather look at a similar option, we have ${alt}.`;
         body += ` Just reply if you would prefer to switch — otherwise we will ship the original order as planned.`;
       }
       body += `
+
+${outro}`;
+      break;
+    }
+    case "delager": {
+      const stock = cleanStr(extras.stockQty) || "X";
+      const ordered = cleanStr(extras.orderedQty);
+      body = `${intro}We wanted to let you know that stock of ${prod} is limited right now.`;
+      body += ordered
+        ? ` You ordered ${ordered}, but we only have ${stock} available.`
+        : ` We only have ${stock} available.`;
+      body += `
+
+How would you like us to proceed?
+
+1. Take what is available — we ship ${stock} and refund any difference according to your payment method.
+2. Remove the item / cancel — we remove ${prod} (or cancel the order) and refund according to your payment method.
+3. Ship the rest of the order — if the order contains other products, we ship those now, and ${prod} is removed or partially shipped based on your choice above.
+
+Please reply with the option that suits you best, and we will take it from there.
 
 ${outro}`;
       break;
