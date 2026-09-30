@@ -1,6 +1,6 @@
 {% from 'includes/mx_icon.html' import mx_icon %}
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" class="dark">
 <head>
   <meta charset="UTF-8">
   <title>{{ league.name }} - MX Fantasy League</title>
@@ -11,17 +11,19 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
   <style>
     body {
-      font-family: 'Rajdhani', sans-serif;
+      font-family: "DM Sans", system-ui, sans-serif;
       background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
       background-attachment: fixed;
     }
     .cyberpunk-header {
-      font-family: 'Orbitron', monospace;
+      font-family: "Bebas Neue", Impact, sans-serif;
       text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
     }
     .cyberpunk-card {
@@ -48,7 +50,7 @@
       background: linear-gradient(45deg, #1e293b, #334155);
       border: 1px solid #22d3ee;
       color: #22d3ee;
-      font-family: 'Orbitron', monospace;
+      font-family: "Bebas Neue", Impact, sans-serif;
     }
     .hero-banner {
       position: relative;
@@ -66,7 +68,7 @@
       padding: 1rem;
     }
     .hero-stat {
-      font-family: 'Orbitron', monospace;
+      font-family: "Bebas Neue", Impact, sans-serif;
       border-radius: 0.75rem;
       border: 1px solid rgba(251, 191, 36, 0.3);
       background: rgba(251, 191, 36, 0.08);
@@ -120,7 +122,7 @@
       white-space: nowrap;
     }
     .matrix-table th {
-      font-family: 'Orbitron', monospace;
+      font-family: "Bebas Neue", Impact, sans-serif;
       font-size: 0.62rem;
       font-weight: 600;
       color: #94a3b8;
@@ -146,7 +148,7 @@
     }
     .matrix-table tr:last-child td { border-bottom: none; }
     .matrix-cell {
-      font-family: 'Orbitron', monospace;
+      font-family: "Bebas Neue", Impact, sans-serif;
       font-weight: 700;
       font-size: 0.72rem;
       border-radius: 0.3rem;
@@ -634,7 +636,7 @@
       border-top: 1px solid rgba(51, 65, 85, 0.45);
     }
     .duel-headline {
-      font-family: 'Orbitron', monospace;
+      font-family: "Bebas Neue", Impact, sans-serif;
       font-size: 0.95rem;
       font-weight: 800;
       color: #fde68a;
@@ -753,7 +755,7 @@
       box-shadow: 0 0 14px rgba(251, 191, 36, 0.15);
     }
     .rider-row__num {
-      font-family: 'Orbitron', monospace;
+      font-family: "Bebas Neue", Impact, sans-serif;
       font-size: 0.72rem;
       font-weight: 700;
       color: #22d3ee;
@@ -841,7 +843,7 @@
     .vs-card__sub { font-size: 0.72rem; color: #94a3b8; }
     .vs-divider {
       display: flex; align-items: center; justify-content: center;
-      font-family: 'Orbitron', monospace; font-weight: 900;
+      font-family: "Bebas Neue", Impact, sans-serif; font-weight: 900;
       font-size: 1.1rem; color: #f87171;
       text-shadow: 0 0 12px rgba(248, 113, 113, 0.5);
     }
@@ -880,7 +882,7 @@
       padding: 0.55rem 0.75rem;
       color: #e2e8f0;
       font-size: 1.1rem;
-      font-family: 'Orbitron', monospace;
+      font-family: "Bebas Neue", Impact, sans-serif;
       text-align: center;
     }
     .duel-explain {
@@ -907,7 +909,7 @@
       display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
     }
     .duel-setup-summary__vs {
-      font-family: 'Orbitron', monospace; font-weight: 900;
+      font-family: "Bebas Neue", Impact, sans-serif; font-weight: 900;
       color: #f87171; font-size: 0.8rem;
     }
     .duel-setup-summary__note { font-size: 0.75rem; color: #94a3b8; }
@@ -948,6 +950,208 @@
     .brand-dd__item:hover { background: rgba(8, 145, 178, 0.12); border-color: rgba(34, 211, 238, 0.35); }
     .brand-dd__item.is-selected { background: rgba(120, 53, 15, 0.25); border-color: rgba(251, 191, 36, 0.6); color: #fde68a; }
     .brand-dd__item:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ===== Visual overhaul (align with Mina ligor / season team) ===== */
+    body {
+      font-family: "DM Sans", system-ui, sans-serif !important;
+      color: #e2e8f0;
+      background:
+        radial-gradient(1100px 560px at 8% -12%, rgba(34, 211, 238, 0.13), transparent 55%),
+        radial-gradient(900px 480px at 100% 0%, rgba(167, 139, 250, 0.10), transparent 50%),
+        linear-gradient(180deg, #0b1220 0%, #111827 48%, #0b1220 100%) !important;
+      background-attachment: fixed !important;
+    }
+    .ld-shell {
+      width: 100%;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 1rem 1rem 3.5rem;
+    }
+    @media (min-width: 640px) { .ld-shell { padding: 1.5rem 1.5rem 4rem; } }
+    .cyberpunk-header {
+      font-family: "Bebas Neue", Impact, sans-serif !important;
+      text-shadow: none !important;
+      letter-spacing: 0.04em;
+      font-weight: 400 !important;
+      color: #f8fafc !important;
+    }
+    .cyberpunk-card,
+    .gold-card {
+      background: rgba(15, 23, 42, 0.72) !important;
+      border: 1px solid rgba(148, 163, 184, 0.22) !important;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35) !important;
+      backdrop-filter: blur(10px);
+    }
+    .cyberpunk-button {
+      background: linear-gradient(135deg, #0891b2, #0e7490) !important;
+      border: 1px solid rgba(34, 211, 238, 0.4) !important;
+      box-shadow: none !important;
+      color: #fff !important;
+      font-weight: 700;
+      border-radius: 0.7rem;
+    }
+    .cyberpunk-button:hover {
+      box-shadow: none !important;
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+    .invite-code {
+      background: rgba(2, 6, 23, 0.55) !important;
+      border: 1px solid rgba(148, 163, 184, 0.28) !important;
+      color: #67e8f9 !important;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important;
+      font-weight: 650;
+      letter-spacing: 0.04em;
+    }
+    .hero-banner {
+      border: none !important;
+      border-radius: 0 !important;
+      background: linear-gradient(160deg, rgba(8, 47, 73, 0.45), rgba(15, 23, 42, 0.95)) !important;
+      min-height: 9rem;
+    }
+    .hero-banner img {
+      object-fit: cover !important;
+      padding: 0 !important;
+      min-height: 9rem;
+    }
+    .hero-stat {
+      font-family: "DM Sans", system-ui, sans-serif !important;
+      border: 1px solid rgba(148, 163, 184, 0.22) !important;
+      background: rgba(2, 6, 23, 0.4) !important;
+      border-radius: 0.9rem !important;
+    }
+    .hero-stat--rank-1 { border-color: rgba(251, 191, 36, 0.35) !important; background: rgba(69, 26, 3, 0.35) !important; }
+    .hero-stat--rank-2 { border-color: rgba(34, 211, 238, 0.35) !important; background: rgba(8, 47, 73, 0.4) !important; }
+    .hero-stat--rank-3 { border-color: rgba(52, 211, 153, 0.35) !important; background: rgba(6, 78, 59, 0.3) !important; }
+    .lb-row {
+      border: 1px solid rgba(148, 163, 184, 0.18) !important;
+      background: rgba(2, 6, 23, 0.4) !important;
+      border-radius: 0.65rem !important;
+    }
+    .lb-row--me {
+      background: rgba(34, 211, 238, 0.1) !important;
+      border-color: rgba(34, 211, 238, 0.28) !important;
+    }
+    .matrix-wrap {
+      border: 1px solid rgba(148, 163, 184, 0.2) !important;
+      background: rgba(2, 6, 23, 0.4) !important;
+    }
+    .matrix-table th {
+      font-family: "DM Sans", system-ui, sans-serif !important;
+      font-size: 0.68rem !important;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .matrix-cell {
+      font-family: "DM Sans", system-ui, sans-serif !important;
+      font-weight: 700 !important;
+    }
+    .matrix-row--me td:first-child { color: #67e8f9 !important; }
+    .pulse-card, .digest-card, .rival-card {
+      border: 1px solid rgba(148, 163, 184, 0.22) !important;
+      background: rgba(15, 23, 42, 0.72) !important;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3) !important;
+    }
+    .pulse-card { border-color: rgba(34, 211, 238, 0.28) !important; }
+    .digest-card { border-color: rgba(251, 191, 36, 0.22) !important; }
+    .rival-card { border-color: rgba(248, 113, 113, 0.28) !important; }
+    .member-chip {
+      border-radius: 0.55rem !important;
+      border: 1px solid rgba(148, 163, 184, 0.22) !important;
+      background: rgba(2, 6, 23, 0.45) !important;
+    }
+    .duel-card {
+      border: 1px solid rgba(148, 163, 184, 0.22) !important;
+      background: rgba(15, 23, 42, 0.65) !important;
+    }
+    .duel-card--action {
+      border-color: rgba(34, 211, 238, 0.4) !important;
+      box-shadow: none !important;
+    }
+    .duels-section--alert {
+      border-color: rgba(251, 191, 36, 0.4) !important;
+      animation: none !important;
+      box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.15) !important;
+    }
+    .duels-jump-bar {
+      border: 1px solid rgba(251, 191, 36, 0.4) !important;
+      background: rgba(15, 23, 42, 0.95) !important;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
+      animation: none !important;
+      color: #fde68a !important;
+    }
+    .duel-btn {
+      background: linear-gradient(135deg, #0891b2, #0e7490) !important;
+      border: 1px solid rgba(34, 211, 238, 0.4) !important;
+      color: #fff !important;
+      box-shadow: none !important;
+      border-radius: 0.65rem !important;
+    }
+    .duel-btn:hover { box-shadow: none !important; filter: brightness(1.06); }
+    .duel-btn--ghost {
+      background: transparent !important;
+      border: 1px solid rgba(148, 163, 184, 0.28) !important;
+      color: #cbd5e1 !important;
+    }
+    .duel-modal {
+      border: 1px solid rgba(148, 163, 184, 0.25) !important;
+      background: rgba(15, 23, 42, 0.96) !important;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5) !important;
+    }
+    .duel-headline {
+      font-family: "Bebas Neue", Impact, sans-serif !important;
+      letter-spacing: 0.04em;
+      color: #fde68a !important;
+    }
+    .duel-class-pill {
+      border-radius: 0.45rem !important;
+      box-shadow: none !important;
+    }
+    .upcoming-pill {
+      border: 1px solid rgba(148, 163, 184, 0.22) !important;
+      background: rgba(2, 6, 23, 0.4) !important;
+      border-radius: 0.75rem !important;
+    }
+    .upcoming-pill:hover {
+      border-color: rgba(34, 211, 238, 0.35) !important;
+      background: rgba(8, 145, 178, 0.1) !important;
+      transform: none;
+    }
+    .ld-chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.55rem 0.85rem; border-radius: 0.65rem;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(30, 41, 59, 0.75);
+      color: #cbd5e1; font-size: 0.8rem; font-weight: 650;
+      text-decoration: none; cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .ld-chip:hover {
+      background: rgba(51, 65, 85, 0.9);
+      border-color: rgba(34, 211, 238, 0.35);
+      color: #fff;
+    }
+    .ld-chip--danger {
+      border-color: rgba(248, 113, 113, 0.35);
+      color: #fca5a5;
+      background: transparent;
+    }
+    .ld-chip--danger:hover { background: rgba(127, 29, 29, 0.35); color: #fecaca; }
+    .ld-top {
+      display: flex; flex-wrap: wrap; align-items: flex-start;
+      justify-content: space-between; gap: 0.85rem; margin-bottom: 1.25rem;
+    }
+    .ld-top h1 { margin: 0.35rem 0 0; font-size: clamp(1.85rem, 6vw, 2.75rem); }
+    .ld-top .back { font-size: 0.8rem; color: #94a3b8; text-decoration: none; font-weight: 600; }
+    .ld-top .back:hover { color: #67e8f9; }
+    .ld-top .meta { margin: 0.4rem 0 0; font-size: 0.85rem; color: #94a3b8; }
+    .ld-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .series-badge {
+      background: rgba(34, 211, 238, 0.12) !important;
+      color: #a5f3fc !important;
+      border-color: rgba(34, 211, 238, 0.28) !important;
+    }
+
   </style>
 </head>
 <body class="text-gray-100 min-h-screen">
@@ -973,40 +1177,31 @@
 </div>
 {% endmacro %}
 
-  <div class="container mx-auto p-3 sm:p-4 md:p-8 max-w-6xl">
+  <div class="ld-shell">
 
     <!-- Top bar -->
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 gap-4">
+    <div class="ld-top">
       <div class="flex-1 min-w-0">
-        <a href="{{ url_for('leagues_page') }}" class="text-cyan-400/70 hover:text-cyan-300 text-sm mb-2 inline-block">← Mina ligor</a>
-        <h1 class="cyberpunk-header text-3xl sm:text-4xl font-bold text-cyan-400 truncate">{{ league.name }}</h1>
-        <p class="text-gray-400 text-sm mt-1">
-          Inbjudningskod:
-          <span class="invite-code px-2 py-0.5 rounded text-xs ml-1">{{ league.invite_code }}</span>
-          <span class="text-gray-500 mx-2">·</span>
-          <span>{{ summary.member_count }} medlemmar</span>
+        <a href="{{ url_for('leagues_page') }}" class="back">← Mina ligor</a>
+        <h1 class="cyberpunk-header truncate">{{ league.name }}</h1>
+        <p class="meta">
+          Kod <span class="invite-code px-2 py-0.5 rounded text-xs">{{ league.invite_code }}</span>
+          <span style="margin:0 0.4rem;opacity:0.5">·</span>
+          {{ summary.member_count }} medlemmar
         </p>
       </div>
-      <div class="flex flex-wrap gap-2 shrink-0">
-        <a href="{{ url_for('index') }}" class="text-sm px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:border-cyan-500/50 hover:text-cyan-300 transition">
-          Huvudsidan
-        </a>
+      <div class="ld-actions">
+        <a href="{{ url_for('index') }}" class="ld-chip">Hem</a>
         {% if league.creator_id != session["user_id"] %}
         <form action="{{ url_for('leave_league', league_id=league.id) }}" method="POST"
               onsubmit="return confirm('Är du säker på att du vill lämna ligan?');">
-          <button type="submit" class="text-sm px-4 py-2 rounded-lg border border-red-500/60 text-red-400 hover:bg-red-500/10 transition">
-            Lämna liga
-          </button>
+          <button type="submit" class="ld-chip ld-chip--danger">Lämna</button>
         </form>
         {% else %}
-        <button onclick="toggleEditForm()" class="text-sm px-4 py-2 rounded-lg border border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/10 transition">
-          {{ mx_icon('edit') }} Redigera
-        </button>
+        <button type="button" onclick="toggleEditForm()" class="ld-chip">{{ mx_icon('edit') }} Redigera</button>
         <form action="{{ url_for('delete_league', league_id=league.id) }}" method="POST"
               onsubmit="return confirm('Vill du ta bort denna liga permanent?');" class="inline">
-          <button type="submit" class="text-sm px-4 py-2 rounded-lg border border-red-600/60 text-red-400 hover:bg-red-500/10 transition">
-            Ta bort
-          </button>
+          <button type="submit" class="ld-chip ld-chip--danger">Ta bort</button>
         </form>
         {% endif %}
       </div>
