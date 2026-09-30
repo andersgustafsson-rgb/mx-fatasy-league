@@ -1023,7 +1023,8 @@ def build_mxon_crowd_ranking(competition_id: int) -> dict[str, Any]:
         "nations": nations_out,
         "classes": classes_out,
         "method": (
-            "Topp 5 nationer efter tippvikt (#1=5p … #5=1p). "
-            "% = andel inom tipparnas topp 5. Klass-% = andel av tippen på favoriten. Inte odds."
+            "Topp 10 nationer efter tippvikt (#1=5p … #5=1p). "
+            "% visas för tipparnas topp 5 (andel av all tippvikt). "
+            "Klass-% = andel av tippen på favoriten. Inte odds."
         ),
     }
