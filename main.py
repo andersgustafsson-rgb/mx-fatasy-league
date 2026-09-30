@@ -9115,10 +9115,13 @@ def _season_team_created_date(team) -> date | None:
 
 def season_team_counts_competition(team, competition) -> bool:
     """
-    Late joiners must not score races that already happened.
-    Rule: competition.event_date >= team.created_at (date).
-    Legacy teams without created_at keep counting all races.
+    Whether a competition can award season-team points.
+    - Tippa-only (WSX / MXON / MXGP): never — season team is AMA (SX/MX/SMX) only.
+    - Late joiners: competition.event_date >= team.created_at (date).
+    - Legacy teams without created_at keep counting all AMA races.
     """
+    if competition is not None and is_tippa_only_series(getattr(competition, "series", None)):
+        return False
     created_d = _season_team_created_date(team)
     if created_d is None:
         return True
@@ -9194,6 +9197,9 @@ def build_season_team_competition_points(user_id: int) -> tuple[dict | None, str
 
     competition_points = []
     for comp in competitions:
+        # Season team is AMA-only — never list WSX / MXON / MXGP tippa races here.
+        if is_tippa_only_series(getattr(comp, "series", None)):
+            continue
         counts = season_team_counts_competition(team, comp)
         comp_points = 0
         rider_breakdown = []

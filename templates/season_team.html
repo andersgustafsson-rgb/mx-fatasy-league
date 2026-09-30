@@ -1,160 +1,431 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" class="dark">
 <head>
   {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
   <title>{% if is_own_team %}{{ team.team_name if team else 'Mitt Säsongsteam' }}{% else %}{{ team.team_name if team else 'Säsongsteam' }} — {{ viewing_user.display_name or viewing_user.username }}{% endif %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
-<script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
+  <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --st-bg: #0b1220;
+      --st-panel: rgba(15, 23, 42, 0.72);
+      --st-line: rgba(148, 163, 184, 0.22);
+      --st-cyan: #22d3ee;
+      --st-ok: #34d399;
+      --st-amber: #fbbf24;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "DM Sans", system-ui, sans-serif;
+      color: #e2e8f0;
+      background:
+        radial-gradient(1100px 560px at 8% -12%, rgba(34, 211, 238, 0.13), transparent 55%),
+        radial-gradient(900px 480px at 100% 0%, rgba(167, 139, 250, 0.10), transparent 50%),
+        linear-gradient(180deg, #0b1220 0%, #111827 48%, #0b1220 100%);
+      background-attachment: fixed;
+    }
+    .st-display {
+      font-family: "Bebas Neue", Impact, sans-serif;
+      letter-spacing: 0.04em;
+      line-height: 0.95;
+    }
+    .st-shell {
+      width: 100%;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 1rem 1rem 3rem;
+    }
+    @media (min-width: 640px) { .st-shell { padding: 1.5rem 1.5rem 3.5rem; } }
+    .st-top {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .st-top h1 {
+      margin: 0;
+      font-size: clamp(1.85rem, 7vw, 2.85rem);
+      color: #f8fafc;
+    }
+    .st-top .sub {
+      margin: 0.35rem 0 0;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+    .st-nav {
+      display: flex; flex-wrap: wrap; gap: 0.45rem; flex-shrink: 0;
+    }
+    .st-chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.55rem 0.85rem; border-radius: 0.65rem;
+      border: 1px solid var(--st-line); background: rgba(30, 41, 59, 0.75);
+      color: #cbd5e1; font-size: 0.8rem; font-weight: 650; text-decoration: none;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .st-chip:hover {
+      background: rgba(51, 65, 85, 0.9);
+      border-color: rgba(34, 211, 238, 0.35);
+      color: #fff;
+    }
+    .st-panel {
+      border: 1px solid var(--st-line);
+      border-radius: 1.15rem;
+      background: var(--st-panel);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      margin-bottom: 1.1rem;
+      animation: stIn 0.4s ease both;
+    }
+    .st-panel-inner { padding: 1.2rem 1.1rem 1.4rem; }
+    @media (min-width: 640px) { .st-panel-inner { padding: 1.55rem 1.6rem 1.75rem; } }
+    @keyframes stIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: none; }
+    }
+    .st-kicker {
+      font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em;
+      color: #7dd3fc; font-weight: 700; margin: 0 0 0.35rem;
+    }
+    .st-team-name {
+      margin: 0 0 1rem;
+      font-size: clamp(1.6rem, 5vw, 2.2rem);
+      color: #f8fafc;
+    }
+    .st-stats {
+      display: grid; gap: 0.65rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 1.25rem;
+    }
+    @media (min-width: 640px) { .st-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    .st-stat {
+      border: 1px solid var(--st-line); border-radius: 0.9rem;
+      padding: 0.85rem 0.9rem; background: rgba(2, 6, 23, 0.4);
+    }
+    .st-stat .lbl {
+      font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: #94a3b8; font-weight: 700;
+    }
+    .st-stat .val {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 1.55rem; letter-spacing: 0.03em; margin-top: 0.2rem;
+    }
+    .st-stat .val.cyan { color: #67e8f9; }
+    .st-stat .val.ok { color: var(--st-ok); }
+    .st-stat .val.amber { color: var(--st-amber); }
+    .st-section-title {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 1.35rem; letter-spacing: 0.05em;
+      color: #f1f5f9; margin: 0 0 0.85rem;
+      padding-bottom: 0.55rem;
+      border-bottom: 1px solid var(--st-line);
+    }
+    .st-riders {
+      display: grid; gap: 0.75rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 640px) { .st-riders { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (min-width: 1024px) { .st-riders { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    .st-rider {
+      position: relative;
+      border: 1px solid var(--st-line);
+      border-radius: 1rem;
+      padding: 0.95rem;
+      background:
+        linear-gradient(160deg, rgba(8, 47, 73, 0.35), rgba(15, 23, 42, 0.85));
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      overflow: hidden;
+    }
+    .st-rider:hover {
+      border-color: rgba(34, 211, 238, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+    }
+    .st-rider::before {
+      content: "";
+      position: absolute; inset: 0 auto 0 0; width: 3px;
+      background: linear-gradient(180deg, #22d3ee, #a78bfa);
+      opacity: 0.85;
+    }
+    .st-rider.is-450::before { background: linear-gradient(180deg, #fb923c, #ef4444); }
+    .st-rider.is-250::before { background: linear-gradient(180deg, #fbbf24, #fb923c); }
+    .st-rider-top {
+      display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.7rem;
+    }
+    .st-rider img.av, .st-rider .av-ph {
+      width: 3rem; height: 3rem; border-radius: 999px; object-fit: cover;
+      border: 2px solid rgba(148, 163, 184, 0.35); flex-shrink: 0;
+      background: #1e293b;
+    }
+    .st-rider .av-ph {
+      display: grid; place-items: center;
+      font-size: 0.75rem; font-weight: 800; color: #94a3b8;
+    }
+    .st-num {
+      width: 1.7rem; height: 1.7rem; border-radius: 999px;
+      display: grid; place-items: center;
+      font-size: 0.68rem; font-weight: 800; color: #fff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      flex-shrink: 0;
+    }
+    .st-num.cc450 { background: linear-gradient(135deg, #f97316, #dc2626); }
+    .st-num.cc250 { background: linear-gradient(135deg, #fbbf24, #ea580c); }
+    .st-rider .name {
+      font-weight: 750; font-size: 0.95rem; color: #f8fafc;
+      line-height: 1.2; margin: 0;
+    }
+    .st-rider .meta {
+      margin: 0.15rem 0 0; font-size: 0.75rem; color: #94a3b8; font-weight: 550;
+    }
+    .st-rider .price {
+      margin: 0.55rem 0 0;
+      font-size: 0.78rem; font-weight: 700; color: #fbbf24;
+    }
+    .st-cls {
+      display: inline-flex; align-items: center;
+      margin-top: 0.45rem; padding: 0.15rem 0.45rem; border-radius: 999px;
+      font-size: 0.65rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .st-cls.cc450 {
+      background: rgba(251, 146, 60, 0.18); color: #fdba74;
+      border: 1px solid rgba(251, 146, 60, 0.35);
+    }
+    .st-cls.cc250 {
+      background: rgba(167, 139, 250, 0.15); color: #c4b5fd;
+      border: 1px solid rgba(167, 139, 250, 0.35);
+    }
+    .st-actions {
+      display: grid; gap: 0.65rem; margin-top: 1.15rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 640px) { .st-actions { grid-template-columns: 1fr 1fr; } }
+    .st-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+      padding: 0.85rem 1rem; border-radius: 0.8rem;
+      font-weight: 750; font-size: 0.92rem; text-decoration: none;
+      border: 1px solid transparent; transition: transform 0.15s, filter 0.15s, background 0.15s;
+    }
+    .st-btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .st-btn--primary {
+      background: linear-gradient(135deg, #22d3ee, #06b6d4);
+      color: #0f172a;
+      box-shadow: 0 10px 28px rgba(34, 211, 238, 0.22);
+    }
+    .st-btn--accent {
+      background: linear-gradient(135deg, #a78bfa, #7c3aed);
+      color: #fff;
+      box-shadow: 0 10px 28px rgba(124, 58, 237, 0.25);
+    }
+    .st-btn--ghost {
+      background: rgba(30, 41, 59, 0.75);
+      border-color: var(--st-line);
+      color: #e2e8f0;
+    }
+    .st-tip {
+      border: 1px solid rgba(34, 211, 238, 0.28);
+      background: linear-gradient(135deg, rgba(8, 47, 73, 0.55), rgba(15, 23, 42, 0.7));
+      border-radius: 0.9rem;
+      padding: 0.85rem 1rem;
+      font-size: 0.82rem;
+      color: #bae6fd;
+      line-height: 1.45;
+      margin-bottom: 1rem;
+    }
+    .st-tip strong { color: #e0f2fe; }
+    .st-tip .note { display: block; margin-top: 0.35rem; font-size: 0.75rem; color: #7dd3fc; opacity: 0.9; }
+    .st-empty {
+      text-align: center; padding: 2rem 1rem;
+      color: #94a3b8;
+    }
+    .st-empty p { margin: 0 0 1rem; }
+    /* Competition table (JS-rendered) */
+    .st-filters { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 0.85rem; }
+    .st-filter-row {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem;
+    }
+    .st-filter-meta { font-size: 0.72rem; color: #64748b; font-weight: 600; }
+    .st-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .st-pill {
+      padding: 0.4rem 0.7rem; border-radius: 999px; font-size: 0.72rem; font-weight: 750;
+      border: 1px solid var(--st-line); background: rgba(15, 23, 42, 0.7); color: #cbd5e1; cursor: pointer;
+    }
+    .st-pill.is-on {
+      background: rgba(8, 47, 73, 0.85); border-color: rgba(34, 211, 238, 0.45); color: #e0f2fe;
+    }
+    .st-pill.is-on-ok {
+      background: rgba(6, 78, 59, 0.55); border-color: rgba(52, 211, 153, 0.4); color: #a7f3d0;
+    }
+    .st-pill.is-on-wait {
+      background: rgba(120, 53, 15, 0.45); border-color: rgba(251, 191, 36, 0.4); color: #fde68a;
+    }
+    .st-toolbar {
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    @media (min-width: 640px) {
+      .st-toolbar { flex-direction: row; align-items: stretch; }
+    }
+    .st-input, .st-select {
+      width: 100%; padding: 0.65rem 0.85rem; border-radius: 0.7rem;
+      border: 1px solid var(--st-line); background: rgba(2, 6, 23, 0.5);
+      color: #f1f5f9; font-size: 0.85rem; outline: none;
+    }
+    .st-input:focus, .st-select:focus { border-color: rgba(34, 211, 238, 0.5); }
+    @media (min-width: 640px) {
+      .st-select { width: 12rem; flex-shrink: 0; }
+    }
+    .st-table-wrap {
+      border: 1px solid var(--st-line); border-radius: 0.9rem; overflow: hidden;
+      background: rgba(2, 6, 23, 0.35);
+    }
+    .st-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .st-table thead {
+      background: rgba(30, 41, 59, 0.85);
+      color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.68rem;
+    }
+    .st-table th { padding: 0.7rem 0.75rem; text-align: left; font-weight: 750; }
+    .st-table th.r { text-align: right; }
+    .st-table th.c { text-align: center; }
+    .st-table td {
+      padding: 0.7rem 0.75rem; border-top: 1px solid rgba(51, 65, 85, 0.55);
+      color: #e2e8f0; vertical-align: middle;
+    }
+    .st-table tr.is-click:hover { background: rgba(8, 47, 73, 0.35); cursor: pointer; }
+    .st-badge {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      padding: 0.2rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 750;
+    }
+    .st-badge.wait { background: rgba(120, 53, 15, 0.45); color: #fde68a; }
+    .st-badge.done { background: rgba(6, 78, 59, 0.55); color: #a7f3d0; }
+    .st-badge.before { background: rgba(51, 65, 85, 0.7); color: #cbd5e1; }
+    .st-modal-panel {
+      background: #0f172a; border: 1px solid var(--st-line); border-radius: 1rem;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    }
+  </style>
 </head>
-<body class="bg-gray-900 text-gray-200 font-sans">
-  <div class="container mx-auto p-3 sm:p-4 md:p-6">
-    <!-- Header - Responsiv layout -->
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 gap-4">
-      <h1 class="text-2xl sm:text-3xl font-bold text-blue-500">
-        {% if is_own_team | default(true) %}Mitt Säsongsteam{% else %}Säsongsteam — {{ viewing_user.display_name or viewing_user.username }}{% endif %}
-      </h1>
-      <div class="flex gap-2 flex-wrap">
-        {% if is_own_team | default(true) %}
-        <a
-          href="{{ url_for('profile_page') }}"
-          class="bg-pink-600 hover:bg-pink-700 px-3 sm:px-4 py-2 rounded text-white font-bold text-sm sm:text-base"
-        ><span class="mx-heading-icon">{{ mx_icon('user') }}</span> Profil
-        </a>
-        {% else %}
-        <a
-          href="{{ url_for('view_user_profile', user_id=season_team_user_id) }}"
-          class="bg-pink-600 hover:bg-pink-700 px-3 sm:px-4 py-2 rounded text-white font-bold text-sm sm:text-base"
-        ><span class="mx-heading-icon">{{ mx_icon('user') }}</span> Profil
-        </a>
+<body>
+  <div class="st-shell">
+    <div class="st-top">
+      <header>
+        <p class="st-kicker">Säsongsteam · SMX 2027</p>
+        <h1 class="st-display">
+          {% if is_own_team | default(true) %}Mitt lag{% else %}Säsongsteam{% endif %}
+        </h1>
+        {% if not is_own_team and viewing_user %}
+        <p class="sub">{{ viewing_user.display_name or viewing_user.username }}</p>
         {% endif %}
-        <a
-          href="{{ url_for('index') }}"
-          class="bg-gray-600 hover:bg-gray-700 px-3 sm:px-4 py-2 rounded text-white font-bold text-sm sm:text-base"
-        >
-          ⬅ Tillbaka
-        </a>
-      </div>
+      </header>
+      <nav class="st-nav" aria-label="Navigation">
+        {% if is_own_team | default(true) %}
+        <a class="st-chip" href="{{ url_for('profile_page') }}"><span class="mx-heading-icon">{{ mx_icon('user') }}</span> Profil</a>
+        {% else %}
+        <a class="st-chip" href="{{ url_for('view_user_profile', user_id=season_team_user_id) }}"><span class="mx-heading-icon">{{ mx_icon('user') }}</span> Profil</a>
+        {% endif %}
+        <a class="st-chip" href="{{ url_for('index') }}">← Hem</a>
+      </nav>
     </div>
 
     {% if team %}
-      <div class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md mb-4 sm:mb-6">
-        <h2 class="text-xl sm:text-2xl font-semibold mb-2 break-words">{{ team.team_name }}</h2>
-        {% if is_own_team and user_total_points is not none %}
-        <p class="text-base sm:text-lg mb-3 sm:mb-4">
-          Poäng för byten (AMA tippa):
-          <span class="font-bold text-green-400">{{ user_total_points or 0 }}</span>
-        </p>
-        {% endif %}
-        <p class="text-sm text-gray-400 mb-3">
-          Säsongsteam poäng: <span class="font-bold text-blue-400">{{ team.total_points or 0 }}</span>
-        </p>
+      {% set ns = namespace(budget=0) %}
+      {% for rider in riders %}
+        {% set ns.budget = ns.budget + (rider.price or 0) %}
+      {% endfor %}
 
-        <h3 class="text-lg sm:text-xl font-semibold mb-3 border-b border-gray-700 pb-2">
-          {% if is_own_team %}Ditt team{% else %}Lag{% endif %}:
-        </h3>
+      <section class="st-panel">
+        <div class="st-panel-inner">
+          <p class="st-kicker">{% if is_own_team %}Ditt team{% else %}Lag{% endif %}</p>
+          <h2 class="st-display st-team-name">{{ team.team_name }}</h2>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {% for rider in riders %}
-            <div class="bg-gray-700 p-3 sm:p-4 rounded-lg flex items-center shadow">
-              <div class="flex items-center gap-2 sm:gap-3 mr-2 sm:mr-3 flex-shrink-0">
-                {% if rider.image_url %}
-                  <img
-                    src="{{ rider.image_url if rider.image_url.startswith('data:') else url_for('static', filename=rider.image_url) }}"
-                    alt="{{ rider.name }} headshot"
-                    class="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full" width="40" height="40"
-                  />
-                {% elif rider.bike_brand %}
-                  <img
-                    src="{{ url_for('static', filename='brand_logos/' ~ rider.bike_brand|lower ~ '.png') }}"
-                    alt="{{ rider.bike_brand }} Logo"
-                    class="w-8 h-8 sm:w-10 sm:h-10 object-contain" width="40" height="40"
-                  />
-                {% else %}
-                  <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gray-600 rounded-full"></div>
-                {% endif %}
-                
-                <!-- Nummer-cirkel med klassbaserad färg -->
-                <div class="w-6 h-6 sm:w-8 sm:h-8 {% if rider.class_name == '450cc' %}bg-gradient-to-br from-orange-500 to-red-600{% else %}bg-gradient-to-br from-yellow-400 to-orange-500{% endif %} rounded-full flex items-center justify-center shadow-lg">
-                  <span class="text-white text-xs sm:text-sm font-bold">#{{ rider.rider_number }}</span>
-                </div>
-              </div>
-
-              <div class="min-w-0 flex-1">
-                <p class="font-bold text-sm sm:text-lg truncate">
-                  {{ rider.name }}
-                </p>
-                <p class="text-xs sm:text-sm text-gray-300 truncate">
-                  {{ rider.class_name }} ({{ rider.bike_brand or '—' }})
-                </p>
-                <p class="text-xs sm:text-sm text-yellow-400">
-                  Värde: {{ "{:,.0f}".format(rider.price) }} kr
-                </p>
-              </div>
+          <div class="st-stats">
+            <div class="st-stat">
+              <div class="lbl">Säsongsteam</div>
+              <div class="val cyan">{{ team.total_points or 0 }} <span style="font-size:0.85rem;opacity:.7">p</span></div>
             </div>
-          {% else %}
-            <p class="text-gray-400">Inga förare i teamet ännu.</p>
-          {% endfor %}
-        </div>
-
-        {% if is_own_team | default(true) %}
-        <div class="mt-4 sm:mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <a
-            href="{{ url_for('my_scores') }}"
-            class="text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded transition text-sm sm:text-base"
-          >
-            Visa poänghistorik
-          </a>
-          <a
-            href="{{ url_for('season_team_builder') }}"
-            class="text-center bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded transition text-sm sm:text-base"
-          >
-            Ändra team
-          </a>
-        </div>
-        {% endif %}
-
-        <!-- Säsongsteam Poäng per Tävling -->
-        <div class="mt-6 bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md">
-          <h3 class="text-lg sm:text-xl font-semibold mb-4 border-b border-gray-700 pb-2">
-            Säsongsteam Poäng per Tävling
-          </h3>
-          <div class="bg-blue-900 border border-blue-700 rounded-lg p-3 mb-4">
-            <p class="text-sm text-blue-200">
-              💡 <strong>Tips:</strong> Klicka på en tävling för detaljerad <strong>säsongsteam</strong>-poängfördelning per förare.<br>
-              <span class="text-xs mt-1 block"><span class="mx-heading-icon">{{ mx_icon('alert') }}</span> OBS: Inte race picks — poäng från lagets 4 säsongsteam-förare. Race före laget skapades ger 0 p.</span>
-            </p>
+            {% if is_own_team and user_total_points is not none %}
+            <div class="st-stat">
+              <div class="lbl">Poäng för byten</div>
+              <div class="val ok">{{ user_total_points or 0 }} <span style="font-size:0.85rem;opacity:.7">p</span></div>
+            </div>
+            {% endif %}
+            <div class="st-stat">
+              <div class="lbl">Budget använt</div>
+              <div class="val amber">{{ "{:,.0f}".format(ns.budget) }} <span style="font-size:0.75rem;opacity:.7">kr</span></div>
+            </div>
           </div>
-          <div id="season-team-competitions" class="overflow-x-auto">
-            <p class="text-gray-400 text-center">Laddar tävlingar...</p>
+
+          <h3 class="st-section-title">Roster</h3>
+          <div class="st-riders">
+            {% for rider in riders %}
+              <article class="st-rider {% if rider.class_name == '450cc' %}is-450{% else %}is-250{% endif %}">
+                <div class="st-rider-top">
+                  {% if rider.image_url %}
+                    <img class="av" src="{{ rider.image_url if rider.image_url.startswith('data:') else url_for('static', filename=rider.image_url) }}" alt="{{ rider.name }}" width="48" height="48" loading="lazy" />
+                  {% else %}
+                    <div class="av-ph">#{{ rider.rider_number or '?' }}</div>
+                  {% endif %}
+                  <div class="st-num {% if rider.class_name == '450cc' %}cc450{% else %}cc250{% endif %}">#{{ rider.rider_number }}</div>
+                </div>
+                <p class="name">{{ rider.name }}</p>
+                <p class="meta">{{ rider.bike_brand or '—' }}</p>
+                <span class="st-cls {% if rider.class_name == '450cc' %}cc450{% else %}cc250{% endif %}">{{ rider.class_name }}</span>
+                <p class="price">{{ "{:,.0f}".format(rider.price) }} kr</p>
+              </article>
+            {% else %}
+              <p class="text-slate-400">Inga förare i teamet ännu.</p>
+            {% endfor %}
+          </div>
+
+          {% if is_own_team | default(true) %}
+          <div class="st-actions">
+            <a class="st-btn st-btn--ghost" href="#poang-per-tavling">Visa poänghistorik</a>
+            <a class="st-btn st-btn--primary" href="{{ url_for('season_team_builder') }}">Ändra team →</a>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="st-panel" id="poang-per-tavling" style="animation-delay:0.08s">
+        <div class="st-panel-inner">
+          <h3 class="st-section-title">Poäng per tävling</h3>
+          <div class="st-tip">
+            <strong>Tips:</strong> Klicka på en körd tävling för poängfördelning per förare.
+            <span class="note"><span class="mx-heading-icon">{{ mx_icon('alert') }}</span> Bara SX · MX · SMX (säsongsteam). Tippa-only (WSX / MXGP / MXON) visas inte. Race före laget skapades ger 0 p.</span>
+          </div>
+          <div id="season-team-competitions">
+            <p class="text-slate-500 text-center text-sm py-6">Laddar tävlingar…</p>
           </div>
         </div>
-      </div>
+      </section>
+
     {% else %}
-      <div class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md">
-        {% if is_own_team %}
-        <p class="mb-3 sm:mb-4 text-sm sm:text-base">Du har inte skapat något säsongsteam ännu.</p>
-        <a
-          href="{{ url_for('season_team_builder') }}"
-          class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 sm:px-4 py-2 rounded text-sm sm:text-base"
-        >
-          Skapa team
-        </a>
-        {% else %}
-        <p class="mb-3 sm:mb-4 text-sm sm:text-base">{{ viewing_user.display_name or viewing_user.username }} har inget säsongsteam.</p>
-        {% endif %}
-      </div>
+      <section class="st-panel">
+        <div class="st-panel-inner st-empty">
+          {% if is_own_team %}
+          <p class="st-display" style="font-size:1.8rem;color:#f8fafc;margin-bottom:0.5rem">Inget lag ännu</p>
+          <p>Bygg 2×450 + 2×250 inom 2 milj budget.</p>
+          <a class="st-btn st-btn--primary" href="{{ url_for('season_team_builder') }}">Skapa säsongsteam →</a>
+          {% else %}
+          <p>{{ viewing_user.display_name or viewing_user.username }} har inget säsongsteam.</p>
+          {% endif %}
+        </div>
+      </section>
     {% endif %}
   </div>
 
-  <!-- Modal för detaljvy -->
-  <div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" style="z-index: 9999;">
-    <div class="bg-gray-800 p-4 rounded shadow-lg max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col" style="z-index: 10000;">
-      <h3 class="text-lg font-bold mb-3 text-white">Detaljerad Säsongsteam Poäng</h3>
-      <div id="detail-content" class="mb-3 text-xs text-gray-200 overflow-y-auto flex-1"></div>
-      <button onclick="closeModal()" class="bg-red-600 text-white px-4 py-2 rounded text-sm">Stäng</button>
+  <div id="detail-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4" style="z-index:9999;">
+    <div class="st-modal-panel p-5 max-w-4xl w-full max-h-[90vh] flex flex-col" style="z-index:10000;">
+      <h3 class="st-display text-2xl text-white mb-3">Detaljerad poäng</h3>
+      <div id="detail-content" class="mb-4 text-sm text-slate-200 overflow-y-auto flex-1"></div>
+      <button type="button" onclick="closeModal()" class="st-btn st-btn--ghost self-end">Stäng</button>
     </div>
   </div>
 
@@ -165,31 +436,24 @@
     async function loadSeasonTeamCompetitions() {
       const container = document.getElementById('season-team-competitions');
       if (!container) return;
-      
+
       try {
         const res = await fetch('/get_season_team_competition_points' + seasonTeamApiQuery);
         const data = await res.json();
-        
+
         if (data.error) {
-          container.innerHTML = '<p class="text-red-400">Fel: ' + data.error + '</p>';
+          container.innerHTML = '<p class="text-rose-400 text-sm">Fel: ' + data.error + '</p>';
           return;
         }
-        
         if (!data.competitions || data.competitions.length === 0) {
-          container.innerHTML = '<p class="text-gray-400">Inga tävlingar ännu.</p>';
+          container.innerHTML = '<p class="text-slate-500 text-sm text-center py-4">Inga tävlingar ännu.</p>';
           return;
         }
-        
+
         const all = (data.competitions || []).slice();
         all.sort((a, b) => (b.event_date || '').localeCompare(a.event_date || ''));
 
-        const state = {
-          showAll: false,
-          status: 'all', // all | done | waiting
-          series: 'all',  // all | SX | MX | SMX | ...
-          q: '',
-        };
-
+        const state = { showAll: false, status: 'all', series: 'all', q: '' };
         const uniqueSeries = Array.from(new Set(all.map(c => c.series).filter(Boolean))).sort();
 
         function passesFilters(comp) {
@@ -211,35 +475,40 @@
           const onClick = canClick ? `onclick="showSeasonTeamDetails(${comp.competition_id})"` : '';
           let statusBadge;
           if (beforeTeam) {
-            statusBadge = '<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200">Före lag</span>';
+            statusBadge = '<span class="st-badge before">Före lag</span>';
           } else if (hasResults) {
-            statusBadge = '<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">' + (typeof mxIcon==='function'?mxIcon('check-circle'):'') + ' Kört</span>';
+            statusBadge = '<span class="st-badge done">' + (typeof mxIcon==='function'?mxIcon('check-circle'):'') + ' Kört</span>';
           } else {
-            statusBadge = '<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">' + (typeof mxIcon==='function'?mxIcon('hourglass'):'') + ' Väntar</span>';
+            statusBadge = '<span class="st-badge wait">' + (typeof mxIcon==='function'?mxIcon('hourglass'):'') + ' Väntar</span>';
           }
 
-          let ptsClass = 'text-gray-400';
+          let ptsClass = 'text-slate-500';
           let ptsText = String(comp.total_points);
-          if (beforeTeam) {
-            ptsClass = 'text-slate-500';
-            ptsText = '—';
-          } else if (hasResults && comp.total_points > 0) ptsClass = 'text-green-500';
-          else if (hasResults && comp.total_points === 0) ptsClass = 'text-red-500';
+          if (beforeTeam) { ptsClass = 'text-slate-600'; ptsText = '—'; }
+          else if (hasResults && comp.total_points > 0) ptsClass = 'text-emerald-400';
+          else if (hasResults && comp.total_points === 0) ptsClass = 'text-rose-400';
 
           return `
-            <tr ${onClick} class="border-t border-gray-600 ${canClick ? 'cursor-pointer hover:bg-gray-700' : ''} transition-colors group">
-              <td class="p-2 whitespace-nowrap">${comp.event_date}</td>
-              <td class="p-2">
-                <div class="flex items-center gap-2">
-                  <span class="text-gray-100">${comp.name}</span>
-                  ${canClick ? '<span class="text-xs text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400">👆 Detaljer</span>' : ''}
+            <tr ${onClick} class="${canClick ? 'is-click' : ''}">
+              <td class="whitespace-nowrap text-slate-400">${comp.event_date || '—'}</td>
+              <td>
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="font-semibold text-slate-100 truncate">${comp.name}</span>
+                  ${canClick ? '<span class="text-[10px] text-cyan-400/80 shrink-0">Detaljer →</span>' : ''}
                 </div>
               </td>
-              <td class="p-2 text-center">${comp.series || '—'}</td>
-              <td class="p-2 text-center">${statusBadge}</td>
-              <td class="p-2 text-right font-bold ${ptsClass}">${ptsText}</td>
+              <td class="text-center text-slate-400">${comp.series || '—'}</td>
+              <td class="text-center">${statusBadge}</td>
+              <td class="text-right font-bold tabular-nums ${ptsClass}">${ptsText}</td>
             </tr>
           `;
+        }
+
+        function pillClass(status) {
+          if (state.status !== status) return 'st-pill';
+          if (status === 'done') return 'st-pill is-on-ok';
+          if (status === 'waiting') return 'st-pill is-on-wait';
+          return 'st-pill is-on';
         }
 
         function render() {
@@ -249,51 +518,46 @@
             ? `Visar ${filtered.length} tävlingar`
             : `Visar ${Math.min(6, filtered.length)} av ${filtered.length}`;
 
-          let html = '';
-          html += `
-            <div class="flex flex-col gap-3 mb-3">
-              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div class="text-xs text-gray-500 dark:text-gray-400">${showingText}</div>
-                <div class="flex flex-wrap gap-2">
-                  <button data-status="all" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='all' ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-700 text-gray-200 border-gray-600'}">Alla</button>
-                  <button data-status="done" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='done' ? 'bg-green-600 text-white border-green-500' : 'bg-gray-700 text-gray-200 border-gray-600'}">${typeof mxIcon==='function'?mxIcon('check-circle'):''} Kört</button>
-                  <button data-status="waiting" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='waiting' ? 'bg-yellow-600 text-white border-yellow-500' : 'bg-gray-700 text-gray-200 border-gray-600'}">${typeof mxIcon==='function'?mxIcon('hourglass'):''} Väntar</button>
+          let html = `
+            <div class="st-filters">
+              <div class="st-filter-row">
+                <div class="st-filter-meta">${showingText}</div>
+                <div class="st-pills">
+                  <button type="button" data-status="all" class="${pillClass('all')}">Alla</button>
+                  <button type="button" data-status="done" class="${pillClass('done')}">${typeof mxIcon==='function'?mxIcon('check-circle'):''} Kört</button>
+                  <button type="button" data-status="waiting" class="${pillClass('waiting')}">${typeof mxIcon==='function'?mxIcon('hourglass'):''} Väntar</button>
                 </div>
               </div>
-
-              <div class="flex flex-col sm:flex-row gap-2">
-                <div class="flex-1">
-                  <input id="comp-search" value="${state.q}" placeholder="Sök tävling…" class="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 text-sm" />
-                </div>
-                <div class="sm:w-48">
-                  <select id="series-filter" class="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 text-sm">
-                    <option value="all"${state.series==='all' ? ' selected' : ''}>Alla serier</option>
-                    ${uniqueSeries.map(s => `<option value="${s}"${state.series===s ? ' selected' : ''}>${s}</option>`).join('')}
-                  </select>
-                </div>
-                <div>
-                  <button id="toggle-show" class="px-3 py-2 rounded-lg text-sm font-bold bg-gray-700 hover:bg-gray-600 text-white">
-                    ${state.showAll ? 'Visa färre' : 'Visa fler'}
-                  </button>
-                </div>
+              <div class="st-toolbar">
+                <input id="comp-search" value="${state.q}" placeholder="Sök tävling…" class="st-input flex-1" />
+                <select id="series-filter" class="st-select sm:w-48">
+                  <option value="all"${state.series==='all' ? ' selected' : ''}>Alla serier</option>
+                  ${uniqueSeries.map(s => `<option value="${s}"${state.series===s ? ' selected' : ''}>${s}</option>`).join('')}
+                </select>
+                <button type="button" id="toggle-show" class="st-btn st-btn--ghost" style="padding:0.65rem 0.9rem;font-size:0.8rem">
+                  ${state.showAll ? 'Visa färre' : 'Visa fler'}
+                </button>
               </div>
+            </div>
+            <div class="st-table-wrap overflow-x-auto">
+              <table class="st-table">
+                <thead>
+                  <tr>
+                    <th>Datum</th>
+                    <th>Tävling</th>
+                    <th class="c">Serie</th>
+                    <th class="c">Status</th>
+                    <th class="r">Poäng</th>
+                  </tr>
+                </thead>
+                <tbody>${visible.map(rowHtml).join('')}</tbody>
+              </table>
             </div>
           `;
 
-          html += '<table class="w-full border-collapse bg-gray-800 shadow-lg rounded text-sm">';
-          html += '<thead class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"><tr>';
-          html += '<th class="p-2 text-left">Datum</th>';
-          html += '<th class="p-2 text-left">Tävling</th>';
-          html += '<th class="p-2">Serie</th>';
-          html += '<th class="p-2 text-center">Status</th>';
-          html += '<th class="p-2 text-right">Poäng</th>';
-          html += '</tr></thead><tbody>';
-          html += visible.map(rowHtml).join('');
-          html += '</tbody></table>';
-
           container.innerHTML = html;
 
-          container.querySelectorAll('.filter-status').forEach(btn => {
+          container.querySelectorAll('[data-status]').forEach(btn => {
             btn.addEventListener('click', () => {
               state.status = btn.getAttribute('data-status') || 'all';
               render();
@@ -325,92 +589,70 @@
         render();
       } catch (e) {
         console.error('Error loading season team competitions:', e);
-        container.innerHTML = '<p class="text-red-400">Fel vid laddning av tävlingar.</p>';
+        container.innerHTML = '<p class="text-rose-400 text-sm">Fel vid laddning av tävlingar.</p>';
       }
     }
-    
+
     async function showSeasonTeamDetails(compId) {
       try {
         const res = await fetch(`/get_season_team_competition_details/${compId}${seasonTeamApiQuery}`);
         const data = await res.json();
-        
         if (data.error) {
           alert('Fel: ' + data.error);
           return;
         }
-        
+
         const content = document.getElementById('detail-content');
-        let html = `<div class="mb-4"><h4 class="font-bold text-base mb-2">${data.competition.name}</h4>`;
-        html += `<p class="text-sm text-gray-600 dark:text-gray-400">${data.competition.event_date}</p></div>`;
-        
+        let html = `<div class="mb-4"><h4 class="st-display text-xl text-white mb-1">${data.competition.name}</h4>`;
+        html += `<p class="text-sm text-slate-400">${data.competition.event_date}</p></div>`;
         html += '<div class="space-y-2 mb-4">';
         data.breakdown.forEach(rider => {
-          html += '<div class="flex items-center justify-between p-2 bg-gray-700 rounded border-b border-gray-600">';
-          html += `<div class="flex-1">`;
-          html += `<span class="font-semibold">${rider.rider_name}</span>`;
-          if (rider.rider_number) {
-            html += ` <span class="text-xs text-gray-500">#${rider.rider_number}</span>`;
-          }
-          html += ` <span class="text-xs text-gray-500">(${rider.class_name})</span>`;
-          html += `</div>`;
+          html += '<div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-700/60">';
+          html += `<div class="min-w-0"><span class="font-semibold text-slate-100">${rider.rider_name}</span>`;
+          if (rider.rider_number) html += ` <span class="text-xs text-slate-500">#${rider.rider_number}</span>`;
+          html += ` <span class="text-xs text-slate-500">(${rider.class_name})</span></div>`;
           if (rider.position !== null) {
-            html += `<div class="flex items-center gap-2">`;
-            html += `<span class="px-2 py-1 rounded text-xs font-medium bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100">Pos: ${rider.position}</span>`;
-            html += `<span class="font-bold text-green-600 dark:text-green-400">+${rider.points}p</span>`;
-            html += `</div>`;
+            html += `<div class="flex items-center gap-2 shrink-0">`;
+            html += `<span class="st-badge done">Pos ${rider.position}</span>`;
+            html += `<span class="font-bold text-emerald-400">+${rider.points}p</span></div>`;
           } else {
-            html += `<span class="text-xs text-gray-400">Inget resultat</span>`;
+            html += `<span class="text-xs text-slate-500">Inget resultat</span>`;
           }
           html += `</div>`;
         });
         html += '</div>';
-        
+
         if (data.bonus_points > 0) {
-          html += '<div class="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">';
-          html += '<h5 class="font-bold text-sm mb-2 mx-btn-icon">' + (typeof mxIcon==='function'?mxIcon('target'):'') + ' Bonus Poäng:</h5>';
-          data.bonus_details.forEach(detail => {
-            html += `<p class="text-sm">${detail}</p>`;
-          });
-          html += `<p class="font-bold mt-2">Totalt bonus: +${data.bonus_points}p</p>`;
-          html += '</div>';
+          html += '<div class="mb-4 p-3 rounded-lg border border-amber-500/30 bg-amber-950/30">';
+          html += '<h5 class="font-bold text-sm mb-2 text-amber-200">' + (typeof mxIcon==='function'?mxIcon('target'):'') + ' Bonus</h5>';
+          data.bonus_details.forEach(detail => { html += `<p class="text-sm text-amber-100/90">${detail}</p>`; });
+          html += `<p class="font-bold mt-2 text-amber-200">Totalt bonus: +${data.bonus_points}p</p></div>`;
         }
-        
-        html += `<div class="mt-4 pt-4 border-t border-gray-300 dark:border-gray-600">`;
-        html += `<div class="flex justify-between items-center">`;
-        html += `<span class="font-semibold">Förare poäng:</span>`;
-        html += `<span class="font-bold text-green-600 dark:text-green-400">${data.rider_points}p</span>`;
-        html += `</div>`;
+
+        html += `<div class="mt-4 pt-4 border-t border-slate-700 space-y-2">`;
+        html += `<div class="flex justify-between"><span class="text-slate-400">Förare</span><span class="font-bold text-emerald-400">${data.rider_points}p</span></div>`;
         if (data.bonus_points > 0) {
-          html += `<div class="flex justify-between items-center mt-2">`;
-          html += `<span class="font-semibold">Bonus poäng:</span>`;
-          html += `<span class="font-bold text-yellow-600 dark:text-yellow-400">+${data.bonus_points}p</span>`;
-          html += `</div>`;
+          html += `<div class="flex justify-between"><span class="text-slate-400">Bonus</span><span class="font-bold text-amber-300">+${data.bonus_points}p</span></div>`;
         }
-        html += `<div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-300 dark:border-gray-600">`;
-        html += `<span class="font-bold text-lg">Totalt:</span>`;
-        html += `<span class="font-bold text-lg text-green-600 dark:text-green-400">${data.total_points}p</span>`;
-        html += `</div></div>`;
-        
+        html += `<div class="flex justify-between pt-2 border-t border-slate-700"><span class="st-display text-lg text-white">Totalt</span><span class="st-display text-lg text-cyan-300">${data.total_points}p</span></div></div>`;
+
         content.innerHTML = html;
-        
-        document.getElementById('detail-modal').classList.remove('hidden');
-        document.getElementById('detail-modal').classList.add('flex');
+        const modal = document.getElementById('detail-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
       } catch (e) {
         console.error('Error loading details:', e);
         alert('Kunde inte hämta detaljer');
       }
     }
-    
+
     function closeModal() {
       const m = document.getElementById('detail-modal');
       m.classList.add('hidden');
       m.classList.remove('flex');
     }
-    
-    // Load competitions on page load
-    document.addEventListener('DOMContentLoaded', function() {
-      loadSeasonTeamCompetitions();
-    });
+
+    document.addEventListener('DOMContentLoaded', loadSeasonTeamCompetitions);
   </script>
 </body>
 </html>
