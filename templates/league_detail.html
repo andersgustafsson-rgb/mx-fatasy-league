@@ -1325,7 +1325,7 @@
           <p class="text-sm text-gray-400 mt-0.5">
             <span class="text-cyan-400 font-bold">{{ picks_pulse.complete_count }}/{{ picks_pulse.member_count }}</span> har klara picks
             {% if picks_pulse.hours_left is not none %}
-            · stänger om <span class="text-amber-300 font-semibold">{% if picks_pulse.hours_left < 1 %}&lt;1h{% else %}{{ picks_pulse.hours_left }}h{% endif %}</span>
+            · stänger om <span class="text-cyan-300 font-semibold">{% if picks_pulse.hours_left < 1 %}&lt;1h{% else %}{{ picks_pulse.hours_left }}h{% endif %}</span>
             {% elif picks_pulse.deadline_display %}
             · deadline {{ picks_pulse.deadline_display }}
             {% endif %}

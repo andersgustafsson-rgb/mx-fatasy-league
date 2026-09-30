@@ -5935,10 +5935,45 @@ def _assess_users_picks_on_comp(user_ids: list[int], comp: Competition) -> dict[
     """Map user_id -> 'complete' | 'partial' | 'none'."""
     if not user_ids:
         return {}
-    is_wsx = (comp.series or "") == "WSX"
-    class_450 = "wsx_sx1" if is_wsx else "450cc"
-    class_250 = "wsx_sx2" if is_wsx else "250cc"
+    series_u = (comp.series or "").strip().upper()
     comp_id = int(comp.id)
+
+    # MXoN tippa: 5 nations + 3 class winners (not AMA RacePick 6+6).
+    if series_u == "MXON":
+        nation_counts = dict(
+            db.session.query(MxonNationPick.user_id, db.func.count(MxonNationPick.id))
+            .filter(
+                MxonNationPick.competition_id == comp_id,
+                MxonNationPick.user_id.in_(user_ids),
+            )
+            .group_by(MxonNationPick.user_id)
+            .all()
+        )
+        class_counts = dict(
+            db.session.query(MxonClassPick.user_id, db.func.count(MxonClassPick.id))
+            .filter(
+                MxonClassPick.competition_id == comp_id,
+                MxonClassPick.user_id.in_(user_ids),
+            )
+            .group_by(MxonClassPick.user_id)
+            .all()
+        )
+        result: dict[int, str] = {}
+        for uid in user_ids:
+            n = int(nation_counts.get(uid, 0) or 0)
+            c = int(class_counts.get(uid, 0) or 0)
+            if n >= 5 and c >= 3:
+                result[uid] = "complete"
+            elif n > 0 or c > 0:
+                result[uid] = "partial"
+            else:
+                result[uid] = "none"
+        return result
+
+    is_wsx = series_u == "WSX"
+    is_mxgp = series_u == "MXGP"
+    class_450 = "wsx_sx1" if is_wsx else ("mxgp" if is_mxgp else "450cc")
+    class_250 = "wsx_sx2" if is_wsx else ("mx2" if is_mxgp else "250cc")
 
     race_picks = RacePick.query.filter(
         RacePick.competition_id == comp_id,
@@ -5955,6 +5990,16 @@ def _assess_users_picks_on_comp(user_ids: list[int], comp: Competition) -> dict[
             WildcardPick.user_id.in_(user_ids),
         ).all()
     }
+    qual_by_user: dict[int, set[str]] = {}
+    if is_mxgp:
+        for qp in QualifyingPick.query.filter(
+            QualifyingPick.competition_id == comp_id,
+            QualifyingPick.user_id.in_(user_ids),
+        ).all():
+            if qp.rider_id:
+                qual_by_user.setdefault(int(qp.user_id), set()).add(
+                    (qp.class_name or "").strip().lower()
+                )
 
     rider_ids = {p.rider_id for p in race_picks}
     rider_ids.update(h.rider_id for h in holeshots)
@@ -5980,12 +6025,12 @@ def _assess_users_picks_on_comp(user_ids: list[int], comp: Competition) -> dict[
             continue
         cls = (rider.class_name or "").strip().lower()
         flags = holeshot_by_user.setdefault(uid, {class_450: False, class_250: False})
-        if cls in (class_450, "450cc", "wsx_sx1"):
+        if cls in (class_450, "450cc", "wsx_sx1", "mxgp"):
             flags[class_450] = True
-        elif cls in (class_250, "250cc", "wsx_sx2"):
+        elif cls in (class_250, "250cc", "wsx_sx2", "mx2"):
             flags[class_250] = True
 
-    result: dict[int, str] = {}
+    result = {}
     for uid in user_ids:
         picks_map = race_by_user.get(uid, {})
         n450 = n250 = 0
@@ -5994,15 +6039,20 @@ def _assess_users_picks_on_comp(user_ids: list[int], comp: Competition) -> dict[
             if not rider:
                 continue
             cls = (rider.class_name or "").strip().lower()
-            if cls in (class_450, "450cc", "wsx_sx1"):
+            if cls in (class_450, "450cc", "wsx_sx1", "mxgp"):
                 n450 += 1
-            elif cls in (class_250, "250cc", "wsx_sx2"):
+            elif cls in (class_250, "250cc", "wsx_sx2", "mx2"):
                 n250 += 1
         hs_flags = holeshot_by_user.get(uid, {class_450: False, class_250: False})
         wc = wildcards.get(uid)
-        wildcard_complete = (
-            True if is_wsx else bool(wc and wc.rider_id and wc.position is not None)
+        # Tippa-only series (WSX / MXGP): no wildcard required.
+        wildcard_complete = True if (is_wsx or is_mxgp) else bool(
+            wc and wc.rider_id and wc.position is not None
         )
+        qual_ok = True
+        if is_mxgp:
+            qset = qual_by_user.get(uid, set())
+            qual_ok = "mxgp" in qset and "mx2" in qset
         race_complete = n450 == 6 and n250 == 6
         holeshot_complete = hs_flags[class_450] and hs_flags[class_250]
         started = bool(
@@ -6011,8 +6061,9 @@ def _assess_users_picks_on_comp(user_ids: list[int], comp: Competition) -> dict[
             or hs_flags[class_450]
             or hs_flags[class_250]
             or (wc and (wc.rider_id or wc.position))
+            or (is_mxgp and qual_by_user.get(uid))
         )
-        if race_complete and holeshot_complete and wildcard_complete:
+        if race_complete and holeshot_complete and wildcard_complete and qual_ok:
             result[uid] = "complete"
         elif started:
             result[uid] = "partial"
@@ -6074,7 +6125,11 @@ def _league_picks_pulse(league_id: int, viewer_id: int) -> dict | None:
         "competition_id": comp.id,
         "name": comp.name,
         "short_label": _short_competition_label(comp, max_len=22),
-        "picks_url": url_for("race_picks_page", competition_id=comp.id),
+        "picks_url": (
+            url_for("mxon_picks_page", competition_id=comp.id)
+            if (comp.series or "").upper() == "MXON"
+            else url_for("race_picks_page", competition_id=comp.id)
+        ),
         "complete_count": len(complete),
         "partial_count": len(partial),
         "waiting_count": len(waiting),
