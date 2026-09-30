@@ -9193,11 +9193,20 @@ def build_season_team_competition_points(user_id: int) -> tuple[dict | None, str
 
     team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
     rider_ids = [tr.rider_id for tr in team_riders]
-    competitions = Competition.query.order_by(Competition.event_date.asc().nulls_last()).all()
+    # AMA only (SX/MX/SMX) — never WSX / MXON / MXGP tippa races.
+    competitions = (
+        Competition.query.filter(ama_competition_clause()).all()
+    )
+    competitions.sort(
+        key=lambda c: (
+            c.event_date is None,
+            c.event_date or date.min,
+            int(c.id or 0),
+        )
+    )
 
     competition_points = []
     for comp in competitions:
-        # Season team is AMA-only — never list WSX / MXON / MXGP tippa races here.
         if is_tippa_only_series(getattr(comp, "series", None)):
             continue
         counts = season_team_counts_competition(team, comp)

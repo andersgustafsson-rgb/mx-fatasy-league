@@ -652,7 +652,16 @@
       m.classList.remove('flex');
     }
 
-    document.addEventListener('DOMContentLoaded', loadSeasonTeamCompetitions);
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSeasonTeamCompetitions();
+      const scrollBtn = document.getElementById('btn-scroll-points');
+      if (scrollBtn) {
+        scrollBtn.addEventListener('click', () => {
+          const el = document.getElementById('poang-per-tavling');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+    });
   </script>
 </body>
 </html>
