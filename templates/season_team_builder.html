@@ -539,7 +539,10 @@
       return new Intl.NumberFormat("sv-SE").format(Math.round(v || 0));
     }
     function spent() {
-      return myTeam.reduce((s, r) => s + (r.price || 0), 0);
+      // Mid-swap: free the outgoing rider's price so "budget kvar" shows buying power.
+      return myTeam
+        .filter((r) => swapOutId == null || !sameId(r.id, swapOutId))
+        .reduce((s, r) => s + (r.price || 0), 0);
     }
     function remaining() {
       return TOTAL_BUDGET - spent();
@@ -689,6 +692,10 @@
 
     function updateBudgetUI(needSlots, needClass) {
       const rem = remaining();
+      const labelEl = document.querySelector("#budget-bar .label");
+      if (labelEl) {
+        labelEl.textContent = swapOutId != null ? "Tillgängligt" : "Budget kvar";
+      }
       document.getElementById("budget-val").textContent = money(rem);
       const fill = document.getElementById("budget-fill");
       const track = document.getElementById("budget-bar-track");
