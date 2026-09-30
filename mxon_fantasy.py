@@ -957,8 +957,11 @@ def build_mxon_crowd_ranking(competition_id: int) -> dict[str, Any]:
     )
     total_score = float(sum(scores.values())) or 1.0
     ranked_nations = sorted(scores.items(), key=lambda x: (-x[1], x[0]))
+    # Only top 5 — matches how tippers pick. % among those five (sums ~100).
+    top5 = ranked_nations[:5]
+    top5_total = float(sum(s for _, s in top5)) or 1.0
     nations_out = []
-    for i, (nid, score) in enumerate(ranked_nations[:10], 1):
+    for i, (nid, score) in enumerate(top5, 1):
         n = nations.get(nid)
         if not n:
             continue
@@ -971,7 +974,7 @@ def build_mxon_crowd_ranking(competition_id: int) -> dict[str, Any]:
                 "name": n.name,
                 "flag_url": flag_image_url(code) if code else None,
                 "flag_emoji": n.flag_emoji,
-                "strength_pct": int(round(100.0 * float(score) / total_score)),
+                "strength_pct": int(round(100.0 * float(score) / top5_total)),
             }
         )
 
@@ -1022,7 +1025,7 @@ def build_mxon_crowd_ranking(competition_id: int) -> dict[str, Any]:
         "nations": nations_out,
         "classes": classes_out,
         "method": (
-            "Nation-% = andel av tipparnas viktade topp 5 (#1–#5). "
-            "Klass-% = andel av tippen på den favoriten. Inte odds."
+            "Topp 5 nationer efter tippvikt (#1=5p … #5=1p). "
+            "% = andel inom tipparnas topp 5. Klass-% = andel av tippen på favoriten. Inte odds."
         ),
     }
