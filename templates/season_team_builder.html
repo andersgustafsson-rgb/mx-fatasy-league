@@ -440,6 +440,7 @@
           <h2 class="stw-display text-3xl text-white mb-1">Ditt lag</h2>
           <p class="text-slate-400 text-sm mb-4">Markera vem som åker ut, välj ersättare — 50 poäng per byte (MX-klassbyte kan vara gratis).</p>
           <div id="mx-promo-banner" class="hidden mb-4 p-3 rounded-xl border border-emerald-600/40 bg-emerald-950/40 text-emerald-100 text-sm"></div>
+          <div id="swap-locked-banner" class="hidden mb-4 p-3 rounded-xl border border-rose-500/40 bg-rose-950/40 text-rose-100 text-sm"></div>
           {% if has_existing_team and team_slot_count is defined and team_slot_count < 4 %}
           <div class="mb-4 p-3 rounded-xl border border-amber-600/40 bg-amber-950/35 text-amber-100 text-sm">
             <strong class="text-amber-200">Ofullständigt lag ({{ team_slot_count }}/4).</strong>
@@ -605,6 +606,17 @@
 
     function penaltyPoints() {
       return penalizedChanges() * 50;
+    }
+
+    /** True if user can pay for `extra` additional paid swaps from current draft. */
+    function canAffordExtraPaidSwaps(extra) {
+      const n = Math.max(0, parseInt(extra, 10) || 0);
+      return userPoints >= (penalizedChanges() + n) * 50;
+    }
+
+    function paidSwapBlockedMessage(needPts) {
+      const need = needPts != null ? needPts : 50;
+      return `För få poäng (${userPoints}) — byten kostar ${need} p. Fyll tom plats eller gratis MX-klassbyte går fortfarande.`;
     }
 
     function renderStepNav() {
@@ -902,7 +914,8 @@
             </div>
             <div class="flex gap-2">
               <button type="button" class="stw-btn stw-btn--ghost" style="padding:0.55rem;font-size:0.8rem"
-                data-swap="${r.id}">${isOut ? "Avbryt" : "Byt ut"}</button>
+                data-swap="${r.id}"
+                ${!isOut && !canAffordExtraPaidSwaps(1) ? "disabled title=\"För få poäng för byte\"" : ""}>${isOut ? "Avbryt" : "Byt ut"}</button>
               ${
                 promo
                   ? `<button type="button" class="stw-btn stw-btn--go" style="padding:0.55rem;font-size:0.75rem"
@@ -920,6 +933,11 @@
             swapOutId = null;
             renderRoster();
             updateFooter();
+            return;
+          }
+          // Block paid swaps immediately when tippa balance can't cover them.
+          if (!canAffordExtraPaidSwaps(1)) {
+            showToast(paidSwapBlockedMessage((penalizedChanges() + 1) * 50), false);
             return;
           }
           swapOutId = id;
@@ -943,6 +961,21 @@
           window.promotionOffers
             .map((o) => `${o.from_name || "förare"} → ${o.to_name || "ny klass"}`)
             .join(", ");
+      } else if (banner) {
+        banner.classList.add("hidden");
+      }
+
+      const locked = document.getElementById("swap-locked-banner");
+      if (locked) {
+        if (hasExistingTeam && userPoints < 50) {
+          locked.classList.remove("hidden");
+          locked.innerHTML =
+            `<strong class="text-rose-200">Inga byten just nu.</strong> ` +
+            `Du har <strong>${userPoints} p</strong> — ett byte kostar 50. ` +
+            `Du kan fortfarande fylla tom plats eller använda gratis MX-klassbyte.`;
+        } else {
+          locked.classList.add("hidden");
+        }
       }
 
       const cost = document.getElementById("edit-cost-box");
@@ -1042,12 +1075,18 @@
 
     function canAdvance() {
       const key = currentStepKey();
-      if (key === "intro" || key === "roster") return true;
+      if (key === "intro") return true;
+      if (key === "roster") {
+        // Don't walk into save flow with unpaid swaps the user can't afford
+        if (hasExistingTeam && penaltyPoints() > userPoints) return false;
+        return true;
+      }
       if (key === "pick450") return countClass("450cc") === 2;
       if (key === "pick250") return countClass("250cc") === 2 && remaining() >= 0;
       if (key === "pickSwap") {
         // Must have completed a swap (no pending swapOut) and still 4 riders / rules
         if (swapOutId != null) return false;
+        if (hasExistingTeam && penaltyPoints() > userPoints) return false;
         return (
           myTeam.length === 4 &&
           countClass("450cc") === 2 &&
@@ -1057,6 +1096,7 @@
       }
       if (key === "confirm") {
         const name = readTeamName();
+        if (hasExistingTeam && penaltyPoints() > userPoints) return false;
         return (
           !!name &&
           myTeam.length === 4 &&
@@ -1090,9 +1130,27 @@
         return;
       }
       if (key === "intro") next.textContent = "Börja bygga";
-      else if (key === "roster") next.textContent = myTeamChanged() ? "Granska & spara" : "Spara / byt namn";
-      else if (key === "confirm") next.textContent = hasExistingTeam ? "Spara ändringar" : "Spara säsongsteam";
-      else if (key === "pickSwap") next.textContent = "Fortsätt";
+      else if (key === "roster") {
+        if (hasExistingTeam && penaltyPoints() > userPoints) {
+          next.textContent = `För få poäng (${userPoints}/${penaltyPoints()})`;
+        } else {
+          next.textContent = myTeamChanged() ? "Granska & spara" : "Spara / byt namn";
+        }
+      }
+      else if (key === "confirm") {
+        if (hasExistingTeam && penaltyPoints() > userPoints) {
+          next.textContent = `För få poäng (${userPoints}/${penaltyPoints()})`;
+        } else {
+          next.textContent = hasExistingTeam ? "Spara ändringar" : "Spara säsongsteam";
+        }
+      }
+      else if (key === "pickSwap") {
+        if (hasExistingTeam && swapOutId == null && penaltyPoints() > userPoints) {
+          next.textContent = `För få poäng (${userPoints}/${penaltyPoints()})`;
+        } else {
+          next.textContent = "Fortsätt";
+        }
+      }
       else next.textContent = "Nästa";
       next.disabled = !canAdvance();
       next.className =
