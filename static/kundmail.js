@@ -25,9 +25,15 @@ const TEMPLATE_DEFS = [
   {
     id: "utgatt",
     fields: [
-      { id: "cancelOrder", type: "checkbox", default: true },
+      { id: "cancelOrder", type: "checkbox", default: true, exclusiveGroup: "utgattAction" },
       { id: "alternativeProduct", type: "text" },
-      { id: "shipRestOfOrder", type: "checkbox", default: false },
+      { id: "shipRestOfOrder", type: "checkbox", default: false, exclusiveGroup: "utgattAction" },
+      {
+        id: "askShipRestOrCancel",
+        type: "checkbox",
+        default: false,
+        exclusiveGroup: "utgattAction",
+      },
       {
         id: "refundNote",
         type: "select",
@@ -165,11 +171,15 @@ const UI = {
     },
     utgatt: {
       label: "Utgått / discontinuerad",
-      description: "Produkten tas bort ur sortimentet. Standard: vi avbryter ordern.",
+      description:
+        "Produkten tas bort ur sortimentet. Välj: avbryt ordern, stryk artikel & skicka resten, eller fråga kunden (t.ex. när övriga varor bara är fraktfyllnad).",
       fields: {
         cancelOrder: { label: "Vi avbryter ordern (frågar inte kunden)" },
         alternativeProduct: { label: "Föreslagen ersättning (valfritt)" },
         shipRestOfOrder: { label: "Stryk bara artikeln och skicka övriga i ordern" },
+        askShipRestOrCancel: {
+          label: "Fråga om övriga varor i ordern eller avbryta hela ordern",
+        },
         refundNote: {
           label: "Återbetalning (vid avbrott)",
           options: {
@@ -1006,7 +1016,7 @@ Vill du vänta tills produkten finns i lager igen, eller föredrar du att vi avb
     case "utgatt": {
       const alt = cleanStr(extras.alternativeProduct);
       body = `${intro}Vi måste tyvärr meddela att ${prod} har utgått ur vårt sortiment och inte kommer tillbaka i lager.`;
-      // shipRestOfOrder = vi stryker artikeln (frågar inte). cancelOrder = avbryt hela ordern.
+      // shipRest = bekräfta stryk+skicka. ask = fråga resten vs avbryt. cancel = avbryt utan fråga.
       if (extras.shipRestOfOrder) {
         body += `
 
@@ -1014,6 +1024,14 @@ Vi stryker därför ${prod} från ordern och skickar övriga artiklar så snart 
         if (alt) {
           body += ` Om du vill beställa ett alternativ kan vi rekommendera ${alt}.`;
         }
+      } else if (extras.askShipRestOrCancel) {
+        body += `
+
+Om du har fler artiklar i samma order: vill du att vi skickar övriga varor, eller föredrar du att vi avbryter hela ordern?`;
+        if (alt) {
+          body += ` Som alternativ kan vi rekommendera ${alt} om du vill byta artikel i stället.`;
+        }
+        body += ` Återkom gärna med vad som passar dig bäst.`;
       } else if (extras.cancelOrder) {
         body += `
 
@@ -1291,6 +1309,14 @@ Vi stryger derfor ${prod} fra ordren og sender de øvrige varer, så snart de er
         if (alt) {
           body += ` Hvis du gerne vil bestille et alternativ, kan vi anbefale ${alt}.`;
         }
+      } else if (extras.askShipRestOrCancel) {
+        body += `
+
+Hvis du har flere varer i samme ordre: vil du have os til at sende de øvrige varer, eller foretrækker du, at vi annullerer hele ordren?`;
+        if (alt) {
+          body += ` Som alternativ kan vi anbefale ${alt}, hvis du vil skifte vare i stedet.`;
+        }
+        body += ` Vend gerne tilbage med, hvad der passer dig bedst.`;
       } else if (extras.cancelOrder) {
         body += `
 
@@ -1568,6 +1594,14 @@ We are therefore removing ${prod} from the order and will ship the remaining ite
         if (alt) {
           body += ` If you would like to order an alternative, we can recommend ${alt}.`;
         }
+      } else if (extras.askShipRestOrCancel) {
+        body += `
+
+If you have other items in the same order: would you like us to ship the remaining items, or would you prefer that we cancel the entire order?`;
+        if (alt) {
+          body += ` As an alternative we can recommend ${alt} if you would like to swap the item.`;
+        }
+        body += ` Please let us know what works best for you.`;
       } else if (extras.cancelOrder) {
         body += `
 
@@ -1855,7 +1889,21 @@ function renderExtraFields() {
       input.id = `extra_${field.id}`;
       input.checked = field.default !== false;
       input.className = "rounded border-slate-600 bg-slate-800 text-emerald-500";
-      input.addEventListener("change", forceGenerate);
+      input.addEventListener("change", () => {
+        if (input.checked && field.exclusiveGroup) {
+          for (const other of tpl.fields || []) {
+            if (
+              other.type === "checkbox" &&
+              other.exclusiveGroup === field.exclusiveGroup &&
+              other.id !== field.id
+            ) {
+              const oel = document.getElementById(`extra_${other.id}`);
+              if (oel) oel.checked = false;
+            }
+          }
+        }
+        forceGenerate();
+      });
       const span = document.createElement("span");
       span.textContent = fs.label || field.id;
       label.appendChild(input);
