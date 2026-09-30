@@ -130,6 +130,14 @@ def create_app() -> Flask:
 		resp.headers["Content-Type"] = "text/html; charset=utf-8"
 		return resp
 
+	# Force dark UI sitewide (same hook as main:app)
+	try:
+		from force_dark import register_force_dark
+
+		register_force_dark(app)
+	except Exception as e:
+		print(f"force_dark register skip: {type(e).__name__}: {e}")
+
 	@app.before_request
 	def _redirect_legacy_render_host():
 		from flask import redirect, request

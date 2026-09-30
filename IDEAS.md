@@ -8,7 +8,7 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 
 | # | Idé | Status | Kommentar |
 |---|-----|--------|-----------|
-| 1 | **Light/dark mode-toggle** | Uppskjutet | Knapp enkel; hela appen light = större jobb (hårdkodat mörkt). Du sa: *kan vänta*. |
+| 1 | **Light/dark mode-toggle** | Force-dark ✅ | Appen är mörk by design. OS light mode läckte vita tabeller (`darkMode:media`). Sitewide `force_dark` (html.dark + Tailwind `class` + `mx_force_dark.css`). Light-toggle kvar uppskjutet. |
 | 2 | **Första-laddning error → refresh funkar** | Åtgärdat (keep-alive) | Syns mer efter `mx-fantasy.se` (kall worker/DB efter idle). Keep-alive: GitHub Action var 10 min + valfri Render Cron `scripts/cron_keepalive.py`. Health svarar alltid 200. |
 | 3 | **PWA-banner bara på mobil** | Inte beslutat | Syns på desktop via Chrome “Installera”. Frågat om begränsa till mobil — ej svarat. |
 | 4 | **SEO / “citerbara” tippa-sidor** | Gjort (v4) | `/om`, `/manual`, `/tippa-supercross`, `/tippa-motocross`, `/tippa-smx`, `/tippa-wsx`, **`/tippa-mxgp`**, **`/tippa-mxon`** + sitemap/llms.txt. |

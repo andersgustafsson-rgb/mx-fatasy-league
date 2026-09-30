@@ -1,0 +1,96 @@
+/**
+ * Force dark UI sitewide.
+ * App is dark-designed; OS light mode must not reveal Tailwind light-first utilities
+ * (bg-white / bg-gray-100) when darkMode was previously media-based.
+ */
+html {
+  color-scheme: dark !important;
+}
+
+input,
+select,
+textarea,
+button,
+option {
+  color-scheme: dark;
+}
+
+/* Native controls without explicit dark classes */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([class*="bg-"]),
+select:not([class*="bg-"]),
+textarea:not([class*="bg-"]) {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+}
+
+/* Solid white / gray-100 panels → slate (skip intentional bg-white/10 opacity utilities) */
+/* Solid bg-white only — skip intentional translucent utilities like bg-white/10 */
+html.dark [class~="bg-white"],
+html.dark .bg-white.bg-opacity-90,
+html.dark .bg-white.bg-opacity-80,
+html.dark .bg-white.bg-opacity-70 {
+  background-color: rgb(31 41 55) !important;
+}
+
+html.dark .bg-gray-100 {
+  background-color: rgb(30 41 59) !important;
+}
+
+html.dark .bg-gray-50 {
+  background-color: rgb(51 65 85) !important;
+}
+
+html.dark .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-gray-800,
+html.dark .text-gray-700 {
+  color: #e2e8f0 !important;
+}
+
+html.dark .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .border-gray-200,
+html.dark .border-gray-300 {
+  border-color: rgb(55 65 81) !important;
+}
+
+html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(55 65 81);
+}
+
+/* Common light gradient cards in season-team / auth helpers */
+html.dark .from-gray-100 {
+  --tw-gradient-from: #1e293b var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(30 41 59 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+html.dark .from-green-50,
+html.dark .from-blue-50,
+html.dark .from-emerald-50 {
+  --tw-gradient-from: #0f172a var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(15 23 42 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+html.dark .to-blue-100,
+html.dark .to-green-100,
+html.dark .to-emerald-100 {
+  --tw-gradient-to: #1e293b var(--tw-gradient-to-position);
+}
+
+/* Tables: thead often bg-gray-100 */
+html.dark thead.bg-gray-100,
+html.dark thead .bg-gray-100 {
+  background-color: rgb(30 41 59) !important;
+  color: #e2e8f0;
+}
+
+html.dark tbody tr {
+  border-color: rgb(51 65 85);
+}

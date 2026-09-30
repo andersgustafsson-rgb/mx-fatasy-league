@@ -729,6 +729,15 @@ def favicon():
     return resp
 
 
+# Force dark UI sitewide (Tailwind darkMode:class + CSS safety net).
+try:
+    from force_dark import register_force_dark
+
+    register_force_dark(app)
+except Exception as e:
+    print(f"force_dark register skip: {type(e).__name__}: {e}")
+
+
 @app.after_request
 def _mark_local_dev_html(response):
     """

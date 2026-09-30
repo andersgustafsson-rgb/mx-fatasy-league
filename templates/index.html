@@ -3181,21 +3181,21 @@
           <div id="stats" class="tab-panel hidden">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <!-- Personal Points Card -->
-              <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
+              <div class="bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Mina Poäng</span></span></h2>
                 <div class="space-y-4">
-                  <div class="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 p-4 rounded-lg border border-green-200 dark:border-green-700">
+                  <div class="bg-gradient-to-r from-green-900/30 to-emerald-900/30 p-4 rounded-lg border border-green-700">
                     <div class="flex justify-between items-center mb-2">
-                      <span class="text-gray-700 dark:text-gray-300 font-medium">Totalt antal poäng:</span>
-                      <span class="font-bold text-2xl text-green-600 dark:text-green-400">{{ user_total_points or 0 }}</span>
+                      <span class="text-gray-300 font-medium">Totalt antal poäng:</span>
+                      <span class="font-bold text-2xl text-green-400">{{ user_total_points or 0 }}</span>
                     </div>
                     <div class="flex justify-between items-center mb-2">
-                      <span class="text-gray-700 dark:text-gray-300 font-medium">Antal races:</span>
-                      <span class="font-bold text-blue-600 dark:text-blue-400">{{ races_participated or 0 }}</span>
+                      <span class="text-gray-300 font-medium">Antal races:</span>
+                      <span class="font-bold text-blue-400">{{ races_participated or 0 }}</span>
                     </div>
                     <div class="flex justify-between items-center">
-                      <span class="text-gray-700 dark:text-gray-300 font-medium">Bästa placering:</span>
-                      <span class="font-bold text-yellow-600 dark:text-yellow-400">{{ best_position or '-' }}</span>
+                      <span class="text-gray-300 font-medium">Bästa placering:</span>
+                      <span class="font-bold text-yellow-400">{{ best_position or '-' }}</span>
                     </div>
                   </div>
                   <a href="{{ url_for('my_scores') }}" class="rp-btn rp-btn--block rp-btn--primary">Visa detaljerade stats</a>
@@ -3203,11 +3203,11 @@
               </div>
               
               <!-- Rider Bio Card -->
-              <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
+              <div class="bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('user') }}<span>Förare & Biografier</span></span></h2>
                 <div class="space-y-4">
-                  <div class="bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
-                    <p class="text-gray-700 dark:text-gray-300 mb-3">
+                  <div class="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 p-4 rounded-lg border border-purple-700">
+                    <p class="text-gray-300 mb-3">
                       Utforska detaljerade biografier och statistik för alla förare.
                     </p>
                     <div class="text-sm text-gray-600 dark:text-gray-400">
@@ -3223,7 +3223,7 @@
           <!-- Games Tab -->
           <div id="games" class="tab-panel hidden">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
-              <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
+              <div class="bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('gamepad') }}<span>Spel & Underhållning</span></span></h2>
                 <div class="rp-btn-stack">
                   <a href="{{ url_for('cross_jump_modern') }}" class="rp-btn rp-btn--block rp-btn--accent">Cross Jump Modern</a>
@@ -3234,7 +3234,7 @@
                 </div>
               </div>
               
-              <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
+              <div class="bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span data-i18n="lb.game_highscores">Spel — Highscores</span></span></h2>
                 
                 <!-- Cross Jump Highscores -->
@@ -3259,7 +3259,7 @@
 
           <!-- Leagues Tab -->
           <div id="leagues" class="tab-panel hidden">
-            <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg mb-6 md:mb-8">
+            <div class="bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg mb-6 md:mb-8">
               <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <h2 class="text-xl sm:text-2xl font-bold text-slate-100"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Mina ligor</span></span></h2>
                 <div class="flex flex-wrap gap-2">
@@ -3269,8 +3269,8 @@
                 </div>
               </div>
               <div id="my-leagues-container" class="space-y-4">
-                <div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 p-4 rounded-lg">
-                  <p class="text-gray-600 dark:text-gray-300 text-center"><span class="mx-heading-icon">{{ mx_icon('chart-up') }}<span>Laddar dina ligor...</span></span></p>
+                <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-4 rounded-lg">
+                  <p class="text-gray-300 text-center"><span class="mx-heading-icon">{{ mx_icon('chart-up') }}<span>Laddar dina ligor...</span></span></p>
                 </div>
               </div>
             </div>
@@ -3279,17 +3279,17 @@
           <!-- Season Team Tab -->
           <div id="season-team" class="tab-panel hidden">
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-6 md:mb-8">
-              <div class="min-w-0 bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
+              <div class="min-w-0 bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 id="season-team-panel-title" class="text-xl sm:text-2xl font-bold text-slate-100 mb-4 leading-tight break-words"><span class="mx-heading-icon"><span class="shrink-0">{{ mx_icon('user') }}</span><span class="min-w-0" data-season-team-title>{% if is_logged_in and my_team %}Säsongsteam{% else %}Skapa ditt säsongsteam{% endif %}</span></span></h2>
                 {% if is_logged_in and my_team %}
-                  <div id="season-team-has-team" class="rounded-xl border border-green-300/50 dark:border-green-700/50 bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-emerald-900/20 p-4 sm:p-5 shadow-inner">
+                  <div id="season-team-has-team" class="rounded-xl border border-green-700/50 bg-gradient-to-br from-gray-900 via-gray-800 to-emerald-900/20 p-4 sm:p-5 shadow-inner">
                     <div class="flex items-start justify-between gap-3 mb-4">
                       <div class="min-w-0 flex-1">
                         <div class="text-xs font-semibold tracking-wide text-slate-400 uppercase">Ditt team</div>
-                        <div class="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-white break-words">
+                        <div class="text-lg sm:text-xl font-extrabold text-white break-words">
                           {{ my_team.team_name }}
                         </div>
-                        <div class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                        <div class="mt-1 text-sm text-gray-300">
                           Totalt: <span class="font-bold text-slate-200">{{ my_team.total_points or 0 }}</span> p
                         </div>
                       </div>
@@ -3303,26 +3303,26 @@
                     {% if team_riders and team_riders|length > 0 %}
                       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         {% for r in team_riders %}
-                          <div class="rounded-xl border border-white/70 dark:border-white/10 bg-white/70 dark:bg-gray-900/40 p-3 shadow">
+                          <div class="rounded-xl border border-white/10 bg-gray-900/40 p-3 shadow">
                             <div class="flex items-center gap-3 min-w-0">
                               {% if r.image_url %}
                                 <img
                                   src="{{ r.image_url if r.image_url.startswith('data:') else url_for('static', filename=r.image_url) }}"
                                   alt="{{ r.name }}"
-                                  class="w-11 h-11 rounded-full object-cover border border-gray-200 dark:border-gray-700 shrink-0"
+                                  class="w-11 h-11 rounded-full object-cover border border-gray-700 shrink-0"
                                   loading="lazy"
                                 />
                               {% else %}
-                                <div class="w-11 h-11 rounded-full bg-gradient-to-br from-gray-200 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200 dark:border-gray-700 shrink-0"></div>
+                                <div class="w-11 h-11 rounded-full bg-gradient-to-br from-gray-800 to-gray-700 border border-gray-700 shrink-0"></div>
                               {% endif %}
                               <div class="min-w-0 flex-1">
-                                <div class="text-sm font-bold text-gray-900 dark:text-white leading-snug break-words">{{ r.name }}</div>
+                                <div class="text-sm font-bold text-white leading-snug break-words">{{ r.name }}</div>
                                 <div class="flex flex-wrap items-center gap-1.5 mt-1">
                                   <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold
-                                    {% if r.class == '450cc' %}bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-200{% else %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-200{% endif %}">
+                                    {% if r.class == '450cc' %}bg-orange-900/40 text-orange-200{% else %}bg-yellow-900/40 text-yellow-200{% endif %}">
                                     {{ r.class }}
                                   </span>
-                                  <span class="text-[11px] text-gray-600 dark:text-gray-300 font-semibold">#{{ r.number }}</span>
+                                  <span class="text-[11px] text-gray-300 font-semibold">#{{ r.number }}</span>
                                 </div>
                               </div>
                             </div>
@@ -3330,7 +3330,7 @@
                         {% endfor %}
                       </div>
                     {% else %}
-                      <div class="text-sm text-gray-600 dark:text-gray-300">Inga förare i teamet ännu.</div>
+                      <div class="text-sm text-gray-300">Inga förare i teamet ännu.</div>
                     {% endif %}
 
                     <div class="mt-4 rp-btn-row">
@@ -3368,7 +3368,7 @@
                     <a href="{{ url_for('index') }}#andras-lag" class="rp-btn rp-btn--block rp-btn--accent mt-2" onclick="if(typeof openOthersSeasonTeams==='function'){openOthersSeasonTeams();return false;}">Se andras lag</a>
                     {% endif %}
                   </div>
-                  <div id="season-team-has-team-fallback" class="hidden rounded-xl border border-green-300/50 dark:border-green-700/50 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950/40 p-5 sm:p-6 text-center">
+                  <div id="season-team-has-team-fallback" class="hidden rounded-xl border border-green-700/50 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950/40 p-5 sm:p-6 text-center">
                     <p class="text-lg font-bold text-slate-100 mb-1">Ditt säsongsteam</p>
                     <p class="text-sm text-slate-400 mb-4">Du har redan ett lag — öppna det för roster och poäng.</p>
                     <a href="{{ url_for('season_team_page') }}" class="rp-btn rp-btn--block rp-btn--primary">Öppna mitt lag</a>
@@ -3378,11 +3378,11 @@
                 {% endif %}
               </div>
               
-              <div class="min-w-0 bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
+              <div class="min-w-0 bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4 leading-tight break-words"><span class="mx-heading-icon"><span class="shrink-0">{{ mx_icon('chart') }}</span><span class="min-w-0">Statistik</span></span></h2>
                 <div id="season-team-stats-container" class="space-y-4">
-                  <div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 p-4 rounded-lg">
-                    <p class="text-gray-600 dark:text-gray-300 text-center"><span class="mx-heading-icon">{{ mx_icon('chart-up') }}<span>Laddar statistik...</span></span></p>
+                  <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-4 rounded-lg">
+                    <p class="text-gray-300 text-center"><span class="mx-heading-icon">{{ mx_icon('chart-up') }}<span>Laddar statistik...</span></span></p>
                   </div>
                 </div>
               </div>
@@ -3416,7 +3416,7 @@
           <!-- Settings Tab -->
           <div id="settings" class="tab-panel hidden">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
-              <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
+              <div class="bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('user') }}<span>Profil & Inställningar</span></span></h2>
                 <div class="rp-btn-stack">
                   {% if is_logged_in %}
@@ -3431,7 +3431,7 @@
               
 
               {% if is_admin or (username and username|lower in ['test', 'spliffan']) %}
-              <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
+              <div class="bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4">Admin & System</h2>
                 <div class="rp-btn-stack">
                   <a href="{{ url_for('admin_page') }}" class="rp-btn rp-btn--block rp-btn--gold">Admin Panel</a>
@@ -3607,7 +3607,7 @@
     async function loadMyLeagues() {
       const container = document.getElementById('my-leagues-container');
       if (!container) return;
-      container.innerHTML = '<div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 p-4 rounded-lg"><p class="text-gray-600 dark:text-gray-300 text-center mx-btn-icon">' + (typeof mxIcon === 'function' ? mxIcon('chart-up') : '') + ' Laddar dina ligor...</p></div>';
+      container.innerHTML = '<div class="bg-gradient-to-r from-gray-700 to-gray-600 p-4 rounded-lg"><p class="text-gray-300 text-center mx-btn-icon">' + (typeof mxIcon === 'function' ? mxIcon('chart-up') : '') + ' Laddar dina ligor...</p></div>';
 
       try {
         const res = await fetch('/api/leagues/stats');
@@ -3951,9 +3951,9 @@
         if (data.error) {
           if (data.error === 'no_team') {
             container.innerHTML = `
-              <div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 p-4 rounded-lg">
-                <p class="text-gray-600 dark:text-gray-300 text-center">Du har inget säsongsteam ännu.</p>
-                <a href="${window.seasonTeamBuilderUrl || '/season_team_builder'}" class="block text-center mt-3 text-blue-600 dark:text-blue-400 hover:underline">Skapa ett team</a>
+              <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-4 rounded-lg">
+                <p class="text-gray-300 text-center">Du har inget säsongsteam ännu.</p>
+                <a href="${window.seasonTeamBuilderUrl || '/season_team_builder'}" class="block text-center mt-3 text-blue-400 hover:underline">Skapa ett team</a>
               </div>
             `;
           } else {
@@ -3990,8 +3990,8 @@
         
         if (!data.competitions || data.competitions.length === 0) {
           container.innerHTML = `
-            <div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 p-4 rounded-lg">
-              <p class="text-gray-600 dark:text-gray-300 text-center">Inga tävlingar ännu.</p>
+            <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-4 rounded-lg">
+              <p class="text-gray-300 text-center">Inga tävlingar ännu.</p>
             </div>
           `;
           return;
@@ -4078,7 +4078,7 @@
           `;
           recentCompetitions.forEach(comp => {
             const ptsClass = comp.total_points > 0
-              ? 'text-green-600 dark:text-green-400'
+              ? 'text-green-400'
               : 'text-red-500 dark:text-red-400';
             const ser = (comp.series || '—').toString();
             html += `
@@ -7578,9 +7578,9 @@
 
   <!-- Login Modal -->
   <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="handleModalClick(event)">
-    <div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl border dark:border-gray-700 max-w-md w-full mx-4 relative z-60" onclick="event.stopPropagation()">
+    <div class="bg-gray-800 p-8 rounded-lg shadow-xl border border-gray-700 max-w-md w-full mx-4 relative z-60" onclick="event.stopPropagation()">
       <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Logga in</h2>
+        <h2 class="text-2xl font-bold text-white">Logga in</h2>
         <button onclick="closeLoginModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -7591,11 +7591,11 @@
       <form id="loginForm">
         <input type="hidden" name="modal" value="true">
         <div class="mb-4">
-          <label for="modal_username" class="block text-gray-700 dark:text-gray-300 mb-2">Användarnamn eller e-post</label>
+          <label for="modal_username" class="block text-gray-300 mb-2">Användarnamn eller e-post</label>
           <input type="text" id="modal_username" name="username" class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent" required autocomplete="username" placeholder="Namn eller e-post">
         </div>
         <div class="mb-4">
-          <label for="modal_password" class="block text-gray-700 dark:text-gray-300 mb-2">Lösenord</label>
+          <label for="modal_password" class="block text-gray-300 mb-2">Lösenord</label>
           <div class="relative">
             <input type="password" id="modal_password" name="password" class="w-full p-3 pr-12 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
             <button type="button" id="toggleModalPassword" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white" aria-label="Visa lösenord">
@@ -7610,7 +7610,7 @@
       </form>
       
       <p class="text-right text-sm mt-4 mb-2">
-        <a id="forgotPasswordLink" href="{{ url_for('forgot_password') }}" class="text-blue-600 dark:text-blue-400 underline hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer font-medium">Glömt lösenord?</a>
+        <a id="forgotPasswordLink" href="{{ url_for('forgot_password') }}" class="text-blue-400 underline hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer font-medium">Glömt lösenord?</a>
       </p>
       
       <div class="mt-4 text-center">

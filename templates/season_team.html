@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
 <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
+<body class="bg-gray-900 text-gray-200 font-sans">
   <div class="container mx-auto p-3 sm:p-4 md:p-6">
     <!-- Header - Responsiv layout -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 gap-4">
@@ -121,8 +121,8 @@
           <h3 class="text-lg sm:text-xl font-semibold mb-4 border-b border-gray-700 pb-2">
             Säsongsteam Poäng per Tävling
           </h3>
-          <div class="bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded-lg p-3 mb-4">
-            <p class="text-sm text-blue-800 dark:text-blue-200">
+          <div class="bg-blue-900 border border-blue-700 rounded-lg p-3 mb-4">
+            <p class="text-sm text-blue-200">
               💡 <strong>Tips:</strong> Klicka på en tävling för detaljerad <strong>säsongsteam</strong>-poängfördelning per förare.<br>
               <span class="text-xs mt-1 block"><span class="mx-heading-icon">{{ mx_icon('alert') }}</span> OBS: Inte race picks — poäng från lagets 4 säsongsteam-förare. Race före laget skapades ger 0 p.</span>
             </p>
@@ -151,9 +151,9 @@
 
   <!-- Modal för detaljvy -->
   <div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" style="z-index: 9999;">
-    <div class="bg-white dark:bg-gray-800 p-4 rounded shadow-lg max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col" style="z-index: 10000;">
-      <h3 class="text-lg font-bold mb-3 text-gray-800 dark:text-white">Detaljerad Säsongsteam Poäng</h3>
-      <div id="detail-content" class="mb-3 text-xs text-gray-800 dark:text-gray-200 overflow-y-auto flex-1"></div>
+    <div class="bg-gray-800 p-4 rounded shadow-lg max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col" style="z-index: 10000;">
+      <h3 class="text-lg font-bold mb-3 text-white">Detaljerad Säsongsteam Poäng</h3>
+      <div id="detail-content" class="mb-3 text-xs text-gray-200 overflow-y-auto flex-1"></div>
       <button onclick="closeModal()" class="bg-red-600 text-white px-4 py-2 rounded text-sm">Stäng</button>
     </div>
   </div>
@@ -227,11 +227,11 @@
           else if (hasResults && comp.total_points === 0) ptsClass = 'text-red-500';
 
           return `
-            <tr ${onClick} class="border-t border-gray-200 dark:border-gray-600 ${canClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700' : ''} transition-colors group">
+            <tr ${onClick} class="border-t border-gray-600 ${canClick ? 'cursor-pointer hover:bg-gray-700' : ''} transition-colors group">
               <td class="p-2 whitespace-nowrap">${comp.event_date}</td>
               <td class="p-2">
                 <div class="flex items-center gap-2">
-                  <span class="text-gray-900 dark:text-gray-100">${comp.name}</span>
+                  <span class="text-gray-100">${comp.name}</span>
                   ${canClick ? '<span class="text-xs text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400">👆 Detaljer</span>' : ''}
                 </div>
               </td>
@@ -255,18 +255,18 @@
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div class="text-xs text-gray-500 dark:text-gray-400">${showingText}</div>
                 <div class="flex flex-wrap gap-2">
-                  <button data-status="all" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='all' ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}">Alla</button>
-                  <button data-status="done" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='done' ? 'bg-green-600 text-white border-green-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}">${typeof mxIcon==='function'?mxIcon('check-circle'):''} Kört</button>
-                  <button data-status="waiting" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='waiting' ? 'bg-yellow-600 text-white border-yellow-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}">${typeof mxIcon==='function'?mxIcon('hourglass'):''} Väntar</button>
+                  <button data-status="all" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='all' ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-700 text-gray-200 border-gray-600'}">Alla</button>
+                  <button data-status="done" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='done' ? 'bg-green-600 text-white border-green-500' : 'bg-gray-700 text-gray-200 border-gray-600'}">${typeof mxIcon==='function'?mxIcon('check-circle'):''} Kört</button>
+                  <button data-status="waiting" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='waiting' ? 'bg-yellow-600 text-white border-yellow-500' : 'bg-gray-700 text-gray-200 border-gray-600'}">${typeof mxIcon==='function'?mxIcon('hourglass'):''} Väntar</button>
                 </div>
               </div>
 
               <div class="flex flex-col sm:flex-row gap-2">
                 <div class="flex-1">
-                  <input id="comp-search" value="${state.q}" placeholder="Sök tävling…" class="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 text-sm" />
+                  <input id="comp-search" value="${state.q}" placeholder="Sök tävling…" class="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 text-sm" />
                 </div>
                 <div class="sm:w-48">
-                  <select id="series-filter" class="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 text-sm">
+                  <select id="series-filter" class="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 text-sm">
                     <option value="all"${state.series==='all' ? ' selected' : ''}>Alla serier</option>
                     ${uniqueSeries.map(s => `<option value="${s}"${state.series===s ? ' selected' : ''}>${s}</option>`).join('')}
                   </select>
@@ -280,7 +280,7 @@
             </div>
           `;
 
-          html += '<table class="w-full border-collapse bg-white dark:bg-gray-800 shadow-lg rounded text-sm">';
+          html += '<table class="w-full border-collapse bg-gray-800 shadow-lg rounded text-sm">';
           html += '<thead class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"><tr>';
           html += '<th class="p-2 text-left">Datum</th>';
           html += '<th class="p-2 text-left">Tävling</th>';
@@ -345,7 +345,7 @@
         
         html += '<div class="space-y-2 mb-4">';
         data.breakdown.forEach(rider => {
-          html += '<div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded border-b border-gray-200 dark:border-gray-600">';
+          html += '<div class="flex items-center justify-between p-2 bg-gray-700 rounded border-b border-gray-600">';
           html += `<div class="flex-1">`;
           html += `<span class="font-semibold">${rider.rider_name}</span>`;
           if (rider.rider_number) {
