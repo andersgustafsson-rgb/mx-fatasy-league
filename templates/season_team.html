@@ -386,14 +386,13 @@
 
           {% if is_own_team | default(true) %}
           <div class="st-actions">
-            <button type="button" class="st-btn st-btn--ghost" id="btn-scroll-points">Visa poänghistorik</button>
             <a class="st-btn st-btn--primary" href="{{ url_for('season_team_builder') }}">Ändra team →</a>
           </div>
           {% endif %}
         </div>
       </section>
 
-      <section class="st-panel" id="poang-per-tavling" style="animation-delay:0.08s; scroll-margin-top: 1rem;">
+      <section class="st-panel" id="poang-per-tavling" style="animation-delay:0.08s">
         <div class="st-panel-inner">
           <h3 class="st-section-title">Poäng per tävling</h3>
           <div class="st-tip">
@@ -652,16 +651,7 @@
       m.classList.remove('flex');
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      loadSeasonTeamCompetitions();
-      const scrollBtn = document.getElementById('btn-scroll-points');
-      if (scrollBtn) {
-        scrollBtn.addEventListener('click', () => {
-          const el = document.getElementById('poang-per-tavling');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-      }
-    });
+    document.addEventListener('DOMContentLoaded', loadSeasonTeamCompetitions);
   </script>
 </body>
 </html>
