@@ -27,7 +27,8 @@ load_dotenv(os.path.join(ROOT, ".env"))
 LOCAL_DB_NAME = "fantasy_mx_local.db"
 LOCAL_URL = f"sqlite:///{LOCAL_DB_NAME}"
 
-# Insert order respects foreign keys
+# Insert order respects foreign keys. Keep in sync with models.py — missing
+# tables leave stale local rows (e.g. MXoN tips) while core data is overwritten.
 SYNC_TABLES = [
     "series",
     "users",
@@ -37,10 +38,13 @@ SYNC_TABLES = [
     "season_teams",
     "season_team_riders",
     "season_team_class_promotions",
+    "season_team_archives",
     "leagues",
     "league_memberships",
     "league_requests",
     "league_season_archives",
+    "league_challenges",
+    "user_league_challenge_badges",
     "competition_rider_status",
     "competition_results",
     "competition_images",
@@ -48,18 +52,36 @@ SYNC_TABLES = [
     "race_picks",
     "holeshot_picks",
     "wildcard_picks",
+    "qualifying_picks",
+    "qualifying_results",
     "picks_snapshots",
     "competition_scores",
     "leaderboard_history",
+    # MXoN (nations → roster/outs → picks/results)
+    "mxon_nations",
+    "mxon_team_entries",
+    "mxon_competition_outs",
+    "mxon_nation_picks",
+    "mxon_nation_results",
+    "mxon_class_picks",
+    "mxon_class_results",
     "bulletin_posts",
     "bulletin_reactions",
     "cross_dino_highscores",
     "finished_series_stats",
     "admin_announcements",
     "user_announcement_dismissals",
+    "user_race_recap_dismissals",
     "message_threads",
     "messages",
     "inbox_notifications",
+    "push_subscriptions",
+    "user_reminders",
+    "user_checklist_items",
+    "daily_site_stats",
+    "daily_visitor_sightings",
+    "barniva_schema_workspaces",
+    "barniva_schema_workspace_versions",
 ]
 
 BLOB_COLUMNS = {
