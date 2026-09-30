@@ -955,28 +955,26 @@ def build_mxon_crowd_ranking(competition_id: int) -> dict[str, Any]:
         if nation_ids
         else {}
     )
-    total_score = float(sum(scores.values())) or 1.0
+    total_all = float(sum(scores.values())) or 1.0
     ranked_nations = sorted(scores.items(), key=lambda x: (-x[1], x[0]))
-    # Only top 5 — matches how tippers pick. % among those five (sums ~100).
-    top5 = ranked_nations[:5]
-    top5_total = float(sum(s for _, s in top5)) or 1.0
+    # Show top 10 for the board; % only on tip-style top 5 (share of all tip weight).
     nations_out = []
-    for i, (nid, score) in enumerate(top5, 1):
+    for i, (nid, score) in enumerate(ranked_nations[:10], 1):
         n = nations.get(nid)
         if not n:
             continue
         code = (n.code or "").strip()
-        nations_out.append(
-            {
-                "rank": i,
-                "nation_id": nid,
-                "code": code or None,
-                "name": n.name,
-                "flag_url": flag_image_url(code) if code else None,
-                "flag_emoji": n.flag_emoji,
-                "strength_pct": int(round(100.0 * float(score) / top5_total)),
-            }
-        )
+        row = {
+            "rank": i,
+            "nation_id": nid,
+            "code": code or None,
+            "name": n.name,
+            "flag_url": flag_image_url(code) if code else None,
+            "flag_emoji": n.flag_emoji,
+        }
+        if i <= 5:
+            row["strength_pct"] = int(round(100.0 * float(score) / total_all))
+        nations_out.append(row)
 
     class_counts: dict[str, dict[int, int]] = {
         k: defaultdict(int) for k in MXON_CLASS_KEYS
