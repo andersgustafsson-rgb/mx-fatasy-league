@@ -963,11 +963,252 @@
     }
     .ld-shell {
       width: 100%;
-      max-width: 1040px;
+      max-width: 36rem;
       margin: 0 auto;
       padding: 1rem 1rem 3.5rem;
     }
-    @media (min-width: 640px) { .ld-shell { padding: 1.5rem 1.5rem 4rem; } }
+    @media (min-width: 640px) { .ld-shell { padding: 1.25rem 1.25rem 4rem; max-width: 40rem; } }
+    /* Mobile dashboard: status strip */
+    .ld-status {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 0.9rem;
+      margin-bottom: 0.85rem;
+      border-radius: 0.9rem;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(15, 23, 42, 0.72);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+    }
+    .ld-status__logo {
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 0.65rem;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      background: rgba(2, 6, 23, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ld-status__logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .ld-status__body { min-width: 0; flex: 1; }
+    .ld-status__rank {
+      display: flex;
+      align-items: baseline;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      font-family: "Bebas Neue", Impact, sans-serif;
+      font-size: 1.55rem;
+      letter-spacing: 0.03em;
+      line-height: 1.1;
+      color: #f8fafc;
+    }
+    .ld-status__rank span.of {
+      font-family: "DM Sans", system-ui, sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #94a3b8;
+      letter-spacing: 0;
+    }
+    .ld-status__meta {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 0.15rem;
+      line-height: 1.35;
+    }
+    .ld-status__meta .gap { color: #67e8f9; font-weight: 600; }
+    .ld-status__meta .lead { color: #fbbf24; font-weight: 600; }
+    /* Compact picks */
+    .pulse-card.pulse-card--compact {
+      padding: 0.85rem 0.95rem !important;
+      margin-bottom: 0.85rem !important;
+      border-radius: 0.9rem !important;
+    }
+    .pulse-card--compact .pulse-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.65rem;
+      margin-bottom: 0.65rem;
+    }
+    .pulse-card--compact h2 {
+      font-size: 0.95rem !important;
+      margin: 0;
+    }
+    .pulse-cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0.55rem 0.95rem !important;
+      white-space: nowrap;
+    }
+    .pulse-chips {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .pulse-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem 0.45rem;
+    }
+    .pulse-chip-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-right: 0.15rem;
+    }
+    .pulse-chip-label--ok { color: rgba(74, 222, 128, 0.85); }
+    .pulse-chip-label--wait { color: #64748b; }
+    .pulse-chip-label--part { color: rgba(251, 191, 36, 0.85); }
+    .pick-chip {
+      padding: 0.15rem 0.5rem !important;
+      font-size: 0.72rem !important;
+      gap: 0.3rem !important;
+    }
+    /* Competition panel (rival + duels) */
+    .compete-card {
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(15, 23, 42, 0.72);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3);
+      border-radius: 0.9rem;
+      padding: 0.9rem 0.95rem;
+      margin-bottom: 0.85rem;
+    }
+    .compete-card.duels-section--alert {
+      border-color: rgba(251, 191, 36, 0.4) !important;
+      box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.15) !important;
+    }
+    .compete-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .compete-head h2 {
+      font-size: 1rem !important;
+      margin: 0;
+    }
+    .compete-sub {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 0.15rem;
+    }
+    .compete-rival {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.65rem 0.7rem;
+      border-radius: 0.7rem;
+      border: 1px solid rgba(248, 113, 113, 0.28);
+      background: rgba(127, 29, 29, 0.12);
+      margin-bottom: 0.65rem;
+    }
+    .compete-rival__meta { min-width: 0; flex: 1; }
+    .compete-rival__name {
+      font-weight: 700;
+      color: #fff;
+      font-size: 0.95rem;
+      line-height: 1.2;
+    }
+    .compete-rival__name a { color: inherit; text-decoration: none; }
+    .compete-rival__name a:hover { color: #fecaca; }
+    .compete-rival__gap { font-size: 0.75rem; color: #94a3b8; margin-top: 0.1rem; }
+    .compete-vs {
+      margin-top: 0.55rem;
+      padding: 0.45rem 0.55rem;
+      border-radius: 0.55rem;
+      background: rgba(2, 6, 23, 0.4);
+      border: 1px solid rgba(71, 85, 105, 0.5);
+      font-size: 0.75rem;
+    }
+    .compete-duels-empty {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      padding: 0.35rem 0;
+    }
+    .compete-footer {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-top: 0.65rem;
+      padding-top: 0.55rem;
+      border-top: 1px solid rgba(71, 85, 105, 0.45);
+    }
+    .duel-manual-link {
+      display: inline-flex !important;
+      align-items: center;
+      gap: 0.25rem;
+      margin-top: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent !important;
+      border-radius: 0 !important;
+      color: #64748b !important;
+      font-size: 0.72rem !important;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      box-shadow: none !important;
+    }
+    .duel-manual-link:hover {
+      color: #94a3b8 !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    .duel-btn {
+      min-height: 44px;
+    }
+    .ld-fold {
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(15, 23, 42, 0.72);
+      border-radius: 0.9rem;
+      margin-bottom: 0.85rem;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
+    }
+    .ld-fold > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 0.85rem 0.95rem;
+      font-family: "Bebas Neue", Impact, sans-serif;
+      letter-spacing: 0.04em;
+      font-size: 1rem;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      user-select: none;
+    }
+    .ld-fold > summary::-webkit-details-marker { display: none; }
+    .ld-fold > summary::after {
+      content: "▾";
+      color: #64748b;
+      font-size: 0.85rem;
+      transition: transform 0.15s ease;
+    }
+    .ld-fold[open] > summary::after { transform: rotate(180deg); }
+    .ld-fold__body { padding: 0 0.95rem 0.95rem; }
+    .ld-stack { display: flex; flex-direction: column; gap: 0.85rem; }
     .cyberpunk-header {
       font-family: "Bebas Neue", Impact, sans-serif !important;
       text-shadow: none !important;
@@ -1270,147 +1511,218 @@
     </div>
   {% endif %}
 
-    <!-- Hero -->
-    <div class="gold-card rounded-2xl overflow-hidden mb-6">
-      <div class="grid grid-cols-1 lg:grid-cols-5 gap-0">
-        <div class="lg:col-span-2 hero-banner flex items-center justify-center">
-          {% if league.image_url %}
-          <img src="{{ url_for('league_image', league_id=league.id) }}" alt="{{ league.name }}"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-          <div class="hidden absolute inset-0 items-center justify-center opacity-40">{{ mx_icon('trophy', 'mx-icon--2xl') }}</div>
+    <!-- Status strip -->
+    {% set my_rank = summary.my_rank %}
+    <div class="ld-status">
+      <div class="ld-status__logo" aria-hidden="true">
+        {% if league.image_url %}
+        <img src="{{ url_for('league_image', league_id=league.id) }}" alt=""
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="hidden items-center justify-center w-full h-full opacity-50">{{ mx_icon('trophy') }}</div>
+        {% else %}
+        <span class="opacity-40">{{ mx_icon('trophy') }}</span>
+        {% endif %}
+      </div>
+      <div class="ld-status__body">
+        <div class="ld-status__rank">
+          {% if my_rank %}
+          #{{ my_rank }} <span class="of">av {{ summary.member_count }}</span>
           {% else %}
-          <div class="flex items-center justify-center w-full min-h-[10rem] opacity-30">{{ mx_icon('trophy', 'mx-icon--2xl') }}</div>
+          — <span class="of">av {{ summary.member_count }}</span>
+          {% endif %}
+          {% if challenges and challenges.alert and challenges.alert.has_action %}
+          <span class="duels-alert-pill" title="{{ challenges.alert.short_label }}">{{ challenges.alert.count }}</span>
           {% endif %}
         </div>
-        <div class="lg:col-span-3 p-5 sm:p-6 flex flex-col justify-center gap-4">
-          {% set my_rank = summary.my_rank %}
-          {% set rank_cls = 'hero-stat--rank-1' if my_rank == 1 else ('hero-stat--rank-2' if my_rank == 2 else ('hero-stat--rank-3' if my_rank == 3 else '')) %}
-          <div class="hero-stat {{ rank_cls }}">
-            <div class="text-xs uppercase tracking-widest text-gray-400 mb-1">Din placering</div>
-            {% if my_rank %}
-            <div class="text-2xl sm:text-3xl font-black text-white">
-              #{{ my_rank }} <span class="text-lg font-normal text-gray-400">av {{ summary.member_count }}</span>
-            </div>
-            <div class="text-xl font-bold text-amber-300 mt-1">{{ summary.my_points }} p</div>
-            {% else %}
-            <div class="text-gray-400">Ingen poäng ännu</div>
-            {% endif %}
-          </div>
-          <div class="text-sm leading-relaxed">
-            {% if my_rank == 1 %}
-            <span class="text-amber-300 font-semibold">{{ mx_icon('trophy') }} Du leder ligan!</span>
-            {% if summary.gap_below %}
-            <span class="text-gray-400"> · {{ summary.gap_below }} p före {{ summary.standings[1].display_name if summary.standings|length > 1 else 'nästa' }}</span>
-            {% endif %}
-            {% elif my_rank and summary.gap_above %}
-            <span class="text-cyan-300">{{ summary.gap_above }} p efter {{ summary.rival_name }}</span>
-            {% if summary.gap_below %}
-            <span class="text-gray-500"> · </span>
-            <span class="text-gray-400">{{ summary.gap_below }} p före {{ summary.standings[my_rank].display_name if summary.standings|length > my_rank else 'nästa' }}</span>
-            {% endif %}
-            {% elif summary.leader_name %}
-            <span class="text-gray-400">Ledar: <span class="text-white">{{ summary.leader_name }}</span></span>
-            {% endif %}
-          </div>
+        <div class="ld-status__meta">
+          {% if my_rank %}
+          <span class="text-white font-semibold">{{ summary.my_points }} p</span>
+          {% else %}
+          <span>Ingen poäng ännu</span>
+          {% endif %}
+          {% if my_rank == 1 %}
+          <span class="lead"> · Du leder</span>
+          {% if summary.gap_below %}
+          <span> · {{ summary.gap_below }} p före {{ summary.standings[1].display_name if summary.standings|length > 1 else 'nästa' }}</span>
+          {% endif %}
+          {% elif my_rank and summary.gap_above %}
+          <span class="gap"> · {{ summary.gap_above }} p efter {{ summary.rival_name }}</span>
+          {% elif summary.leader_name %}
+          <span> · Ledar: <span class="text-white">{{ summary.leader_name }}</span></span>
+          {% endif %}
         </div>
       </div>
     </div>
 
     {% if picks_pulse %}
-    <div class="pulse-card rounded-2xl p-5 mb-6">
-      <div class="flex flex-wrap items-start justify-between gap-4 mb-4">
-        <div>
-          <h2 class="cyberpunk-header text-lg font-bold text-cyan-300">{{ mx_icon('clock') }} Nästa race — picks-läge</h2>
-          <p class="text-white font-semibold mt-1">{{ picks_pulse.name }}</p>
-          <p class="text-sm text-gray-400 mt-0.5">
-            <span class="text-cyan-400 font-bold">{{ picks_pulse.complete_count }}/{{ picks_pulse.member_count }}</span> har klara picks
+    <div class="pulse-card pulse-card--compact rounded-2xl">
+      <div class="pulse-head">
+        <div class="min-w-0">
+          <h2 class="cyberpunk-header font-bold text-cyan-300">{{ mx_icon('clock') }} Nästa race</h2>
+          <p class="text-white font-semibold text-sm mt-0.5 truncate">{{ picks_pulse.name }}</p>
+          <p class="text-xs text-gray-400 mt-0.5">
+            <span class="text-cyan-400 font-bold">{{ picks_pulse.complete_count }}/{{ picks_pulse.member_count }}</span> klara
             {% if picks_pulse.hours_left is not none %}
             · stänger om <span class="text-cyan-300 font-semibold">{% if picks_pulse.hours_left < 1 %}&lt;1h{% else %}{{ picks_pulse.hours_left }}h{% endif %}</span>
             {% elif picks_pulse.deadline_display %}
-            · deadline {{ picks_pulse.deadline_display }}
+            · {{ picks_pulse.deadline_display }}
             {% endif %}
           </p>
         </div>
-        <a href="{{ picks_pulse.picks_url }}"
-           class="cyberpunk-button text-white font-bold px-4 py-2.5 rounded-lg text-sm shrink-0">
-          {% if picks_pulse.viewer_status == 'complete' %}Visa picks{% else %}Gör dina picks →{% endif %}
+        <a href="{{ picks_pulse.picks_url }}" class="cyberpunk-button pulse-cta text-white font-bold text-sm shrink-0 rounded-lg">
+          {% if picks_pulse.viewer_status == 'complete' %}Visa picks{% else %}Gör picks →{% endif %}
         </a>
       </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <p class="text-xs uppercase tracking-widest text-green-400/80 mb-2">{{ mx_icon('check-circle') }} Klara ({{ picks_pulse.complete_count }})</p>
-          <div class="flex flex-wrap gap-1.5">
-            {% for m in picks_pulse.complete %}
-            <span class="pick-chip pick-chip--complete{% if m.is_me %} pick-chip--me{% endif %}">
-              {{ user_avatar(m, 'xs') }}
-              {% if m.is_me %}Du{% else %}{{ m.display_name }}{% endif %}
-            </span>
-            {% else %}
-            <span class="text-xs text-gray-500">Ingen ännu</span>
-            {% endfor %}
-          </div>
+      <div class="pulse-chips">
+        <div class="pulse-chip-row">
+          <span class="pulse-chip-label pulse-chip-label--ok">Klara</span>
+          {% for m in picks_pulse.complete %}
+          <span class="pick-chip pick-chip--complete{% if m.is_me %} pick-chip--me{% endif %}">
+            {{ user_avatar(m, 'xs') }}
+            {% if m.is_me %}Du{% else %}{{ m.display_name }}{% endif %}
+          </span>
+          {% else %}
+          <span class="text-xs text-gray-500">—</span>
+          {% endfor %}
         </div>
         {% if picks_pulse.partial %}
-        <div>
-          <p class="text-xs uppercase tracking-widest text-amber-400/80 mb-2">{{ mx_icon('note') }} Påbörjade ({{ picks_pulse.partial_count }})</p>
-          <div class="flex flex-wrap gap-1.5">
-            {% for m in picks_pulse.partial %}
-            <span class="pick-chip pick-chip--partial{% if m.is_me %} pick-chip--me{% endif %}">
-              {{ user_avatar(m, 'xs') }}
-              {% if m.is_me %}Du{% else %}{{ m.display_name }}{% endif %}
-            </span>
-            {% endfor %}
-          </div>
+        <div class="pulse-chip-row">
+          <span class="pulse-chip-label pulse-chip-label--part">Pågår</span>
+          {% for m in picks_pulse.partial %}
+          <span class="pick-chip pick-chip--partial{% if m.is_me %} pick-chip--me{% endif %}">
+            {{ user_avatar(m, 'xs') }}
+            {% if m.is_me %}Du{% else %}{{ m.display_name }}{% endif %}
+          </span>
+          {% endfor %}
         </div>
         {% endif %}
         {% if picks_pulse.waiting %}
-        <div>
-          <p class="text-xs uppercase tracking-widest text-gray-500 mb-2"><span class="mx-heading-icon">{{ mx_icon('hourglass') }}</span> Väntar ({{ picks_pulse.waiting_count }})</p>
-          <div class="flex flex-wrap gap-1.5">
-            {% for m in picks_pulse.waiting %}
-            <span class="pick-chip pick-chip--waiting{% if m.is_me %} pick-chip--me{% endif %}">
-              {{ user_avatar(m, 'xs') }}
-              {% if m.is_me %}Du{% else %}{{ m.display_name }}{% endif %}
-            </span>
-            {% endfor %}
-          </div>
+        <div class="pulse-chip-row">
+          <span class="pulse-chip-label pulse-chip-label--wait">Väntar</span>
+          {% for m in picks_pulse.waiting %}
+          <span class="pick-chip pick-chip--waiting{% if m.is_me %} pick-chip--me{% endif %}">
+            {{ user_avatar(m, 'xs') }}
+            {% if m.is_me %}Du{% else %}{{ m.display_name }}{% endif %}
+          </span>
+          {% endfor %}
         </div>
         {% endif %}
       </div>
     </div>
     {% endif %}
 
-    {% if last_race_digest or rival_card %}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      {% if last_race_digest %}
-      <div class="digest-card rounded-2xl p-5">
-        <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+    {% set show_duels = challenges and challenges.next_competition and challenges.next_competition.picks_open %}
+    {% set show_digest_solo = last_race_digest and not rival_card %}
+    {% if rival_card or show_duels or show_digest_solo %}
+    <div class="compete-card{% if show_duels and challenges.alert and challenges.alert.has_action %} duels-section--alert{% endif %}" id="duelsSection">
+      <div class="compete-head">
+        <div class="min-w-0">
+          <h2 class="cyberpunk-header font-bold text-cyan-300">
+            {{ mx_icon('swords') }} Konkurrens
+            {% if show_duels and challenges.alert and challenges.alert.has_action %}
+            <span class="duels-alert-pill" title="{{ challenges.alert.short_label }}">{{ challenges.alert.count }}</span>
+            {% endif %}
+          </h2>
+          {% if show_duels %}
+          <p class="compete-sub">{{ challenges.next_competition.short_label }} — utmana &amp; samla märken</p>
+          {% elif rival_card %}
+          <p class="compete-sub">{% if rival_card.role == 'rival' %}Din närmaste rival{% else %}Jagar dig{% endif %}</p>
+          {% else %}
+          <p class="compete-sub">Senaste race</p>
+          {% endif %}
+        </div>
+        {% if show_duels %}
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
+          {% if challenges.my_badge %}
+          <span class="duel-badge duel-badge--{{ challenges.my_badge.kind }}">
+            {{ challenges.my_badge.emoji }} {{ challenges.my_badge.label }}
+          </span>
+          {% endif %}
+          <button type="button" class="duel-btn text-sm" id="btnNewChallenge">+ Utmana</button>
+        </div>
+        {% endif %}
+      </div>
+
+      {% if rival_card %}
+      <div class="compete-rival">
+        {{ user_avatar(rival_card.opp_avatar, 'md') }}
+        <div class="compete-rival__meta">
+          <div class="compete-rival__name">
+            <a href="{{ url_for('view_user_profile', user_id=rival_card.opp_user_id) }}">{{ rival_card.opp_name }}</a>
+            <span class="text-gray-500 text-xs font-normal"> · #{{ rival_card.opp_rank }}</span>
+          </div>
+          <div class="compete-rival__gap">
+            {% if rival_card.role == 'rival' %}
+            {{ rival_card.gap_points }}p före dig totalt
+            {% else %}
+            {{ rival_card.gap_points }}p efter dig
+            {% endif %}
+          </div>
+          {% if rival_card.last_race %}
+          <div class="compete-vs">
+            <div class="flex items-center justify-between gap-2">
+              <span>Du <strong class="text-cyan-300">{{ rival_card.last_race.my_points }}p</strong></span>
+              <span class="text-gray-600">vs</span>
+              <span>{{ rival_card.opp_name.split(' ')[0] }} <strong class="text-red-300">{{ rival_card.last_race.opp_points }}p</strong></span>
+            </div>
+            {% set diff = rival_card.last_race.point_diff %}
+            {% if diff > 0 %}
+            <p class="text-green-400 mt-1">Du +{{ diff }}p · {{ rival_card.last_race.short_label }}</p>
+            {% elif diff < 0 %}
+            <p class="text-red-400 mt-1">{{ rival_card.opp_name.split(' ')[0] }} +{{-diff}}p · {{ rival_card.last_race.short_label }}</p>
+            {% else %}
+            <p class="text-gray-500 mt-1">Lika · {{ rival_card.last_race.short_label }}</p>
+            {% endif %}
+          </div>
+          {% endif %}
+          {% if rival_card.h2h.races > 0 %}
+          <div class="mt-2">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-cyan-300">Du {{ rival_card.h2h.me }}</span>
+              <span class="text-gray-500">H2H{% if rival_card.h2h.ties %} · {{ rival_card.h2h.ties }} lika{% endif %}</span>
+              <span class="text-red-300">{{ rival_card.h2h.rival }}</span>
+            </div>
+            {% set total = rival_card.h2h.me + rival_card.h2h.rival + rival_card.h2h.ties %}
+            {% if total > 0 %}
+            <div class="h2h-bar">
+              <div class="h2h-bar__me" style="width: {{ (rival_card.h2h.me / total * 100)|round(1) }}%"></div>
+              <div class="h2h-bar__rival" style="width: {{ (rival_card.h2h.rival / total * 100)|round(1) }}%"></div>
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+          {% if show_duels %}
+          <div class="mt-2">
+            <button type="button"
+                    class="duel-btn w-full text-center text-sm"
+                    id="btnChallengeRival"
+                    data-opponent-id="{{ rival_card.opp_user_id }}">
+              {{ mx_icon('swords') }} Utmana {{ rival_card.opp_name.split(' ')[0] }}
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% elif show_digest_solo %}
+      <div class="digest-card rounded-xl p-3 mb-3">
+        <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
           <div>
-            <h2 class="cyberpunk-header text-lg font-bold text-amber-300">{{ mx_icon('flag') }} Senaste race</h2>
-            <a href="{{ last_race_digest.trackmap_url }}" class="text-white font-semibold hover:text-amber-200 transition">
+            <p class="text-xs uppercase tracking-widest text-amber-300/80 mb-0.5">Senaste race</p>
+            <a href="{{ last_race_digest.trackmap_url }}" class="text-white font-semibold text-sm hover:text-amber-200 transition">
               {{ last_race_digest.name }}
             </a>
           </div>
           {% if last_race_digest.my_race_rank %}
           <div class="text-right">
-            <div class="text-xs text-gray-500 uppercase tracking-widest">Du i ligan</div>
-            <div class="font-black text-2xl text-amber-300">#{{ last_race_digest.my_race_rank }}</div>
+            <div class="font-black text-xl text-amber-300">#{{ last_race_digest.my_race_rank }}</div>
             {% if last_race_digest.my_points is not none %}
-            <div class="text-sm text-gray-400">{{ last_race_digest.my_points }}p</div>
+            <div class="text-xs text-gray-400">{{ last_race_digest.my_points }}p</div>
             {% endif %}
           </div>
           {% endif %}
         </div>
-        {% if last_race_digest.highlights %}
-        <div class="space-y-2 mb-3">
-          {% for line in last_race_digest.highlights %}
-          <div class="story-line">{{ line }}</div>
-          {% endfor %}
-        </div>
-        {% endif %}
         <p class="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
-          <span>Liga-vinnare:</span>
+          <span>Vinnare:</span>
           {{ user_avatar(last_race_digest, 'xs') }}
           <span class="text-amber-200 font-semibold">{{ last_race_digest.winner_name }}</span>
           <span>· {{ last_race_digest.winner_points }}p</span>
@@ -1418,149 +1730,18 @@
       </div>
       {% endif %}
 
-      {% if rival_card %}
-      <div class="rival-card rounded-2xl p-5">
-        <h2 class="cyberpunk-header text-lg font-bold text-red-300 mb-1">
-          {% if rival_card.role == 'rival' %}{{ mx_icon('target') }} Din rival{% else %}{{ mx_icon('eye') }} Jagar dig{% endif %}
-        </h2>
-        <div class="flex items-center gap-3 mt-2 mb-1">
-          {{ user_avatar(rival_card.opp_avatar, 'lg') }}
-          <div>
-            <p class="text-white font-semibold text-lg leading-tight">
-              <a href="{{ url_for('view_user_profile', user_id=rival_card.opp_user_id) }}" class="hover:text-red-200 transition">
-                {{ rival_card.opp_name }}
-              </a>
-              <span class="text-gray-500 text-sm font-normal"> · #{{ rival_card.opp_rank }}</span>
-            </p>
-            <p class="text-sm text-gray-400 mt-0.5">
-              {% if rival_card.role == 'rival' %}
-              {{ rival_card.gap_points }}p före dig totalt
-              {% else %}
-              {{ rival_card.gap_points }}p efter dig
-              {% endif %}
-            </p>
-          </div>
-        </div>
-
-        {% if rival_card.last_race %}
-        <div class="mt-4 rounded-lg border border-gray-700/70 bg-black/25 p-3">
-          <p class="text-xs uppercase tracking-widest text-gray-500 mb-2">Senaste race — {{ rival_card.last_race.short_label }}</p>
-          <div class="flex items-center justify-between gap-3 text-sm">
-            <div class="flex items-center gap-2">
-              {{ user_avatar(rival_card.viewer_avatar, 'xs') }}
-              <span class="text-gray-500">Du</span>
-              <span class="font-bold text-cyan-300">{{ rival_card.last_race.my_points }}p</span>
-            </div>
-            <span class="text-gray-600">vs</span>
-            <div class="flex items-center gap-2 text-right">
-              {{ user_avatar(rival_card.opp_avatar, 'xs') }}
-              <span class="text-gray-500">{{ rival_card.opp_name.split(' ')[0] }}</span>
-              <span class="font-bold text-red-300">{{ rival_card.last_race.opp_points }}p</span>
-            </div>
-          </div>
-          {% set diff = rival_card.last_race.point_diff %}
-          {% if diff > 0 %}
-          <p class="text-xs text-green-400 mt-2">Du +{{ diff }}p detta race {{ mx_icon('check') }}</p>
-          {% elif diff < 0 %}
-          <p class="text-xs text-red-400 mt-2">{{ rival_card.opp_name.split(' ')[0] }} +{{-diff}}p detta race</p>
-          {% else %}
-          <p class="text-xs text-gray-500 mt-2">Lika detta race</p>
-          {% endif %}
-        </div>
-        {% endif %}
-
-        {% if rival_card.pick_highlights %}
-        <div class="mt-3 space-y-1.5">
-          {% for line in rival_card.pick_highlights %}
-          <div class="story-line text-gray-300 text-sm">{{ line }}</div>
-          {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if rival_card.h2h.races > 0 %}
-        <div class="mt-4 pt-3 border-t border-gray-700/60">
-          <p class="text-xs uppercase tracking-widest text-gray-500 mb-1">Säsong H2H (race för race)</p>
-          <div class="flex justify-between text-sm font-semibold">
-            <span class="text-cyan-300">Du {{ rival_card.h2h.me }}</span>
-            <span class="text-gray-500">{% if rival_card.h2h.ties %}· {{ rival_card.h2h.ties }} lika ·{% endif %}</span>
-            <span class="text-red-300">{{ rival_card.h2h.rival }} {{ rival_card.opp_name.split(' ')[0] }}</span>
-          </div>
-          {% set total = rival_card.h2h.me + rival_card.h2h.rival + rival_card.h2h.ties %}
-          {% if total > 0 %}
-          <div class="h2h-bar">
-            <div class="h2h-bar__me" style="width: {{ (rival_card.h2h.me / total * 100)|round(1) }}%"></div>
-            <div class="h2h-bar__rival" style="width: {{ (rival_card.h2h.rival / total * 100)|round(1) }}%"></div>
-          </div>
-          {% endif %}
-        </div>
-        {% endif %}
-
-        {% if challenges and challenges.next_competition and challenges.next_competition.picks_open %}
-        <div class="mt-4 pt-3 border-t border-gray-700/60">
-          <button type="button"
-                  class="duel-btn w-full text-center"
-                  id="btnChallengeRival"
-                  data-opponent-id="{{ rival_card.opp_user_id }}">
-            {{ mx_icon('swords') }} Utmana {{ rival_card.opp_name.split(' ')[0] }}
-          </button>
-        </div>
-        {% endif %}
-      </div>
-      {% endif %}
-    </div>
-    {% endif %}
-
-    {% if challenges and challenges.next_competition and challenges.next_competition.picks_open %}
-    <div class="gold-card rounded-2xl p-5 mb-6{% if challenges.alert and challenges.alert.has_action %} duels-section--alert{% endif %}" id="duelsSection">
-      <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-        <div>
-          <h2 class="cyberpunk-header text-lg font-bold text-amber-300">
-            {{ mx_icon('swords') }} Dina dueller
-            {% if challenges.alert and challenges.alert.has_action %}
-            <span class="duels-alert-pill" title="{{ challenges.alert.short_label }}">{{ challenges.alert.count }}</span>
-            {% endif %}
-          </h2>
-          <p class="text-sm text-gray-400 mt-0.5">
-            {{ challenges.next_competition.short_label }} — utmana, svara och samla märken
-          </p>
-          <a href="{{ url_for('manual_page') }}#liga-dueller" target="_blank" rel="noopener" class="duel-manual-link">
-            <span>{{ mx_icon('note') }}</span>
-            <span>Vad är H2H, Vem högre & Brand battle?</span>
-            <span class="text-amber-400/70">→</span>
-          </a>
-          <div id="push-challenge-wrap" class="hidden mt-2">
-            <p data-push-ios-hint class="hidden text-xs text-amber-200/90 leading-snug mb-2"></p>
-            <button type="button" id="btnPushChallengeEnable" class="text-xs text-amber-300 hover:text-amber-200 font-semibold underline-offset-2 hover:underline">
-              {{ mx_icon('bell') }} Slå på Pit Lane-notiser
-            </button>
-            <p id="push-challenge-status" class="hidden text-xs text-green-400 mt-1 cursor-pointer" title="Klicka för att stänga av"></p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 flex-wrap">
-          {% if challenges.my_badge %}
-          <span class="duel-badge duel-badge--{{ challenges.my_badge.kind }}">
-            {{ challenges.my_badge.emoji }} {{ challenges.my_badge.label }}
-            <span class="opacity-70">({{ challenges.my_badge.wins }}W-{{ challenges.my_badge.losses }}L)</span>
-          </span>
-          {% endif %}
-          <button type="button" class="duel-btn" id="btnNewChallenge">+ Utmana</button>
-        </div>
-      </div>
-
+      {% if show_duels %}
       {% if challenges.active %}
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+      <div class="grid grid-cols-1 gap-2.5 mb-2">
         {% for duel in challenges.active %}
-        <div class="duel-card rounded-xl p-4{% if duel.needs_type or duel.needs_answer %} duel-card--action{% endif %}" data-challenge-id="{{ duel.id }}">
-          <div class="mb-3">
+        <div class="duel-card rounded-xl p-3{% if duel.needs_type or duel.needs_answer %} duel-card--action{% endif %}" data-challenge-id="{{ duel.id }}">
+          <div class="mb-2">
             <div class="duel-headline">Liga-duell{% if duel.class_label %} · {{ duel.class_label }}{% endif %}</div>
-            <div class="flex flex-wrap items-center gap-2 mt-1.5">
+            <div class="flex flex-wrap items-center gap-2 mt-1">
               {% if duel.class_label %}
               <span class="duel-class-pill">{{ duel.class_label }}</span>
               {% endif %}
               <span class="text-xs text-gray-400">{{ duel.type_icon }} {{ duel.type_label or 'Väljer motfråga…' }}</span>
-              {% if duel.competition_short %}
-              <span class="text-xs text-gray-500">· {{ duel.competition_short }}</span>
-              {% endif %}
             </div>
           </div>
           <div class="flex items-center justify-between gap-2 mb-2">
@@ -1587,7 +1768,7 @@
             {% endfor %}
           </div>
           {% endif %}
-          <div class="flex gap-2 flex-wrap mt-3 items-center">
+          <div class="flex gap-2 flex-wrap mt-2 items-center">
             {% if duel.needs_type or duel.needs_answer %}
             <button type="button" class="duel-btn text-sm js-duel-action" data-id="{{ duel.id }}">{% if duel.needs_type %}Välj motfråga{% else %}Svara{% endif %}</button>
             {% elif duel.waiting_for_opponent %}
@@ -1608,15 +1789,17 @@
         {% endfor %}
       </div>
       {% else %}
-      <p class="text-sm text-gray-500 mb-4">Inga aktiva dueller — utmana en rival innan picks stänger!</p>
+      <div class="compete-duels-empty">
+        <span>Inga aktiva dueller</span>
+      </div>
       {% endif %}
 
       {% if challenges.recent %}
-      <details class="duel-recent-section"{% if challenges.recent|length <= 3 %} open{% endif %}>
+      <details class="duel-recent-section">
         <summary>Senaste <span class="text-gray-600 normal-case tracking-normal font-semibold">({{ challenges.recent|length }})</span></summary>
         <div class="duel-recent-list">
           {% for duel in challenges.recent %}
-          <details class="duel-recent-item"{% if loop.first %} open{% endif %}>
+          <details class="duel-recent-item">
             <summary>
               {{ duel.type_icon }}
               {{ duel.challenger.name }} vs {{ duel.challenged.name }}
@@ -1648,8 +1831,22 @@
         </div>
       </details>
       {% endif %}
+
+      <div class="compete-footer">
+        <a href="{{ url_for('manual_page') }}#liga-dueller" target="_blank" rel="noopener" class="duel-manual-link">
+          Vad är H2H / Brand battle?
+        </a>
+        <div id="push-challenge-wrap" class="hidden">
+          <p data-push-ios-hint class="hidden text-xs text-amber-200/90 leading-snug mb-1"></p>
+          <button type="button" id="btnPushChallengeEnable" class="text-xs text-slate-400 hover:text-cyan-300 font-semibold">
+            {{ mx_icon('bell') }} Notiser
+          </button>
+          <p id="push-challenge-status" class="hidden text-xs text-green-400 mt-1 cursor-pointer" title="Klicka för att stänga av"></p>
+        </div>
+      </div>
+      {% endif %}
     </div>
-    {% if challenges.alert and challenges.alert.has_action %}
+    {% if show_duels and challenges.alert and challenges.alert.has_action %}
     <button type="button" class="duels-jump-bar" id="duelsJumpBar" aria-label="Gå till dina dueller">
       <span class="duels-jump-bar__icon">{{ mx_icon('swords') }}</span>
       <span class="duels-jump-bar__text">{{ challenges.alert.short_label }} — {{ challenges.alert.label }}</span>
@@ -1658,11 +1855,11 @@
     {% endif %}
     {% endif %}
 
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+    <div class="ld-stack">
 
       <!-- Leaderboard -->
-      <div class="lg:col-span-2 cyberpunk-card rounded-xl p-5">
-        <h2 class="cyberpunk-header text-lg font-bold text-cyan-400 mb-4">{{ mx_icon('flag') }} Leaderboard</h2>
+      <div class="cyberpunk-card rounded-xl p-4">
+        <h2 class="cyberpunk-header text-base font-bold text-cyan-400 mb-3">{{ mx_icon('flag') }} Leaderboard</h2>
         {% if season_leaderboard %}
         <div class="space-y-1.5">
           {% for team in season_leaderboard %}
@@ -1686,7 +1883,7 @@
         {% endif %}
 
         {% if season_archives %}
-        <div class="mt-5 pt-4 border-t border-gray-700/60">
+        <div class="mt-4 pt-3 border-t border-gray-700/60">
           <h3 class="text-xs uppercase tracking-widest text-gray-500 mb-2">Säsongsarkiv</h3>
           <ul class="space-y-2">
             {% for arch in season_archives %}
@@ -1709,7 +1906,7 @@
         </div>
         {% endif %}
 
-        <div class="mt-5 pt-4 border-t border-gray-700/60">
+        <div class="mt-4 pt-3 border-t border-gray-700/60">
           <h3 class="text-xs uppercase tracking-widest text-gray-500 mb-2">Medlemmar</h3>
           <div class="flex flex-wrap gap-1.5">
             {% for member in members %}
@@ -1722,15 +1919,11 @@
         </div>
       </div>
 
-      <!-- Race matrix + upcoming -->
-      <div class="lg:col-span-3 space-y-6">
-
-        {% if race_matrix.races %}
-        <div class="cyberpunk-card rounded-xl p-5">
-          <div class="flex flex-wrap items-baseline justify-between gap-2 mb-4">
-            <h2 class="cyberpunk-header text-lg font-bold text-cyan-400">{{ mx_icon('chart') }} Senaste tävlingar</h2>
-            <span class="text-xs text-gray-500">Guld = bäst i ligan den tävlingen</span>
-          </div>
+      {% if race_matrix.races %}
+      <details class="ld-fold">
+        <summary>{{ mx_icon('chart') }} Senaste tävlingar</summary>
+        <div class="ld-fold__body">
+          <p class="text-xs text-gray-500 mb-2">Guld = bäst i ligan den tävlingen</p>
           <div class="matrix-wrap">
             <table class="matrix-table">
               <thead>
@@ -1770,11 +1963,13 @@
             </table>
           </div>
         </div>
-        {% endif %}
+      </details>
+      {% endif %}
 
-        {% if upcoming_races %}
-        <div class="cyberpunk-card rounded-xl p-5">
-          <h2 class="cyberpunk-header text-lg font-bold text-cyan-400 mb-4">{{ mx_icon('calendar') }} Kommande</h2>
+      {% if upcoming_races %}
+      <details class="ld-fold">
+        <summary>{{ mx_icon('calendar') }} Kommande</summary>
+        <div class="ld-fold__body">
           <div class="flex flex-wrap gap-3">
             {% for race in upcoming_races %}
             <a href="{{ url_for('trackmaps_competition_page', competition_id=race.id) }}?league_id={{ league.id }}"
@@ -1794,9 +1989,9 @@
             {% endfor %}
           </div>
         </div>
-        {% endif %}
+      </details>
+      {% endif %}
 
-      </div>
     </div>
   </div>
 
