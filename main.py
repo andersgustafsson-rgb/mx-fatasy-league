@@ -4038,9 +4038,26 @@ def build_series_status_list() -> list[dict]:
         elif s.name == "MXGP":
             series_code = "MXGP"
 
+        series_year = int(getattr(s, "year", 0) or 0)
+
+        def _candidates_for_this_series(code: str) -> list:
+            raw = upcoming_by_series.get(code, [])
+            # Prefer series_id match so 2026 cards never steal 2027 races
+            by_id = [c for c in raw if getattr(c, "series_id", None) == s.id]
+            if by_id:
+                return by_id
+            if series_year:
+                return [
+                    c
+                    for c in raw
+                    if getattr(c, "event_date", None) is not None
+                    and c.event_date.year == series_year
+                ]
+            return []
+
         next_race = None
         if series_code:
-            candidates = upcoming_by_series.get(series_code, [])
+            candidates = _candidates_for_this_series(series_code)
             next_race = _pick_next_competition(candidates, require_open=True)
             if not next_race:
                 next_race = _pick_next_competition(candidates, require_open=False)
@@ -4075,7 +4092,7 @@ def build_series_status_list() -> list[dict]:
                 if under_construction:
                     real_upcoming = [
                         c
-                        for c in (upcoming_by_series.get("MXGP") or [])
+                        for c in _candidates_for_this_series("MXGP")
                         if getattr(c, "name", None) != ADMIN_TEST_GP_NAME
                         and not getattr(c, "is_cancelled", False)
                     ]
@@ -4092,6 +4109,13 @@ def build_series_status_list() -> list[dict]:
                                 )
                                 if not getattr(c, "is_cancelled", False)
                                 and getattr(c, "name", None) != ADMIN_TEST_GP_NAME
+                                and (
+                                    getattr(c, "series_id", None) == s.id
+                                    or (
+                                        getattr(c, "event_date", None) is not None
+                                        and c.event_date.year == series_year
+                                    )
+                                )
                             ),
                             None,
                         )
@@ -4103,7 +4127,10 @@ def build_series_status_list() -> list[dict]:
         if under_construction:
             is_currently_active = True
         elif not simulation_active:
-            if s.end_date and current_date > s.end_date:
+            if s.end_date and current_date > s.end_date and next_race is None:
+                is_currently_active = False
+            elif s.end_date and current_date > s.end_date:
+                # Season window over — only stay "active" if this series_id still has races
                 is_currently_active = False
             elif next_race is not None:
                 is_currently_active = True
@@ -4124,10 +4151,21 @@ def build_series_status_list() -> list[dict]:
         if s.start_date:
             days_until_start = (s.start_date - current_date).days
 
+        # Finished seasons without upcoming races belong in Fantasy-arkiv, not Välj Serie
+        if (
+            not under_construction
+            and not is_currently_active
+            and next_race is None
+            and s.end_date
+            and current_date > s.end_date
+        ):
+            continue
+
         series_data.append(
             {
                 "id": s.id,
                 "name": s.name,
+                "year": series_year or None,
                 "series_code": series_code,
                 "is_active": is_currently_active,
                 "under_construction": under_construction,
@@ -4146,6 +4184,42 @@ def build_series_status_list() -> list[dict]:
                 ),
             }
         )
+
+    def _series_family_key(item: dict) -> str:
+        name = (item.get("name") or "").strip()
+        if name in ("MXON", "MXoN"):
+            return "MXON"
+        return name
+
+    def _prefer_series_card(a: dict, b: dict) -> dict:
+        """One card per family: current season over finished, sooner next race over later."""
+        if bool(a.get("under_construction")) != bool(b.get("under_construction")):
+            return b if a.get("under_construction") else a
+        if bool(a.get("is_active")) != bool(b.get("is_active")):
+            return a if a.get("is_active") else b
+        da = a.get("days_until_next_race")
+        db_ = b.get("days_until_next_race")
+        a_has = isinstance(da, int) and da >= 0
+        b_has = isinstance(db_, int) and db_ >= 0
+        if a_has and b_has and da != db_:
+            return a if da < db_ else b
+        if a_has != b_has:
+            return a if a_has else b
+        ya = int(a.get("year") or 0)
+        yb = int(b.get("year") or 0)
+        if ya != yb:
+            # Prefer the season that hasn't started yet over a finished twin,
+            # else the higher (upcoming) year.
+            return a if ya > yb else b
+        return a
+
+    # Deduplicate SX/MX/SMX (and peers) when both 2026 and 2027 rows exist
+    best_by_family: dict[str, dict] = {}
+    for item in series_data:
+        key = _series_family_key(item)
+        prev = best_by_family.get(key)
+        best_by_family[key] = item if prev is None else _prefer_series_card(prev, item)
+    series_data = list(best_by_family.values())
 
     # Sort: soonest next race first. Under-construction teasers after live tippa.
     def _series_sort_key(item: dict):

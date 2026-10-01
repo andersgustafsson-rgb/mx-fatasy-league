@@ -4382,10 +4382,15 @@
     function homeSeriesDisplayName(serie) {
       const code = (serie?.series_code || seriesNameToCode(serie?.name) || '').toUpperCase();
       const raw = (serie?.name || '').trim();
-      if (code === 'SX' || raw === 'Supercross') return 'AMA Supercross';
-      if (code === 'MX' || raw === 'Motocross') return 'AMA Pro Motocross';
-      if (code === 'MXON' || raw === 'MXON' || raw === 'MXoN') return 'MXoN';
-      return raw || code;
+      let label = raw || code;
+      if (code === 'SX' || raw === 'Supercross') label = 'AMA Supercross';
+      else if (code === 'MX' || raw === 'Motocross') label = 'AMA Pro Motocross';
+      else if (code === 'MXON' || raw === 'MXON' || raw === 'MXoN') label = 'MXoN';
+      const year = serie?.year;
+      if (year && (code === 'SX' || code === 'MX' || code === 'SMX' || raw === 'SMX Finals')) {
+        return `${label} (${year})`;
+      }
+      return label;
     }
 
     function isTippaOnlyHomeSeries(code) {
