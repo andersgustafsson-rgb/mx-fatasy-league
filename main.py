@@ -11621,6 +11621,12 @@ def series_page(series_id):
         competition_venues = {}
         competition_gates = {}
         competition_trackmaps: dict[int, list[str]] = {}
+        competition_info: dict[int, dict] = {}
+        try:
+            from ama_2027_calendar import competition_public_info as _comp_public_info
+        except Exception:
+            _comp_public_info = None
+
         for c in competitions:
             label = competition_schedule_venue_label(c) or wsx_venue_by_name.get(c.name)
             if not label and int(getattr(series, "year", 0) or 0) >= 2027:
@@ -11643,6 +11649,13 @@ def series_page(series_id):
                     competition_trackmaps[c.id] = urls
             except Exception:
                 pass
+            if _comp_public_info:
+                try:
+                    info = _comp_public_info(c, series_year=getattr(series, "year", None))
+                    if info and (info.get("blurb") or info.get("highlights")):
+                        competition_info[c.id] = info
+                except Exception:
+                    pass
 
         mxon_nations = []
         if series.name in ("MXON", "MXoN"):
@@ -11887,6 +11900,7 @@ def series_page(series_id):
                              competition_venues=competition_venues,
                              competition_gates=competition_gates,
                              competition_trackmaps=competition_trackmaps,
+                             competition_info=competition_info,
                              user_picks_status=user_picks_status,
                              picks_locked_status=picks_locked_status,
                              next_race=next_race,

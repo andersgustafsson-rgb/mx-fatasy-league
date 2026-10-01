@@ -602,6 +602,34 @@
       gap: 0.5rem;
       margin-top: 1rem;
     }
+    .sp-map-modal__blurb {
+      margin: 0.85rem 0 0;
+      padding: 0.85rem 1rem;
+      border-radius: 0.55rem;
+      border: 1px solid rgba(42, 53, 72, 0.9);
+      background: rgba(26, 36, 54, 0.72);
+      color: #cbd5e1;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+    .sp-map-modal__tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.75rem;
+    }
+    .sp-map-modal__tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(103, 232, 249, 0.28);
+      background: rgba(14, 116, 144, 0.18);
+      color: #a5f3fc;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
   </style>
 </head>
 <body>
@@ -799,6 +827,7 @@
         {% set cancelled = comp.is_cancelled %}
         {% set maps = competition_trackmaps.get(comp.id, []) %}
         {% set map_url = maps[0] if maps else '' %}
+        {% set info = competition_info.get(comp.id, {}) %}
         <button type="button"
                 class="sp-race-card{% if cancelled %} sp-race-card--cancelled{% endif %}"
                 data-open-race
@@ -810,7 +839,13 @@
                 data-map-url="{% if map_url %}{{ url_for('static', filename=map_url) }}{% endif %}"
                 data-picks-url="{% if not cancelled %}{{ url_for('race_picks_page', competition_id=comp.id) }}{% endif %}"
                 data-picks-open="{% if picks_open and next_race and next_race.id == comp.id %}1{% else %}0{% endif %}"
-                data-status="{% if cancelled %}Cancelled{% elif has_results %}Avslutad{% elif not comp.event_date %}Datum TBA{% elif next_race and comp.id == next_race.id %}Nästa{% else %}Kommande{% endif %}">
+                data-status="{% if cancelled %}Cancelled{% elif has_results %}Avslutad{% elif not comp.event_date %}Datum TBA{% elif next_race and comp.id == next_race.id %}Nästa{% else %}Kommande{% endif %}"
+                data-blurb="{{ info.get('blurb', '')|e }}"
+                data-highlights="{{ (info.get('highlights') or [])|join(' · ')|e }}"
+                data-round="{{ info.get('round') or '' }}"
+                data-coast="{{ info.get('coast_label', '')|e }}"
+                data-format="{{ info.get('format_label', '')|e }}"
+                data-tz="{{ info.get('timezone_label', '')|e }}">
           <div class="sp-race-card__media">
             {% if map_url %}
               <img src="{{ url_for('static', filename=map_url) }}" alt="{{ comp.name }} track map" loading="lazy">
@@ -856,6 +891,8 @@
         <p id="sp-race-modal-sub" class="sp-map-modal__sub"></p>
         <img id="sp-race-modal-img" class="sp-map-modal__img" alt="" hidden>
         <div id="sp-race-modal-empty" class="sp-map-modal__empty" hidden>Banbild saknas ännu för denna tävling.</div>
+        <p id="sp-race-modal-blurb" class="sp-map-modal__blurb" hidden></p>
+        <div id="sp-race-modal-tags" class="sp-map-modal__tags" hidden></div>
         <div class="sp-map-modal__meta">
           <div class="sp-info-tile">
             <p class="sp-stat-label">Datum</p>
@@ -865,6 +902,18 @@
             <p class="sp-stat-label">Status</p>
             <p id="sp-race-modal-status" class="sp-stat-value text-base"></p>
           </div>
+          <div class="sp-info-tile" id="sp-race-modal-round-wrap" hidden>
+            <p class="sp-stat-label">Runda</p>
+            <p id="sp-race-modal-round" class="sp-stat-value text-base"></p>
+          </div>
+          <div class="sp-info-tile" id="sp-race-modal-format-wrap" hidden>
+            <p class="sp-stat-label">Format</p>
+            <p id="sp-race-modal-format" class="sp-stat-value text-base"></p>
+          </div>
+          <div class="sp-info-tile" id="sp-race-modal-coast-wrap" hidden>
+            <p class="sp-stat-label">250-klass</p>
+            <p id="sp-race-modal-coast" class="sp-stat-value text-base"></p>
+          </div>
           <div class="sp-info-tile" id="sp-race-modal-venue-wrap" hidden>
             <p class="sp-stat-label">Bana / Ort</p>
             <p id="sp-race-modal-venue" class="sp-stat-value text-base"></p>
@@ -872,6 +921,10 @@
           <div class="sp-info-tile" id="sp-race-modal-gate-wrap" hidden>
             <p class="sp-stat-label">Gate drop</p>
             <p id="sp-race-modal-gate" class="sp-stat-value text-base"></p>
+          </div>
+          <div class="sp-info-tile" id="sp-race-modal-tz-wrap" hidden>
+            <p class="sp-stat-label">Tidszon</p>
+            <p id="sp-race-modal-tz" class="sp-stat-value text-base"></p>
           </div>
         </div>
         <div class="sp-map-modal__actions">
@@ -1067,6 +1120,27 @@
         const gateWrap = document.getElementById('sp-race-modal-gate-wrap');
         const gateEl = document.getElementById('sp-race-modal-gate');
         const picksEl = document.getElementById('sp-race-modal-picks');
+        const blurbEl = document.getElementById('sp-race-modal-blurb');
+        const tagsEl = document.getElementById('sp-race-modal-tags');
+        const roundWrap = document.getElementById('sp-race-modal-round-wrap');
+        const roundEl = document.getElementById('sp-race-modal-round');
+        const formatWrap = document.getElementById('sp-race-modal-format-wrap');
+        const formatEl = document.getElementById('sp-race-modal-format');
+        const coastWrap = document.getElementById('sp-race-modal-coast-wrap');
+        const coastEl = document.getElementById('sp-race-modal-coast');
+        const tzWrap = document.getElementById('sp-race-modal-tz-wrap');
+        const tzEl = document.getElementById('sp-race-modal-tz');
+
+        const setTile = (wrap, el, value) => {
+          if (!wrap || !el) return;
+          const v = (value || '').trim();
+          if (v) {
+            el.textContent = v;
+            wrap.hidden = false;
+          } else {
+            wrap.hidden = true;
+          }
+        };
 
         const openRace = (btn) => {
           const name = btn.getAttribute('data-race-name') || '';
@@ -1077,23 +1151,42 @@
           const status = btn.getAttribute('data-status') || '';
           const picksUrl = btn.getAttribute('data-picks-url') || '';
           const picksOpen = btn.getAttribute('data-picks-open') === '1';
+          const blurb = btn.getAttribute('data-blurb') || '';
+          const highlights = btn.getAttribute('data-highlights') || '';
+          const round = btn.getAttribute('data-round') || '';
+          const coast = btn.getAttribute('data-coast') || '';
+          const format = btn.getAttribute('data-format') || '';
+          const tz = btn.getAttribute('data-tz') || '';
 
           titleEl.textContent = name;
           subEl.textContent = date ? `${date}${status ? ' · ' + status : ''}` : (status || '');
           dateEl.textContent = date || 'TBA';
           statusEl.textContent = status || '—';
 
-          if (venue) {
-            venueEl.textContent = venue;
-            venueWrap.hidden = false;
-          } else {
-            venueWrap.hidden = true;
+          setTile(venueWrap, venueEl, venue);
+          setTile(gateWrap, gateEl, gate);
+          setTile(roundWrap, roundEl, round ? `Runda ${round}` : '');
+          setTile(formatWrap, formatEl, format);
+          setTile(coastWrap, coastEl, coast);
+          setTile(tzWrap, tzEl, tz);
+
+          if (blurbEl) {
+            if (blurb) {
+              blurbEl.textContent = blurb;
+              blurbEl.hidden = false;
+            } else {
+              blurbEl.hidden = true;
+            }
           }
-          if (gate) {
-            gateEl.textContent = gate;
-            gateWrap.hidden = false;
-          } else {
-            gateWrap.hidden = true;
+          if (tagsEl) {
+            const tags = highlights.split('·').map((t) => t.trim()).filter(Boolean);
+            if (tags.length) {
+              tagsEl.innerHTML = tags.map((t) => `<span class="sp-map-modal__tag">${t}</span>`).join('');
+              tagsEl.hidden = false;
+            } else {
+              tagsEl.innerHTML = '';
+              tagsEl.hidden = true;
+            }
           }
 
           if (mapUrl) {

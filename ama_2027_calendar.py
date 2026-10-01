@@ -10,24 +10,301 @@ from typing import Any, Callable
 
 # Supercross 2027 — stadium calendar (coast_250 best-effort until East/West published)
 SX_2027: list[dict[str, Any]] = [
-    {"name": "Anaheim 1", "date": "2027-01-09", "coast_250": "west", "is_triple_crown": False, "venue": "Angel Stadium, Anaheim, CA"},
-    {"name": "San Diego", "date": "2027-01-16", "coast_250": "west", "is_triple_crown": False, "venue": "Snapdragon Stadium, San Diego, CA"},
-    {"name": "Anaheim 2", "date": "2027-01-23", "coast_250": "west", "is_triple_crown": True, "venue": "Angel Stadium, Anaheim, CA"},
-    {"name": "San Antonio", "date": "2027-01-30", "coast_250": "west", "is_triple_crown": False, "venue": "Alamodome, San Antonio, TX"},
-    {"name": "Tampa", "date": "2027-02-06", "coast_250": "east", "is_triple_crown": False, "venue": "Raymond James Stadium, Tampa, FL"},
-    {"name": "Glendale", "date": "2027-02-13", "coast_250": "west", "is_triple_crown": False, "venue": "State Farm Stadium, Glendale, AZ"},
-    {"name": "Detroit", "date": "2027-02-20", "coast_250": "east", "is_triple_crown": False, "venue": "Ford Field, Detroit, MI"},
-    {"name": "Arlington", "date": "2027-02-27", "coast_250": "showdown", "is_triple_crown": False, "venue": "AT&T Stadium, Arlington, TX"},
-    {"name": "Daytona", "date": "2027-03-06", "coast_250": "east", "is_triple_crown": True, "venue": "Daytona International Speedway, Daytona Beach, FL"},
-    {"name": "Indianapolis", "date": "2027-03-13", "coast_250": "showdown", "is_triple_crown": False, "venue": "Lucas Oil Stadium, Indianapolis, IN"},
-    {"name": "Seattle", "date": "2027-03-20", "coast_250": "west", "is_triple_crown": False, "venue": "Lumen Field, Seattle, WA"},
-    {"name": "Foxborough", "date": "2027-04-03", "coast_250": "east", "is_triple_crown": False, "venue": "Gillette Stadium, Foxborough, MA"},
-    {"name": "Baltimore", "date": "2027-04-10", "coast_250": "east", "is_triple_crown": False, "venue": "M&T Bank Stadium, Baltimore, MD"},
-    {"name": "East Rutherford", "date": "2027-04-17", "coast_250": "east", "is_triple_crown": False, "venue": "MetLife Stadium, East Rutherford, NJ"},
-    {"name": "Pittsburgh", "date": "2027-04-24", "coast_250": "east", "is_triple_crown": False, "venue": "Acrisure Stadium, Pittsburgh, PA"},
-    {"name": "Denver", "date": "2027-05-08", "coast_250": "showdown", "is_triple_crown": False, "venue": "Empower Field at Mile High, Denver, CO"},
-    {"name": "Salt Lake City", "date": "2027-05-15", "coast_250": "west", "is_triple_crown": False, "venue": "Rice-Eccles Stadium, Salt Lake City, UT"},
+    {
+        "name": "Anaheim 1",
+        "date": "2027-01-09",
+        "round": 1,
+        "coast_250": "west",
+        "is_triple_crown": False,
+        "venue": "Angel Stadium, Anaheim, CA",
+        "timezone_label": "PT",
+        "blurb": "Säsongsöppnare i Angel Stadium — SX:s klassiska startarena i södra Kalifornien. 250 West kör här.",
+        "highlights": ["Säsongsöppnare", "250 West", "Klassisk SX-arena"],
+    },
+    {
+        "name": "San Diego",
+        "date": "2027-01-16",
+        "round": 2,
+        "coast_250": "west",
+        "is_triple_crown": False,
+        "venue": "Snapdragon Stadium, San Diego, CA",
+        "timezone_label": "PT",
+        "blurb": "Runda 2 i Snapdragon Stadium (ca 35 000 platser), hemmaarena för SDSU Aztecs. San Diego har kört SX sedan 1980; Snapdragon tog över 2023.",
+        "highlights": ["250 West", "Snapdragon Stadium", "Early-season West"],
+    },
+    {
+        "name": "Anaheim 2",
+        "date": "2027-01-23",
+        "round": 3,
+        "coast_250": "west",
+        "is_triple_crown": True,
+        "venue": "Angel Stadium, Anaheim, CA",
+        "timezone_label": "PT",
+        "blurb": "Andra Anaheim-besöket — Triple Crown (tre mains, poäng summeras). Ofta en av säsongens mest dramatiska kvällar.",
+        "highlights": ["Triple Crown", "250 West", "Tre mains"],
+    },
+    {
+        "name": "San Antonio",
+        "date": "2027-01-30",
+        "round": 4,
+        "coast_250": "west",
+        "is_triple_crown": False,
+        "venue": "Alamodome, San Antonio, TX",
+        "timezone_label": "CT",
+        "blurb": "Första SX-besöket någonsin i Alamodome. Ny Texas-arena på schemat efter många år med Houston/Arlington.",
+        "highlights": ["Debut 2027", "Alamodome", "250 West"],
+    },
+    {
+        "name": "Tampa",
+        "date": "2027-02-06",
+        "round": 5,
+        "coast_250": "east",
+        "is_triple_crown": False,
+        "venue": "Raymond James Stadium, Tampa, FL",
+        "timezone_label": "ET",
+        "blurb": "Återkomst till Raymond James Stadium (Buccaneers). Florida-runda där 250 East tar över efter West-starten.",
+        "highlights": ["250 East", "Återkomst", "Raymond James"],
+    },
+    {
+        "name": "Glendale",
+        "date": "2027-02-13",
+        "round": 6,
+        "coast_250": "west",
+        "is_triple_crown": False,
+        "venue": "State Farm Stadium, Glendale, AZ",
+        "timezone_label": "MST",
+        "blurb": "Arizona-runda i State Farm Stadium (Cardinals). Ökenvärme, högt tempo och klassisk West-stopp.",
+        "highlights": ["250 West", "State Farm Stadium", "Arizona"],
+    },
+    {
+        "name": "Detroit",
+        "date": "2027-02-20",
+        "round": 7,
+        "coast_250": "east",
+        "is_triple_crown": False,
+        "venue": "Ford Field, Detroit, MI",
+        "timezone_label": "ET",
+        "blurb": "Inomhus på Ford Field (Lions). Tidigarelagt 2027 — Midwestern-runda med typiskt tekniskt underlag.",
+        "highlights": ["250 East", "Ford Field", "Inomhus"],
+    },
+    {
+        "name": "Arlington",
+        "date": "2027-02-27",
+        "round": 8,
+        "coast_250": "showdown",
+        "is_triple_crown": False,
+        "venue": "AT&T Stadium, Arlington, TX",
+        "timezone_label": "CT",
+        "blurb": "East/West Showdown i AT&T Stadium (Cowboys). Båda 250-coasts kör samma natt — extra kaos i tippat.",
+        "highlights": ["East/West Showdown", "AT&T Stadium", "Båda coasts"],
+    },
+    {
+        "name": "Daytona",
+        "date": "2027-03-06",
+        "round": 9,
+        "coast_250": "east",
+        "is_triple_crown": True,
+        "venue": "Daytona International Speedway, Daytona Beach, FL",
+        "timezone_label": "ET",
+        "blurb": "Triple Crown på Daytona International Speedway — unikt underlag och layout. Banbild publiceras ofta senare än övriga rundor.",
+        "highlights": ["Triple Crown", "Daytona Speedway", "250 East"],
+    },
+    {
+        "name": "Indianapolis",
+        "date": "2027-03-13",
+        "round": 10,
+        "coast_250": "showdown",
+        "is_triple_crown": False,
+        "venue": "Lucas Oil Stadium, Indianapolis, IN",
+        "timezone_label": "ET",
+        "blurb": "East/West Showdown i Lucas Oil Stadium. Inomhus, tät bana och ofta avgörande för 250-ställningen.",
+        "highlights": ["East/West Showdown", "Lucas Oil Stadium", "Inomhus"],
+    },
+    {
+        "name": "Seattle",
+        "date": "2027-03-20",
+        "round": 11,
+        "coast_250": "west",
+        "is_triple_crown": False,
+        "venue": "Lumen Field, Seattle, WA",
+        "timezone_label": "PT",
+        "blurb": "Lumen Field (Seahawks) — SX i Seattle sedan 1978 (Kingdome-eran). Flyttat senare i schemat 2027.",
+        "highlights": ["250 West", "Lumen Field", "Historisk SX-marknad"],
+    },
+    {
+        "name": "Foxborough",
+        "date": "2027-04-03",
+        "round": 12,
+        "coast_250": "east",
+        "is_triple_crown": False,
+        "venue": "Gillette Stadium, Foxborough, MA",
+        "timezone_label": "ET",
+        "blurb": "Återkomst till Gillette Stadium (Patriots). Start på den östkustsvängen i april.",
+        "highlights": ["250 East", "Gillette Stadium", "Återkomst"],
+    },
+    {
+        "name": "Baltimore",
+        "date": "2027-04-10",
+        "round": 13,
+        "coast_250": "east",
+        "is_triple_crown": False,
+        "venue": "M&T Bank Stadium, Baltimore, MD",
+        "timezone_label": "ET",
+        "blurb": "Första SX någonsin i Baltimore / M&T Bank Stadium (Ravens). Första stadium-SX i DMV på 44 år. FanFest + kval från ca 08:00 lokal tid.",
+        "highlights": ["Debut 2027", "M&T Bank Stadium", "250 East"],
+    },
+    {
+        "name": "East Rutherford",
+        "date": "2027-04-17",
+        "round": 14,
+        "coast_250": "east",
+        "is_triple_crown": False,
+        "venue": "MetLife Stadium, East Rutherford, NJ",
+        "timezone_label": "ET",
+        "blurb": "MetLife Stadium (Giants/Jets) i New York-metro. Storöstkust-publik och sen-säsongs intensitet.",
+        "highlights": ["250 East", "MetLife Stadium", "NY/NJ"],
+    },
+    {
+        "name": "Pittsburgh",
+        "date": "2027-04-24",
+        "round": 15,
+        "coast_250": "east",
+        "is_triple_crown": False,
+        "venue": "Acrisure Stadium, Pittsburgh, PA",
+        "timezone_label": "ET",
+        "blurb": "Acrisure Stadium (Steelers) — modern comeback till Pittsburgh (tidigare Three Rivers 1978/1983).",
+        "highlights": ["250 East", "Acrisure Stadium", "Pittsburgh-comeback"],
+    },
+    {
+        "name": "Denver",
+        "date": "2027-05-08",
+        "round": 16,
+        "coast_250": "showdown",
+        "is_triple_crown": False,
+        "venue": "Empower Field at Mile High, Denver, CO",
+        "timezone_label": "MT",
+        "blurb": "East/West Showdown på mile-high höjd i Empower Field. Tunn luft = motor/kondition blir extra viktigt.",
+        "highlights": ["East/West Showdown", "Mile High", "Höjd ~1600 m"],
+    },
+    {
+        "name": "Salt Lake City",
+        "date": "2027-05-15",
+        "round": 17,
+        "coast_250": "west",
+        "is_triple_crown": False,
+        "venue": "Rice-Eccles Stadium, Salt Lake City, UT",
+        "timezone_label": "MT",
+        "blurb": "SX-finalen i Rice-Eccles Stadium. Titlar avgörs ofta här innan sommarens Pro Motocross tar vid.",
+        "highlights": ["SX-final", "250 West", "Rice-Eccles"],
+    },
 ]
+
+# Short venue blurbs for Pro Motocross 2027 (shown on series schedule click-through)
+MX_2027_INFO: dict[str, dict[str, Any]] = {
+    "Fox Raceway National": {
+        "blurb": "Memorial Day-öppnare i Pala, CA — sandig/hårdpackad bana som sätter tonen för outdoorsäsongen.",
+        "highlights": ["MX-öppnare", "Pala, CA", "Memorial Day"],
+    },
+    "Hangtown Classic": {
+        "blurb": "Klassisk Hangtown utanför Sacramento — en av de mest traditionsrika nationals.",
+        "highlights": ["Hangtown", "Sacramento", "Classic"],
+    },
+    "Thunder Valley National": {
+        "blurb": "Thunder Valley i Colorado — höjd, branta sektioner och ofta spektakulära whoops.",
+        "highlights": ["Lakewood, CO", "Höjd", "Thunder Valley"],
+    },
+    "High Point National": {
+        "blurb": "Father’s Day-weekend i Mount Morris, PA — klassisk East Coast-national.",
+        "highlights": ["Father’s Day", "Mount Morris, PA"],
+    },
+    "RedBud National": {
+        "blurb": "Independence Day på RedBud — en av MX:s mest ikoniska banor (LaRocco’s Leap m.m.).",
+        "highlights": ["4th of July", "Buchanan, MI", "Ikonisk"],
+    },
+    "Southwick National": {
+        "blurb": "Sandbanan i Southwick, MA — specialister på sand får ofta övertaget.",
+        "highlights": ["Sand", "Southwick, MA"],
+    },
+    "Spring Creek National": {
+        "blurb": "Spring Creek i Millville, MN — kuperad Midwestern-bana mitt i sommaren.",
+        "highlights": ["Millville, MN", "Kuperat"],
+    },
+    "Washougal National": {
+        "blurb": "Washougal i Washington — Pacific Northwest, tekniskt och ofta blött underlag.",
+        "highlights": ["Washougal, WA", "PNW"],
+    },
+    "Unadilla National": {
+        "blurb": "Unadilla i New Berlin, NY — en av de äldsta och mest respekterade nationals.",
+        "highlights": ["Unadilla", "New Berlin, NY"],
+    },
+    "Budds Creek National": {
+        "blurb": "Budds Creek i Maryland — sen-säsongs national innan Ironman.",
+        "highlights": ["Mechanicsville, MD", "Budds Creek"],
+    },
+    "Ironman National": {
+        "blurb": "MX-finalen på Ironman Raceway, Crawfordsville — sista poängen innan SMX-playoffs.",
+        "highlights": ["MX-final", "Crawfordsville, IN"],
+    },
+}
+
+
+def get_sx_2027_race_info(name: str) -> dict[str, Any] | None:
+    key = (name or "").strip()
+    for race in SX_2027:
+        if race["name"] == key:
+            return race
+    return None
+
+
+def competition_public_info(competition, series_year: int | None = None) -> dict[str, Any]:
+    """Public blurbs/tags for series schedule click-through."""
+    name = (getattr(competition, "name", None) or "").strip()
+    year = series_year
+    if year is None:
+        ed = getattr(competition, "event_date", None)
+        year = ed.year if ed is not None else None
+    series = (getattr(competition, "series", None) or "").strip().upper()
+
+    info: dict[str, Any] = {
+        "blurb": "",
+        "highlights": [],
+        "round": None,
+        "coast_label": "",
+        "format_label": "",
+        "timezone_label": "",
+    }
+
+    if series == "SX" and year and int(year) >= 2027:
+        race = get_sx_2027_race_info(name)
+        if race:
+            coast = (race.get("coast_250") or "").lower()
+            coast_label = {
+                "west": "250 West",
+                "east": "250 East",
+                "showdown": "East/West Showdown",
+                "both": "250 båda coasts",
+            }.get(coast, "")
+            fmt = "Triple Crown" if race.get("is_triple_crown") else "Standard (1 main)"
+            info.update(
+                {
+                    "blurb": race.get("blurb") or "",
+                    "highlights": list(race.get("highlights") or []),
+                    "round": race.get("round"),
+                    "coast_label": coast_label,
+                    "format_label": fmt,
+                    "timezone_label": race.get("timezone_label") or "",
+                }
+            )
+            return info
+
+    if series == "MX" and year and int(year) >= 2027:
+        mx = MX_2027_INFO.get(name) or {}
+        if mx:
+            info["blurb"] = mx.get("blurb") or ""
+            info["highlights"] = list(mx.get("highlights") or [])
+            return info
+
+    return info
 
 MX_2027: list[dict[str, Any]] = [
     {"name": "Fox Raceway National", "date": "2027-05-29", "location": "Pala, CA"},
