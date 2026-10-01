@@ -4023,6 +4023,16 @@ def build_series_status_list() -> list[dict]:
         # One MXGP homepage card only (2027 UC). Keep 2026 series in DB for calendar/admin.
         if s.name == "MXGP" and int(getattr(s, "year", 0) or 0) != 2027:
             continue
+        # AMA tippa: once next year's Series exists, drop prior year from Välj Serie
+        # (finished seasons live in Fantasy-arkiv — not as Avslutad/Startar-om twins).
+        if s.name in ("Supercross", "Motocross", "SMX Finals"):
+            sy = int(getattr(s, "year", 0) or 0)
+            if sy and any(
+                (o.name == s.name)
+                and int(getattr(o, "year", 0) or 0) > sy
+                for o in all_series
+            ):
+                continue
 
         series_code = None
         if s.name == "Supercross":

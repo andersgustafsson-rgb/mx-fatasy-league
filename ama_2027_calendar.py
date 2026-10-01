@@ -265,6 +265,17 @@ def ensure_ama_2027_calendar(
             created_comps += 1
 
     db.session.commit()
+
+    # Prior AMA year is Fantasy-arkiv only once 2027 calendar exists
+    deactivated = []
+    for name in ("Supercross", "Motocross", "SMX Finals"):
+        older = Series.query.filter_by(name=name, year=2026).first()
+        if older and older.is_active:
+            older.is_active = False
+            deactivated.append(name)
+    if deactivated:
+        db.session.commit()
+
     summary = {
         "ok": True,
         "series_created": created_series,
@@ -273,9 +284,11 @@ def ensure_ama_2027_calendar(
         "sx": len(SX_2027),
         "mx": len(MX_2027),
         "smx": len(SMX_2027),
+        "deactivated_2026": deactivated,
     }
     print(
         f"[AMA-2027] series+={len(created_series)} comps+={created_comps} "
         f"comps~={updated_comps} (SX {len(SX_2027)} / MX {len(MX_2027)} / SMX {len(SMX_2027)})"
+        + (f" deactivated_2026={deactivated}" if deactivated else "")
     )
     return summary
