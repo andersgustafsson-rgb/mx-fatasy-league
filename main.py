@@ -48,6 +48,7 @@ from services.picks_lock import (
     is_picks_locked,
     is_picks_preseason_locked,
     picks_preseason_opens_on,
+    PICKS_OPEN_DAYS_BEFORE_SERIES,
 )
 from services.results_import import (
     _FIRST_NAME_ALIASES,
@@ -4164,6 +4165,19 @@ def build_series_status_list() -> list[dict]:
         if s.start_date:
             days_until_start = (s.start_date - current_date).days
 
+        picks_opens_on = None
+        picks_preseason = False
+        days_until_picks_open = None
+        if next_race is not None:
+            try:
+                picks_preseason = is_picks_preseason_locked(next_race)
+                opens = picks_preseason_opens_on(next_race)
+                if opens:
+                    picks_opens_on = opens.isoformat()
+                    days_until_picks_open = (opens - current_date).days
+            except Exception:
+                picks_preseason = False
+
         # Finished seasons without upcoming races belong in Fantasy-arkiv, not Välj Serie
         if (
             not under_construction
@@ -4186,6 +4200,9 @@ def build_series_status_list() -> list[dict]:
                 "end_date": s.end_date.isoformat() if s.end_date else None,
                 "days_until_start": days_until_start,
                 "days_until_next_race": days_until_next_race,
+                "picks_preseason_locked": picks_preseason,
+                "picks_opens_on": picks_opens_on,
+                "days_until_picks_open": days_until_picks_open,
                 "next_race": (
                     {
                         "id": next_race.id,
@@ -12283,7 +12300,7 @@ def race_picks_page(competition_id):
             picks_locked=True,
             preseason_locked=preseason_locked,
             picks_opens_on=opens_on,
-            picks_open_days_before=14,
+            picks_open_days_before=PICKS_OPEN_DAYS_BEFORE_SERIES,
         )
 
     # 1) Hämta OUT-förare för detta race

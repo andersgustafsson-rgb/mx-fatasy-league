@@ -4334,6 +4334,27 @@
       if (!(serie.is_active || (Number.isFinite(serie.days_until_next_race) && serie.days_until_next_race >= 0))) {
         return '';
       }
+      if (serie.picks_preseason_locked) {
+        const opensIso = serie.picks_opens_on;
+        let when = '';
+        if (opensIso) {
+          const datePart = String(opensIso).split('T')[0];
+          const [y, m, d] = datePart.split('-');
+          if (y && m && d) when = isEn ? `${y}-${m}-${d}` : `${d}/${m}/${y}`;
+        }
+        const days = Number.isFinite(serie.days_until_picks_open) ? serie.days_until_picks_open : null;
+        let label;
+        if (days != null && days > 0) {
+          label = isEn
+            ? (when ? `Picks open ${when}` : `Picks open in ${days} day${days !== 1 ? 's' : ''}`)
+            : (when ? `Picks öppnar ${when}` : `Picks öppnar om ${days} dagar`);
+        } else if (when) {
+          label = isEn ? `Picks open ${when}` : `Picks öppnar ${when}`;
+        } else {
+          label = isEn ? 'Picks not open yet' : 'Picks öppnar snart';
+        }
+        return `<p class="home-series-card__picks home-series-card__picks--need">${typeof mxIcon === 'function' ? mxIcon('note', { className: 'mx-icon--sm' }) : '·'} ${label}</p>`;
+      }
       const code = (seriesCode || '').toUpperCase();
       const info = _seriesPicksStatusCache[code];
       if (!info || !info.status) return '';
@@ -6440,6 +6461,19 @@
             statusColor = 'text-amber-300';
             buttonClass = 'bg-amber-600 hover:bg-amber-700';
             buttonText = isEn ? 'Preview schedule' : 'Förhandsgranska schema';
+            isClickable = true;
+          } else if (serie.picks_preseason_locked) {
+            const daysOpen = Number.isFinite(serie.days_until_picks_open) ? serie.days_until_picks_open : null;
+            if (daysOpen != null && daysOpen > 0) {
+              statusText = isEn
+                ? `Picks open in ${daysOpen} day${daysOpen !== 1 ? 's' : ''}`
+                : `Picks öppnar om ${daysOpen} dagar`;
+            } else {
+              statusText = isEn ? 'Picks opening soon' : 'Picks öppnar snart';
+            }
+            statusColor = 'text-amber-300';
+            buttonClass = 'bg-blue-600 hover:bg-blue-700';
+            buttonText = isEn ? 'Show schedule' : 'Visa schema';
             isClickable = true;
           } else if (isActive) {
             if (daysFromNextRace != null && daysFromNextRace > 0) {

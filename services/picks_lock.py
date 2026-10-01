@@ -12,7 +12,7 @@ from models import Competition, Series, db
 
 
 # Picks open this many calendar days before Series.start_date (roster/numbers usually known by then).
-PICKS_OPEN_DAYS_BEFORE_SERIES = 14
+PICKS_OPEN_DAYS_BEFORE_SERIES = 30
 
 _SV_MONTHS = (
     "",
