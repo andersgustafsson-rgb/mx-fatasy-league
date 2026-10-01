@@ -57,15 +57,38 @@
         }
         .ap-sidebar-backdrop.show { display: block; }
         .ap-sidebar__brand {
-            padding: 0.35rem 0.55rem 0.85rem;
+            display: block;
+            padding: 0.25rem 0.45rem 0.85rem;
             border-bottom: 1px solid var(--ap-line);
             margin-bottom: 0.65rem;
+            text-decoration: none;
+            border-radius: 0.55rem;
+            transition: background 0.15s;
         }
-        .ap-sidebar__brand strong {
-            display: block; font-family: "Barlow Condensed", sans-serif;
-            font-size: 1.35rem; letter-spacing: 0.04em; color: #f8fafc;
+        .ap-sidebar__brand:hover { background: rgba(30, 41, 59, 0.55); }
+        .ap-sidebar__brand:focus-visible {
+            outline: 2px solid rgba(34, 211, 238, 0.65);
+            outline-offset: 2px;
         }
-        .ap-sidebar__brand span { font-size: 0.75rem; color: var(--ap-muted); }
+        .ap-sidebar__brand-img {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            min-height: 44px;
+            object-fit: contain;
+            object-position: left center;
+        }
+        .ap-sidebar__brand-tag {
+            display: block;
+            margin-top: 0.35rem;
+            padding-left: 0.15rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
         .ap-nav-label {
             margin: 0.65rem 0.55rem 0.25rem; font-size: 0.65rem; font-weight: 700;
             letter-spacing: 0.1em; text-transform: uppercase; color: #64748b;
@@ -560,10 +583,19 @@
     <div class="ap-sidebar-backdrop" id="apSidebarBackdrop" onclick="closeAdminSidebar()"></div>
     <div class="ap-shell ap-wrap">
         <aside class="ap-sidebar" id="apSidebar" aria-label="Admin-meny">
-            <div class="ap-sidebar__brand">
-                <strong>Admin</strong>
-                <span>MX Fantasy</span>
-            </div>
+            <a href="{{ url_for('index') }}" class="ap-sidebar__brand" aria-label="MX Fantasy League — till startsidan" title="Till startsidan">
+                <img
+                    class="ap-sidebar__brand-img"
+                    src="{{ url_for('static', filename='images/mx_fantasy_logo_sm.png') }}?v=5"
+                    srcset="{{ url_for('static', filename='images/mx_fantasy_logo_sm.png') }}?v=5 720w, {{ url_for('static', filename='images/mx_fantasy_logo.png') }}?v=5 960w"
+                    sizes="220px"
+                    alt="MX Fantasy League"
+                    width="680"
+                    height="200"
+                    decoding="async"
+                />
+                <span class="ap-sidebar__brand-tag">Admin</span>
+            </a>
             <p class="ap-nav-label">Överblick</p>
             <button type="button" class="ap-nav-item active" data-section="overview" onclick="showSection('overview', this)">Översikt</button>
             <p class="ap-nav-label">Resultat</p>
@@ -580,9 +612,6 @@
             <button type="button" class="ap-nav-item" data-section="sasongsslut" onclick="showSection('sasongsslut', this)">Säsongsslut</button>
             <button type="button" class="ap-nav-item" data-section="system-tools" onclick="showSection('system-tools', this)">Verktyg</button>
             <button type="button" class="ap-nav-item" data-section="announcements" onclick="showSection('announcements', this)">Meddelanden</button>
-            <div style="margin-top:auto;padding-top:1rem;">
-                <a href="/" class="ap-nav-item">← Startsida</a>
-            </div>
         </aside>
 
         <div class="ap-main">
