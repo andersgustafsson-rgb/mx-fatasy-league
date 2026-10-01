@@ -80,14 +80,26 @@ SMX_VENUE_LABELS: dict[str, str] = {
 }
 
 
-def get_smx_race_meta(competition_name: str) -> Optional[dict[str, Any]]:
-    return SMX_RACE_META.get((competition_name or "").strip())
+def get_smx_race_meta(competition_name: str, event_year: int | None = None) -> Optional[dict[str, Any]]:
+    name = (competition_name or "").strip()
+    if event_year and int(event_year) >= 2027:
+        try:
+            from ama_2027_calendar import SMX_RACE_META_2027
+
+            meta = SMX_RACE_META_2027.get(name)
+            if meta:
+                return meta
+        except Exception:
+            pass
+    return SMX_RACE_META.get(name)
 
 
 def competition_venue_label(competition) -> Optional[str]:
     """Venue + city for schedule/hero (SMX playoffs)."""
     name = (getattr(competition, "name", None) or "").strip()
-    meta = SMX_RACE_META.get(name)
+    ed = getattr(competition, "event_date", None)
+    year = ed.year if ed is not None else None
+    meta = get_smx_race_meta(name, year)
     if not meta:
         return None
     return f"{meta['venue']} · {meta['city']}"
@@ -96,7 +108,9 @@ def competition_venue_label(competition) -> Optional[str]:
 def competition_gate_label(competition) -> Optional[str]:
     """Local gate-drop time label (SMX playoffs)."""
     name = (getattr(competition, "name", None) or "").strip()
-    meta = SMX_RACE_META.get(name)
+    ed = getattr(competition, "event_date", None)
+    year = ed.year if ed is not None else None
+    meta = get_smx_race_meta(name, year)
     if meta:
         return meta.get("gate_label")
     return None

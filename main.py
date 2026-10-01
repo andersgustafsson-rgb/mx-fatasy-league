@@ -1230,21 +1230,25 @@ def ensure_ama_2026_series_dates() -> dict:
 
     changed: list[str] = []
 
-    def _max_event_date(series_row: Series | None, series_code: str):
-        filters = [db.func.upper(db.func.coalesce(Competition.series, "")) == series_code]
-        if series_row is not None:
-            filters.append(Competition.series_id == series_row.id)
-        return (
-            db.session.query(db.func.max(Competition.event_date))
-            .filter(db.or_(*filters))
-            .scalar()
+    def _max_event_date(series_row: Series | None, series_code: str, year: int):
+        """Max event_date for this series year only (never bleed into next season)."""
+        q = Competition.query.filter(
+            db.func.upper(db.func.coalesce(Competition.series, "")) == series_code,
+            Competition.event_date >= _date(year, 1, 1),
+            Competition.event_date <= _date(year, 12, 31),
         )
+        if series_row is not None:
+            q = q.filter(Competition.series_id == series_row.id)
+        return q.with_entities(db.func.max(Competition.event_date)).scalar()
 
     mx = Series.query.filter_by(name="Motocross", year=2026).first()
     if mx:
         ironman_end = _date(2026, 8, 29)
-        target_end = _max_event_date(mx, "MX") or ironman_end
+        target_end = _max_event_date(mx, "MX", 2026) or ironman_end
         if target_end < ironman_end:
+            target_end = ironman_end
+        # Cap hard at 2026 — never pull 2027 nationals into 2026 series meta
+        if target_end.year != 2026:
             target_end = ironman_end
         if mx.end_date != target_end or not mx.is_active:
             mx.end_date = target_end
@@ -1254,8 +1258,10 @@ def ensure_ama_2026_series_dates() -> dict:
     smx = Series.query.filter_by(name="SMX Finals", year=2026).first()
     if smx:
         final_end = _date(2026, 9, 26)
-        target_end = _max_event_date(smx, "SMX") or final_end
+        target_end = _max_event_date(smx, "SMX", 2026) or final_end
         if target_end < final_end:
+            target_end = final_end
+        if target_end.year != 2026:
             target_end = final_end
         if smx.end_date != target_end or not smx.is_active:
             smx.end_date = target_end
@@ -1285,7 +1291,19 @@ def ensure_smx_2026_competition_meta() -> dict:
         st = meta.get("start_time")
         start_time_val = dt_time(st[0], st[1]) if st else None
 
-        existing = Competition.query.filter_by(name=name).first()
+        existing = None
+        if series_id:
+            existing = Competition.query.filter_by(name=name, series_id=series_id).first()
+        if not existing:
+            # Prefer 2026-dated rows; never steal a 2027 playoff with the same display name
+            existing = (
+                Competition.query.filter(
+                    Competition.name == name,
+                    Competition.series == "SMX",
+                    Competition.event_date >= datetime(2026, 1, 1).date(),
+                    Competition.event_date <= datetime(2026, 12, 31).date(),
+                ).first()
+            )
         if existing:
             if existing.event_date != target_date:
                 existing.event_date = target_date
@@ -2517,6 +2535,23 @@ def admin_seed_mxgp():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/admin/seed_ama_2027", methods=["GET", "POST"])
+def admin_seed_ama_2027():
+    """Seed official AMA SX + MX + SMX 2027 calendar (idempotent; does not touch 2026)."""
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    try:
+        from ama_2027_calendar import ensure_ama_2027_calendar
+
+        global _SERIES_STATUS_CACHE
+        info = ensure_ama_2027_calendar(get_timezone_for_track=get_track_timezone)
+        _SERIES_STATUS_CACHE = None
+        return jsonify({"message": "AMA 2027 calendar seeded/verified", **info})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/admin/seed_wsx_2026", methods=["GET", "POST"])
 def admin_seed_wsx_2026():
     if not is_admin_user():
@@ -2974,6 +3009,7 @@ def get_track_timezone(track_name):
         
         # Central Time (UTC-6/-5) - Texas, Missouri, Tennessee, Alabama
         'Houston': 'America/Chicago',            # Houston, TX
+        'San Antonio': 'America/Chicago',        # San Antonio, TX (Alamodome)
         'Arlington': 'America/Chicago',          # Arlington, TX
         'St. Louis': 'America/Chicago',          # St. Louis, MO
         'Nashville': 'America/Chicago',          # Nashville, TN
@@ -2989,6 +3025,8 @@ def get_track_timezone(track_name):
         'Philadelphia': 'America/New_York',      # Philadelphia, PA
         'East Rutherford': 'America/New_York',   # MetLife, NJ
         'Foxborough': 'America/New_York',        # Foxborough, MA
+        'Baltimore': 'America/New_York',         # Baltimore, MD
+        'Pittsburgh': 'America/New_York',        # Pittsburgh, PA
         'Atlanta': 'America/New_York',           # Atlanta, GA
 
         # Pro Motocross nationals
@@ -27855,6 +27893,12 @@ def init_database():
                     ensure_ama_2026_series_dates()
                 except Exception as seed_err:
                     print(f"Warning: AMA 2026 series date fix failed: {seed_err}")
+                try:
+                    from ama_2027_calendar import ensure_ama_2027_calendar
+
+                    ensure_ama_2027_calendar(get_timezone_for_track=get_track_timezone)
+                except Exception as seed_err:
+                    print(f"Warning: AMA 2027 calendar seed failed: {seed_err}")
                 try:
                     ensure_smx_2026_competition_meta()
                 except Exception as seed_err:
