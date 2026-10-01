@@ -410,6 +410,198 @@
       font-weight: 650;
       color: #e2e8f0;
     }
+    .sp-race-name--map {
+      cursor: pointer;
+      color: #a5f3fc;
+      text-decoration: underline;
+      text-decoration-color: rgba(103, 232, 249, 0.35);
+      text-underline-offset: 0.15em;
+    }
+    .sp-race-name--map:hover {
+      color: #ecfeff;
+      text-decoration-color: rgba(103, 232, 249, 0.7);
+    }
+    .sp-map-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .sp-map-modal[hidden] { display: none !important; }
+    .sp-map-modal__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.78);
+      backdrop-filter: blur(2px);
+    }
+    .sp-map-modal__card {
+      position: relative;
+      z-index: 1;
+      width: min(920px, 100%);
+      max-height: min(92vh, 980px);
+      overflow: auto;
+      border-radius: 0.85rem;
+      border: 1px solid var(--sp-border);
+      background: #121a2b;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      padding: 1rem 1rem 1.15rem;
+    }
+    .sp-map-modal__x {
+      position: absolute;
+      top: 0.55rem;
+      right: 0.65rem;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 999px;
+      border: 1px solid var(--sp-border);
+      background: #1c283a;
+      color: #e2e8f0;
+      font-size: 1.25rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .sp-map-modal__x:hover { background: #243247; }
+    .sp-map-modal__title {
+      margin: 0 2rem 0.35rem 0;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+    .sp-map-modal__sub {
+      margin: 0 0 0.85rem;
+      font-size: 0.85rem;
+      color: var(--sp-muted);
+    }
+    .sp-map-modal__img {
+      display: block;
+      width: 100%;
+      max-height: 72vh;
+      object-fit: contain;
+      border-radius: 0.55rem;
+      background: #0b1220;
+      border: 1px solid rgba(42, 53, 72, 0.8);
+    }
+    .sp-map-modal__empty {
+      text-align: center;
+      color: var(--sp-muted);
+      padding: 2.5rem 1rem;
+    }
+    .sp-race-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.85rem;
+      padding: 1rem 1.1rem 1.15rem;
+    }
+    @media (min-width: 640px) {
+      .sp-race-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+      }
+    }
+    .sp-race-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      border-radius: 0.7rem;
+      border: 1px solid var(--sp-border);
+      background: #121a2b;
+      overflow: hidden;
+      cursor: pointer;
+      text-align: left;
+      padding: 0;
+      width: 100%;
+      color: inherit;
+      transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    }
+    .sp-race-card:hover {
+      border-color: rgba(103, 232, 249, 0.45);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+    }
+    .sp-race-card--cancelled {
+      opacity: 0.65;
+    }
+    .sp-race-card__media {
+      position: relative;
+      aspect-ratio: 3 / 4;
+      background: #0b1220;
+      overflow: hidden;
+    }
+    .sp-race-card__media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .sp-race-card__placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        linear-gradient(160deg, #152033 0%, #0b1220 55%, #1a2436 100%);
+      color: #64748b;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .sp-race-card__body {
+      padding: 0.7rem 0.75rem 0.85rem;
+      border-top: 1px solid rgba(42, 53, 72, 0.85);
+      background: #152033;
+    }
+    .sp-race-card__date {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--sp-muted);
+      margin-bottom: 0.2rem;
+    }
+    .sp-race-card__name {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #f8fafc;
+      line-height: 1.25;
+      margin: 0 0 0.35rem;
+    }
+    .sp-race-card__venue {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .sp-race-card__badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.55rem;
+    }
+    .sp-map-modal__meta {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.65rem;
+      margin: 0.85rem 0 0;
+    }
+    @media (min-width: 520px) {
+      .sp-map-modal__meta {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    .sp-map-modal__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -559,26 +751,27 @@
                 {% if user_has_picks %}Visa mina picks{% else %}Gör dina picks{% endif %}
               </a>
             {% endif %}
+          {% elif picks_preseason and picks_opens_on %}
+            <div class="mt-4 sp-info-tile border-amber-500/30">
+              <p class="text-amber-200 font-semibold text-sm">
+                Picks öppnar {{ picks_opens_on.strftime('%d %b %Y') }}
+              </p>
+              <p class="text-xs text-slate-400 mt-1">30 dagar före serie-start · kolla banorna i schemat under tiden</p>
+            </div>
           {% else %}
-            {% if series.start_date %}
-              {% set days_until_start = (series.start_date - current_date).days %}
-              {% if days_until_start > 7 %}
-                <div class="mt-4 sp-info-tile border-amber-500/30">
-                  <p class="text-amber-200 font-semibold text-sm">
-                    Picks öppnar om {{ days_until_start - 7 }} dag{{ 'ar' if days_until_start - 7 != 1 else '' }}
-                  </p>
-                  <p class="text-xs text-slate-400 mt-1">En vecka före säsongstart {{ series.start_date.strftime('%d %b %Y') }}</p>
-                </div>
-              {% else %}
-                <div class="mt-4 sp-info-tile border-rose-500/30">
-                  <p class="text-rose-200 font-semibold text-sm">Picks är låsta för detta race</p>
-                </div>
-              {% endif %}
-            {% else %}
-              <div class="mt-4 sp-info-tile">
-                <p class="text-slate-300 font-semibold text-sm">Säsongstartdatum saknas</p>
-              </div>
-            {% endif %}
+            <div class="mt-4 sp-info-tile border-rose-500/30">
+              <p class="text-rose-200 font-semibold text-sm">Picks är låsta för detta race</p>
+            </div>
+          {% endif %}
+          {% if competition_trackmaps.get(next_race.id) %}
+            <button type="button"
+                    class="sp-cta sp-cta--done ml-0 sm:ml-2"
+                    data-open-trackmap
+                    data-race-name="{{ next_race.name }}"
+                    data-race-date="{% if next_race.event_date %}{{ next_race.event_date.strftime('%d %b %Y') }}{% endif %}"
+                    data-map-url="{{ url_for('static', filename=competition_trackmaps[next_race.id][0]) }}">
+              Visa bana
+            </button>
           {% endif %}
         </div>
       </section>
@@ -591,88 +784,102 @@
       </section>
     {% endif %}
 
-    <!-- Schedule -->
+    <!-- Schedule: track maps first -->
     <section class="sp-panel">
       <div class="sp-panel__head">
         <h2><span class="mx-heading-icon">{{ mx_icon('calendar') }}<span>Race schema</span></span></h2>
       </div>
-      <div class="sp-panel__body !p-0 overflow-x-auto">
-        <table class="sp-table">
-          <thead>
-            <tr>
-              <th>Datum</th>
-              <th>Race</th>
-              <th>Bana / Ort</th>
-              <th>Status</th>
-              <th class="sp-th-center">Åtgärd</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for comp in competitions %}
-            {% set has_results = competition_results[comp.id]|length > 0 %}
-            {% set user_has_picks = user_picks_status[comp.id].has_picks %}
-            {% set cancelled = comp.is_cancelled %}
-            <tr class="{% if cancelled %}sp-row--cancelled{% endif %}">
-              <td class="whitespace-nowrap sp-race-date">
-                {% if comp.event_date %}
-                  {{ comp.event_date.strftime('%d %b %Y') }}
-                {% else %}
-                  <span class="text-amber-300 font-semibold">TBA</span>
-                {% endif %}
-              </td>
-              <td class="font-semibold text-slate-100 sp-race-name">{{ comp.name }}</td>
-              <td class="text-slate-400 sp-race-venue">{{ competition_venues.get(comp.id, '—') }}</td>
-              <td>
-                <div class="flex flex-wrap gap-1.5">
-                  {% if cancelled %}
-                    <span class="sp-badge sp-badge--cancelled">Cancelled</span>
-                  {% elif has_results %}
-                    <span class="sp-badge sp-badge--done">Avslutad</span>
-                  {% elif not comp.event_date %}
-                    <span class="sp-badge sp-badge--tba">Datum TBA</span>
-                  {% elif comp.event_date == current_date %}
-                    <span class="sp-badge sp-badge--tba">Idag</span>
-                  {% elif active_race_id and comp.id == active_race_id %}
-                    <span class="sp-badge sp-badge--next">Aktivt race</span>
-                  {% elif next_race and comp.id == next_race.id %}
-                    <span class="sp-badge sp-badge--next">Nästa</span>
-                  {% else %}
-                    <span class="sp-badge sp-badge--open">Kommande</span>
-                  {% endif %}
-                  {% if user_has_picks and not has_results and not cancelled %}
-                    <span class="sp-badge sp-badge--picks">Picks klara</span>
-                  {% endif %}
-                </div>
-              </td>
-              <td class="text-center">
-                {% if cancelled %}
-                  <span class="text-xs text-amber-400/80">—</span>
-                {% elif active_race_id and comp.id == active_race_id %}
-                  {% if picks_locked_status[comp.id] %}
-                    <span class="sp-badge sp-badge--locked">Picks låsta</span>
-                  {% else %}
-                    <a href="{{ url_for('race_picks_page', competition_id=comp.id) }}" class="sp-link-btn sp-link-btn--go">Picks</a>
-                  {% endif %}
-                {% elif next_race and comp.id == next_race.id and picks_open %}
-                  {% if next_race.id == 9999 %}
-                    <a href="/race_picks_test" class="sp-link-btn">Test picks</a>
-                  {% else %}
-                    <a href="{{ url_for('race_picks_page', competition_id=comp.id) }}" class="sp-link-btn sp-link-btn--go">Picks</a>
-                  {% endif %}
-                {% elif comp.event_date and comp.event_date >= current_date %}
-                  <span class="text-xs text-slate-500">—</span>
-                {% elif not comp.event_date %}
-                  <span class="text-xs text-amber-400/80">TBA</span>
-                {% else %}
-                  <span class="text-xs text-slate-600">—</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <p class="px-4 pt-3 pb-0 text-sm text-slate-400">
+        Klicka på en tävling för bana och mer info.
+      </p>
+      <div class="sp-race-grid">
+        {% for comp in competitions %}
+        {% set has_results = competition_results[comp.id]|length > 0 %}
+        {% set user_has_picks = user_picks_status[comp.id].has_picks %}
+        {% set cancelled = comp.is_cancelled %}
+        {% set maps = competition_trackmaps.get(comp.id, []) %}
+        {% set map_url = maps[0] if maps else '' %}
+        <button type="button"
+                class="sp-race-card{% if cancelled %} sp-race-card--cancelled{% endif %}"
+                data-open-race
+                data-race-id="{{ comp.id }}"
+                data-race-name="{{ comp.name }}"
+                data-race-date="{% if comp.event_date %}{{ comp.event_date.strftime('%d %b %Y') }}{% else %}TBA{% endif %}"
+                data-race-venue="{{ competition_venues.get(comp.id, '') }}"
+                data-race-gate="{{ competition_gates.get(comp.id, '') }}"
+                data-map-url="{% if map_url %}{{ url_for('static', filename=map_url) }}{% endif %}"
+                data-picks-url="{% if not cancelled %}{{ url_for('race_picks_page', competition_id=comp.id) }}{% endif %}"
+                data-picks-open="{% if picks_open and next_race and next_race.id == comp.id %}1{% else %}0{% endif %}"
+                data-status="{% if cancelled %}Cancelled{% elif has_results %}Avslutad{% elif not comp.event_date %}Datum TBA{% elif next_race and comp.id == next_race.id %}Nästa{% else %}Kommande{% endif %}">
+          <div class="sp-race-card__media">
+            {% if map_url %}
+              <img src="{{ url_for('static', filename=map_url) }}" alt="{{ comp.name }} track map" loading="lazy">
+            {% else %}
+              <div class="sp-race-card__placeholder">Bana TBA</div>
+            {% endif %}
+          </div>
+          <div class="sp-race-card__body">
+            <div class="sp-race-card__date">
+              {% if comp.event_date %}{{ comp.event_date.strftime('%d %b %Y') }}{% else %}TBA{% endif %}
+            </div>
+            <h3 class="sp-race-card__name">{{ comp.name }}</h3>
+            {% if competition_venues.get(comp.id) %}
+            <p class="sp-race-card__venue">{{ competition_venues.get(comp.id) }}</p>
+            {% endif %}
+            <div class="sp-race-card__badges">
+              {% if cancelled %}
+                <span class="sp-badge sp-badge--cancelled">Cancelled</span>
+              {% elif has_results %}
+                <span class="sp-badge sp-badge--done">Avslutad</span>
+              {% elif next_race and comp.id == next_race.id %}
+                <span class="sp-badge sp-badge--next">Nästa</span>
+              {% elif map_url %}
+                <span class="sp-badge sp-badge--open">Bana klar</span>
+              {% else %}
+                <span class="sp-badge sp-badge--tba">Kommande</span>
+              {% endif %}
+              {% if user_has_picks and not has_results and not cancelled %}
+                <span class="sp-badge sp-badge--picks">Picks klara</span>
+              {% endif %}
+            </div>
+          </div>
+        </button>
+        {% endfor %}
       </div>
     </section>
+
+    <div id="sp-race-modal" class="sp-map-modal" hidden>
+      <div class="sp-map-modal__backdrop" data-race-close></div>
+      <div class="sp-map-modal__card" role="dialog" aria-modal="true" aria-labelledby="sp-race-modal-title">
+        <button type="button" class="sp-map-modal__x" data-race-close aria-label="Stäng">×</button>
+        <h3 id="sp-race-modal-title" class="sp-map-modal__title"></h3>
+        <p id="sp-race-modal-sub" class="sp-map-modal__sub"></p>
+        <img id="sp-race-modal-img" class="sp-map-modal__img" alt="" hidden>
+        <div id="sp-race-modal-empty" class="sp-map-modal__empty" hidden>Banbild saknas ännu för denna tävling.</div>
+        <div class="sp-map-modal__meta">
+          <div class="sp-info-tile">
+            <p class="sp-stat-label">Datum</p>
+            <p id="sp-race-modal-date" class="sp-stat-value text-base"></p>
+          </div>
+          <div class="sp-info-tile">
+            <p class="sp-stat-label">Status</p>
+            <p id="sp-race-modal-status" class="sp-stat-value text-base"></p>
+          </div>
+          <div class="sp-info-tile" id="sp-race-modal-venue-wrap" hidden>
+            <p class="sp-stat-label">Bana / Ort</p>
+            <p id="sp-race-modal-venue" class="sp-stat-value text-base"></p>
+          </div>
+          <div class="sp-info-tile" id="sp-race-modal-gate-wrap" hidden>
+            <p class="sp-stat-label">Gate drop</p>
+            <p id="sp-race-modal-gate" class="sp-stat-value text-base"></p>
+          </div>
+        </div>
+        <div class="sp-map-modal__actions">
+          <a id="sp-race-modal-picks" href="#" class="sp-cta sp-cta--primary" hidden>Gör picks</a>
+          <button type="button" class="sp-cta sp-cta--done" data-race-close>Stäng</button>
+        </div>
+      </div>
+    </div>
 
     {% if mxon_nations %}
     <section class="sp-panel">
@@ -845,6 +1052,97 @@
     document.addEventListener('DOMContentLoaded', function () {
       if (document.getElementById('smx-qualification-container')) {
         loadSMXQualification();
+      }
+
+      const raceModal = document.getElementById('sp-race-modal');
+      if (raceModal) {
+        const titleEl = document.getElementById('sp-race-modal-title');
+        const subEl = document.getElementById('sp-race-modal-sub');
+        const imgEl = document.getElementById('sp-race-modal-img');
+        const emptyEl = document.getElementById('sp-race-modal-empty');
+        const dateEl = document.getElementById('sp-race-modal-date');
+        const statusEl = document.getElementById('sp-race-modal-status');
+        const venueWrap = document.getElementById('sp-race-modal-venue-wrap');
+        const venueEl = document.getElementById('sp-race-modal-venue');
+        const gateWrap = document.getElementById('sp-race-modal-gate-wrap');
+        const gateEl = document.getElementById('sp-race-modal-gate');
+        const picksEl = document.getElementById('sp-race-modal-picks');
+
+        const openRace = (btn) => {
+          const name = btn.getAttribute('data-race-name') || '';
+          const date = btn.getAttribute('data-race-date') || '';
+          const venue = btn.getAttribute('data-race-venue') || '';
+          const gate = btn.getAttribute('data-race-gate') || '';
+          const mapUrl = btn.getAttribute('data-map-url') || '';
+          const status = btn.getAttribute('data-status') || '';
+          const picksUrl = btn.getAttribute('data-picks-url') || '';
+          const picksOpen = btn.getAttribute('data-picks-open') === '1';
+
+          titleEl.textContent = name;
+          subEl.textContent = date ? `${date}${status ? ' · ' + status : ''}` : (status || '');
+          dateEl.textContent = date || 'TBA';
+          statusEl.textContent = status || '—';
+
+          if (venue) {
+            venueEl.textContent = venue;
+            venueWrap.hidden = false;
+          } else {
+            venueWrap.hidden = true;
+          }
+          if (gate) {
+            gateEl.textContent = gate;
+            gateWrap.hidden = false;
+          } else {
+            gateWrap.hidden = true;
+          }
+
+          if (mapUrl) {
+            imgEl.src = mapUrl;
+            imgEl.alt = `${name} track map`;
+            imgEl.hidden = false;
+            emptyEl.hidden = true;
+          } else {
+            imgEl.removeAttribute('src');
+            imgEl.hidden = true;
+            emptyEl.hidden = false;
+          }
+
+          if (picksOpen && picksUrl) {
+            picksEl.href = picksUrl;
+            picksEl.hidden = false;
+          } else {
+            picksEl.hidden = true;
+          }
+
+          raceModal.hidden = false;
+          document.body.style.overflow = 'hidden';
+        };
+
+        const closeRace = () => {
+          raceModal.hidden = true;
+          document.body.style.overflow = '';
+        };
+
+        document.querySelectorAll('[data-open-race]').forEach((btn) => {
+          btn.addEventListener('click', () => openRace(btn));
+        });
+        document.querySelectorAll('[data-open-trackmap]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            // Reuse same modal from next-race "Visa bana"
+            const fake = document.createElement('button');
+            fake.setAttribute('data-race-name', btn.getAttribute('data-race-name') || '');
+            fake.setAttribute('data-race-date', btn.getAttribute('data-race-date') || '');
+            fake.setAttribute('data-map-url', btn.getAttribute('data-map-url') || '');
+            fake.setAttribute('data-status', 'Nästa');
+            openRace(fake);
+          });
+        });
+        raceModal.querySelectorAll('[data-race-close]').forEach((el) => {
+          el.addEventListener('click', closeRace);
+        });
+        document.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Escape' && !raceModal.hidden) closeRace();
+        });
       }
 
       const nationsEl = document.getElementById('mxon-nations-json');

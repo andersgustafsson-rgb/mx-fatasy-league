@@ -11594,6 +11594,7 @@ def series_page(series_id):
         from trackmap_utils import (
             competition_gate_label,
             competition_schedule_venue_label,
+            get_trackmaps_for_competition,
             race_background_static_url,
         )
 
@@ -11606,10 +11607,24 @@ def series_page(series_id):
             "New Zealand GP": "Christchurch — One New Zealand Stadium",
             "Swedish GP": "Sverige",
         }
+        sx_2027_venue_by_name: dict[str, str] = {}
+        try:
+            from ama_2027_calendar import SX_2027
+
+            for race in SX_2027:
+                venue = (race.get("venue") or "").strip()
+                if venue:
+                    sx_2027_venue_by_name[race["name"]] = venue
+        except Exception:
+            pass
+
         competition_venues = {}
         competition_gates = {}
+        competition_trackmaps: dict[int, list[str]] = {}
         for c in competitions:
             label = competition_schedule_venue_label(c) or wsx_venue_by_name.get(c.name)
+            if not label and int(getattr(series, "year", 0) or 0) >= 2027:
+                label = sx_2027_venue_by_name.get(c.name)
             if not label and (getattr(c, "series", None) or "").upper() == "MXON":
                 label = "Ernée — Circuit Raymond Demy · kval lör · race sön"
             if label:
@@ -11617,6 +11632,17 @@ def series_page(series_id):
             gate = competition_gate_label(c)
             if gate:
                 competition_gates[c.id] = gate
+            try:
+                maps = get_trackmaps_for_competition(c)
+                urls = [
+                    (getattr(m, "image_url", None) or "").strip()
+                    for m in (maps or [])
+                    if (getattr(m, "image_url", None) or "").strip()
+                ]
+                if urls:
+                    competition_trackmaps[c.id] = urls
+            except Exception:
+                pass
 
         mxon_nations = []
         if series.name in ("MXON", "MXoN"):
@@ -11838,6 +11864,16 @@ def series_page(series_id):
         if next_race and comp_ids:
             picks_locked_status[next_race.id] = not picks_open
 
+        picks_opens_on = None
+        picks_preseason = False
+        if next_race:
+            try:
+                picks_preseason = is_picks_preseason_locked(next_race)
+                picks_opens_on = picks_preseason_opens_on(next_race)
+            except Exception:
+                picks_preseason = False
+                picks_opens_on = None
+
         next_race_bg_url = race_background_static_url(next_race) if next_race else None
         if next_race and (getattr(next_race, "series", None) or "").upper() == "MXON":
             next_race_bg_url = "images/mxon/ernee_aerial.jpg"
@@ -11850,11 +11886,14 @@ def series_page(series_id):
                              competition_results=competition_results,
                              competition_venues=competition_venues,
                              competition_gates=competition_gates,
+                             competition_trackmaps=competition_trackmaps,
                              user_picks_status=user_picks_status,
                              picks_locked_status=picks_locked_status,
                              next_race=next_race,
                              next_race_bg_url=next_race_bg_url,
                              picks_open=picks_open,
+                             picks_preseason=picks_preseason,
+                             picks_opens_on=picks_opens_on,
                              current_date=get_today(),
                              active_race_id=active_race_id,
                              mxon_nations=mxon_nations,
