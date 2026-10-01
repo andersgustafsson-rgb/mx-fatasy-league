@@ -25,7 +25,159 @@
                 linear-gradient(165deg, #020617 0%, #0f172a 50%, #020617 100%);
             background-attachment: fixed;
         }
-        .ap-wrap { max-width: 1280px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+        .ap-wrap { max-width: none; margin: 0; padding: 0; }
+        .ap-shell {
+            display: grid;
+            grid-template-columns: 1fr;
+            min-height: 100vh;
+        }
+        @media (min-width: 960px) {
+            .ap-shell { grid-template-columns: 15.5rem minmax(0, 1fr); }
+        }
+        .ap-sidebar {
+            display: none;
+            flex-direction: column;
+            gap: 0.25rem;
+            padding: 1rem 0.75rem 1.5rem;
+            border-right: 1px solid var(--ap-line);
+            background: rgba(2, 6, 23, 0.72);
+            backdrop-filter: blur(10px);
+        }
+        @media (min-width: 960px) {
+            .ap-sidebar { display: flex; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        }
+        .ap-sidebar.open {
+            display: flex;
+            position: fixed; inset: 0 auto 0 0; width: min(17rem, 86vw); z-index: 60;
+            box-shadow: 20px 0 50px rgba(0,0,0,0.45);
+        }
+        .ap-sidebar-backdrop {
+            display: none; position: fixed; inset: 0; z-index: 50;
+            background: rgba(2, 6, 23, 0.65);
+        }
+        .ap-sidebar-backdrop.show { display: block; }
+        .ap-sidebar__brand {
+            padding: 0.35rem 0.55rem 0.85rem;
+            border-bottom: 1px solid var(--ap-line);
+            margin-bottom: 0.65rem;
+        }
+        .ap-sidebar__brand strong {
+            display: block; font-family: "Barlow Condensed", sans-serif;
+            font-size: 1.35rem; letter-spacing: 0.04em; color: #f8fafc;
+        }
+        .ap-sidebar__brand span { font-size: 0.75rem; color: var(--ap-muted); }
+        .ap-nav-label {
+            margin: 0.65rem 0.55rem 0.25rem; font-size: 0.65rem; font-weight: 700;
+            letter-spacing: 0.1em; text-transform: uppercase; color: #64748b;
+        }
+        .ap-nav-item {
+            appearance: none; width: 100%; text-align: left;
+            border: 1px solid transparent; background: transparent;
+            color: #cbd5e1; border-radius: 0.55rem; padding: 0.55rem 0.7rem;
+            font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+            text-decoration: none; display: flex; align-items: center; gap: 0.45rem;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .ap-nav-item:hover { background: rgba(30, 41, 59, 0.7); color: #f8fafc; }
+        .ap-nav-item.active {
+            background: rgba(34, 211, 238, 0.12);
+            border-color: rgba(34, 211, 238, 0.4);
+            color: #a5f3fc;
+        }
+        .ap-main { min-width: 0; padding: 1rem 1rem 3rem; }
+        @media (min-width: 960px) { .ap-main { padding: 1.25rem 1.5rem 3rem; } }
+        .ap-main-inner { max-width: 1120px; margin: 0 auto; }
+        .ap-mobile-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 0.75rem; margin-bottom: 0.85rem;
+        }
+        @media (min-width: 960px) { .ap-mobile-bar { display: none; } }
+
+        .ap-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.65rem;
+            margin-bottom: 1rem;
+        }
+        @media (min-width: 720px) {
+            .ap-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+        }
+        @media (min-width: 1100px) {
+            .ap-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        .ap-kpi {
+            appearance: none; width: 100%; text-align: left; cursor: pointer;
+            border: 1px solid var(--ap-line); border-radius: 0.85rem;
+            background: var(--ap-panel); padding: 0.85rem 0.9rem;
+            color: inherit; font: inherit;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+            transition: border-color 0.15s, transform 0.15s;
+            display: flex; flex-direction: column; gap: 0.45rem;
+            min-height: 7.5rem;
+        }
+        .ap-kpi:hover { border-color: rgba(34, 211, 238, 0.4); transform: translateY(-1px); }
+        .ap-kpi__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+        .ap-kpi__label {
+            font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em;
+            text-transform: uppercase; color: #64748b; margin-bottom: 0.2rem;
+        }
+        .ap-kpi__value {
+            font-family: "Barlow Condensed", sans-serif; font-weight: 800;
+            font-size: 1.85rem; line-height: 1; color: #f8fafc; letter-spacing: 0.02em;
+        }
+        .ap-kpi__meta { margin-top: auto; font-size: 0.78rem; color: var(--ap-muted); }
+        .ap-kpi__meta strong { color: #67e8f9; font-weight: 700; }
+        .ap-kpi--warn { border-color: rgba(251, 191, 36, 0.35); }
+        .ap-kpi--ok .ap-kpi__value { color: #6ee7b7; }
+        .ap-kpi--hot { border-color: rgba(34, 211, 238, 0.4); box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.12), 0 12px 28px rgba(0,0,0,0.18); }
+        .ap-ring {
+            --pct: 0;
+            width: 3.1rem; height: 3.1rem; border-radius: 9999px; flex-shrink: 0;
+            background:
+                radial-gradient(closest-side, rgba(15, 23, 42, 0.95) 72%, transparent 73% 100%),
+                conic-gradient(#22d3ee calc(var(--pct) * 1%), rgba(51, 65, 85, 0.55) 0);
+            display: grid; place-items: center;
+        }
+        .ap-ring span {
+            font-family: "Barlow Condensed", sans-serif; font-weight: 800;
+            font-size: 0.85rem; color: #e2e8f0; letter-spacing: 0.02em;
+        }
+        .ap-ring--amber {
+            background:
+                radial-gradient(closest-side, rgba(15, 23, 42, 0.95) 72%, transparent 73% 100%),
+                conic-gradient(#fbbf24 calc(var(--pct) * 1%), rgba(51, 65, 85, 0.55) 0);
+        }
+        .ap-ring--green {
+            background:
+                radial-gradient(closest-side, rgba(15, 23, 42, 0.95) 72%, transparent 73% 100%),
+                conic-gradient(#34d399 calc(var(--pct) * 1%), rgba(51, 65, 85, 0.55) 0);
+        }
+        .ap-meter {
+            height: 0.4rem; border-radius: 9999px; background: rgba(51, 65, 85, 0.7);
+            overflow: hidden; margin-top: 0.15rem;
+        }
+        .ap-meter > i {
+            display: block; height: 100%; width: 0%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #22d3ee, #67e8f9);
+            transition: width 0.45s ease;
+        }
+        .ap-meter--amber > i { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .ap-spark {
+            display: flex; align-items: flex-end; gap: 3px; height: 2.1rem; margin-top: 0.15rem;
+        }
+        .ap-spark span {
+            flex: 1; border-radius: 2px 2px 0 0; min-height: 2px;
+            background: rgba(34, 211, 238, 0.35);
+        }
+        .ap-spark span.on { background: #22d3ee; }
+        .ap-dash-actions {
+            display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;
+        }
+        .ap-dash-note {
+            font-size: 0.8rem; color: #64748b; margin: 0 0 1rem;
+        }
+
         .ap-top {
             display: flex; flex-wrap: wrap; align-items: flex-end;
             justify-content: space-between; gap: 1rem; margin-bottom: 1.1rem;
@@ -405,59 +557,143 @@
     </style>
 </head>
 <body class="min-h-screen">
-    <div class="ap-wrap container mx-auto">
+    <div class="ap-sidebar-backdrop" id="apSidebarBackdrop" onclick="closeAdminSidebar()"></div>
+    <div class="ap-shell ap-wrap">
+        <aside class="ap-sidebar" id="apSidebar" aria-label="Admin-meny">
+            <div class="ap-sidebar__brand">
+                <strong>Admin</strong>
+                <span>MX Fantasy</span>
+            </div>
+            <p class="ap-nav-label">Överblick</p>
+            <button type="button" class="ap-nav-item active" data-section="overview" onclick="showSection('overview', this)">Översikt</button>
+            <p class="ap-nav-label">Resultat</p>
+            <button type="button" class="ap-nav-item" data-section="race-results" onclick="showSection('race-results', this)">SMX</button>
+            <button type="button" class="ap-nav-item" data-section="wsx-results" onclick="showSection('wsx-results', this)">WSX</button>
+            <button type="button" class="ap-nav-item" data-section="mxgp-scaffold" onclick="showSection('mxgp-scaffold', this)">MXGP</button>
+            <a href="/admin/mxon" class="ap-nav-item">MXoN</a>
+            <p class="ap-nav-label">Spel</p>
+            <button type="button" class="ap-nav-item" data-section="picks-management" onclick="showSection('picks-management', this)">Picks</button>
+            <button type="button" class="ap-nav-item" data-section="user-management" onclick="showSection('user-management', this)">Användare</button>
+            <button type="button" class="ap-nav-item" data-section="league-management" onclick="showSection('league-management', this)">Ligor</button>
+            <button type="button" class="ap-nav-item" data-section="rider-competition-management" onclick="showSection('rider-competition-management', this)">Förare &amp; tävlingar</button>
+            <p class="ap-nav-label">Övrigt</p>
+            <button type="button" class="ap-nav-item" data-section="sasongsslut" onclick="showSection('sasongsslut', this)">Säsongsslut</button>
+            <button type="button" class="ap-nav-item" data-section="system-tools" onclick="showSection('system-tools', this)">Verktyg</button>
+            <button type="button" class="ap-nav-item" data-section="announcements" onclick="showSection('announcements', this)">Meddelanden</button>
+            <div style="margin-top:auto;padding-top:1rem;">
+                <a href="/" class="ap-nav-item">← Startsida</a>
+            </div>
+        </aside>
+
+        <div class="ap-main">
+        <div class="ap-main-inner container mx-auto">
+        <div class="ap-mobile-bar">
+            <button type="button" class="ap-btn" onclick="openAdminSidebar()">Meny</button>
+            <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;letter-spacing:0.04em;font-size:1.2rem;">Admin</span>
+            <a href="/" class="ap-btn ap-btn--ghost ap-btn--sm">Hem</a>
+        </div>
+
         <!-- Header -->
         <div class="ap-top">
             <div>
                 <p class="ap-eyebrow">MX Fantasy</p>
-                <h1 class="ap-title">Admin</h1>
-                <p class="ap-sub">SMX, WSX, picks, förare, användare och verktyg</p>
+                <h1 class="ap-title" id="apSectionTitle">Översikt</h1>
+                <p class="ap-sub" id="apSectionSub">KPI:er och genvägar — välj sektion i menyn</p>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
-                <a href="/" class="ap-btn ap-btn--ghost">Startsida</a>
+                <button type="button" class="ap-btn ap-btn--sm" onclick="loadAdminDashboard()">Uppdatera KPI</button>
+                <a href="/" class="ap-btn ap-btn--ghost" style="display:none" id="apDesktopHome">Startsida</a>
             </div>
         </div>
 
-        <!-- Visit counter (compact) -->
-        <div class="ap-visit">
-            <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-gray-300">
-                <span class="ap-visit-label">Besökare</span>
-                <span><strong id="visit-today-uv">–</strong> unika idag</span>
-                <span class="text-gray-600">·</span>
-                <span><strong class="text-emerald-300" id="visit-today-signups">–</strong> nya konton</span>
-                <span class="text-gray-500 text-xs" id="visit-today-signup-names"></span>
-                <span class="text-gray-600">·</span>
-                <span>7d: <strong id="visit-week-signups">–</strong> nya</span>
-                <span class="text-gray-600">·</span>
-                <span>Rekord: <strong id="visit-peak-uv">–</strong> <span class="text-gray-500" id="visit-peak-day"></span></span>
-                <span class="text-gray-600">·</span>
-                <span class="ap-visit-label">Säsongsteam</span>
-                <span><strong id="season-team-live-count" class="text-cyan-300">–</strong> lag skapade</span>
-                <span class="text-gray-600 text-xs w-full sm:w-auto">Bara speletsidor · ej personal/kundmail/bots</span>
+        <!-- Overview dashboard -->
+        <div id="overview" class="section-panel active">
+            <p class="ap-dash-note">Klicka ett kort för att hoppa till rätt sektion.</p>
+            <div class="ap-kpi-grid" id="apKpiGrid">
+                <button type="button" class="ap-kpi" onclick="showSection('user-management')" data-kpi="users-today">
+                    <div class="ap-kpi__top">
+                        <div>
+                            <div class="ap-kpi__label">Nya idag</div>
+                            <div class="ap-kpi__value" id="kpi-users-today">–</div>
+                        </div>
+                        <div class="ap-ring ap-ring--green" id="kpi-users-today-ring" style="--pct:0"><span id="kpi-users-today-ring-txt">0</span></div>
+                    </div>
+                    <div class="ap-kpi__meta" id="kpi-users-today-meta">konton</div>
+                </button>
+                <button type="button" class="ap-kpi" onclick="showSection('user-management')" data-kpi="users-week">
+                    <div class="ap-kpi__top">
+                        <div>
+                            <div class="ap-kpi__label">Nya 7 dagar</div>
+                            <div class="ap-kpi__value" id="kpi-users-week">–</div>
+                        </div>
+                    </div>
+                    <div class="ap-spark" id="kpi-signup-spark" aria-hidden="true"></div>
+                    <div class="ap-kpi__meta"><span id="kpi-users-total">–</span> totalt</div>
+                </button>
+                <button type="button" class="ap-kpi" onclick="showSection('picks-management')" data-kpi="picks">
+                    <div class="ap-kpi__top">
+                        <div>
+                            <div class="ap-kpi__label">Picks klara</div>
+                            <div class="ap-kpi__value" id="kpi-picks-pct">–</div>
+                        </div>
+                        <div class="ap-ring" id="kpi-picks-ring" style="--pct:0"><span id="kpi-picks-ring-txt">–</span></div>
+                    </div>
+                    <div class="ap-meter" id="kpi-picks-meter"><i id="kpi-picks-meter-fill"></i></div>
+                    <div class="ap-kpi__meta" id="kpi-picks-meta">nästa race</div>
+                </button>
+                <button type="button" class="ap-kpi" data-kpi="visits">
+                    <div class="ap-kpi__top">
+                        <div>
+                            <div class="ap-kpi__label">Unika idag</div>
+                            <div class="ap-kpi__value" id="kpi-visits-uv">–</div>
+                        </div>
+                        <div class="ap-ring" id="kpi-visits-ring" style="--pct:0"><span id="kpi-visits-ring-txt">–</span></div>
+                    </div>
+                    <div class="ap-spark" id="kpi-visit-spark" aria-hidden="true"></div>
+                    <div class="ap-kpi__meta">7d: <strong id="kpi-visits-week">–</strong> UV · peak <span id="kpi-visits-peak">–</span></div>
+                </button>
+                <button type="button" class="ap-kpi" onclick="showSection('league-management')" data-kpi="leagues">
+                    <div class="ap-kpi__label">Ligor</div>
+                    <div class="ap-kpi__value" id="kpi-leagues">–</div>
+                    <div class="ap-kpi__meta" id="kpi-leagues-meta">aktiva</div>
+                </button>
+                <button type="button" class="ap-kpi" onclick="showSection('sasongsslut')" data-kpi="teams">
+                    <div class="ap-kpi__label">Säsongsteam</div>
+                    <div class="ap-kpi__value" id="kpi-teams">–</div>
+                    <div class="ap-meter ap-meter--amber" id="kpi-teams-meter"><i id="kpi-teams-meter-fill"></i></div>
+                    <div class="ap-kpi__meta">skapade lag</div>
+                </button>
+                <button type="button" class="ap-kpi" onclick="showSection('picks-management')" data-kpi="picks-missing">
+                    <div class="ap-kpi__top">
+                        <div>
+                            <div class="ap-kpi__label">Ej startat</div>
+                            <div class="ap-kpi__value" id="kpi-picks-missing">–</div>
+                        </div>
+                        <div class="ap-ring ap-ring--amber" id="kpi-missing-ring" style="--pct:0"><span id="kpi-missing-ring-txt">–</span></div>
+                    </div>
+                    <div class="ap-kpi__meta" id="kpi-picks-missing-meta">tippare</div>
+                </button>
+                <button type="button" class="ap-kpi" onclick="showSection('race-results')" data-kpi="next-race">
+                    <div class="ap-kpi__label">Nästa race</div>
+                    <div class="ap-kpi__value" id="kpi-next-race" style="font-size:1.15rem;line-height:1.15;">–</div>
+                    <div class="ap-kpi__meta" id="kpi-next-race-meta">—</div>
+                </button>
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:0.35rem;">
-                <button type="button" onclick="loadVisitStats()" class="ap-btn ap-btn--sm">Uppdatera</button>
-                <button type="button" onclick="resetVisitStatsToday()" class="ap-btn ap-btn--sm ap-btn--ghost">Nollställ idag</button>
+            <p class="ap-dash-note" id="apDashErr" style="display:none;color:#fbbf24;"></p>
+            <!-- Keep legacy visit strip ids for existing JS helpers -->
+            <div class="hidden" aria-hidden="true">
+                <span id="visit-today-uv"></span>
+                <span id="visit-today-signups"></span>
+                <span id="visit-today-signup-names"></span>
+                <span id="visit-week-signups"></span>
+                <span id="visit-peak-uv"></span>
+                <span id="visit-peak-day"></span>
+                <span id="season-team-live-count"></span>
             </div>
-        </div>
-
-        <!-- Navigation Tabs -->
-        <div class="admin-tab-bar" role="tablist" aria-label="Admin-sektioner">
-            <button type="button" onclick="showSection('race-results', this)" class="tab-btn active">SMX</button>
-            <button type="button" onclick="showSection('wsx-results', this)" class="tab-btn">WSX</button>
-            <button type="button" onclick="showSection('mxgp-scaffold', this)" class="tab-btn">MXGP</button>
-            <a href="/admin/mxon" class="tab-btn">MXoN</a>
-            <button type="button" onclick="showSection('picks-management', this)" class="tab-btn">Picks</button>
-            <button type="button" onclick="showSection('rider-competition-management', this)" class="tab-btn">Förare &amp; tävlingar</button>
-            <button type="button" onclick="showSection('user-management', this)" class="tab-btn">Användare</button>
-            <button type="button" onclick="showSection('league-management', this)" class="tab-btn">Ligor</button>
-            <button type="button" onclick="showSection('sasongsslut', this)" class="tab-btn">Säsongsslut</button>
-            <button type="button" onclick="showSection('system-tools', this)" class="tab-btn">Verktyg</button>
-            <button type="button" onclick="showSection('announcements', this)" class="tab-btn">Meddelanden</button>
         </div>
 
         <!-- Race Results Section -->
-        <div id="race-results" class="section-panel active">
+        <div id="race-results" class="section-panel hidden">
             <div class="section-card rounded-lg p-6 mb-6">
                 <div class="ap-hub-head">
                     <h2>SMX</h2>
@@ -2042,7 +2278,9 @@
                 </details>
             </div>
         </div>
-    </div>
+        </div><!-- /.ap-main-inner -->
+        </div><!-- /.ap-main -->
+    </div><!-- /.ap-shell -->
 
     <!-- Modal: Clear Game Highscores -->
     <div id="clearGameModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50">
@@ -2167,13 +2405,36 @@
             return _competitionsImportInflight[key];
         }
 
-        // Tab switching
+        const AP_SECTION_META = {
+            overview: { title: 'Översikt', sub: 'KPI:er och genvägar — välj sektion i menyn' },
+            'race-results': { title: 'SMX', sub: 'Importera resultat, holeshot och manuell inmatning' },
+            'wsx-results': { title: 'WSX', sub: 'WSX-resultat och verktyg' },
+            'mxgp-scaffold': { title: 'MXGP', sub: 'MXGP-scaffold' },
+            'picks-management': { title: 'Picks', sub: 'Statistik, simulering och omräkning' },
+            'rider-competition-management': { title: 'Förare & tävlingar', sub: 'Hantera roster och kalender' },
+            'user-management': { title: 'Användare', sub: 'Konton och behörigheter' },
+            'league-management': { title: 'Ligor', sub: 'Ligor och poängverktyg' },
+            sasongsslut: { title: 'Säsongsslut', sub: 'Arkiv, posters och reset' },
+            'system-tools': { title: 'Verktyg', sub: 'Farliga reset-knappar och underhåll' },
+            announcements: { title: 'Meddelanden', sub: 'Poster-studios, annonser och mail' },
+        };
+
+        function openAdminSidebar() {
+            document.getElementById('apSidebar')?.classList.add('open');
+            document.getElementById('apSidebarBackdrop')?.classList.add('show');
+        }
+        function closeAdminSidebar() {
+            document.getElementById('apSidebar')?.classList.remove('open');
+            document.getElementById('apSidebarBackdrop')?.classList.remove('show');
+        }
+
+        // Tab / sidebar switching
         function showSection(sectionId, tabEl) {
             document.querySelectorAll('.section-panel').forEach(panel => {
                 panel.classList.add('hidden');
                 panel.classList.remove('active');
             });
-            document.querySelectorAll('.tab-btn').forEach(btn => {
+            document.querySelectorAll('.tab-btn, .ap-nav-item').forEach(btn => {
                 btn.classList.remove('active');
             });
             const panel = document.getElementById(sectionId);
@@ -2181,9 +2442,17 @@
                 panel.classList.remove('hidden');
                 panel.classList.add('active');
             }
-            const tab = tabEl || (typeof event !== 'undefined' && event?.target?.closest?.('.tab-btn'))
+            const tab = tabEl
+                || document.querySelector(`.ap-nav-item[data-section="${sectionId}"]`)
                 || document.querySelector(`.tab-btn[onclick*="showSection('${sectionId}')"]`);
             if (tab) tab.classList.add('active');
+            const meta = AP_SECTION_META[sectionId];
+            const titleEl = document.getElementById('apSectionTitle');
+            const subEl = document.getElementById('apSectionSub');
+            if (meta && titleEl) titleEl.textContent = meta.title;
+            if (meta && subEl) subEl.textContent = meta.sub;
+            closeAdminSidebar();
+            if (sectionId === 'overview') loadAdminDashboard();
             if (sectionId === 'wsx-results') {
                 loadWsxManualCompetitions();
                 loadWsxBulkCompetitions();
@@ -2195,6 +2464,142 @@
             if (sectionId === 'picks-management') {
                 loadPicksStatsCompetitions(true);
             }
+            try {
+                const url = new URL(window.location.href);
+                if (sectionId === 'overview') url.searchParams.delete('section');
+                else url.searchParams.set('section', sectionId);
+                history.replaceState({}, '', url);
+            } catch (_) { /* ignore */ }
+        }
+
+        async function loadAdminDashboard() {
+            const set = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            };
+            const setRing = (id, pct, label) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const p = Math.max(0, Math.min(100, Number(pct) || 0));
+                el.style.setProperty('--pct', String(p));
+                const txt = document.getElementById(id + '-txt') || el.querySelector('span');
+                if (txt) txt.textContent = label != null ? String(label) : `${Math.round(p)}%`;
+            };
+            const setMeter = (id, pct) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const p = Math.max(0, Math.min(100, Number(pct) || 0));
+                el.style.width = `${p}%`;
+            };
+            const setSpark = (id, values) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const vals = (values || []).map((v) => Number(v) || 0);
+                const max = Math.max(1, ...vals);
+                el.innerHTML = vals.map((v, i) => {
+                    const h = Math.max(8, Math.round((v / max) * 100));
+                    const on = i === vals.length - 1 ? ' on' : '';
+                    return `<span class="${on.trim()}" style="height:${h}%"></span>`;
+                }).join('');
+            };
+            try {
+                const res = await fetch('/admin/api/dashboard');
+                const data = await res.json();
+                const errEl = document.getElementById('apDashErr');
+                if (!res.ok || !data.ok) {
+                    if (errEl) {
+                        errEl.style.display = 'block';
+                        errEl.textContent = data.error || ('Kunde inte ladda KPI (' + res.status + ')');
+                    }
+                    return;
+                }
+                if (errEl) {
+                    if (data.visit_error) {
+                        errEl.style.display = 'block';
+                        errEl.textContent = 'Besöksdata: ' + data.visit_error;
+                    } else {
+                        errEl.style.display = 'none';
+                    }
+                }
+                const u = data.users || {};
+                const v = data.visits || {};
+                const p = data.picks || {};
+                const series = v.series || [];
+
+                set('kpi-users-today', String(u.today ?? 0));
+                const names = (u.today_names || []).filter(Boolean);
+                set('kpi-users-today-meta', names.length ? names.join(', ') : 'konton');
+                setRing('kpi-users-today-ring', u.today > 0 ? Math.min(100, (u.today / Math.max(1, u.week || u.today)) * 100) : 0, u.today ?? 0);
+                set('kpi-users-week', String(u.week ?? 0));
+                set('kpi-users-total', String(u.total ?? 0));
+                setSpark('kpi-signup-spark', series.map((d) => d.signups));
+
+                set('kpi-visits-uv', String(v.today_uv ?? 0));
+                set('kpi-visits-week', String(v.week_uv ?? 0));
+                set('kpi-visits-peak', v.peak_uv ? String(v.peak_uv) : '–');
+                const peak = Math.max(1, Number(v.peak_uv) || Number(v.today_uv) || 1);
+                setRing('kpi-visits-ring', Math.round((Number(v.today_uv || 0) / peak) * 100), v.today_uv ?? 0);
+                setSpark('kpi-visit-spark', series.map((d) => d.uv));
+                document.querySelector('[data-kpi="visits"]')?.classList.toggle('ap-kpi--hot', Number(v.today_uv || 0) > 0);
+
+                set('kpi-leagues', String(data.leagues ?? 0));
+                const pending = Number(data.pending_league_requests || 0);
+                set('kpi-leagues-meta', pending ? `${pending} väntande ansökningar` : 'aktiva');
+                document.querySelector('[data-kpi="leagues"]')?.classList.toggle('ap-kpi--warn', pending > 0);
+
+                const teams = Number(data.season_teams || 0);
+                set('kpi-teams', String(teams));
+                setMeter('kpi-teams-meter-fill', Math.min(100, teams)); // soft fill, not a real target
+
+                if (p && p.success !== false && p.competition_name) {
+                    const complete = Number(p.users_complete || 0);
+                    const total = Number(p.total_users || 0);
+                    const pct = Number(p.complete_pct || 0);
+                    const missing = Number(p.users_not_started || 0);
+                    const missingPct = total > 0 ? Math.round((missing / total) * 100) : 0;
+                    set('kpi-picks-pct', `${pct}%`);
+                    set('kpi-picks-meta', `${complete}/${total} · ${p.competition_name}`);
+                    setRing('kpi-picks-ring', pct, `${pct}%`);
+                    setMeter('kpi-picks-meter-fill', pct);
+                    set('kpi-picks-missing', String(missing));
+                    set('kpi-picks-missing-meta', `av ${total} tippare`);
+                    setRing('kpi-missing-ring', missingPct, `${missingPct}%`);
+                    set('kpi-next-race', p.competition_name);
+                    const lockBits = [];
+                    if (p.deadline_display) lockBits.push(p.deadline_display);
+                    if (p.picks_locked) lockBits.push('låst');
+                    else lockBits.push('öppet');
+                    if (p.has_results) lockBits.push('har resultat');
+                    set('kpi-next-race-meta', lockBits.join(' · '));
+                    document.querySelector('[data-kpi="picks"]')?.classList.toggle('ap-kpi--ok', pct >= 70);
+                } else {
+                    set('kpi-picks-pct', '–');
+                    set('kpi-picks-meta', (p && p.error) ? String(p.error) : 'ingen tävling');
+                    setRing('kpi-picks-ring', 0, '–');
+                    setMeter('kpi-picks-meter-fill', 0);
+                    set('kpi-picks-missing', '–');
+                    setRing('kpi-missing-ring', 0, '–');
+                    set('kpi-next-race', '–');
+                    set('kpi-next-race-meta', '—');
+                }
+
+                // Keep legacy visit ids in sync
+                set('visit-today-uv', String(v.today_uv ?? 0));
+                set('visit-today-signups', String(u.today ?? 0));
+                set('visit-week-signups', String(u.week ?? 0));
+                set('season-team-live-count', String(data.season_teams ?? 0));
+                if (v.peak_uv) {
+                    set('visit-peak-uv', String(v.peak_uv));
+                    set('visit-peak-day', v.peak_day ? `(${v.peak_day})` : '');
+                }
+            } catch (err) {
+                console.error('admin dashboard', err);
+                const errEl = document.getElementById('apDashErr');
+                if (errEl) {
+                    errEl.style.display = 'block';
+                    errEl.textContent = 'Fel vid laddning: ' + (err && err.message ? err.message : err);
+                }
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -2202,7 +2607,10 @@
             try {
                 const section = new URLSearchParams(window.location.search).get('section');
                 if (section) showSection(section);
-            } catch (_) { /* ignore */ }
+                else loadAdminDashboard();
+            } catch (_) {
+                loadAdminDashboard();
+            }
         });
 
         function getOutCompetitionId(scope) {
@@ -4240,6 +4648,7 @@
             stagger(() => loadPicksStatsCompetitions(true), 900);
             stagger(() => loadAnnouncement(), 1000);
             stagger(() => loadUsersWithEmail(), 1100);
+            stagger(() => loadAdminDashboard(), 400);
             stagger(() => loadVisitStats(), 1200);
             
             // Load existing results if a competition is already selected (only if not just submitted)

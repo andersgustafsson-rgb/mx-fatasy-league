@@ -305,7 +305,8 @@ def _signup_stats(start: date, end: date) -> tuple[dict[str, int], list[dict[str
     window_start = datetime.combine(start - timedelta(days=1), datetime.min.time())
     window_end = datetime.combine(end + timedelta(days=1), datetime.max.time())
     users = (
-        User.query.filter(
+        User.query.with_entities(User.id, User.username, User.created_at)
+        .filter(
             User.created_at.isnot(None),
             User.created_at >= window_start,
             User.created_at <= window_end,

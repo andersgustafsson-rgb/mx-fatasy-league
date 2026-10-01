@@ -30,9 +30,12 @@ from models import (
 	Competition,
 	CompetitionResult,
 	HoleshotPick,
+	League,
+	LeagueRequest,
 	PicksSnapshot,
 	RacePick,
 	Rider,
+	SeasonTeam,
 	SeasonTeamClassPromotion,
 	SeasonTeamRider,
 	User,
@@ -826,6 +829,154 @@ def admin_page():
 		return render_template("admin_organized.html")
 	except Exception as e:
 		return f"<h1>Database Error</h1><p>{e}</p>"
+
+
+@bp.get("/admin/api/dashboard")
+@login_required
+def admin_dashboard_stats():
+	"""KPI payload for admin overview dashboard."""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+
+	# Local SQLite may lag migrations — don't let one missing column blank the board.
+	try:
+		from main import (
+			_ensure_email_opt_out_column,
+			_ensure_google_oauth_columns,
+			_sqlite_add_column_if_missing,
+		)
+
+		_ensure_google_oauth_columns()
+		_ensure_email_opt_out_column()
+		_sqlite_add_column_if_missing(
+			"competitions", "is_cancelled", "is_cancelled BOOLEAN DEFAULT 0"
+		)
+		_sqlite_add_column_if_missing(
+			"season_teams", "created_at", "created_at DATETIME"
+		)
+	except Exception:
+		pass
+
+	today: dict = {}
+	week: dict = {}
+	peak: dict = {}
+	visit_series: list = []
+	visit_err = None
+	try:
+		from visit_stats import get_visit_summary
+
+		visit = get_visit_summary(days=14)
+		today = visit.get("today") or {}
+		week = visit.get("last_7_days") or {}
+		peak = visit.get("peak") or {}
+		# days is newest-first; take 7 for sparkline (oldest→newest)
+		raw_days = list(reversed((visit.get("days") or [])[:7]))
+		visit_series = [
+			{
+				"day": d.get("day"),
+				"uv": int(d.get("unique_visitors") or 0),
+				"signups": int(d.get("new_signups") or 0),
+			}
+			for d in raw_days
+		]
+	except Exception as e:
+		visit_err = str(e)
+
+	picks = None
+	try:
+		from main import (
+			_admin_picks_stats_payload,
+			_current_picks_competition,
+			_next_competition_for_pick_reminders,
+		)
+
+		comp = _next_competition_for_pick_reminders() or _current_picks_competition()
+		if comp:
+			picks = _admin_picks_stats_payload(comp)
+	except Exception as picks_err:
+		picks = {"success": False, "error": str(picks_err)}
+
+	def _safe_count(fn, default=0):
+		try:
+			return int(fn() or 0)
+		except Exception:
+			return default
+
+	def _user_total() -> int:
+		try:
+			from main import _sqlite_add_column_if_missing
+
+			_sqlite_add_column_if_missing(
+				"users", "email_opt_out", "email_opt_out BOOLEAN DEFAULT 0"
+			)
+		except Exception:
+			pass
+		try:
+			return int(User.query.count() or 0)
+		except Exception:
+			try:
+				return int(
+					db.session.execute(db.text("SELECT COUNT(*) FROM users")).scalar()
+					or 0
+				)
+			except Exception:
+				return 0
+
+	def _table_count(table: str) -> int:
+		try:
+			return int(
+				db.session.execute(db.text(f"SELECT COUNT(*) FROM {table}")).scalar()
+				or 0
+			)
+		except Exception:
+			return 0
+
+	pending_reqs = _safe_count(
+		lambda: LeagueRequest.query.filter_by(status="pending").count()
+	)
+	if pending_reqs == 0:
+		# ORM may fail on schema drift; try raw
+		pending_reqs = 0
+		try:
+			pending_reqs = int(
+				db.session.execute(
+					db.text(
+						"SELECT COUNT(*) FROM league_requests WHERE status = 'pending'"
+					)
+				).scalar()
+				or 0
+			)
+		except Exception:
+			pending_reqs = 0
+
+	return jsonify(
+		{
+			"ok": True,
+			"users": {
+				"total": _user_total(),
+				"today": int(today.get("new_signups") or 0),
+				"today_names": [
+					u.get("username")
+					for u in (today.get("new_signup_users") or [])
+					if u.get("username")
+				],
+				"week": int(week.get("new_signups") or 0),
+			},
+			"visits": {
+				"today_uv": int(today.get("unique_visitors") or 0),
+				"today_pv": int(today.get("pageviews") or 0),
+				"week_uv": int(week.get("unique_visitors") or 0),
+				"peak_uv": int(peak.get("unique_visitors") or 0),
+				"peak_day": peak.get("day"),
+				"series": visit_series,
+			},
+			"picks": picks,
+			"season_teams": _table_count("season_teams"),
+			"leagues": _table_count("leagues"),
+			"pending_league_requests": pending_reqs,
+			"visit_error": visit_err,
+		}
+	)
 
 
 @bp.get("/admin/api/visit_stats")
