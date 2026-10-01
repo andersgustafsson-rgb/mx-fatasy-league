@@ -8,8 +8,11 @@ from datetime import datetime, timedelta
 
 from flask import session
 
-from models import Competition, db
+from models import Competition, Series, db
 
+
+# Picks open this many calendar days before Series.start_date (roster/numbers usually known by then).
+PICKS_OPEN_DAYS_BEFORE_SERIES = 14
 
 _SV_MONTHS = (
     "",
@@ -248,8 +251,69 @@ def get_current_time():
     # Default to real time
     return datetime.utcnow()
 
-def is_picks_locked(competition):
-    """Check if picks are locked for a specific competition"""
+
+def _series_start_date_for_competition(competition_obj) -> "date | None":
+    """Series.start_date, else earliest event_date on the same series_id."""
+    from datetime import date as date_type
+
+    sid = getattr(competition_obj, "series_id", None)
+    if sid:
+        try:
+            series_row = Series.query.get(sid)
+            if series_row and getattr(series_row, "start_date", None):
+                return series_row.start_date
+        except Exception:
+            db.session.rollback()
+        try:
+            earliest = (
+                Competition.query.filter_by(series_id=sid)
+                .filter(Competition.event_date.isnot(None))
+                .order_by(Competition.event_date.asc())
+                .first()
+            )
+            if earliest and earliest.event_date:
+                return earliest.event_date
+        except Exception:
+            db.session.rollback()
+
+    raw = getattr(competition_obj, "event_date", None)
+    if isinstance(raw, datetime):
+        return raw.date()
+    if isinstance(raw, date_type):
+        return raw
+    return None
+
+
+def picks_preseason_opens_on(competition) -> "date | None":
+    """First calendar day picks may be submitted for this competition's series."""
+    from datetime import date as date_type
+
+    if isinstance(competition, int):
+        competition = Competition.query.get(competition)
+        if not competition:
+            return None
+    start = _series_start_date_for_competition(competition)
+    if not start:
+        return None
+    return start - timedelta(days=PICKS_OPEN_DAYS_BEFORE_SERIES)
+
+
+def is_picks_preseason_locked(competition) -> bool:
+    """True when the series tippa window has not opened yet (too early)."""
+    opens = picks_preseason_opens_on(competition)
+    if opens is None:
+        return False
+    try:
+        today = get_current_time().date()
+    except Exception:
+        from datetime import date as date_type
+
+        today = date_type.today()
+    return today < opens
+
+
+def is_picks_deadline_passed(competition) -> bool:
+    """True when the race pick deadline has passed (too late to change picks)."""
     # Rollback any existing transaction to avoid "aborted transaction" errors
     db.session.rollback()
     
@@ -533,3 +597,10 @@ def is_picks_locked(competition):
         picks_locked = time_to_deadline.total_seconds() <= 0
     
     return picks_locked
+
+
+def is_picks_locked(competition):
+    """True when picks cannot be submitted (too early for the series, or past race deadline)."""
+    if is_picks_preseason_locked(competition):
+        return True
+    return is_picks_deadline_passed(competition)

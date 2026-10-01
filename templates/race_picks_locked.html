@@ -4,16 +4,18 @@
   {% from 'includes/mx_icon.html' import mx_icon %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Picks Låsta - {{ competition.name }}</title>
+    <title>{% if preseason_locked %}Picks öppnar snart{% else %}Picks Låsta{% endif %} - {{ competition.name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-4 py-8">
-        <!-- Header -->
         <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ mx_icon('lock') }}  Picks Låsta</h1>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                      {{ mx_icon('lock') }}
+                      {% if preseason_locked %}Picks öppnar snart{% else %}Picks Låsta{% endif %}
+                    </h1>
                     <p class="text-gray-600">{{ competition.name }} - {{ competition.event_date }}</p>
                 </div>
                 <a href="{{ url_for('index') }}" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
@@ -22,7 +24,38 @@
             </div>
         </div>
 
-        <!-- Locked Message -->
+        {% if preseason_locked %}
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-6">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-lg font-medium text-amber-900">
+                        Tippa öppnar {{ picks_open_days_before }} dagar innan serien startar
+                    </h3>
+                    <div class="mt-2 text-sm text-amber-800 space-y-1">
+                        <p>Roster och nummer är inte klara än — därför går det inte att tippa ännu.</p>
+                        {% if picks_opens_on %}
+                        <p class="font-semibold">Öppnar {{ picks_opens_on.strftime('%Y-%m-%d') }}.</p>
+                        {% endif %}
+                        <p>Du kan titta på schemat under tiden.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 class="text-lg font-medium text-blue-800 mb-3">Info</h3>
+            <ul class="text-sm text-blue-700 space-y-2">
+                <li>• Picks öppnar {{ picks_open_days_before }} dagar innan respektive serie (SX / MX / SMX)</li>
+                <li>• När fönstret är öppet låses picks 2 timmar före race (eller vid kval om det är satt)</li>
+                <li>• Schema &amp; banor går fortfarande att kolla</li>
+            </ul>
+        </div>
+        {% else %}
         <div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
@@ -42,9 +75,8 @@
             </div>
         </div>
 
-        <!-- Information -->
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 class="text-lg font-medium text-blue-800 mb-3">ℹ️ Information</h3>
+            <h3 class="text-lg font-medium text-blue-800 mb-3">Info</h3>
             <ul class="text-sm text-blue-700 space-y-2">
                 <li>• Picks låses 2 timmar före racet startar</li>
                 <li>• Du kan se dina val på huvudsidan</li>
@@ -52,6 +84,7 @@
                 <li>• Nästa race kommer att ha öppna picks</li>
             </ul>
         </div>
+        {% endif %}
     </div>
 </body>
 </html>

@@ -44,7 +44,10 @@ from services.picks_lock import (
     _SV_MONTHS,
     _competition_race_schedule,
     get_current_time,
+    is_picks_deadline_passed,
     is_picks_locked,
+    is_picks_preseason_locked,
+    picks_preseason_opens_on,
 )
 from services.results_import import (
     _FIRST_NAME_ALIASES,
@@ -338,7 +341,7 @@ def _auto_ensure_picks_snapshots_if_locked(comp: Competition | None) -> None:
     if comp_id in _PICKS_SNAPSHOT_AUTO_DONE:
         return
     try:
-        if not is_picks_locked(comp):
+        if not is_picks_deadline_passed(comp):
             return
     except Exception:
         return
@@ -1135,11 +1138,11 @@ def _next_open_picks_competition() -> Competition | None:
 
 
 def _can_view_other_users_picks(comp: Competition) -> bool:
-    """Tillåt visning när picks är låsta eller race är färdigt."""
+    """Tillåt visning när race-deadline passerat eller race är färdigt (inte preseason-lås)."""
     has_results = (
         CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
     )
-    return has_results or is_picks_locked(comp)
+    return has_results or is_picks_deadline_passed(comp)
 
 
 def _competition_for_viewing_other_picks(
@@ -6742,9 +6745,9 @@ def _crowd_scores_for_competition(target: Competition, rider_ids: set[int]) -> d
     scores = defaultdict(float)
     comp_id = int(target.id)
 
-    # Prefer snapshots once picks are locked (stable even if live rows change later)
+    # Prefer snapshots once race deadline has passed (stable even if live rows change later)
     try:
-        locked = is_picks_locked(target)
+        locked = is_picks_deadline_passed(target)
     except Exception:
         locked = False
 
@@ -12269,13 +12272,18 @@ def race_picks_page(competition_id):
     
     # Use the unified picks lock check function
     picks_locked = is_picks_locked(comp)
+    preseason_locked = is_picks_preseason_locked(comp)
+    opens_on = picks_preseason_opens_on(comp) if preseason_locked else None
     
     # If picks are locked, show locked page instead of redirect
     if picks_locked:
         return render_template(
             "race_picks_locked.html",
             competition=comp,
-            picks_locked=True
+            picks_locked=True,
+            preseason_locked=preseason_locked,
+            picks_opens_on=opens_on,
+            picks_open_days_before=14,
         )
 
     # 1) Hämta OUT-förare för detta race
