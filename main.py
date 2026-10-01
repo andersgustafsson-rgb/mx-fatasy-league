@@ -2549,6 +2549,13 @@ def admin_seed_ama_2027():
 
         global _SERIES_STATUS_CACHE
         info = ensure_ama_2027_calendar(get_timezone_for_track=get_track_timezone)
+        try:
+            from trackmap_utils import ensure_sx_2027_trackmap_images
+
+            maps_info = ensure_sx_2027_trackmap_images()
+            info = {**info, "trackmaps": maps_info}
+        except Exception as map_err:
+            info = {**info, "trackmaps_error": str(map_err)}
         _SERIES_STATUS_CACHE = None
         return jsonify({"message": "AMA 2027 calendar seeded/verified", **info})
     except Exception as e:
@@ -28009,6 +28016,12 @@ def init_database():
                 except Exception as seed_err:
                     print(f"Warning: AMA 2027 calendar seed failed: {seed_err}")
                 try:
+                    from trackmap_utils import ensure_sx_2027_trackmap_images
+
+                    ensure_sx_2027_trackmap_images()
+                except Exception as seed_err:
+                    print(f"Warning: SX 2027 track maps seed failed: {seed_err}")
+                try:
                     ensure_smx_2026_competition_meta()
                 except Exception as seed_err:
                     print(f"Warning: SMX 2026 competition meta fix failed: {seed_err}")
@@ -28293,6 +28306,12 @@ if init_success:
                 print(f"✅ Auto-created {created} track map records on startup")
             else:
                 print(f"Found {existing_images} existing track map images, skipping creation")
+            try:
+                from trackmap_utils import ensure_sx_2027_trackmap_images
+
+                ensure_sx_2027_trackmap_images()
+            except Exception as map_err:
+                print(f"Warning: SX 2027 track maps on startup: {map_err}")
     except Exception as e:
         print(f"❌ Error auto-creating track maps on startup: {e}")
 else:

@@ -22,6 +22,78 @@ MX_NAME_MATCH_TOKENS: dict[str, list[str]] = {
     "Ironman National": ["ironman"],
 }
 
+# Official 2027 SX track maps (supercrosslive.com, Oct 2026 release — first four)
+SX_2027_TRACKMAP_FILES: dict[str, list[str]] = {
+    "Anaheim 1": ["trackmaps/2027/anaheim1.jpg"],
+    "San Diego": ["trackmaps/2027/sandiego.jpg"],
+    "Anaheim 2": ["trackmaps/2027/anaheim2.jpg"],
+    "Baltimore": ["trackmaps/2027/baltimore.jpg"],
+}
+
+
+def competition_event_year(competition) -> Optional[int]:
+    ed = getattr(competition, "event_date", None)
+    if ed is None:
+        return None
+    try:
+        return int(ed.year)
+    except Exception:
+        return None
+
+
+def resolve_sx_2027_trackmap_urls(competition_name: str) -> list[str]:
+    name = (competition_name or "").strip()
+    rels = SX_2027_TRACKMAP_FILES.get(name) or []
+    return [r for r in rels if (Path("static") / r).is_file()]
+
+
+def ensure_sx_2027_trackmap_images() -> dict[str, Any]:
+    """Attach released 2027 SX track maps to CompetitionImage (year-scoped)."""
+    from models import Competition, CompetitionImage, Series, db
+
+    sx = Series.query.filter_by(name="Supercross", year=2027).first()
+    if not sx:
+        return {"ok": False, "reason": "no_sx_2027_series"}
+
+    created = 0
+    updated = 0
+    for name, rels in SX_2027_TRACKMAP_FILES.items():
+        existing_files = [r for r in rels if (Path("static") / r).is_file()]
+        if not existing_files:
+            continue
+        image_url = existing_files[0]
+        comp = Competition.query.filter_by(name=name, series_id=sx.id).first()
+        if not comp:
+            continue
+        rows = (
+            CompetitionImage.query.filter_by(competition_id=comp.id)
+            .order_by(CompetitionImage.sort_order)
+            .all()
+        )
+        if not rows:
+            db.session.add(
+                CompetitionImage(
+                    competition_id=comp.id,
+                    image_url=image_url,
+                    sort_order=0,
+                )
+            )
+            created += 1
+            continue
+        primary = rows[0]
+        if (primary.image_url or "").strip() != image_url:
+            primary.image_url = image_url
+            updated += 1
+        # Drop extras that point at old compressed 2026 maps for this 2027 row
+        for extra in rows[1:]:
+            db.session.delete(extra)
+
+    if created or updated:
+        db.session.commit()
+    print(f"[TRACKMAP-2027] SX maps created={created} updated={updated}")
+    return {"ok": True, "created": created, "updated": updated}
+
+
 # Official 2026 SMX playoff maps from supermotocross.com/playoffs/
 SMX_TRACKMAP_FILES: dict[str, list[str]] = {
     "SMX Playoff 1": [
@@ -347,6 +419,12 @@ def race_background_static_url(competition) -> Optional[str]:
     name = getattr(competition, "name", None) or ""
     series = (getattr(competition, "series", None) or "").strip().upper()
 
+    year = competition_event_year(competition)
+    if series == "SX" and year and year >= 2027:
+        urls = resolve_sx_2027_trackmap_urls(name)
+        if urls:
+            return urls[0]
+
     if is_mxgp_competition(competition):
         urls = resolve_mxgp_trackmap_urls(name)
         return urls[0] if urls else None
@@ -489,6 +567,12 @@ def get_trackmaps_for_competition(competition) -> list:
 
     if valid_db:
         return valid_db
+
+    year = competition_event_year(competition)
+    if series == "SX" and year and year >= 2027:
+        urls = resolve_sx_2027_trackmap_urls(competition.name or "")
+        if urls:
+            return as_trackmap_image_objects(urls)
 
     if is_smx_competition(competition):
         urls = resolve_smx_trackmap_urls(competition.name or "")
