@@ -11906,7 +11906,7 @@ def series_page(series_id):
 
         next_race_bg_url = race_background_static_url(next_race) if next_race else None
         if next_race and (getattr(next_race, "series", None) or "").upper() == "MXON":
-            next_race_bg_url = "images/mxon/ernee_aerial.jpg"
+            next_race_bg_url = "images/mxon/ernee_trackmap.jpg"
         
         # Simple template render with all required variables
         print(f"DEBUG: About to render series_page.html for series {series_id}")
@@ -12206,11 +12206,11 @@ def mxon_picks_page(competition_id):
         initial_class = get_user_class_picks(uid, int(comp.id))
 
     schedule = _competition_race_schedule(comp)
-    hero_image = "/static/images/mxon/ernee_layout.png"
+    hero_image = "/static/images/mxon/ernee_trackmap.jpg"
     try:
         from pathlib import Path
 
-        if not (Path("static") / "images/mxon/ernee_layout.png").is_file():
+        if not (Path("static") / "images/mxon/ernee_trackmap.jpg").is_file():
             hero_image = "/static/images/mxon/ernee_aerial.jpg"
     except Exception:
         pass

@@ -97,8 +97,8 @@ _CODE_TO_ALPHA2 = {
 }
 
 COMP_NAME = "MXoN Ernée 2026"
-# Tippa / CompetitionImage: banlayout. Serie-kort: aerial (CSS), separat fil.
-TRACK_IMAGE_REL = "images/mxon/ernee_layout.png"
+# Tippa / CompetitionImage: flygfoto av banan. Serie-kort: samma (CSS).
+TRACK_IMAGE_REL = "images/mxon/ernee_trackmap.jpg"
 TRACK_IMAGE_STATIC = TRACK_IMAGE_REL
 AERIAL_IMAGE_REL = "images/mxon/ernee_aerial.jpg"
 
@@ -552,7 +552,7 @@ def ensure_mxon_2026(*, attach_track_image: bool = True) -> dict:
 
 
 def _ensure_ernee_track_image(comp: Competition) -> bool:
-    """Attach CompetitionImage pointing at static/images/mxon/ernee_2026.jpg."""
+    """Attach CompetitionImage pointing at the Ernée aerial track photo."""
     root = Path(__file__).resolve().parent
     abs_path = root / "static" / TRACK_IMAGE_REL
     abs_path.parent.mkdir(parents=True, exist_ok=True)

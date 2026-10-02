@@ -469,7 +469,7 @@ def race_background_static_url(competition) -> Optional[str]:
         candidates.append("wsx_hero")
 
     if series == "MXON":
-        for rel in ("images/mxon/ernee_layout.png", "images/mxon/ernee_aerial.jpg", "images/mxon/ernee_2026.jpg"):
+        for rel in ("images/mxon/ernee_trackmap.jpg", "images/mxon/ernee_aerial.jpg", "images/mxon/ernee_2026.jpg"):
             if Path(f"static/{rel}").is_file():
                 return rel
         return None
@@ -564,7 +564,7 @@ def get_trackmaps_for_competition(competition) -> list:
                 urls.append(url)
                 seen.add(url)
         for mxon_rel in (
-            "images/mxon/ernee_layout.png",
+            "images/mxon/ernee_trackmap.jpg",
             "images/mxon/ernee_aerial.jpg",
             "images/mxon/ernee_2026.jpg",
         ):
