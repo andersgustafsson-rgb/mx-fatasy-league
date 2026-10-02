@@ -1435,7 +1435,7 @@ Hvordan vil du gerne, at vi går videre?
 
 1. Tag det, der er — vi sender ${stock} stk. og tilbagebetaler en eventuel difference efter gældende betalingsmetode.
 2. Stryg varen/ordren — vi fjerner ${prod} (eller annullerer ordren) og tilbagebetaler efter gældende betalingsmetode.
-3. Send øvrige varer — hvis ordren indeholder flere produkter, sender vi dem nu, og ${prod} stryges eller sendes delvist efter dit valg ovenfor.
+3. Send øvrige varer nu — hvis ordren indeholder flere produkter, sender vi dem uden at vente. Skriv, om ${prod} skal sendes delvist (${stock} stk.) eller stryges.
 
 Svar gerne på denne mail med, hvilket alternativ der passer dig bedst, så hjælper vi dig videre.
 
@@ -1731,7 +1731,7 @@ How would you like us to proceed?
 
 1. Take what is available — we ship ${stock} and refund any difference according to your payment method.
 2. Remove the item / cancel — we remove ${prod} (or cancel the order) and refund according to your payment method.
-3. Ship the rest of the order — if the order contains other products, we ship those now, and ${prod} is removed or partially shipped based on your choice above.
+3. Ship the rest of the order now — if the order contains other products, we ship those without waiting. Let us know whether ${prod} should ship partially (${stock}) or be removed.
 
 Please reply with the option that suits you best, and we will take it from there.
 
@@ -2348,8 +2348,12 @@ async function translateMailTo(targetLang) {
   if (btn) btn.textContent = "Översätter…";
   setTranslateStatus(`Översätter till ${label}…`);
 
-  // Prefer the language selector over "auto" — auto misreads slang (Tjena→Vente).
-  const source = cleanStr(els.language?.value) || "sv";
+  // SPRÅK = mallens målspråk, inte alltid källan till fri text i Svar.
+  // Om den redan är t.ex. "Danska" och man trycker → Danska blev det da→da = no-op.
+  let source = cleanStr(els.language?.value) || "sv";
+  if (source === targetLang) {
+    source = targetLang === "sv" ? "da" : "sv";
+  }
   try {
     let subjectOut = "";
     let bodyOut = "";
@@ -2384,14 +2388,14 @@ async function translateMailTo(targetLang) {
     setTranslateStatus(err?.message || "Översättning misslyckades.", true);
   } finally {
     const defaults = {
-      sv: "Översätt till svenska",
-      da: "Översätt till danska",
-      en: "Översätt till engelska",
+      sv: "→ Svenska",
+      da: "→ Danska",
+      en: "→ Engelska",
     };
     for (const [lang, el] of Object.entries(btnMap)) {
       if (!el) continue;
       el.disabled = false;
-      if (lang === targetLang) el.textContent = oldLabel || defaults[lang];
+      el.textContent = defaults[lang] || oldLabel || el.textContent;
     }
   }
 }

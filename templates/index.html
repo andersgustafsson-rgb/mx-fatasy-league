@@ -1779,6 +1779,17 @@
       background: rgba(127, 29, 29, 0.25);
       color: #fecaca;
     }
+    .home-sidebar-foot__btn--admin {
+      border-color: rgba(234, 179, 8, 0.45);
+      background: rgba(120, 53, 15, 0.35);
+      color: #fde68a;
+      font-weight: 700;
+    }
+    .home-sidebar-foot__btn--admin:hover {
+      border-color: rgba(250, 204, 21, 0.65);
+      background: rgba(161, 98, 7, 0.45);
+      color: #fef3c7;
+    }
     .home-sidebar-guest-title {
       margin: 0;
       font-size: 1rem;
@@ -2539,6 +2550,9 @@
               </button>
               <a href="{{ url_for('manual_page') }}" class="home-sidebar-foot__btn home-sidebar-foot__page" target="_blank" rel="noopener" data-i18n="tab.manual">Manual</a>
               <button type="button" class="tab-btn home-sidebar-foot__btn settings-btn" data-tab="settings" data-i18n="tab.settings">Inställningar</button>
+              {% if is_admin %}
+              <a href="{{ url_for('admin_page') }}" class="home-sidebar-foot__btn home-sidebar-foot__btn--admin">Admin</a>
+              {% endif %}
               <a href="{{ url_for('logout') }}" class="home-sidebar-foot__btn home-sidebar-foot__btn--out">Logga ut</a>
               <div class="mx-lang-toggle home-sidebar-lang" role="group" aria-label="Välj språk / Choose language">
                 <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>
@@ -3472,15 +3486,6 @@
               </div>
               
 
-              {% if is_admin or (username and username|lower in ['test', 'spliffan']) %}
-              <div class="bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg">
-                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4">Admin & System</h2>
-                <div class="rp-btn-stack">
-                  <a href="{{ url_for('admin_page') }}" class="rp-btn rp-btn--block rp-btn--gold">Admin Panel</a>
-                  <a href="{{ url_for('admin_users') }}" class="rp-btn rp-btn--block rp-btn--accent">Användare</a>
-                </div>
-              </div>
-              {% endif %}
             </div>
           </div>
         </div>
