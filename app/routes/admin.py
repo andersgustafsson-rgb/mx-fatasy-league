@@ -53,7 +53,7 @@ def get_today() -> date:
 
 
 def is_admin_user() -> bool:
-	"""Check if current user is admin (username or user_id session)."""
+	"""Check if current user is admin via DB flag only (no username hardcodes)."""
 	username = session.get("username")
 	user_id = session.get("user_id")
 	try:
@@ -71,7 +71,7 @@ def is_admin_user() -> bool:
 			return True
 	except Exception:
 		pass
-	return bool(username == "test")
+	return False
 
 
 def _requested_next_path() -> str:

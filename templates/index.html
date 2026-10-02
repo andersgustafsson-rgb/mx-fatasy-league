@@ -3456,6 +3456,20 @@
                   {% endif %}
                 </div>
               </div>
+
+              <div class="bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg" id="settings-pwa-card">
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-2"><span class="mx-heading-icon">{{ mx_icon('smartphone') }}<span>App på mobilen</span></span></h2>
+                <p id="settings-pwa-text" class="text-sm text-slate-300 mb-4">
+                  Lägg MX Fantasy på hemskärmen så den öppnas som en app. Funkar även om genvägen försvunnit.
+                </p>
+                <div class="rp-btn-stack">
+                  <button type="button" id="settings-pwa-install-btn" class="rp-btn rp-btn--block rp-btn--accent hidden">Installera / Lägg till</button>
+                  <button type="button" id="settings-pwa-how-btn" class="rp-btn rp-btn--block rp-btn--secondary">Visa hur man gör</button>
+                </div>
+                <div id="settings-pwa-steps" class="hidden mt-4 rounded-lg border border-slate-600/50 bg-slate-900/50 p-3 text-sm text-slate-300 space-y-2">
+                  <p id="settings-pwa-steps-body"></p>
+                </div>
+              </div>
               
 
               {% if is_admin or (username and username|lower in ['test', 'spliffan']) %}
@@ -7564,28 +7578,32 @@
       });
     })();
 
-    // PWA install prompt (Android/Chrome) + iOS instructions
+    // PWA install: homepage banner + permanent Settings card
     (function(){
       const banner = document.getElementById('pwa-install-banner');
       const btn = document.getElementById('pwa-install-btn');
       const closeBtn = document.getElementById('pwa-install-close');
       const txt = document.getElementById('pwa-install-text');
       const help = document.getElementById('pwa-install-help');
-      if (!banner || !btn || !closeBtn || !txt) return;
+      const settingsBtn = document.getElementById('settings-pwa-install-btn');
+      const settingsHow = document.getElementById('settings-pwa-how-btn');
+      const settingsText = document.getElementById('settings-pwa-text');
+      const settingsSteps = document.getElementById('settings-pwa-steps');
+      const settingsStepsBody = document.getElementById('settings-pwa-steps-body');
 
       const DISMISS_KEY = 'pwa_install_banner_dismissed_v1';
-      if (localStorage.getItem(DISMISS_KEY) === '1') return;
+      const bannerDismissed = localStorage.getItem(DISMISS_KEY) === '1';
 
-      const isStandalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+      const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+        || window.navigator.standalone === true;
       const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
       const isSafari = isIOS && /safari/i.test(navigator.userAgent) && !/crios|fxios|edgios/i.test(navigator.userAgent);
-
-      if (isStandalone) return;
+      const isAndroid = /android/i.test(navigator.userAgent);
 
       let deferredPrompt = null;
 
-      const show = () => banner.classList.remove('hidden');
-      const hide = () => banner.classList.add('hidden');
+      const showBanner = () => { if (banner) banner.classList.remove('hidden'); };
+      const hideBanner = () => { if (banner) banner.classList.add('hidden'); };
 
       const toast = (msg, kind) => {
         try {
@@ -7603,47 +7621,122 @@
         } catch (_) {}
       };
 
-      closeBtn.addEventListener('click', () => {
-        localStorage.setItem(DISMISS_KEY, '1');
-        hide();
-      });
+      const howText = () => {
+        if (isIOS) {
+          return 'iPhone/iPad (Safari):\n1. Öppna mx-fantasy.se i Safari\n2. Tryck Dela (rutan med pilen)\n3. Välj “Lägg till på hemskärmen”\n4. Bekräfta — ikonen dyker upp på hemskärmen';
+        }
+        if (isAndroid) {
+          return 'Android (Chrome):\n1. Tryck “Installera / Lägg till” här ovan (eller menyn ⋮)\n2. Välj “Installera app” / “Lägg till på startskärmen”\n3. Bekräfta';
+        }
+        return 'Dator: använd Chrome/Edge-menyn → “Installera MX Fantasy…” om den syns.\nMobil: öppna sajten i Safari (iPhone) eller Chrome (Android).';
+      };
 
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        btn.classList.remove('hidden');
-        btn.onclick = async () => {
-          if (!deferredPrompt) return;
+      const syncSettingsUi = () => {
+        if (settingsText) {
+          if (isStandalone) {
+            settingsText.textContent = 'Appen körs redan från hemskärmen på den här enheten.';
+          } else {
+            settingsText.textContent = 'Lägg MX Fantasy på hemskärmen så den öppnas som en app. Funkar även om genvägen försvunnit.';
+          }
+        }
+        if (settingsBtn) {
+          if (isStandalone) {
+            settingsBtn.classList.add('hidden');
+          } else if (deferredPrompt) {
+            settingsBtn.classList.remove('hidden');
+            settingsBtn.textContent = 'Installera / Lägg till';
+            settingsBtn.disabled = false;
+          } else if (isIOS || isAndroid) {
+            // Always show a way back in — opens steps if native prompt missing
+            settingsBtn.classList.remove('hidden');
+            settingsBtn.textContent = isIOS ? 'Visa iPhone-steg' : 'Installera / Lägg till';
+            settingsBtn.disabled = false;
+          } else {
+            settingsBtn.classList.remove('hidden');
+            settingsBtn.textContent = 'Visa hur man gör';
+          }
+        }
+        if (settingsStepsBody) settingsStepsBody.textContent = howText();
+      };
+
+      const runInstall = async (sourceBtn) => {
+        if (deferredPrompt) {
           try {
-            btn.disabled = true;
-            btn.textContent = 'Installerar…';
+            if (sourceBtn) {
+              sourceBtn.disabled = true;
+              sourceBtn.textContent = 'Installerar…';
+            }
             await deferredPrompt.prompt();
-            // userChoice gives explicit feedback in Chrome/Android
             const choice = await deferredPrompt.userChoice;
             if (choice && choice.outcome === 'accepted') {
               toast('Installerad! Hitta den i app-listan.', 'ok');
             } else {
               toast('Installeringen avbröts.', 'warn');
             }
-          } catch (_) {}
+          } catch (_) {
+            toast('Kunde inte öppna installeringen.', 'warn');
+          }
           deferredPrompt = null;
-          hide();
-        };
-        show();
+          hideBanner();
+          syncSettingsUi();
+          return;
+        }
+        // No native prompt (iOS / already dismissed by browser) → show steps
+        if (settingsSteps) {
+          settingsSteps.classList.remove('hidden');
+          try {
+            document.getElementById('settings')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (_) {}
+        }
+        toast(isIOS ? 'Följ stegen för iPhone nedan.' : 'Följ stegen nedan (eller webbläsarmenyn ⋮).', 'warn');
+      };
+
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+          localStorage.setItem(DISMISS_KEY, '1');
+          hideBanner();
+        });
+      }
+
+      if (btn) {
+        btn.addEventListener('click', () => runInstall(btn));
+      }
+      if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => runInstall(settingsBtn));
+      }
+      if (settingsHow) {
+        settingsHow.addEventListener('click', () => {
+          if (settingsSteps) {
+            settingsSteps.classList.toggle('hidden');
+            if (settingsStepsBody) settingsStepsBody.textContent = howText();
+          }
+        });
+      }
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (btn) btn.classList.remove('hidden');
+        syncSettingsUi();
+        // Homepage banner is optional — Settings always keeps the way back
+        if (!bannerDismissed && !isStandalone) showBanner();
       });
 
-      // Some browsers fire this when installation completes
       window.addEventListener('appinstalled', () => {
         toast('Installerad! Hitta den i app-listan.', 'ok');
-        hide();
+        hideBanner();
+        deferredPrompt = null;
+        syncSettingsUi();
       });
 
-      // iOS: no beforeinstallprompt → show instructions banner
-      if (isSafari) {
-        txt.textContent = 'På iPhone: Tryck Dela → Lägg till på hemskärmen.';
+      // iOS Safari: banner once (unless dismissed), Settings always available
+      if (isSafari && !isStandalone) {
+        if (txt) txt.textContent = 'På iPhone: Tryck Dela → Lägg till på hemskärmen.';
         if (help) help.classList.remove('hidden');
-        show();
+        if (!bannerDismissed) showBanner();
       }
+
+      syncSettingsUi();
     })();
 
     // iOS PWA splash overlay control (display is CSS-controlled for instant show)

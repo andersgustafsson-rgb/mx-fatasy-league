@@ -16,7 +16,7 @@ from models import (
 from datetime import datetime
 
 def is_admin_user() -> bool:
-	"""Check if current user is admin (username or user_id session)."""
+	"""Check if current user is admin via DB flag only (no username hardcodes)."""
 	username = session.get("username")
 	user_id = session.get("user_id")
 	try:
@@ -34,8 +34,7 @@ def is_admin_user() -> bool:
 			return True
 	except Exception:
 		pass
-	# Fallback to old method for backward compatibility
-	return bool(username == "test")
+	return False
 
 
 def _ensure_quali_start_time_column() -> None:

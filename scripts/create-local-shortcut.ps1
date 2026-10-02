@@ -1,21 +1,35 @@
-# Skapar genvag pa skrivbordet till start_local.bat
+# Skapar genvagar: start (dolt) + stopp — skrivbord och Start-meny
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$target = Join-Path $projectRoot "start_local.bat"
+$startTarget = Join-Path $projectRoot "start_local_hidden.vbs"
+$stopTarget = Join-Path $projectRoot "stop_local.bat"
+$icon = Join-Path $projectRoot "static\icons\mx_fantasy_local.ico"
 $desktop = [Environment]::GetFolderPath("Desktop")
-$lnk = Join-Path $desktop "MX Fantasy (lokalt).lnk"
+$startMenu = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs"
 
-if (-not (Test-Path $target)) {
-    Write-Error "Hittar inte $target"
+if (-not (Test-Path $startTarget)) {
+    Write-Error "Hittar inte $startTarget"
     exit 1
 }
 
-$ws = New-Object -ComObject WScript.Shell
-$shortcut = $ws.CreateShortcut($lnk)
-$shortcut.TargetPath = $target
-$shortcut.WorkingDirectory = $projectRoot
-$shortcut.WindowStyle = 1
-$shortcut.Description = "Starta MX Fantasy League lokalt (SQLite, main.py)"
-$shortcut.Save()
+function New-MxFantasyShortcut([string]$lnkPath, [string]$target, [string]$description) {
+    $ws = New-Object -ComObject WScript.Shell
+    $shortcut = $ws.CreateShortcut($lnkPath)
+    $shortcut.TargetPath = $target
+    $shortcut.WorkingDirectory = $projectRoot
+    $shortcut.WindowStyle = 1
+    $shortcut.Description = $description
+    if (Test-Path $icon) {
+        $shortcut.IconLocation = "$icon,0"
+    }
+    $shortcut.Save()
+    Write-Host "  $lnkPath"
+}
 
-Write-Host "Genvag skapad:"
-Write-Host "  $lnk"
+Write-Host "Genvagar skapade:"
+New-MxFantasyShortcut (Join-Path $desktop "MX Fantasy (lokalt).lnk") $startTarget "Starta MX Fantasy lokalt (doltt fonster)"
+New-MxFantasyShortcut (Join-Path $startMenu "MX Fantasy (lokalt).lnk") $startTarget "Starta MX Fantasy lokalt (doltt fonster)"
+New-MxFantasyShortcut (Join-Path $desktop "MX Fantasy (stopp).lnk") $stopTarget "Stoppa lokal MX Fantasy-server"
+New-MxFantasyShortcut (Join-Path $startMenu "MX Fantasy (stopp).lnk") $stopTarget "Stoppa lokal MX Fantasy-server"
+Write-Host ""
+Write-Host "Start: sok 'MX Fantasy (lokalt)'"
+Write-Host "Stopp: sok 'MX Fantasy (stopp)'"

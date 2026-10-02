@@ -67,7 +67,11 @@ echo.
 echo.
 echo Startar servern...
 echo   Oppna:  http://127.0.0.1:%PORT%/
-echo   Stopp:  Ctrl+C i detta fonster
+if defined MX_LOCAL_HIDDEN (
+  echo   Lage: dold ^(logg: instance\local_server.log^)
+) else (
+  echo   Stopp:  Ctrl+C i detta fonster
+)
 echo.
 
 timeout /t 2 /nobreak >nul
@@ -91,4 +95,5 @@ if errorlevel 1 (
 
 echo.
 echo Servern stoppad.
+if defined MX_LOCAL_HIDDEN exit /b
 pause

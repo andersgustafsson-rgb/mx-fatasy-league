@@ -20,6 +20,7 @@ from flask import (
     make_response,
     Response,
     g,
+    abort,
 )
 import re
 import threading
@@ -2842,7 +2843,7 @@ def admin_mxon_score(competition_id: int):
 
 
 def is_admin_user():
-    """Check if current user is admin (username or user_id session)."""
+    """Check if current user is admin via DB flag only (no username hardcodes)."""
     username = session.get("username")
     user_id = session.get("user_id")
     try:
@@ -2859,10 +2860,6 @@ def is_admin_user():
             if user.username and not username:
                 session["username"] = user.username
             return True
-        # Hardcoded local/dev admin usernames (flag may be off after DB sync)
-        uname = (user.username if user else username) or ""
-        if uname.lower() in ("test", "spliffan"):
-            return True
         # Log soft-misses for admin POSTs (helps diagnose "unauthorized" after deploy)
         if username or user_id:
             print(
@@ -2871,8 +2868,28 @@ def is_admin_user():
             )
     except Exception as e:
         print(f"Error checking is_admin flag: {e}")
-    # Fallback to old method for backward compatibility
-    return bool(username and str(username).lower() == "test")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+    return False
+
+
+def _dev_bootstrap_allowed() -> bool:
+    """Legacy create/debug bootstrap URLs — off by default; never on Render."""
+    if str(os.environ.get("RENDER", "")).lower() in ("1", "true", "yes"):
+        return False
+    return str(os.environ.get("ALLOW_DEV_BOOTSTRAP", "")).strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def _reject_dev_bootstrap():
+    """404 so scanners don't learn that the route exists."""
+    abort(404)
+
 
 def check_session_timeout():
     """Check if session has expired and logout if needed"""
@@ -12801,6 +12818,8 @@ def create_league():
 @app.get("/reset_database")
 def reset_database():
     """Reset database - useful when database gets corrupted"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         # Drop all tables
         db.drop_all()
@@ -27120,6 +27139,8 @@ def find_duplicate_riders():
 
 @app.get("/routes")
 def list_routes():
+    if not is_admin_user():
+        _reject_dev_bootstrap()
     output = []
     for rule in app.url_map.iter_rules():
         methods = ",".join(sorted(rule.methods))
@@ -27129,6 +27150,8 @@ def list_routes():
 @app.get("/create_user_now")
 def create_user_now_route():
     """Create user immediately"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         # Create test user
         existing_user = User.query.filter_by(username='test').first()
@@ -27155,6 +27178,8 @@ def create_user_now_route():
 @app.get("/create_test2_user")
 def create_test2_user_route():
     """Create test2 user"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         # Create test2 user
         existing_user = User.query.filter_by(username='test2').first()
@@ -27181,6 +27206,8 @@ def create_test2_user_route():
 @app.get("/fix_user_roles")
 def fix_user_roles_route():
     """Fix user roles - test=admin, test2=normal user"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         # Update test user (admin)
         test_user = User.query.filter_by(username='test').first()
@@ -27237,6 +27264,8 @@ def fix_user_roles_route():
 @app.get("/force_create_users")
 def force_create_users_route():
     """Force create users - delete and recreate"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         # Delete existing users
         User.query.filter(User.username.in_(['test', 'test2'])).delete()
@@ -27366,6 +27395,8 @@ def fix_database_route():
 @app.get("/create_test_user")
 def create_test_user_route():
     """Create test user and all data via web route"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     # Create test user
     existing_user = User.query.filter_by(username='test').first()
     if not existing_user:
@@ -27533,6 +27564,8 @@ def check_data_route():
 @app.get("/reset_database")
 def reset_database_route():
     """Reset database - drop all tables and recreate"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         with app.app_context():
             print("Dropping all tables...")
@@ -27563,6 +27596,8 @@ def reset_database_route():
 @app.get("/force_create_data")
 def force_create_data_route():
     """Force create all data"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     # Clear existing data
     Competition.query.delete()
     # Don't delete riders - use rider management as master list
@@ -28373,6 +28408,8 @@ else:
 @app.get("/create_test_data")
 def create_test_data_route():
     """Manually create test data - useful for development"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     if not is_admin_user():
         return redirect(url_for("login"))
     
@@ -28408,6 +28445,8 @@ def create_test_data_route():
 @app.get("/force_recreate_data")
 def force_recreate_data():
     """Force recreate all data - clears everything and recreates"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     if not is_admin_user():
         return redirect(url_for("login"))
     
@@ -28696,8 +28735,9 @@ def quick_anaheim2_simulation():
 
 @app.get("/debug_users")
 def debug_users():
-    """Debug route to check which users exist - no login required for testing"""
-    # Skip login check for debugging
+    """Debug route to check which users exist — admin only"""
+    if not is_admin_user():
+        _reject_dev_bootstrap()
     try:
         users = User.query.all()
         user_list = []
@@ -28721,7 +28761,9 @@ def debug_users():
 
 @app.get("/simple_debug")
 def simple_debug():
-    """Simple debug route - no login required"""
+    """Simple debug route — admin only"""
+    if not is_admin_user():
+        _reject_dev_bootstrap()
     try:
         users = User.query.all()
         result = f"Total users: {len(users)}\n"
@@ -29283,8 +29325,8 @@ def debug_anaheim1():
 @app.get("/debug_database")
 def debug_database():
     """Debug database configuration and status"""
-    if "user_id" not in session:
-        return _redirect_to_login()
+    if not is_admin_user():
+        _reject_dev_bootstrap()
     
     try:
         with app.app_context():
@@ -29754,7 +29796,9 @@ def create_global_simulation_table():
 
 @app.route("/create_admin")
 def create_admin():
-    """Create admin user - emergency route"""
+    """Create admin user - emergency route (dev bootstrap only)"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         # Check if test user exists
         existing_user = User.query.filter_by(username='test').first()
@@ -29790,6 +29834,8 @@ def create_admin():
 @app.route("/migrate_admin_column")
 def migrate_admin_column():
     """Add is_admin column to users table"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         # First, rollback any failed transactions
         db.session.rollback()
@@ -29865,12 +29911,11 @@ def check_user_admin_status():
             try:
                 if hasattr(user, 'is_admin'):
                     has_is_admin_column = True
-                    is_admin = user.is_admin
+                    is_admin = bool(user.is_admin)
                 else:
-                    # Fallback to old method
-                    is_admin = user.username == 'test'
+                    is_admin = False
             except Exception as e:
-                is_admin = user.username == 'test'
+                is_admin = False
             
             user_status.append({
                 'id': user.id,
@@ -30147,7 +30192,9 @@ def fix_anaheim1_duplicates():
 
 @app.route("/create_hampus_admin")
 def create_hampus_admin():
-    """Make Hampus an admin user"""
+    """Make Hampus an admin user (dev bootstrap only)"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         # First ensure is_admin column exists
         try:
@@ -30271,12 +30318,11 @@ def admin_users():
             is_admin = False
             try:
                 if hasattr(user, 'is_admin'):
-                    is_admin = user.is_admin
+                    is_admin = bool(user.is_admin)
                 else:
-                    # Fallback to old method for backward compatibility
-                    is_admin = user.username == 'test'
+                    is_admin = False
             except Exception:
-                is_admin = user.username == 'test'
+                is_admin = False
 
             created_at = getattr(user, "created_at", None)
             is_recent = bool(created_at and created_at >= week_ago)
@@ -30640,11 +30686,13 @@ def cleanup_duplicate_users():
 
 @app.route("/debug_session")
 def debug_session():
-    """Debug session data"""
+    """Debug session data — admin only"""
+    if not is_admin_user():
+        _reject_dev_bootstrap()
     return jsonify({
         "user_id": session.get("user_id"),
         "username": session.get("username"),
-        "is_admin": session.get("username") == "test",
+        "is_admin": True,
         "all_session": dict(session)
     })
 

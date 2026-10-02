@@ -422,8 +422,8 @@ def race_background_static_url(competition) -> Optional[str]:
     year = competition_event_year(competition)
     if series == "SX" and year and year >= 2027:
         urls = resolve_sx_2027_trackmap_urls(name)
-        if urls:
-            return urls[0]
+        # Only official released 2027 maps — never reuse older venue heroes
+        return urls[0] if urls else None
 
     if is_mxgp_competition(competition):
         urls = resolve_mxgp_trackmap_urls(name)
@@ -463,6 +463,10 @@ def race_background_static_url(competition) -> Optional[str]:
             candidates.extend(["southafricangp", "southafrican"])
         elif "swedish" in lower:
             candidates.extend(["swedishgp", "swedish"])
+        elif "zealand" in lower or "christchurch" in lower or "new zealand" in lower:
+            candidates.extend(["newzealandgp", "newzealand", "auckland", "christchurch"])
+        # Shared WSX fallback hero until official track maps land
+        candidates.append("wsx_hero")
 
     if series == "MXON":
         for rel in ("images/mxon/ernee_layout.png", "images/mxon/ernee_aerial.jpg", "images/mxon/ernee_2026.jpg"):
@@ -480,6 +484,10 @@ def race_background_static_url(competition) -> Optional[str]:
             p = base / f"{cand}{ext}"
             if p.is_file():
                 return f"trackmaps/compressed/{cand}{ext}"
+    if series == "WSX":
+        for rel in ("images/wsx_hero.jpg", "trackmaps/compressed/wsx_hero.jpg"):
+            if Path(f"static/{rel}").is_file():
+                return rel
     return None
 
 
@@ -571,8 +579,9 @@ def get_trackmaps_for_competition(competition) -> list:
     year = competition_event_year(competition)
     if series == "SX" and year and year >= 2027:
         urls = resolve_sx_2027_trackmap_urls(competition.name or "")
-        if urls:
-            return as_trackmap_image_objects(urls)
+        # Only the released official maps (Anaheim 1/2, San Diego, Baltimore).
+        # Do not fall back to older compressed venue images for 2027+.
+        return as_trackmap_image_objects(urls) if urls else []
 
     if is_smx_competition(competition):
         urls = resolve_smx_trackmap_urls(competition.name or "")
@@ -582,11 +591,16 @@ def get_trackmaps_for_competition(competition) -> list:
         urls = resolve_mxgp_trackmap_urls(competition.name or "")
         return as_trackmap_image_objects(urls)
 
-    if not is_mx_competition(competition):
-        return []
+    if is_mx_competition(competition):
+        urls = resolve_mx_trackmap_urls(competition.name or "")
+        return as_trackmap_image_objects(urls)
 
-    urls = resolve_mx_trackmap_urls(competition.name or "")
-    return as_trackmap_image_objects(urls)
+    # SX / WSX (and other stadium series): use compressed venue heroes until
+    # official track maps exist — keeps series schedule cards from looking empty.
+    hero = race_background_static_url(competition)
+    if hero:
+        return as_trackmap_image_objects([hero])
+    return []
 
 
 def get_picks_good_to_know(competition) -> list[str]:
