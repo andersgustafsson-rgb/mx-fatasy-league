@@ -7239,7 +7239,63 @@
       } catch (_) {}
     }
 
+    function _nationFlagHtml(n) {
+      if (!n) return '';
+      if (n.flag_url) return `<img src="${n.flag_url}" alt="" class="inline-block w-5 h-3.5 object-cover rounded-sm mr-1.5 align-middle" loading="lazy">`;
+      if (n.flag_emoji) return `<span class="mr-1">${n.flag_emoji}</span>`;
+      return '';
+    }
+
+    function _nationLabel(n) {
+      if (!n) return '?';
+      const code = n.code || '';
+      const name = n.name || code || '?';
+      return code ? `${code} · ${name}` : name;
+    }
+
+    function _renderMxonCrowdSummaryHtml(crowd) {
+      if (!crowd || crowd.kind !== 'mxon') return '';
+      const n = crowd.n_users_with_snapshots_or_picks || crowd.n_lineups || 0;
+      const slots = crowd.slots_nations || {};
+      let inner = '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">';
+      for (let pos = 1; pos <= 5; pos++) {
+        const top = (slots[String(pos)] || [])[0];
+        if (!top) continue;
+        inner += `<div class="rounded-xl bg-gray-900/90 p-3 border border-cyan-500/20">
+          <p class="text-cyan-300 text-[10px] font-bold uppercase tracking-wide mb-2">Plats ${pos} — crowd</p>
+          ${_crowdBarRowHtml(_nationFlagHtml(top) + _nationLabel(top), top.pct)}
+        </div>`;
+      }
+      inner += '</div>';
+      const fav = crowd.class_favorites || {};
+      const classOrder = [
+        ['mxgp', 'MXGP'],
+        ['mx2', 'MX2'],
+        ['open', 'OPEN'],
+      ];
+      const classBits = classOrder.map(([key, label]) => {
+        const row = (fav[key] || [])[0];
+        if (!row) return '';
+        const rider = row.rider_name ? ` · ${row.rider_name}` : '';
+        return `<span class="bg-white/5 px-2 py-1 rounded-lg border border-white/10">${label}: ${_nationFlagHtml(row)}${_nationLabel(row)}${rider} <span class="text-emerald-300">${row.pct}%</span></span>`;
+      }).filter(Boolean).join('');
+      if (classBits) {
+        inner += `<div class="mt-3 rounded-xl bg-gray-900/60 p-3 border border-amber-500/20">
+          <p class="text-amber-300 text-[10px] font-bold uppercase mb-2">Klassfavoriter — crowd</p>
+          <div class="flex flex-wrap gap-2 text-xs text-white/90">${classBits}</div>
+        </div>`;
+      }
+      return `<div class="mb-5 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 to-gray-900/80 p-4">
+        <div class="mb-2">
+          <h4 class="text-emerald-200 font-bold text-sm mx-heading-icon">${typeof mxIcon==='function'?mxIcon('crystal'):''}<span>Fältets favoriter</span></h4>
+        </div>
+        <p class="text-white/45 text-[10px] mb-3">Andelar bland ${n} tippare — topp 5 nationer + klassfavoriter.</p>
+        ${inner}
+      </div>`;
+    }
+
     function _renderCrowdSummaryHtml(crowd, classLabel450, classLabel250, isWSX) {
+      if (crowd && crowd.kind === 'mxon') return _renderMxonCrowdSummaryHtml(crowd);
       if (!crowd || (!crowd.n_lineups && !(crowd.holeshot_450 || []).length && !(crowd.holeshot_250 || []).length && !(crowd.wildcard_top || []).length)) return '';
       const n = crowd.n_users_with_snapshots_or_picks || 0;
       const s450 = crowd.slots_450 && crowd.slots_450['1'] && crowd.slots_450['1'][0];
@@ -7309,7 +7365,10 @@
           return;
         }
         const c = data.crowd;
-        const hasAny = (c.n_lineups > 0) || ((c.holeshot_450 || []).length + (c.holeshot_250 || []).length + (c.wildcard_top || []).length) > 0;
+        const isMXON = (data.competition && String(data.competition.series || '').toUpperCase() === 'MXON') || c.kind === 'mxon';
+        const hasAny = isMXON
+          ? ((c.n_lineups > 0) || Object.keys(c.slots_nations || {}).some(k => (c.slots_nations[k] || []).length))
+          : ((c.n_lineups > 0) || ((c.holeshot_450 || []).length + (c.holeshot_250 || []).length + (c.wildcard_top || []).length) > 0);
         if (!hasAny) {
           wrap.classList.add('hidden');
           return;
@@ -7318,6 +7377,32 @@
         const raceEl = document.getElementById('crowd-teaser-race');
         const body = document.getElementById('crowd-teaser-body');
         if (raceEl) raceEl.textContent = data.competition && data.competition.name ? data.competition.name : '';
+        if (isMXON) {
+          const slots = c.slots_nations || {};
+          let html = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">';
+          for (let pos = 1; pos <= 5; pos++) {
+            const top = (slots[String(pos)] || [])[0];
+            if (!top) continue;
+            html += `<div class="rounded-lg bg-white/5 p-2 border border-cyan-500/20">
+              <p class="text-cyan-300 text-[10px] font-bold uppercase mb-1">Plats ${pos}</p>
+              <div class="flex justify-between text-white text-xs gap-2"><span class="truncate">${_nationFlagHtml(top)}${_nationLabel(top)}</span><span class="text-emerald-300 font-mono">${top.pct}%</span></div>
+            </div>`;
+          }
+          html += '</div>';
+          const fav = c.class_favorites || {};
+          const bits = [];
+          [['mxgp','MXGP'],['mx2','MX2'],['open','OPEN']].forEach(([key, label]) => {
+            const row = (fav[key] || [])[0];
+            if (!row) return;
+            const rider = row.rider_name ? ` ${row.rider_name}` : '';
+            bits.push(`<span class="bg-amber-900/30 px-2 py-1 rounded border border-amber-500/20">${label}: ${_nationFlagHtml(row)}${row.code || ''}${rider} ${row.pct}%</span>`);
+          });
+          if (bits.length) {
+            html += `<div class="flex flex-wrap gap-1.5 mt-2 text-[10px] text-white/85">${bits.join('')}</div>`;
+          }
+          if (body) body.innerHTML = html;
+          return;
+        }
         const isWSX = data.competition && data.competition.series === 'WSX';
         const L450 = isWSX ? 'SX1' : '450';
         const L250 = isWSX ? 'SX2' : '250';
@@ -7380,12 +7465,41 @@
         }
         const usersPicks = Array.isArray(raw) ? raw : (raw.users || []);
         const crowd = (!Array.isArray(raw) && raw.crowd) ? raw.crowd : null;
+        const seriesRaw = (raw.competition && raw.competition.series) || '';
+        const isMXON = String(seriesRaw).toUpperCase() === 'MXON' || (crowd && crowd.kind === 'mxon') || (usersPicks[0] && usersPicks[0].is_mxon);
         
         const isWSX = (usersPicks.length > 0 && usersPicks[0].is_wsx) || {% if view_picks_race and view_picks_race.series == 'WSX' %}true{% else %}false{% endif %};
         const classLabel450 = isWSX ? 'SX1' : '450cc';
         const classLabel250 = isWSX ? 'SX2' : '250cc';
         const crowdBlock = _renderCrowdSummaryHtml(crowd, classLabel450, classLabel250, isWSX);
-        const raceName = window._viewPicksRaceName || '';
+        const raceName = window._viewPicksRaceName || (raw.competition && raw.competition.name) || '';
+
+        const mxonUserCards = usersPicks.map(user => {
+          const nations = user.nations || [];
+          const classes = user.classes || {};
+          const classOrder = [['mxgp','MXGP'],['mx2','MX2'],['open','OPEN']];
+          const classHtml = classOrder.map(([key, label]) => {
+            const row = classes[key];
+            if (!row) return '';
+            const rider = row.rider_name ? ` · ${row.rider_name}` : '';
+            return `<span class="text-white bg-amber-900/25 px-2 py-1 rounded-lg border border-amber-500/20 text-sm">${label}: ${_nationFlagHtml(row)}${_nationLabel(row)}${rider}</span>`;
+          }).filter(Boolean).join('');
+          return `<div class="bg-gray-800/90 rounded-xl p-4 border border-white/5 hover:border-emerald-500/20 transition-colors">
+            <h4 class="text-base font-bold text-white mb-3 flex items-center gap-2"><span class="inline-flex w-8 h-8 rounded-full bg-emerald-600/30 items-center justify-center">${typeof mxIcon==='function'?mxIcon('user'):''}</span>${user.display_name || user.username}</h4>
+            <div class="rounded-lg bg-black/20 p-3 border border-cyan-500/15 mb-3">
+              <h5 class="text-xs font-bold text-cyan-300 uppercase tracking-wide mb-2">Topp 5 nationer</h5>
+              <div class="space-y-1.5">
+                ${nations.length ? nations.map(n => `
+                  <div class="flex items-center gap-2 text-sm">
+                    <span class="text-gray-500 w-6 font-mono text-xs">${n.position}.</span>
+                    <span class="text-white/95">${_nationFlagHtml(n)}${_nationLabel(n)}</span>
+                  </div>
+                `).join('') : '<p class="text-white/50 text-sm">Inga nationstips</p>'}
+              </div>
+            </div>
+            ${classHtml ? `<div class="pt-2 border-t border-white/10"><h5 class="text-xs font-bold text-amber-300 uppercase mb-2">Klassfavoriter</h5><div class="flex flex-wrap gap-2">${classHtml}</div></div>` : ''}
+          </div>`;
+        }).join('');
         
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4';
@@ -7394,7 +7508,7 @@
             <div class="flex justify-between items-start gap-3 mb-4 sticky top-0 bg-gray-900/95 pb-3 border-b border-white/10 z-10">
               <div>
                 <h3 class="text-lg sm:text-xl font-bold text-white">Andra användares picks</h3>
-                <p class="text-white/50 text-xs mt-1">${raceName ? raceName + ' · ' : ''}Jämför lineups — scrolla för alla spelare.</p>
+                <p class="text-white/50 text-xs mt-1">${raceName ? raceName + ' · ' : ''}${isMXON ? 'Jämför topp 5 + klassfavoriter.' : 'Jämför lineups — scrolla för alla spelare.'}</p>
               </div>
               <button type="button" onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-white text-2xl font-bold bg-gray-800 hover:bg-gray-700 rounded-full w-10 h-10 flex items-center justify-center transition-colors shrink-0" aria-label="Stäng">&times;</button>
             </div>
@@ -7404,7 +7518,7 @@
                 <div class="bg-gray-800/80 rounded-xl p-6 text-center border border-white/5">
                   <p class="text-white/90">Inga andra användare har synliga picks ännu.</p>
                 </div>
-              ` : usersPicks.map(user => `
+              ` : (isMXON ? mxonUserCards : usersPicks.map(user => `
                 <div class="bg-gray-800/90 rounded-xl p-4 border border-white/5 hover:border-emerald-500/20 transition-colors">
                   <h4 class="text-base font-bold text-white mb-3 flex items-center gap-2"><span class="inline-flex w-8 h-8 rounded-full bg-emerald-600/30 items-center justify-center">${typeof mxIcon==='function'?mxIcon('user'):''}</span>${user.display_name || user.username}</h4>
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -7447,7 +7561,7 @@
                     </div>
                   ` : ''}
                 </div>
-              `).join('')}
+              `).join(''))}
             </div>
             <div class="mt-6 flex justify-end sticky bottom-0 bg-gray-900/95 pt-3 border-t border-white/10">
               <button type="button" onclick="this.closest('.fixed').remove()" class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2.5 rounded-xl transition-colors font-semibold">Stäng</button>

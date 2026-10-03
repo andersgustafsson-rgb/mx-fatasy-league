@@ -1141,10 +1141,19 @@ def _next_open_picks_competition() -> Competition | None:
 
 def _can_view_other_users_picks(comp: Competition) -> bool:
     """Tillåt visning när race-deadline passerat eller race är färdigt (inte preseason-lås)."""
-    has_results = (
+    if is_picks_deadline_passed(comp):
+        return True
+    series = (getattr(comp, "series", None) or "").upper()
+    if series == "MXON":
+        try:
+            from mxon_fantasy import mxon_has_official_results
+
+            return mxon_has_official_results(int(comp.id))
+        except Exception:
+            return False
+    return (
         CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
     )
-    return has_results or is_picks_deadline_passed(comp)
 
 
 def _competition_for_viewing_other_picks(
@@ -20375,15 +20384,32 @@ def crowd_picks_summary(competition_id):
 
     comp = Competition.query.get_or_404(competition_id)
     picks_locked = is_picks_locked(comp)
-    has_results = CompetitionResult.query.filter_by(competition_id=competition_id).first() is not None
+    series_u = (getattr(comp, "series", None) or "").upper()
+    if series_u == "MXON":
+        try:
+            from mxon_fantasy import mxon_has_official_results
+
+            has_results = mxon_has_official_results(int(competition_id))
+        except Exception:
+            has_results = False
+    else:
+        has_results = (
+            CompetitionResult.query.filter_by(competition_id=competition_id).first()
+            is not None
+        )
 
     if not _can_view_other_users_picks(comp):
         return jsonify({"error": "Picks måste vara låsta eller race färdigt."}), 403
 
     try:
-        summary = _build_crowd_picks_summary(
-            competition_id, comp, ensure_snapshots=picks_locked or has_results
-        )
+        if series_u == "MXON":
+            from mxon_fantasy import build_mxon_crowd_summary
+
+            summary = build_mxon_crowd_summary(int(competition_id))
+        else:
+            summary = _build_crowd_picks_summary(
+                competition_id, comp, ensure_snapshots=picks_locked or has_results
+            )
         return jsonify(
             {
                 "ok": True,
@@ -20404,9 +20430,21 @@ def get_other_users_picks(competition_id):
         
         # Get competition to determine series
         comp = Competition.query.get_or_404(competition_id)
+        series_u = (getattr(comp, "series", None) or "").upper()
         
         picks_locked = is_picks_locked(comp)
-        has_results = CompetitionResult.query.filter_by(competition_id=competition_id).first() is not None
+        if series_u == "MXON":
+            try:
+                from mxon_fantasy import mxon_has_official_results
+
+                has_results = mxon_has_official_results(int(competition_id))
+            except Exception:
+                has_results = False
+        else:
+            has_results = (
+                CompetitionResult.query.filter_by(competition_id=competition_id).first()
+                is not None
+            )
         
         print(f"DEBUG: get_other_users_picks - Competition: {comp.name}, picks_locked: {picks_locked}, has_results: {has_results}")
         
@@ -20414,6 +20452,30 @@ def get_other_users_picks(competition_id):
             error_msg = f"Picks måste vara låsta eller race måste vara färdigt för att se andra användares picks (picks_locked={picks_locked}, has_results={has_results})"
             print(f"DEBUG: get_other_users_picks - Access denied: {error_msg}")
             return jsonify({"error": error_msg}), 403
+
+        if series_u == "MXON":
+            from mxon_fantasy import build_mxon_crowd_summary, list_other_users_mxon_picks
+
+            users_picks = list_other_users_mxon_picks(
+                int(competition_id),
+                exclude_user_id=int(session["user_id"]),
+            )
+            crowd_payload = None
+            try:
+                crowd_payload = build_mxon_crowd_summary(int(competition_id))
+            except Exception as ex_crowd:
+                print(f"WARNING: mxon crowd summary skipped: {ex_crowd}")
+            return jsonify(
+                {
+                    "users": users_picks,
+                    "crowd": crowd_payload,
+                    "competition": {
+                        "id": comp.id,
+                        "name": comp.name,
+                        "series": comp.series,
+                    },
+                }
+            )
 
         # When locked, take snapshots (best-effort) and prefer snapshot data for stability.
         if picks_locked:
@@ -31098,7 +31160,19 @@ def race_countdown():
         picks_locked = is_picks_locked(upcoming_race) if upcoming_race else False
         
         # Check if race has results (is completed)
-        has_results = CompetitionResult.query.filter_by(competition_id=next_race_obj.id).first() is not None
+        series_u = (getattr(next_race_obj, "series", None) or "").upper()
+        if series_u == "MXON":
+            try:
+                from mxon_fantasy import mxon_has_official_results
+
+                has_results = mxon_has_official_results(int(next_race_obj.id))
+            except Exception:
+                has_results = False
+        else:
+            has_results = (
+                CompetitionResult.query.filter_by(competition_id=next_race_obj.id).first()
+                is not None
+            )
 
         view_picks_race = next_race_obj
         can_view_other_picks = (

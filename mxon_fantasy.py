@@ -676,6 +676,178 @@ def get_user_class_picks(user_id: int, competition_id: int) -> dict[str, dict]:
     return out
 
 
+def mxon_has_official_results(competition_id: int) -> bool:
+    """True when nation classification has been entered for scoring."""
+    return (
+        MxonNationResult.query.filter_by(competition_id=int(competition_id)).first()
+        is not None
+    )
+
+
+def _nation_public_row(nation: MxonNation | None, nation_id: int | None = None) -> dict[str, Any]:
+    n = nation
+    if n is None and nation_id is not None:
+        n = MxonNation.query.get(int(nation_id))
+    code = (n.code if n else "") or ""
+    return {
+        "nation_id": int(n.id) if n else int(nation_id or 0),
+        "code": code or None,
+        "name": (n.name if n else None) or code or "?",
+        "flag_emoji": (n.flag_emoji if n else None) or flag_emoji_for_code(code),
+        "flag_url": flag_image_url(code) if code else None,
+    }
+
+
+def build_mxon_crowd_summary(competition_id: int) -> dict[str, Any]:
+    """Field favorites: most tipped nation per slot 1–5 + class favorites."""
+    from collections import defaultdict
+
+    cid = int(competition_id)
+    slot_counts: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
+    class_counts: dict[str, dict[int, int]] = {
+        k: defaultdict(int) for k in MXON_CLASS_KEYS
+    }
+
+    nation_user_ids = {
+        int(uid)
+        for (uid,) in db.session.query(MxonNationPick.user_id)
+        .filter_by(competition_id=cid)
+        .distinct()
+        .all()
+        if uid is not None
+    }
+    class_user_ids = {
+        int(uid)
+        for (uid,) in db.session.query(MxonClassPick.user_id)
+        .filter_by(competition_id=cid)
+        .distinct()
+        .all()
+        if uid is not None
+    }
+    n_users = len(nation_user_ids | class_user_ids)
+
+    for p in MxonNationPick.query.filter_by(competition_id=cid).all():
+        try:
+            pos = int(p.position)
+            nid = int(p.nation_id)
+        except (TypeError, ValueError):
+            continue
+        if 1 <= pos <= 5:
+            slot_counts[pos][nid] += 1
+
+    for p in MxonClassPick.query.filter_by(competition_id=cid).all():
+        key = (p.class_name or "").lower()
+        if key not in MXON_CLASS_KEYS:
+            continue
+        try:
+            class_counts[key][int(p.nation_id)] += 1
+        except (TypeError, ValueError):
+            continue
+
+    all_nids: set[int] = set()
+    for counter in slot_counts.values():
+        all_nids.update(int(nid) for nid in counter)
+    for counter in class_counts.values():
+        all_nids.update(int(nid) for nid in counter)
+    nations_by_id: dict[int, MxonNation] = {}
+    if all_nids:
+        nations_by_id = {
+            int(n.id): n
+            for n in MxonNation.query.filter(MxonNation.id.in_(all_nids)).all()
+        }
+
+    def top_nations(counter: dict[int, int], topn: int = 5) -> list[dict[str, Any]]:
+        tot = sum(counter.values())
+        if tot <= 0:
+            return []
+        items = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
+        out: list[dict[str, Any]] = []
+        for nid, c in items[:topn]:
+            row = _nation_public_row(nations_by_id.get(nid), nid)
+            row["count"] = c
+            row["pct"] = round(100.0 * c / tot, 1)
+            out.append(row)
+        return out
+
+    slots = {str(pos): top_nations(dict(slot_counts.get(pos, {}))) for pos in range(1, 6)}
+    class_favorites = {
+        key: top_nations(dict(class_counts[key]), topn=5) for key in MXON_CLASS_KEYS
+    }
+    # Attach rider seat label for class favorites
+    for key, rows in class_favorites.items():
+        for row in rows:
+            seat = rider_seat_for_nation(int(row["nation_id"]), key)
+            row["rider_name"] = seat.get("rider_name")
+            row["rider_number"] = seat.get("rider_number")
+
+    return {
+        "kind": "mxon",
+        "n_lineups": len(nation_user_ids),
+        "n_users_with_snapshots_or_picks": n_users,
+        "slots_nations": slots,
+        "class_favorites": class_favorites,
+        # Keep empty SX-shaped keys so older clients don't crash
+        "slots_450": {},
+        "slots_250": {},
+        "holeshot_450": [],
+        "holeshot_250": [],
+        "wildcard_top": [],
+    }
+
+
+def list_other_users_mxon_picks(
+    competition_id: int, *, exclude_user_id: int | None = None
+) -> list[dict[str, Any]]:
+    """Per-user MXoN tippa for 'Se andras picks' after deadline."""
+    from models import User
+
+    cid = int(competition_id)
+    q = (
+        db.session.query(MxonNationPick.user_id)
+        .filter_by(competition_id=cid)
+        .distinct()
+    )
+    class_q = (
+        db.session.query(MxonClassPick.user_id)
+        .filter_by(competition_id=cid)
+        .distinct()
+    )
+    user_ids = {int(uid) for (uid,) in q.all() if uid is not None}
+    user_ids |= {int(uid) for (uid,) in class_q.all() if uid is not None}
+    if exclude_user_id is not None:
+        user_ids.discard(int(exclude_user_id))
+
+    users = {
+        int(u.id): u
+        for u in User.query.filter(User.id.in_(user_ids or [0])).all()
+    }
+    out: list[dict[str, Any]] = []
+    for uid in sorted(user_ids, key=lambda i: (users.get(i).username or "").lower() if users.get(i) else ""):
+        user = users.get(uid)
+        if not user:
+            continue
+        nations = get_user_nation_picks(uid, cid)
+        classes = get_user_class_picks(uid, cid)
+        if not nations and not classes:
+            continue
+        out.append(
+            {
+                "username": user.username,
+                "display_name": getattr(user, "display_name", None) or user.username,
+                "is_mxon": True,
+                "is_wsx": False,
+                "nations": nations,
+                "classes": classes,
+                "picks_450": [],
+                "picks_250": [],
+                "holeshot_450": None,
+                "holeshot_250": None,
+                "wildcard": None,
+            }
+        )
+    return out
+
+
 def save_user_class_picks(
     user_id: int,
     competition_id: int,
