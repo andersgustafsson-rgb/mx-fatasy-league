@@ -5,6 +5,16 @@
 {% set _complete = is_complete | default(false) %}
 {% set _partial = is_partial | default(false) %}
 {% set _edit_href = edit_href | default('#') %}
+{% set _by_pos = mxon_nations_by_pos if mxon_nations_by_pos is defined and mxon_nations_by_pos else none %}
+{% if not _by_pos %}
+  {% set _by_pos = {} %}
+  {% for n in _nations %}
+    {% set _pos = n['position'] if n is mapping else n.position %}
+    {% if _pos is not none %}
+      {% set _ = _by_pos.update({(_pos|int): n}) %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
 
 <div class="wizard-picks-summary{% if _complete %} is-complete{% endif %} picks-summary--on-home picks-summary--mxon">
   <div class="wizard-summary-banner{% if not _complete %} is-pending{% endif %}">
@@ -20,10 +30,10 @@
     <div class="wizard-summary-grid wizard-summary-grid--mxon">
       <div class="wizard-summary-col">
         <h4 class="wizard-summary-col__title">Topp 5 nationer</h4>
-        <ol class="wizard-summary-list">
+        <div class="wizard-summary-list" role="list">
           {% for i in range(1, 6) %}
-          {% set pick = _nations | selectattr('position', 'equalto', i) | first %}
-          <li class="wizard-summary-slot{% if pick and i <= 3 %} wizard-summary-slot--p{{ i }}{% endif %}{% if not pick %} wizard-summary-slot--empty{% endif %}">
+          {% set pick = _by_pos.get(i) %}
+          <div class="wizard-summary-slot{% if pick and i <= 3 %} wizard-summary-slot--p{{ i }}{% endif %}{% if not pick %} wizard-summary-slot--empty{% endif %}" role="listitem">
             <span class="wizard-summary-pos">{{ i }}</span>
             {% if pick and pick.flag_url %}
             <img class="wizard-summary-portrait wizard-summary-flag" src="{{ pick.flag_url }}" alt="" loading="eager" decoding="async">
@@ -40,16 +50,16 @@
             {% else %}
             <span class="wizard-summary-empty">—</span>
             {% endif %}
-          </li>
+          </div>
           {% endfor %}
-        </ol>
+        </div>
       </div>
       <div class="wizard-summary-col">
         <h4 class="wizard-summary-col__title">Klassfavoriter</h4>
-        <ol class="wizard-summary-list">
+        <div class="wizard-summary-list" role="list">
           {% for key, label in [('mxgp', 'MXGP'), ('mx2', 'MX2'), ('open', 'OPEN')] %}
           {% set pick = _classes.get(key) if _classes else none %}
-          <li class="wizard-summary-slot{% if not pick %} wizard-summary-slot--empty{% endif %}">
+          <div class="wizard-summary-slot{% if not pick %} wizard-summary-slot--empty{% endif %}" role="listitem">
             <span class="wizard-summary-pos wizard-summary-pos--class">{{ label }}</span>
             {% if pick and pick.flag_url %}
             <img class="wizard-summary-portrait wizard-summary-flag" src="{{ pick.flag_url }}" alt="" loading="eager" decoding="async">
@@ -64,9 +74,9 @@
             {% else %}
             <span class="wizard-summary-empty">—</span>
             {% endif %}
-          </li>
+          </div>
           {% endfor %}
-        </ol>
+        </div>
       </div>
     </div>
     <p class="mt-2 text-center sm:text-left">

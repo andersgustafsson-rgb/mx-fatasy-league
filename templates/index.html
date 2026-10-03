@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
   <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=7"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=mxon-class-label-1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=ios-mxon-picks-visible-1">
   {% if is_logged_in %}
   <script src="{{ url_for('static', filename='home_picks_portraits.js') }}?v=3" defer></script>
   {% endif %}
@@ -216,6 +216,28 @@
       display: flex;
       flex-direction: column;
       min-height: 0;
+    }
+    /* iPhone: overflow+flex min-height clips/blanks the picks list under Aktuellt Race */
+    @media (max-width: 1023px) {
+      #sidebar-race-panel.home-ui-panel {
+        overflow: visible;
+        height: auto;
+        min-height: 0;
+      }
+      #sidebar-race-panel .home-ui-panel__body {
+        overflow: visible;
+        flex: none;
+        min-height: 0;
+      }
+      #home-sidebar-picks-status {
+        overflow: visible;
+        position: relative;
+        z-index: 2;
+      }
+      #home-sidebar-picks-status .wizard-picks-summary {
+        isolation: auto;
+        transform: none;
+      }
     }
     .home-ui-panel--photo {
       position: relative;
@@ -2982,8 +3004,10 @@
                     {% if upcoming_race.series == 'MXON' %}
                     {% set mxon_nations = current_mxon_nations or [] %}
                     {% set mxon_classes = current_mxon_classes or {} %}
+                    {% set mxon_nations_by_pos = current_mxon_nations_by_pos or {} %}
                     {% set edit_href = url_for('mxon_picks_page', competition_id=upcoming_race.id) %}
                     {% include 'partials/mxon_picks_summary_board.html' %}
+                    <script type="application/json" id="home-mxon-picks-bootstrap">{{ {"picks": mxon_nations, "class_picks": mxon_classes, "complete": is_complete}|tojson }}</script>
                     {% else %}
                     {% set class_450_label = 'SX1' if upcoming_race.series == 'WSX' else '450cc' %}
                     {% set class_250_label = 'SX2' if upcoming_race.series == 'WSX' else '250cc' %}
@@ -5231,35 +5255,35 @@
       const podium = pick && pos <= 3 ? ` wizard-summary-slot--p${pos}` : '';
       const empty = pick ? '' : ' wizard-summary-slot--empty';
       if (!pick) {
-        return `<li class="wizard-summary-slot${empty}">
+        return `<div class="wizard-summary-slot${empty}" role="listitem">
           <span class="wizard-summary-pos">${pos}</span>
           <div class="wizard-summary-portrait"></div>
           <span class="wizard-summary-empty">—</span>
-        </li>`;
+        </div>`;
       }
       const flag = pick.flag_url
         ? `<img class="wizard-summary-portrait wizard-summary-flag" src="${_escHome(pick.flag_url)}" alt="" loading="eager" decoding="async">`
         : (pick.flag_emoji
           ? `<span class="wizard-summary-flag-emoji" aria-hidden="true">${_escHome(pick.flag_emoji)}</span>`
           : '<div class="wizard-summary-portrait"></div>');
-      return `<li class="wizard-summary-slot${podium}">
+      return `<div class="wizard-summary-slot${podium}" role="listitem">
         <span class="wizard-summary-pos">${pos}</span>
         ${flag}
         <div class="wizard-summary-rider">
           <span class="wizard-summary-num">${_escHome(pick.code || '')}</span>
           <span class="wizard-summary-name">${_escHome(pick.name || '—')}</span>
         </div>
-      </li>`;
+      </div>`;
     }
 
     function _homeMxonClassSlotHtml(pick, label) {
       const empty = pick ? '' : ' wizard-summary-slot--empty';
       if (!pick) {
-        return `<li class="wizard-summary-slot${empty}">
+        return `<div class="wizard-summary-slot${empty}" role="listitem">
           <span class="wizard-summary-pos wizard-summary-pos--class">${_escHome(label)}</span>
           <div class="wizard-summary-portrait"></div>
           <span class="wizard-summary-empty">—</span>
-        </li>`;
+        </div>`;
       }
       const flag = pick.flag_url
         ? `<img class="wizard-summary-portrait wizard-summary-flag" src="${_escHome(pick.flag_url)}" alt="" loading="eager" decoding="async">`
@@ -5270,14 +5294,14 @@
       const numLabel = pick.rider_number != null
         ? `#${_escHome(pick.rider_number)}`
         : _escHome(pick.code || '');
-      return `<li class="wizard-summary-slot">
+      return `<div class="wizard-summary-slot" role="listitem">
         <span class="wizard-summary-pos wizard-summary-pos--class">${_escHome(label)}</span>
         ${flag}
         <div class="wizard-summary-rider">
           <span class="wizard-summary-num">${numLabel}</span>
           <span class="wizard-summary-name">${_escHome(name)}</span>
         </div>
-      </li>`;
+      </div>`;
     }
 
     function renderHomeMxonPicksBoard(myPicks, { picksStatus, openHref }) {
@@ -5339,11 +5363,11 @@
               <div class="wizard-summary-grid wizard-summary-grid--mxon">
                 <div class="wizard-summary-col">
                   <h4 class="wizard-summary-col__title">${isEn ? 'Top 5 nations' : 'Topp 5 nationer'}</h4>
-                  <ol class="wizard-summary-list">${nationSlots}</ol>
+                  <div class="wizard-summary-list" role="list">${nationSlots}</div>
                 </div>
                 <div class="wizard-summary-col">
                   <h4 class="wizard-summary-col__title">${isEn ? 'Class favorites' : 'Klassfavoriter'}</h4>
-                  <ol class="wizard-summary-list">${classSlots}</ol>
+                  <div class="wizard-summary-list" role="list">${classSlots}</div>
                 </div>
               </div>
               <p class="mt-2 text-center sm:text-left">
@@ -5559,7 +5583,7 @@
       const panel = document.getElementById('home-sidebar-picks-status');
       if (!panel) return;
       const compId = data?.picks_competition_id || data?.next_race?.id;
-      const seriesHint = (data?.series || data?.next_race?.series || homeSelectedSeries || '');
+      const seriesHint = String(data?.series || data?.next_race?.series || homeSelectedSeries || '').toUpperCase();
       const isMXON = seriesHint === 'MXON';
       const isMXGP = seriesHint === 'MXGP';
       const openHref =
@@ -5579,20 +5603,55 @@
 
       try {
         const picksUrl = isMXON ? `/mxon_picks/${compId}/mine` : `/get_my_picks/${compId}`;
-        const res = await fetch(picksUrl);
+        const res = await fetch(picksUrl, { credentials: 'same-origin' });
         if (!res.ok) throw new Error('picks fetch failed');
         const myPicks = await res.json();
         if (isMXON) {
-          const complete = !!myPicks.complete;
-          const hasAny = (Array.isArray(myPicks.picks) && myPicks.picks.length > 0)
-            || (myPicks.class_picks && Object.keys(myPicks.class_picks).length > 0);
-          const status = complete ? 'has_picks' : (hasAny ? 'partial_picks' : 'no_picks');
-          renderHomeMxonPicksBoard(myPicks, { picksStatus: status, openHref });
+          // Prefer live API; fall back to SSR bootstrap if API shape is empty but page had picks
+          let payload = myPicks;
+          const apiHas =
+            (Array.isArray(myPicks?.picks) && myPicks.picks.length > 0)
+            || (myPicks?.class_picks && Object.keys(myPicks.class_picks).length > 0);
+          if (!apiHas) {
+            const bootEl = document.getElementById('home-mxon-picks-bootstrap');
+            if (bootEl) {
+              try {
+                const boot = JSON.parse(bootEl.textContent || '{}');
+                if ((Array.isArray(boot.picks) && boot.picks.length) || (boot.class_picks && Object.keys(boot.class_picks).length)) {
+                  payload = boot;
+                }
+              } catch (_) {}
+            }
+          }
+          const complete = !!payload.complete;
+          const hasAny = (Array.isArray(payload.picks) && payload.picks.length > 0)
+            || (payload.class_picks && Object.keys(payload.class_picks).length > 0);
+          const status = complete ? 'has_picks' : (hasAny ? 'partial_picks' : (picksStatus || 'no_picks'));
+          renderHomeMxonPicksBoard(payload, { picksStatus: status, openHref });
           return;
         }
         renderHomePicksBoard(myPicks, { picksStatus, openHref, isWSX, isMXGP });
       } catch (e) {
         console.warn('refreshHomePicksBoard:', e);
+        // Keep SSR MXoN board if present — don't wipe with a banner-only fallback on iOS fetch blips
+        if (isMXON && panel.querySelector('.picks-summary--mxon .wizard-summary-slot')) {
+          return;
+        }
+        if (isMXON) {
+          const bootEl = document.getElementById('home-mxon-picks-bootstrap');
+          if (bootEl) {
+            try {
+              const boot = JSON.parse(bootEl.textContent || '{}');
+              if ((Array.isArray(boot.picks) && boot.picks.length) || (boot.class_picks && Object.keys(boot.class_picks).length)) {
+                const complete = !!boot.complete;
+                const hasAny = true;
+                const status = complete ? 'has_picks' : (hasAny ? 'partial_picks' : picksStatus);
+                renderHomeMxonPicksBoard(boot, { picksStatus: status, openHref });
+                return;
+              }
+            } catch (_) {}
+          }
+        }
         applySidebarPicksStatusFallback(picksStatus, openHref);
       }
     }

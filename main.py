@@ -4386,6 +4386,7 @@ def index():
                     current_wildcard=None,
                     current_mxon_nations=None,
                     current_mxon_classes=None,
+                    current_mxon_nations_by_pos=None,
                     new_bulletin_posts=0,
                     latest_post_author=None,
                     league_requests_count=0,
@@ -4625,6 +4626,7 @@ def _index_impl():
     current_wildcard = None
     current_mxon_nations: list[dict] = []
     current_mxon_classes: dict[str, dict] = {}
+    current_mxon_nations_by_pos: dict[int, dict] = {}
     home_pick_portraits: dict[str, dict[str, str]] = {}
     picks_status = "no_picks"
     picks_locked = True
@@ -4701,6 +4703,11 @@ def _index_impl():
 
                     current_mxon_nations = get_user_nation_picks(uid, int(competition_id_for_picks))
                     current_mxon_classes = get_user_class_picks(uid, int(competition_id_for_picks))
+                    current_mxon_nations_by_pos = {
+                        int(p["position"]): p
+                        for p in current_mxon_nations
+                        if p.get("position") is not None
+                    }
                     n_ok = len(current_mxon_nations) >= 5
                     c_ok = len(current_mxon_classes) >= 3
                     if n_ok and c_ok:
@@ -5097,6 +5104,7 @@ def _index_impl():
         current_wildcard=current_wildcard if is_logged_in and 'current_wildcard' in locals() else None,
         current_mxon_nations=current_mxon_nations if is_logged_in else None,
         current_mxon_classes=current_mxon_classes if is_logged_in else None,
+        current_mxon_nations_by_pos=current_mxon_nations_by_pos if is_logged_in else None,
         new_bulletin_posts=new_bulletin_posts,
         latest_post_author=latest_post_author,
         league_requests_count=league_requests_count if is_logged_in else 0,
