@@ -2325,6 +2325,103 @@
         display: none;
       }
     }
+
+    /* Fantasy-ställningar — top 5 boards */
+    .home-standings-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+    @media (min-width: 768px) {
+      .home-standings-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.85rem;
+      }
+    }
+    .home-standings-card {
+      border-radius: 0.55rem;
+      border: 1px solid rgba(71, 85, 105, 0.45);
+      background: #1a2436;
+      padding: 0.75rem 0.85rem 0.85rem;
+      min-height: 0;
+    }
+    .home-standings-card__head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.55rem;
+      padding-bottom: 0.45rem;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.7);
+    }
+    .home-standings-card__title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #f1f5f9;
+      letter-spacing: 0.01em;
+    }
+    .home-standings-card__sub {
+      font-size: 0.65rem;
+      font-weight: 650;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .home-standings-card__rows {
+      display: flex;
+      flex-direction: column;
+      gap: 0.28rem;
+    }
+    .home-standings-card .home-lb-row {
+      padding: 0.35rem 0.5rem;
+      background: #222e42;
+    }
+    .home-standings-card__me {
+      margin-top: 0.45rem;
+      padding: 0.4rem 0.55rem;
+      border-radius: 0.4rem;
+      border: 1px dashed rgba(34, 211, 238, 0.35);
+      background: rgba(8, 51, 68, 0.35);
+      font-size: 0.72rem;
+      font-weight: 650;
+      color: #a5f3fc;
+    }
+    .home-standings-card__expand {
+      display: block;
+      width: 100%;
+      margin-top: 0.55rem;
+      padding: 0.4rem 0.5rem;
+      border-radius: 0.4rem;
+      border: 1px solid rgba(71, 85, 105, 0.55);
+      background: rgba(15, 23, 42, 0.55);
+      color: #67e8f9;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+    }
+    .home-standings-card__expand:hover {
+      border-color: rgba(103, 232, 249, 0.45);
+      color: #ecfeff;
+    }
+    .home-standings-card__rest[hidden] {
+      display: none !important;
+    }
+    .home-standings-card__rest {
+      display: flex;
+      flex-direction: column;
+      gap: 0.28rem;
+      margin-top: 0.35rem;
+      padding-top: 0.35rem;
+      border-top: 1px solid rgba(51, 65, 85, 0.55);
+    }
+    .home-standings-card__empty {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      text-align: center;
+      padding: 0.65rem 0.25rem;
+    }
     .home-race-hero #active-now-badge {
       border: 1px solid #3d4f66;
       background: #1a2436;
@@ -2916,11 +3013,26 @@
                   <h2><span class="mx-heading-icon">{{ mx_icon('flag') }}<span data-i18n="home.choose_series">Välj Serie</span></span></h2>
                 </div>
                 <div class="home-series-panel__body">
-                  <div id="series-selection" class="grid grid-cols-1 md:grid-cols-3 gap-4 home-series-accordion">
+                  <div id="series-selection" class="grid grid-cols-1 md:grid-cols-2 gap-4 home-series-accordion">
                     <div class="text-center text-gray-400 py-8 col-span-full">
                       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-500 mx-auto mb-2"></div>
                       <span data-i18n="home.loading_series">Laddar serier...</span>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fantasy-ställningar: top 5 per board, oberoende av valt seriekort -->
+            <div id="home-standings-wrap" class="mb-6">
+              <div class="home-ui-panel">
+                <div class="home-ui-panel__head">
+                  <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Fantasy-ställningar</span></span></h2>
+                </div>
+                <div class="home-ui-panel__body">
+                  <p class="text-xs text-slate-400 mb-3 text-center sm:text-left">Top 5 per serie — syns alltid, oberoende av kortet ovan.</p>
+                  <div id="home-standings-boards" class="home-standings-grid">
+                    <div class="home-standings-card__empty col-span-full">Laddar ställningar…</div>
                   </div>
                 </div>
               </div>
@@ -4092,6 +4204,137 @@
       }
     }
 
+    async function _fetchLeaderboardRows(url, { wrapKey = null } = {}) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(String(res.status));
+      const payload = await res.json();
+      if (payload && payload.error) throw new Error(payload.error);
+      if (wrapKey) {
+        return Array.isArray(payload[wrapKey]) ? payload[wrapKey] : [];
+      }
+      return Array.isArray(payload) ? payload : [];
+    }
+
+    function _standingsRowHtml(row, rank) {
+      const name = row.display_name || row.username || '?';
+      const uid = row.user_id;
+      const nameHtml = uid
+        ? `<a href="/profile/${uid}" class="hover:text-cyan-200 transition-colors">${_escHome(name)}</a>`
+        : _escHome(name);
+      const pts = Number(row.total_points || 0);
+      return homeLbRow(rank, nameHtml, pts);
+    }
+
+    function renderHomeStandingsCard(board) {
+      const rows = Array.isArray(board.rows) ? board.rows : [];
+      const top = rows.slice(0, 5);
+      const rest = rows.slice(5);
+      const meName = (window.currentUsername || '').toString().trim().toLowerCase();
+      let meHtml = '';
+      if (meName && rows.length) {
+        const idx = rows.findIndex(
+          (r) => (r.username || '').toString().trim().toLowerCase() === meName
+        );
+        if (idx >= 5) {
+          const me = rows[idx];
+          meHtml = `<div class="home-standings-card__me">Du · #${idx + 1} · ${Number(me.total_points || 0)}p</div>`;
+        }
+      }
+      let body;
+      if (!rows.length) {
+        body = `<p class="home-standings-card__empty">${_escHome(board.empty || 'Inga poäng ännu.')}</p>`;
+      } else {
+        const topHtml = top.map((r, i) => _standingsRowHtml(r, i + 1)).join('');
+        const restHtml = rest.map((r, i) => _standingsRowHtml(r, i + 6)).join('');
+        const expand = rest.length
+          ? `<button type="button" class="home-standings-card__expand" data-standings-expand>${
+              (typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en')
+                ? `Show all (${rows.length})`
+                : `Visa alla (${rows.length})`
+            }</button>
+            <div class="home-standings-card__rest" hidden data-standings-rest>${restHtml}</div>`
+          : '';
+        body = `<div class="home-standings-card__rows" data-standings-top>${topHtml}</div>${meHtml}${expand}`;
+      }
+      return `<article class="home-standings-card" data-board="${_escHome(board.id)}">
+        <div class="home-standings-card__head">
+          <h3 class="home-standings-card__title">${_escHome(board.title)}</h3>
+          <span class="home-standings-card__sub">${_escHome(board.sub || '')}</span>
+        </div>
+        ${body}
+      </article>`;
+    }
+
+    function bindHomeStandingsExpand(root) {
+      if (!root) return;
+      root.querySelectorAll('[data-standings-expand]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const card = btn.closest('.home-standings-card');
+          const rest = card && card.querySelector('[data-standings-rest]');
+          if (!rest) return;
+          const open = rest.hasAttribute('hidden');
+          if (open) rest.removeAttribute('hidden');
+          else rest.setAttribute('hidden', '');
+          const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+          const n = rest.querySelectorAll('.leaderboard-entry').length + 5;
+          btn.textContent = open
+            ? (isEn ? 'Show top 5' : 'Visa top 5')
+            : (isEn ? `Show all (${n})` : `Visa alla (${n})`);
+        });
+      });
+    }
+
+    async function fetchHomeStandingsBoards() {
+      const root = document.getElementById('home-standings-boards');
+      if (!root) return;
+      const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+      root.innerHTML = `<div class="home-standings-card__empty" style="grid-column:1/-1">${isEn ? 'Loading…' : 'Laddar ställningar…'}</div>`;
+      const boards = [
+        {
+          id: 'ama',
+          title: 'AMA / SMX',
+          sub: isEn ? 'Tippa + team' : 'Tippa + team',
+          empty: isEn ? 'No AMA points yet.' : 'Inga AMA-poäng ännu.',
+          load: () => _fetchLeaderboardRows('/get_season_leaderboard'),
+        },
+        {
+          id: 'wsx',
+          title: 'WSX Fantasy',
+          sub: '2026',
+          empty: isEn ? 'No WSX points yet.' : 'Inga WSX-poäng ännu.',
+          load: () => _fetchLeaderboardRows('/get_wsx_leaderboard?year=2026', { wrapKey: 'leaderboard' }),
+        },
+        {
+          id: 'mxon',
+          title: 'MXoN Fantasy',
+          sub: '2026',
+          empty: isEn ? 'No MXoN points yet.' : 'Inga MXoN-poäng ännu.',
+          load: () => _fetchLeaderboardRows('/get_mxon_leaderboard?year=2026', { wrapKey: 'leaderboard' }),
+        },
+        {
+          id: 'mxgp',
+          title: 'MXGP Fantasy',
+          sub: '2027',
+          empty: isEn ? 'No MXGP points yet.' : 'Inga MXGP-poäng ännu.',
+          load: () => _fetchLeaderboardRows('/get_mxgp_leaderboard?year=2027', { wrapKey: 'leaderboard' }),
+        },
+      ];
+      const settled = await Promise.all(
+        boards.map(async (b) => {
+          try {
+            const rows = await b.load();
+            return { ...b, rows };
+          } catch (e) {
+            console.warn('standings board', b.id, e);
+            return { ...b, rows: [], empty: isEn ? 'Could not load.' : 'Kunde inte ladda.' };
+          }
+        })
+      );
+      root.innerHTML = settled.map(renderHomeStandingsCard).join('');
+      bindHomeStandingsExpand(root);
+    }
+    window.fetchHomeStandingsBoards = fetchHomeStandingsBoards;
+
     async function fetchSeasonTeamLeaderboard() {
       const c = document.getElementById("season-team-leaderboard-list");
       if (!c) return;
@@ -4454,19 +4697,34 @@
 
     function seriesPicksBadgeHtml(serie, seriesCode, isEn) {
       if (!window.__MX_LOGGED_IN__) return '';
-      if (!serie || serie.under_construction || !serie.next_race) return '';
-      if (!(serie.is_active || (Number.isFinite(serie.days_until_next_race) && serie.days_until_next_race >= 0))) {
-        return '';
-      }
-      if (serie.picks_preseason_locked) {
-        const opensIso = serie.picks_opens_on;
+      if (!serie || serie.under_construction) return '';
+      const members = (serie._ama_combined && Array.isArray(serie._ama_members))
+        ? serie._ama_members
+        : [serie];
+      const actionable = members.filter(
+        (m) =>
+          m
+          && m.next_race
+          && (m.is_active || (Number.isFinite(m.days_until_next_race) && m.days_until_next_race >= 0))
+      );
+      if (!actionable.length) return '';
+
+      // Preseason: show earliest opens among AMA members
+      const preseason = actionable.filter((m) => m.picks_preseason_locked);
+      if (preseason.length === actionable.length) {
+        const soonest = [...preseason].sort((a, b) => {
+          const da = Number.isFinite(a.days_until_picks_open) ? a.days_until_picks_open : 9999;
+          const db = Number.isFinite(b.days_until_picks_open) ? b.days_until_picks_open : 9999;
+          return da - db;
+        })[0];
+        const opensIso = soonest.picks_opens_on;
         let when = '';
         if (opensIso) {
           const datePart = String(opensIso).split('T')[0];
           const [y, m, d] = datePart.split('-');
           if (y && m && d) when = isEn ? `${y}-${m}-${d}` : `${d}/${m}/${y}`;
         }
-        const days = Number.isFinite(serie.days_until_picks_open) ? serie.days_until_picks_open : null;
+        const days = Number.isFinite(soonest.days_until_picks_open) ? soonest.days_until_picks_open : null;
         let label;
         if (days != null && days > 0) {
           label = isEn
@@ -4479,17 +4737,28 @@
         }
         return `<p class="home-series-card__picks home-series-card__picks--need">${typeof mxIcon === 'function' ? mxIcon('note', { className: 'mx-icon--sm' }) : '·'} ${label}</p>`;
       }
-      const code = (seriesCode || '').toUpperCase();
-      const info = _seriesPicksStatusCache[code];
-      if (!info || !info.status) return '';
-      const st = info.status;
-      if (st === 'has_picks') {
+
+      const openMembers = actionable.filter((m) => !m.picks_preseason_locked);
+      const priority = { partial_picks: 3, no_picks: 2, has_picks: 1 };
+      let worst = null;
+      let worstPri = 0;
+      for (const m of openMembers) {
+        const code = (m.series_code || seriesNameToCode(m.name) || seriesCode || '').toUpperCase();
+        const st = (_seriesPicksStatusCache[code] || {}).status;
+        const pri = priority[st] || 0;
+        if (pri > worstPri) {
+          worstPri = pri;
+          worst = st;
+        }
+      }
+      if (!worst) return '';
+      if (worst === 'has_picks') {
         return `<p class="home-series-card__picks home-series-card__picks--done">${typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--sm mx-icon--ok' }) : '✓'} ${isEn ? 'Picks done' : 'Picks klara'}</p>`;
       }
-      if (st === 'partial_picks') {
+      if (worst === 'partial_picks') {
         return `<p class="home-series-card__picks home-series-card__picks--partial">${typeof mxIcon === 'function' ? mxIcon('alert', { className: 'mx-icon--sm mx-icon--warn' }) : '!'} ${isEn ? 'Picks incomplete' : 'Picks ofullständiga'}</p>`;
       }
-      if (st === 'no_picks') {
+      if (worst === 'no_picks') {
         return `<p class="home-series-card__picks home-series-card__picks--need">${typeof mxIcon === 'function' ? mxIcon('note', { className: 'mx-icon--sm' }) : '·'} ${isEn ? 'No picks yet' : 'Inga picks än'}</p>`;
       }
       return '';
@@ -4523,8 +4792,51 @@
       return null;
     }
 
+    const AMA_HOME_CODES = new Set(['SX', 'MX', 'SMX']);
+
+    function isAmaHomeSeries(code) {
+      return AMA_HOME_CODES.has(String(code || '').toUpperCase());
+    }
+
+    function homeSeriesCodesMatch(a, b) {
+      const ca = String(a || '').toUpperCase();
+      const cb = String(b || '').toUpperCase();
+      if (!ca || !cb) return false;
+      if (ca === cb) return true;
+      return isAmaHomeSeries(ca) && isAmaHomeSeries(cb);
+    }
+
+    /** Merge SX/MX/SMX into one homepage card — tippa-poäng är redan combined. */
+    function collapseAmaSeriesForHome(seriesList) {
+      const list = Array.isArray(seriesList) ? seriesList : [];
+      const ama = [];
+      const rest = [];
+      for (const s of list) {
+        const code = (s.series_code || seriesNameToCode(s.name) || '').toUpperCase();
+        if (AMA_HOME_CODES.has(code)) ama.push(s);
+        else rest.push(s);
+      }
+      if (!ama.length) return list;
+      const lead = sortSeriesByNextRace(ama)[0];
+      const leadCode = (lead.series_code || seriesNameToCode(lead.name) || '').toUpperCase();
+      return [
+        {
+          ...lead,
+          name: 'AMA / SMX',
+          series_code: leadCode,
+          _ama_combined: true,
+          _ama_members: ama,
+        },
+        ...rest,
+      ];
+    }
+
     /** User-facing label on homepage series cards (DB names stay Supercross/Motocross). */
     function homeSeriesDisplayName(serie) {
+      if (serie && serie._ama_combined) {
+        const year = serie.year;
+        return year ? `AMA / SMX (${year})` : 'AMA / SMX';
+      }
       const code = (serie?.series_code || seriesNameToCode(serie?.name) || '').toUpperCase();
       const raw = (serie?.name || '').trim();
       let label = raw || code;
@@ -4727,7 +5039,7 @@
     async function selectHomeSeries(seriesCode, { navigateIfSame = false, seriesId = null } = {}) {
       const code = String(seriesCode || '').toUpperCase();
       if (!code) return;
-      if (navigateIfSame && homeSelectedSeries === code && seriesId) {
+      if (navigateIfSame && homeSeriesCodesMatch(homeSelectedSeries, code) && seriesId) {
         window.location.href = `/series/${seriesId}`;
         return;
       }
@@ -4776,7 +5088,8 @@
       const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
       let selectedEl = null;
       root.querySelectorAll('[data-series-code]').forEach((el) => {
-        const selected = el.getAttribute('data-series-code') === seriesCode;
+        const elCode = el.getAttribute('data-series-code');
+        const selected = homeSeriesCodesMatch(elCode, seriesCode);
         el.classList.toggle('home-series-card--selected', selected);
         el.classList.toggle('home-series-card--expanded', selected);
         el.classList.toggle('home-series-card--collapsed', !selected);
@@ -6596,13 +6909,17 @@
           return;
         }
         
-        // Närmaste kommande race överst (aktiv säsong först)
-        const sortedSeries = sortSeriesByNextRace(series);
+        // AMA = ett kort; närmaste race överst bland övriga
+        const sortedSeries = sortSeriesByNextRace(collapseAmaSeriesForHome(series));
         const nextUpCode = resolveDefaultHomeSeries(sortedSeries);
         const featuredCode = homeSelectedSeries || nextUpCode;
         const orderedSeries = [
-          ...sortedSeries.filter((s) => (s.series_code || seriesNameToCode(s.name) || '') === featuredCode),
-          ...sortedSeries.filter((s) => (s.series_code || seriesNameToCode(s.name) || '') !== featuredCode),
+          ...sortedSeries.filter((s) =>
+            homeSeriesCodesMatch(s.series_code || seriesNameToCode(s.name), featuredCode)
+          ),
+          ...sortedSeries.filter(
+            (s) => !homeSeriesCodesMatch(s.series_code || seriesNameToCode(s.name), featuredCode)
+          ),
         ];
         
         function formatIsoDateSv(iso) {
@@ -6694,24 +7011,28 @@
           
           // Backgrounds handled by CSS classes. No inline background-image to avoid overrides.
           const seriesCode = serie.series_code || seriesNameToCode(serie.name) || '';
-          const isSelected = featuredCode && seriesCode && featuredCode === seriesCode;
-          const isNextUp = nextUpCode && seriesCode && nextUpCode === seriesCode;
+          const isSelected = featuredCode && seriesCode && homeSeriesCodesMatch(featuredCode, seriesCode);
+          const isNextUp = nextUpCode && seriesCode && homeSeriesCodesMatch(nextUpCode, seriesCode);
           const expandClass = isSelected ? 'home-series-card--expanded' : 'home-series-card--collapsed';
           
           const cardClass = isClickable
             ? `home-series-card home-series-card--clickable ${expandClass}${isSelected ? ' home-series-card--selected' : ''}`
             : `home-series-card ${expandClass}`;
           
-          // Add background class based on series
+          // Add background class based on series (AMA card follows next sub-series)
           let backgroundClass = '';
           const nameLower = (serie.name || '').toLowerCase();
           const codeLower = (seriesCode || '').toLowerCase();
           if (codeLower === 'mxon' || nameLower.includes('mxon')) {
             backgroundClass = 'bg-mxon';
+          } else if (serie._ama_combined || nameLower.includes('smx') || codeLower === 'smx') {
+            backgroundClass = codeLower === 'sx'
+              ? 'bg-supercross'
+              : codeLower === 'mx'
+                ? 'bg-motocross'
+                : 'bg-smx';
           } else if (nameLower.includes('supercross') || codeLower === 'sx') {
             backgroundClass = 'bg-supercross';
-          } else if (nameLower.includes('smx') || codeLower === 'smx') {
-            backgroundClass = 'bg-smx';
           } else if (nameLower.includes('wsx') || codeLower === 'wsx') {
             backgroundClass = 'bg-wsx';
           } else if (nameLower.includes('mxgp') || codeLower === 'mxgp') {
@@ -6719,12 +7040,6 @@
           } else if (nameLower.includes('motocross') || codeLower === 'mx') {
             backgroundClass = 'bg-motocross';
           }
-
-          console.debug('[SeriesCard]', {
-            name: serie.name,
-            id: serie.id,
-            backgroundClass
-          });
           
           const finalCardClass = `${cardClass} ${backgroundClass}`;
           // Inline fallback so hero shows even if class fails
@@ -6744,7 +7059,13 @@
           const nextPill = isNextUp
             ? `<span class="home-series-card__next-pill">${isEn ? 'Next' : 'Nästa'}</span>`
             : '';
-          const compactBits = [statusText];
+          const amaChain = serie._ama_combined
+            ? (isEn ? 'SX · MX · SMX tippa' : 'SX · MX · SMX tippa')
+            : '';
+          const statusForCard = serie._ama_combined && statusText
+            ? (isEn ? `AMA · ${statusText}` : `AMA · ${statusText}`)
+            : statusText;
+          const compactBits = [statusForCard];
           if (nextRace && nextRace.name) compactBits.push(nextRace.name);
           const compactMeta = compactBits.filter(Boolean).join(' · ');
           
@@ -6757,8 +7078,9 @@
               </div>
               <p class="home-series-card__compact-meta">${compactMeta}</p>
               <div class="home-series-card__details">
+                ${amaChain ? `<p class="text-[11px] font-semibold uppercase tracking-wide text-slate-300 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${amaChain}</p>` : ''}
                 ${serie.under_construction ? `<p class="text-xs font-semibold uppercase tracking-wide text-amber-200 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Coming 2027' : 'Kommer 2027'}</p>` : ''}
-                <p class="text-sm ${statusColor} mb-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${statusText}</p>
+                <p class="text-sm ${statusColor} mb-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${statusForCard}</p>
                 ${picksBadge}
                 ${nextRace ? `<p class="text-xs text-gray-200 mb-3" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Next' : 'Nästa'}: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
                 <div class="text-xs text-gray-300 mt-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)" data-series-hint>${hintText}</div>
@@ -6844,12 +7166,17 @@
           fetchRiderSpotlight(),
           fetchPowerRanking(),
           fetchSeasonLeaderboard(),
+          fetchHomeStandingsBoards(),
         ]);
       } catch (error) {
         console.error('Error loading series:', error);
         const el = document.getElementById('series-selection');
         if (el) {
           el.innerHTML = '<div class="text-center text-red-400 py-8">Fel vid laddning av serier</div>';
+        }
+        const boards = document.getElementById('home-standings-boards');
+        if (boards) {
+          boards.innerHTML = '<div class="home-standings-card__empty" style="grid-column:1/-1">Kunde inte ladda serier</div>';
         }
       }
     }
