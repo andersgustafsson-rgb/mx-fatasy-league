@@ -1002,6 +1002,8 @@ def series_display_name(name: str | None) -> str:
         return "Pro Motocross"
     if n == "SMX Finals":
         return "SMX Finals"
+    if n.upper() == "MXON":
+        return "MXoN"
     if n == AMA_TOTAL_SERIES_NAME:
         return "Totalställning"
     return n or "Serie"
@@ -11441,12 +11443,20 @@ def finished_series_detail_page(series_id):
         series_name = (series.name or "").strip()
         is_wsx = series_name.upper() == "WSX"
         is_sx = series_name in ("Supercross", "SX") or series_name.upper() == "SX"
+        is_mxon = series_name.upper() == "MXON"
         wsx_rider_podiums = (
             compute_wsx_rider_podiums_for_series(series_id) if is_wsx else None
         )
         sx_rider_podiums = None
         if is_sx and series.year:
             sx_rider_podiums = compute_sx_rider_podiums_for_year(int(series.year))
+        mxon_nation_podium = None
+        mxon_class_winners = None
+        if is_mxon:
+            from mxon_fantasy import mxon_class_winners_for_series, mxon_nation_podium_for_series
+
+            mxon_nation_podium = mxon_nation_podium_for_series(series_id, limit=3)
+            mxon_class_winners = mxon_class_winners_for_series(series_id)
 
         return render_template(
             "finished_series_detail.html",
@@ -11460,8 +11470,11 @@ def finished_series_detail_page(series_id):
             current_user_id=uid,
             is_wsx=is_wsx,
             is_sx=is_sx,
+            is_mxon=is_mxon,
             wsx_rider_podiums=wsx_rider_podiums,
             sx_rider_podiums=sx_rider_podiums,
+            mxon_nation_podium=mxon_nation_podium,
+            mxon_class_winners=mxon_class_winners,
         )
         
     except Exception as e:
@@ -11509,11 +11522,14 @@ def finished_ama_year_page(year):
             current_user_id=uid,
             is_wsx=False,
             is_sx=False,
+            is_mxon=False,
             is_ama_total=True,
             ama_parts=ama.get("parts") or [],
             ama_total_competitions=ama.get("total_competitions") or 0,
             wsx_rider_podiums=None,
             sx_rider_podiums=None,
+            mxon_nation_podium=None,
+            mxon_class_winners=None,
         )
     except Exception as e:
         import traceback
@@ -18054,6 +18070,126 @@ def archive_wsx_and_reset_points():
         return jsonify({"error": f"Fel vid arkivering: {str(e)}"}), 500
 
 
+@app.post("/admin/archive_mxon_and_reset_points")
+def archive_mxon_and_reset_points():
+    """Archive MXoN tippa into FinishedSeriesStats, wipe CompetitionScores, mark series finished.
+
+    JSON optional: { "year": 2026 }. Keeps MxonNationResult / picks / class results.
+    """
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    try:
+        from collections import defaultdict
+
+        from mxon_fantasy import mxon_competitions_for_year
+
+        data = request.get_json(silent=True) or {}
+        year = int(data.get("year") or 2026)
+
+        mxon_series = Series.query.filter(
+            Series.year == year,
+            Series.name.in_(("MXON", "MXoN")),
+        ).first()
+        if not mxon_series:
+            return jsonify({"error": f"MXoN {year} serie hittades inte"}), 400
+
+        comps = mxon_competitions_for_year(year)
+        if not comps:
+            return jsonify({"error": f"Inga MXoN {year}-tävlingar hittades"}), 400
+        comp_ids = [int(c.id) for c in comps]
+
+        scores = CompetitionScore.query.filter(
+            CompetitionScore.competition_id.in_(comp_ids)
+        ).all()
+        best: dict[tuple[int, int], CompetitionScore] = {}
+        for score in scores:
+            key = (int(score.user_id), int(score.competition_id))
+            prev = best.get(key)
+            if prev is None or int(score.score_id or 0) > int(prev.score_id or 0):
+                best[key] = score
+
+        user_stats = defaultdict(
+            lambda: {
+                "username": "",
+                "display_name": "",
+                "total_points": 0,
+                "race_points": 0,
+                "holeshot_points": 0,
+                "wildcard_points": 0,
+                "competitions_participated": 0,
+            }
+        )
+        for score in best.values():
+            user = User.query.get(score.user_id)
+            if not user:
+                continue
+            st = user_stats[score.user_id]
+            st["username"] = user.username
+            st["display_name"] = getattr(user, "display_name", None) or user.username
+            st["total_points"] += score.total_points or 0
+            st["race_points"] += score.race_points or 0
+            st["holeshot_points"] += score.holeshot_points or 0
+            st["wildcard_points"] += score.wildcard_points or 0
+            st["competitions_participated"] += 1
+
+        stats_list = [{"user_id": uid, **stats} for uid, stats in user_stats.items()]
+        stats_list.sort(key=lambda x: x["total_points"], reverse=True)
+
+        write_payload = {
+            uid: {
+                "total_points": st["total_points"],
+                "race_points": st["race_points"],
+                "holeshot_points": st["holeshot_points"],
+                "wildcard_points": st["wildcard_points"],
+                "competitions_participated": st["competitions_participated"],
+            }
+            for uid, st in user_stats.items()
+        }
+        archived_count = _write_finished_series_stats(mxon_series.id, write_payload)
+        db.session.flush()
+
+        deleted_count = CompetitionScore.query.filter(
+            CompetitionScore.competition_id.in_(comp_ids)
+        ).delete(synchronize_session=False)
+
+        mxon_series.is_active = False
+        # Fantasy-arkiv lists series with end_date < today — ensure it shows immediately
+        today = get_today()
+        if getattr(mxon_series, "end_date", None) is None or mxon_series.end_date >= today:
+            from datetime import timedelta
+
+            mxon_series.end_date = today - timedelta(days=1)
+
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": (
+                f"MXoN {year} arkiverad! {archived_count} spelare i Fantasy-arkivet, "
+                f"{deleted_count} tippa-poängposter raderade. Nationsresultat behålls."
+            ),
+            "archive_summary": {
+                "series": "MXON",
+                "year": year,
+                "series_id": mxon_series.id,
+                "competition_ids": comp_ids,
+                "competition_names": [c.name for c in comps],
+                "total_users": len(stats_list),
+                "top_10": stats_list[:10],
+            },
+            "archived_users": archived_count,
+            "deleted_scores": deleted_count,
+        })
+    except Exception as e:
+        import traceback
+
+        print(f"ERROR in archive_mxon_and_reset_points: {e}")
+        print(traceback.format_exc())
+        db.session.rollback()
+        return jsonify({"error": f"Fel vid arkivering: {str(e)}"}), 500
+
+
 @app.post("/admin/restore_wsx_points")
 def restore_wsx_points():
     """Recalculate tippa for one WSX year from picks/results, then refresh FinishedSeriesStats.
@@ -23176,6 +23312,20 @@ def get_competitions_for_import():
                 .distinct()
                 .all()
             }
+            # MXoN official results live in mxon_nation_results, not competition_results
+            try:
+                from models import MxonNationResult
+
+                mxon_ids = {
+                    row[0]
+                    for row in db.session.query(MxonNationResult.competition_id)
+                    .filter(MxonNationResult.competition_id.in_(cids))
+                    .distinct()
+                    .all()
+                }
+                has_results_ids |= mxon_ids
+            except Exception:
+                pass
 
         competition_list = [
             {

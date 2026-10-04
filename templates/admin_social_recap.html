@@ -39,6 +39,7 @@
             <p class="text-gray-300">Skapa delningsbild + Facebook-text efter race</p>
             <div class="mt-4 flex flex-wrap justify-center gap-3">
                 <a href="/admin" class="btn-secondary px-5 py-2 rounded-lg inline-block">← Admin</a>
+                <a href="/admin/mxon-results-recap-poster" class="btn-secondary px-5 py-2 rounded-lg inline-block">MXoN Results Recap</a>
                 <a href="/" class="btn-secondary px-5 py-2 rounded-lg inline-block">Hem</a>
             </div>
         </div>
@@ -274,9 +275,13 @@
                 for (const c of comps) {
                     const opt = document.createElement('option');
                     opt.value = c.id;
-                    const label = `${c.name || 'Race'}${c.event_date ? ' · ' + c.event_date : ''}`;
+                    opt.dataset.series = String(c.series || '');
+                    const label = `${c.name || 'Race'}${c.series ? ' [' + c.series + ']' : ''}${c.event_date ? ' · ' + c.event_date : ''}`;
                     opt.textContent = label;
                     compSelect.appendChild(opt);
+                    const seriesU = String(c.series || '').toUpperCase();
+                    // Prefer MXoN with results, else any with CompetitionResult
+                    if (!firstWithResults && seriesU === 'MXON' && c.has_results) firstWithResults = String(c.id);
                     if (!firstWithResults && c.has_results) firstWithResults = String(c.id);
                 }
                 if (firstWithResults) compSelect.value = firstWithResults;
@@ -301,11 +306,34 @@
                 const json = await res.json();
                 if (!res.ok) throw new Error(json.error || res.statusText);
 
-                captionText.value = json.caption || '';
-                btnCopy.disabled = !json.caption;
+                captionText.value = json.caption || json.facebook_caption || '';
+                btnCopy.disabled = !captionText.value;
 
                 const lay = document.getElementById('layout-select').value;
                 const ts = Date.now();
+
+                // MXoN: single nation/fantasy recap poster (not dual rider graphic/stats)
+                if (json.is_mxon_results_recap) {
+                    dualPreview.classList.add('hidden');
+                    singlePreview.classList.remove('hidden');
+                    const pngUrl = '/admin/api/social-recap.png?' + p.toString() + '&layout=' + encodeURIComponent(lay === 'story' ? 'story' : 'facebook') + '&_=' + ts;
+                    try {
+                        await setPreviewPng(previewImg, pngUrl, 'g');
+                        previewImg.classList.remove('hidden');
+                        previewPlaceholder.classList.add('hidden');
+                    } catch (imgErr) {
+                        previewImg.classList.add('hidden');
+                        previewPlaceholder.classList.remove('hidden');
+                        previewPlaceholder.textContent = imgErr.message;
+                        statusMsg.textContent = 'Fel: ' + imgErr.message;
+                        return;
+                    }
+                    btnDownload.href = pngUrl;
+                    btnDownload.classList.remove('opacity-50', 'pointer-events-none');
+                    btnDownload.download = 'mxon-results-recap-' + (lay === 'story' ? 'story' : 'fb') + '.png';
+                    statusMsg.textContent = 'MXoN Results Recap klar. ' + (lay === 'story' ? 'Story 1080×1920' : 'Facebook 1620×900') + '. Studio: /admin/mxon-results-recap-poster';
+                    return;
+                }
 
                 if (lay === 'facebook' || json.export_dual) {
                     dualPreview.classList.remove('hidden');

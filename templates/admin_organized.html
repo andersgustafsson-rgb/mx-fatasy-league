@@ -1968,6 +1968,20 @@
 
                     <article class="ap-hub-card">
                         <div>
+                            <p class="ap-hub-card__eyebrow">1c · MXoN</p>
+                            <h3 class="ap-hub-card__title">Arkivera MXoN 2026</h3>
+                        </div>
+                        <p class="ap-hub-card__desc">
+                            Flyttar <strong>MXoN Ernée 2026</strong> tippa till Fantasy-arkivet (prispallar + leaderboard).
+                            Raderar CompetitionScore men behåller nationsresultat och picks.
+                        </p>
+                        <div class="ap-hub-card__actions">
+                            <button type="button" onclick="archiveMxonAndResetPoints()" class="ap-btn ap-btn--primary">Arkivera MXoN 2026</button>
+                        </div>
+                    </article>
+
+                    <article class="ap-hub-card">
+                        <div>
                             <p class="ap-hub-card__eyebrow">2 · Priser</p>
                             <h3 class="ap-hub-card__title">Ladda säsongsteam-priser 2027</h3>
                         </div>
@@ -2067,9 +2081,23 @@
                         </div>
                         <p class="ap-hub-card__desc">
                             Delningsbild (PNG) och Facebook-text — topp-listor och fältfakta från alla tipsare.
+                            MXoN använder Results Recap-postern automatiskt.
                         </p>
                         <div class="ap-hub-card__actions">
                             <a href="/admin/social-recap" class="ap-btn ap-btn--primary">Öppna Recap</a>
+                        </div>
+                    </article>
+
+                    <article class="ap-hub-card">
+                        <div>
+                            <p class="ap-hub-card__eyebrow">MXoN</p>
+                            <h3 class="ap-hub-card__title">MXoN Results Recap</h3>
+                        </div>
+                        <p class="ap-hub-card__desc">
+                            Nationsordning med flaggor, Sverige-callout, klassvinnare och fantasy-toppen — FB + Story.
+                        </p>
+                        <div class="ap-hub-card__actions">
+                            <a href="/admin/mxon-results-recap-poster" class="ap-btn ap-btn--primary">Öppna MXoN Recap</a>
                         </div>
                     </article>
 
@@ -2851,6 +2879,37 @@
                             });
                         }
                         alert(message);
+                    } else {
+                        alert('❌ Error: ' + (result.error || 'okänt'));
+                    }
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
+                }
+            }
+        }
+
+        async function archiveMxonAndResetPoints() {
+            if (confirm('Arkivera MXoN 2026 tippa?\n\n• Sparar statistik i Fantasy-arkivet (färdiga serier)\n• Raderar CompetitionScore för MXoN\n• Behåller nationsresultat + picks\n\nFortsätt?')) {
+                try {
+                    const response = await fetch('/admin/archive_mxon_and_reset_points', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ year: 2026 }),
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        let message = '✅ ' + result.message + '\n\n';
+                        if (result.archive_summary) {
+                            const summary = result.archive_summary;
+                            message += `Top 3 fantasy:\n`;
+                            (summary.top_10 || []).slice(0, 3).forEach((user, i) => {
+                                message += `${i + 1}. ${user.display_name}: ${user.total_points}p\n`;
+                            });
+                        }
+                        alert(message);
+                        if (confirm('Öppna Fantasy-arkivet nu?')) {
+                            window.location.href = '/finished_series';
+                        }
                     } else {
                         alert('❌ Error: ' + (result.error || 'okänt'));
                     }

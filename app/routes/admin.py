@@ -671,6 +671,56 @@ def mxon_power_ranking_poster_png():
 		return jsonify({"error": str(e) or type(e).__name__}), 500
 
 
+@bp.route("/admin/mxon-results-recap-poster")
+@login_required
+def mxon_results_recap_poster_page():
+	"""Post-race MXoN recap poster studio (nations + Sweden + fantasy)."""
+	if not is_admin_user():
+		return redirect(url_for("index"))
+	return render_template("admin_mxon_results_recap_poster.html")
+
+
+@bp.get("/admin/api/mxon-results-recap-poster")
+@login_required
+def mxon_results_recap_poster_api():
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	comp_id = request.args.get("competition_id", type=int)
+	try:
+		from mxon_results_recap_poster_service import build_mxon_results_recap_data
+
+		data = build_mxon_results_recap_data(comp_id)
+		return jsonify(data)
+	except ValueError as e:
+		return jsonify({"error": str(e)}), 404
+	except Exception as e:
+		current_app.logger.exception("mxon_results_recap_poster_api failed: %s", e)
+		return jsonify({"error": str(e) or type(e).__name__}), 500
+
+
+@bp.get("/admin/api/mxon-results-recap-poster.png")
+@login_required
+def mxon_results_recap_poster_png():
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	comp_id = request.args.get("competition_id", type=int)
+	layout = (request.args.get("layout") or "facebook").strip().lower()
+	try:
+		from mxon_results_recap_poster_service import (
+			build_mxon_results_recap_data,
+			render_mxon_results_recap_png,
+		)
+
+		data = build_mxon_results_recap_data(comp_id)
+		png = render_mxon_results_recap_png(data, layout=layout)
+		return Response(png, mimetype="image/png")
+	except ValueError as e:
+		return jsonify({"error": str(e)}), 404
+	except Exception as e:
+		current_app.logger.exception("mxon_results_recap_poster_png failed: %s", e)
+		return jsonify({"error": str(e) or type(e).__name__}), 500
+
+
 @bp.get("/admin/api/social-recap")
 @login_required
 def social_recap_api():
@@ -679,6 +729,29 @@ def social_recap_api():
 	comp_id = request.args.get("competition_id", type=int)
 	if not comp_id:
 		return jsonify({"error": "competition_id_required"}), 400
+
+	# MXoN uses dedicated results-recap poster (nations + fantasy)
+	try:
+		from models import Competition
+
+		comp = Competition.query.get(comp_id)
+		if comp and (getattr(comp, "series", None) or "").upper() == "MXON":
+			from mxon_results_recap_poster_service import build_mxon_results_recap_data
+
+			data = build_mxon_results_recap_data(comp_id)
+			data["series"] = "MXON"
+			data["competition_name"] = data.get("race_name") or "MXoN"
+			data["is_mxon_results_recap"] = True
+			data["has_results"] = True
+			data["export_dual"] = False
+			data["facebook_caption"] = data.get("caption") or ""
+			return jsonify(data)
+	except ValueError as e:
+		return jsonify({"error": str(e), "is_mxon_results_recap": True}), 404
+	except Exception as e:
+		current_app.logger.exception("social_recap_api mxon branch failed: %s", e)
+		return jsonify({"error": str(e) or type(e).__name__, "is_mxon_results_recap": True}), 500
+
 	race_top = request.args.get("race_top", default=3, type=int)
 	season_top = request.args.get("season_top", default=5, type=int)
 	include_race = request.args.get("include_race", "1") not in ("0", "false", "no")
@@ -749,6 +822,31 @@ def social_recap_png():
 		layout = "facebook"
 	if layout not in ("facebook", "portrait", "story"):
 		layout = "facebook"
+
+	# MXoN → dedicated results recap PNG (single image FB/Story)
+	try:
+		from models import Competition
+
+		comp = Competition.query.get(comp_id)
+		if comp and (getattr(comp, "series", None) or "").upper() == "MXON":
+			from mxon_results_recap_poster_service import (
+				build_mxon_results_recap_data,
+				render_mxon_results_recap_png,
+			)
+
+			mxon_data = build_mxon_results_recap_data(comp_id)
+			png_bytes = render_mxon_results_recap_png(
+				mxon_data, layout="story" if layout == "story" else "facebook"
+			)
+			resp = Response(png_bytes, mimetype="image/png")
+			resp.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
+			return resp
+	except ValueError as e:
+		return jsonify({"error": str(e)}), 404
+	except Exception as e:
+		current_app.logger.exception("social_recap_png mxon branch failed: %s", e)
+		return jsonify({"error": str(e) or type(e).__name__}), 500
+
 	try:
 		from social_recap_service import build_social_recap_data, render_social_recap_png
 

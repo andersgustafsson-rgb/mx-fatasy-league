@@ -473,6 +473,62 @@
       </section>
       {% endif %}
 
+      {% if is_mxon and mxon_nation_podium %}
+      <section class="mb-16">
+        <div class="text-center mb-10">
+          <h2 class="text-2xl md:text-3xl font-black text-amber-200 font-orbit inline-flex items-center gap-2">
+            <span class="text-emerald-400" aria-hidden="true">◆</span> MXoN — nationspall
+          </h2>
+          <p class="text-gray-500 text-sm mt-2 max-w-2xl mx-auto">
+            Officiell nationsordning {{ series.year }}.
+          </p>
+        </div>
+        <div class="glass-panel rounded-2xl p-6 sm:p-8 mb-8 max-w-xl mx-auto border-emerald-500/20 bg-gradient-to-b from-emerald-950/20 to-slate-900/40">
+          <div class="podium-row podium-row--stack">
+            {% set n2 = mxon_nation_podium[1] if mxon_nation_podium|length > 1 else none %}
+            {% set n1 = mxon_nation_podium[0] if mxon_nation_podium|length > 0 else none %}
+            {% set n3 = mxon_nation_podium[2] if mxon_nation_podium|length > 2 else none %}
+            {% if n2 %}
+            <div class="podium-slot podium-slot--2">
+              {% if n2.flag_url %}<img src="{{ n2.flag_url }}" alt="" class="w-14 h-10 object-cover rounded shadow mb-2 ring-2 ring-slate-300/40">{% endif %}
+              <div class="text-slate-200 font-orbit font-black text-lg">2</div>
+              <div class="text-white font-bold text-center text-sm mt-1">{{ n2.name }}</div>
+              <div class="text-cyan-300/80 text-xs font-mono">{{ n2.code }}</div>
+            </div>
+            {% endif %}
+            {% if n1 %}
+            <div class="podium-slot podium-slot--1">
+              {% if n1.flag_url %}<img src="{{ n1.flag_url }}" alt="" class="w-16 h-11 object-cover rounded shadow mb-2 ring-2 ring-amber-400/50">{% endif %}
+              <div class="text-amber-300 font-orbit font-black text-2xl">1</div>
+              <div class="text-white font-black text-center mt-1">{{ n1.name }}</div>
+              <div class="text-cyan-300/80 text-xs font-mono">{{ n1.code }}</div>
+            </div>
+            {% endif %}
+            {% if n3 %}
+            <div class="podium-slot podium-slot--3">
+              {% if n3.flag_url %}<img src="{{ n3.flag_url }}" alt="" class="w-14 h-10 object-cover rounded shadow mb-2 ring-2 ring-orange-400/35">{% endif %}
+              <div class="text-orange-300 font-orbit font-black text-lg">3</div>
+              <div class="text-white font-bold text-center text-sm mt-1">{{ n3.name }}</div>
+              <div class="text-cyan-300/80 text-xs font-mono">{{ n3.code }}</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% if mxon_class_winners %}
+        <div class="grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+          {% for cw in mxon_class_winners %}
+          <div class="glass-panel rounded-xl p-4 text-center border border-white/10">
+            <div class="text-[10px] font-orbit tracking-widest text-emerald-300/90 uppercase mb-2">{{ cw.class }}</div>
+            {% if cw.flag_url %}<img src="{{ cw.flag_url }}" alt="" class="w-10 h-7 object-cover rounded mx-auto mb-2">{% endif %}
+            <div class="text-white font-bold text-sm">{{ cw.name }}</div>
+            <div class="text-gray-400 text-xs mt-1">{{ cw.rider_name }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </section>
+      {% endif %}
+
       {% if leaderboard %}
       <section class="mb-12">
         <h2 class="text-xl md:text-2xl font-black text-amber-200 font-orbit mb-6 text-center flex items-center justify-center gap-2">

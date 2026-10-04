@@ -9,6 +9,7 @@ from models import (
     Competition,
     CompetitionImage,
     CompetitionScore,
+    FinishedSeriesStats,
     MxonClassPick,
     MxonClassResult,
     MxonCompetitionOut,
@@ -424,7 +425,15 @@ def ensure_mxon_2026(*, attach_track_image: bool = True) -> dict:
         mxon.name = "MXON"
         mxon.start_date = date(2026, 10, 2)
         mxon.end_date = date(2026, 10, 4)
-        mxon.is_active = True
+        # Don't reopen an archived season
+        already_archived = (
+            FinishedSeriesStats.query.filter_by(series_id=int(mxon.id)).first() is not None
+        )
+        if already_archived:
+            mxon.is_active = False
+        elif mxon.is_active is None:
+            mxon.is_active = True
+        # else: keep current is_active (admin may have closed it)
 
     created_comp = False
     updated_comp = False
@@ -1041,6 +1050,84 @@ def mxon_competitions_for_year(year: int = 2026) -> list[Competition]:
     comps = q.all()
     comps.sort(key=lambda c: (c.event_date is None, c.event_date or date.max, int(c.id)))
     return comps
+
+
+def mxon_nation_podium_for_series(series_id: int, *, limit: int = 3) -> list[dict]:
+    """Top N official nations for finished-series display (flags + place)."""
+    series = Series.query.get(int(series_id))
+    if not series:
+        return []
+    comps = (
+        Competition.query.filter(
+            Competition.series == "MXON",
+            db.or_(
+                Competition.series_id == int(series_id),
+                Competition.series_id.is_(None),
+            ),
+        )
+        .order_by(Competition.event_date.desc().nullslast())
+        .all()
+    )
+    if not comps:
+        return []
+    cid = int(comps[0].id)
+    rows = (
+        MxonNationResult.query.filter_by(competition_id=cid)
+        .order_by(MxonNationResult.position.asc())
+        .limit(max(1, int(limit)))
+        .all()
+    )
+    out: list[dict] = []
+    for r in rows:
+        n = r.nation or MxonNation.query.get(r.nation_id)
+        code = (n.code if n else "") or ""
+        out.append(
+            {
+                "place": int(r.position),
+                "rank": int(r.position),
+                "code": code.upper(),
+                "name": (n.name if n else code) or "?",
+                "flag_url": flag_image_url(code) if code else None,
+                "display_name": (n.name if n else code) or "?",
+                "total_points": None,
+            }
+        )
+    return out
+
+
+def mxon_class_winners_for_series(series_id: int) -> list[dict]:
+    series = Series.query.get(int(series_id))
+    if not series:
+        return []
+    comps = (
+        Competition.query.filter(
+            Competition.series == "MXON",
+            db.or_(
+                Competition.series_id == int(series_id),
+                Competition.series_id.is_(None),
+            ),
+        )
+        .order_by(Competition.event_date.desc().nullslast())
+        .all()
+    )
+    if not comps:
+        return []
+    cr = get_class_results(int(comps[0].id))
+    out = []
+    for key, label in (("mxgp", "MXGP"), ("mx2", "MX2"), ("open", "OPEN")):
+        row = cr.get(key) or {}
+        if not row:
+            continue
+        out.append(
+            {
+                "class": label,
+                "code": (row.get("code") or "").upper(),
+                "name": row.get("name") or row.get("code") or "?",
+                "rider_name": row.get("rider_name") or "—",
+                "flag_url": flag_image_url(row.get("code") or "") if row.get("code") else None,
+            }
+        )
+    return out
 
 
 def fantasy_mxon_leaderboard_for_year(year: int = 2026) -> list[dict]:
