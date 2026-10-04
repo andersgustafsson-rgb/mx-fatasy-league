@@ -2244,6 +2244,87 @@
       background: rgba(127, 29, 29, 0.58);
       border-color: rgba(248, 113, 113, 0.35);
     }
+
+    /* Mobile accordion: next/selected series open, others collapsed */
+    .home-series-card__compact-meta {
+      display: none;
+      margin: 0.15rem 0 0;
+      font-size: 0.72rem;
+      line-height: 1.25;
+      color: #cbd5e1;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+    }
+    .home-series-card__next-pill {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 0.35rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #083344;
+      background: rgba(34, 211, 238, 0.9);
+      vertical-align: middle;
+    }
+    .home-series-card__title-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.15rem 0.25rem;
+    }
+    .home-series-card__title-row .home-series-card__title {
+      margin-bottom: 0;
+    }
+    .home-series-card--expanded .home-series-card__title-row {
+      margin-bottom: 0.5rem;
+    }
+    @media (max-width: 767px) {
+      #series-selection.home-series-accordion {
+        gap: 0.45rem;
+      }
+      .home-series-accordion .home-series-card--collapsed {
+        min-height: 3.15rem !important;
+        padding: 0.55rem 0.8rem;
+      }
+      .home-series-accordion .home-series-card--collapsed .home-series-card__details {
+        display: none;
+      }
+      .home-series-accordion .home-series-card--collapsed .home-series-card__compact-meta {
+        display: block;
+      }
+      .home-series-accordion .home-series-card--collapsed .home-series-card__title {
+        margin-bottom: 0;
+        font-size: 0.95rem;
+      }
+      .home-series-accordion .home-series-card--collapsed .home-series-card__scrim {
+        background: linear-gradient(
+          90deg,
+          rgba(7, 13, 24, 0.55) 0%,
+          rgba(7, 13, 24, 0.42) 55%,
+          rgba(7, 13, 24, 0.55) 100%
+        );
+      }
+      .home-series-accordion .home-series-card--expanded .home-series-card__compact-meta {
+        display: none;
+      }
+      .home-series-accordion .home-series-card--expanded {
+        min-height: 180px;
+      }
+    }
+    @media (min-width: 768px) {
+      .home-series-card__compact-meta {
+        display: none !important;
+      }
+      .home-series-card__details {
+        display: block !important;
+      }
+      .home-series-card__next-pill {
+        display: none;
+      }
+    }
     .home-race-hero #active-now-badge {
       border: 1px solid #3d4f66;
       background: #1a2436;
@@ -2835,7 +2916,7 @@
                   <h2><span class="mx-heading-icon">{{ mx_icon('flag') }}<span data-i18n="home.choose_series">Välj Serie</span></span></h2>
                 </div>
                 <div class="home-series-panel__body">
-                  <div id="series-selection" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div id="series-selection" class="grid grid-cols-1 md:grid-cols-3 gap-4 home-series-accordion">
                     <div class="text-center text-gray-400 py-8 col-span-full">
                       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-500 mx-auto mb-2"></div>
                       <span data-i18n="home.loading_series">Laddar serier...</span>
@@ -4693,9 +4774,13 @@
       const root = document.getElementById('series-selection');
       if (!root) return;
       const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+      let selectedEl = null;
       root.querySelectorAll('[data-series-code]').forEach((el) => {
         const selected = el.getAttribute('data-series-code') === seriesCode;
         el.classList.toggle('home-series-card--selected', selected);
+        el.classList.toggle('home-series-card--expanded', selected);
+        el.classList.toggle('home-series-card--collapsed', !selected);
+        if (selected) selectedEl = el;
         const hint = el.querySelector('[data-series-hint]');
         if (hint) {
           hint.textContent = selected
@@ -4703,6 +4788,14 @@
             : (isEn ? 'Show countdown' : 'Visa countdown');
         }
       });
+      // Mobile: keep the open card on top so you don't scroll to find it
+      if (
+        selectedEl
+        && window.matchMedia('(max-width: 767px)').matches
+        && selectedEl !== root.firstElementChild
+      ) {
+        root.insertBefore(selectedEl, root.firstElementChild);
+      }
     }
     
     function setSidebarRaceVisibility(hasRace) {
@@ -6505,6 +6598,12 @@
         
         // Närmaste kommande race överst (aktiv säsong först)
         const sortedSeries = sortSeriesByNextRace(series);
+        const nextUpCode = resolveDefaultHomeSeries(sortedSeries);
+        const featuredCode = homeSelectedSeries || nextUpCode;
+        const orderedSeries = [
+          ...sortedSeries.filter((s) => (s.series_code || seriesNameToCode(s.name) || '') === featuredCode),
+          ...sortedSeries.filter((s) => (s.series_code || seriesNameToCode(s.name) || '') !== featuredCode),
+        ];
         
         function formatIsoDateSv(iso) {
           if (!iso) return '';
@@ -6514,7 +6613,7 @@
           return `${d}/${m}/${y}`;
         }
 
-        const seriesHTML = sortedSeries.map(serie => {
+        const seriesHTML = orderedSeries.map(serie => {
           const isActive = serie.is_active;
           const nextRace = serie.next_race;
           const daysFromNextRace = Number.isFinite(serie.days_until_next_race) ? serie.days_until_next_race : null;
@@ -6595,11 +6694,13 @@
           
           // Backgrounds handled by CSS classes. No inline background-image to avoid overrides.
           const seriesCode = serie.series_code || seriesNameToCode(serie.name) || '';
-          const isSelected = homeSelectedSeries && seriesCode && homeSelectedSeries === seriesCode;
+          const isSelected = featuredCode && seriesCode && featuredCode === seriesCode;
+          const isNextUp = nextUpCode && seriesCode && nextUpCode === seriesCode;
+          const expandClass = isSelected ? 'home-series-card--expanded' : 'home-series-card--collapsed';
           
           const cardClass = isClickable
-            ? `home-series-card home-series-card--clickable${isSelected ? ' home-series-card--selected' : ''}`
-            : 'home-series-card';
+            ? `home-series-card home-series-card--clickable ${expandClass}${isSelected ? ' home-series-card--selected' : ''}`
+            : `home-series-card ${expandClass}`;
           
           // Add background class based on series
           let backgroundClass = '';
@@ -6640,17 +6741,29 @@
             ? (isEn ? 'Selected · see schedule below' : 'Vald · se schema nedan')
             : buttonText;
           const picksBadge = seriesPicksBadgeHtml(serie, seriesCode, isEn);
+          const nextPill = isNextUp
+            ? `<span class="home-series-card__next-pill">${isEn ? 'Next' : 'Nästa'}</span>`
+            : '';
+          const compactBits = [statusText];
+          if (nextRace && nextRace.name) compactBits.push(nextRace.name);
+          const compactMeta = compactBits.filter(Boolean).join(' · ');
           
           const cardContent = `
             <div class="home-series-card__scrim"></div>
             <div class="relative z-10 text-center">
-              <h3 class="home-series-card__title">${homeSeriesDisplayName(serie)}</h3>
-              ${serie.under_construction ? `<p class="text-xs font-semibold uppercase tracking-wide text-amber-200 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Coming 2027' : 'Kommer 2027'}</p>` : ''}
-              <p class="text-sm ${statusColor} mb-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${statusText}</p>
-              ${picksBadge}
-              ${nextRace ? `<p class="text-xs text-gray-200 mb-3" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Next' : 'Nästa'}: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
-              <div class="text-xs text-gray-300 mt-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)" data-series-hint>${hintText}</div>
-              <a href="/series/${serie.id}" class="home-series-card__open" data-series-open onclick="event.stopPropagation()">${isEn ? 'Schedule & tracks →' : 'Schema & banor →'}</a>
+              <div class="home-series-card__title-row">
+                <h3 class="home-series-card__title">${homeSeriesDisplayName(serie)}</h3>
+                ${nextPill}
+              </div>
+              <p class="home-series-card__compact-meta">${compactMeta}</p>
+              <div class="home-series-card__details">
+                ${serie.under_construction ? `<p class="text-xs font-semibold uppercase tracking-wide text-amber-200 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Coming 2027' : 'Kommer 2027'}</p>` : ''}
+                <p class="text-sm ${statusColor} mb-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${statusText}</p>
+                ${picksBadge}
+                ${nextRace ? `<p class="text-xs text-gray-200 mb-3" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Next' : 'Nästa'}: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
+                <div class="text-xs text-gray-300 mt-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)" data-series-hint>${hintText}</div>
+                <a href="/series/${serie.id}" class="home-series-card__open" data-series-open onclick="event.stopPropagation()">${isEn ? 'Schedule & tracks →' : 'Schema & banor →'}</a>
+              </div>
             </div>
           `;
           
