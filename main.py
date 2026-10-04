@@ -11642,6 +11642,55 @@ def series_page(series_id):
         )
         print(f"DEBUG: Found {len(competitions)} competitions for series {series_id}")
 
+        # AMA tippa chain: show SX + MX + SMX schedules together (homepage AMA card)
+        schedule_sections = None
+        ama_chain = False
+        try:
+            from ama_season_totals import (
+                AMA_TIPPA_SERIES_NAMES,
+                _ama_tippa_series_for_year,
+                ama_series_display_name,
+            )
+
+            ama_chain = (series.name or "").strip() in AMA_TIPPA_SERIES_NAMES
+            year = int(getattr(series, "year", 0) or 0)
+            if ama_chain and year:
+                parts = _ama_tippa_series_for_year(year)
+                if len(parts) > 1:
+                    schedule_sections = []
+                    all_comps: list = []
+                    for part in parts:
+                        comps = Competition.query.filter_by(series_id=part.id).all()
+                        comps.sort(
+                            key=lambda c: (
+                                c.event_date is None,
+                                c.event_date or date.max,
+                                c.id or 0,
+                            )
+                        )
+                        schedule_sections.append(
+                            {
+                                "series": part,
+                                "label": ama_series_display_name(part.name),
+                                "competitions": comps,
+                                "is_current": int(part.id) == int(series_id),
+                            }
+                        )
+                        all_comps.extend(comps)
+                    competitions = all_comps
+        except Exception as ama_sched_err:
+            print(f"AMA schedule sections: {ama_sched_err}")
+            schedule_sections = None
+            ama_chain = False
+            competitions = Competition.query.filter_by(series_id=series_id).all()
+            competitions.sort(
+                key=lambda c: (
+                    c.event_date is None,
+                    c.event_date or date.max,
+                    c.id or 0,
+                )
+            )
+
         # Venue/bana labels for schedule (WSX official calendar + SMX playoffs)
         from trackmap_utils import (
             competition_gate_label,
@@ -11905,7 +11954,18 @@ def series_page(series_id):
             series_code = "MXGP"
 
         next_race = None
-        if series_code:
+        if ama_chain:
+            # Same chain order as homepage: next open tippa across SX → MX → SMX
+            for code in ("SX", "MX", "SMX"):
+                next_race = _next_competition_for_picks(series=code, require_open=True)
+                if next_race:
+                    break
+            if not next_race:
+                for code in ("SX", "MX", "SMX"):
+                    next_race = _next_competition_for_picks(series=code, require_open=False)
+                    if next_race:
+                        break
+        elif series_code:
             next_race = _next_competition_for_picks(series=series_code, require_open=True)
             if not next_race:
                 next_race = _next_competition_for_picks(series=series_code, require_open=False)
@@ -11914,13 +11974,10 @@ def series_page(series_id):
             next_race = next(
                 (
                     c
-                    for c in (
-                        Competition.query.filter_by(series_id=series_id)
-                        .filter(Competition.event_date >= current_date)
-                        .order_by(Competition.event_date)
-                        .all()
-                    )
-                    if not getattr(c, "is_cancelled", False)
+                    for c in competitions
+                    if c.event_date
+                    and c.event_date >= current_date
+                    and not getattr(c, "is_cancelled", False)
                 ),
                 None,
             )
@@ -11948,6 +12005,8 @@ def series_page(series_id):
         return render_template("series_page.html", 
                              series=series, 
                              competitions=competitions,
+                             schedule_sections=schedule_sections,
+                             ama_chain=ama_chain,
                              competition_results=competition_results,
                              competition_venues=competition_venues,
                              competition_gates=competition_gates,

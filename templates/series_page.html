@@ -4,7 +4,7 @@
   {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% if series.name == 'Supercross' %}AMA Supercross{% elif series.name == 'Motocross' %}AMA Pro Motocross{% elif series.name in ('MXON', 'MXoN') %}MXoN{% else %}{{ series.name }}{% endif %} {{ series.year }} — MX Fantasy League</title>
+  <title>{% if ama_chain %}AMA / SMX{% elif series.name == 'Supercross' %}AMA Supercross{% elif series.name == 'Motocross' %}AMA Pro Motocross{% elif series.name in ('MXON', 'MXoN') %}MXoN{% else %}{{ series.name }}{% endif %} {{ series.year }} — MX Fantasy League</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
@@ -637,7 +637,7 @@
     <div class="container mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
         <a href="/" class="sp-brand">MX Fantasy</a>
-        <span class="sp-brand__sub">{% if series.name in ('MXON', 'MXoN') %}MXoN{% elif series.name == 'Supercross' %}AMA Supercross{% elif series.name == 'Motocross' %}AMA Pro Motocross{% else %}{{ series.name }}{% endif %} {{ series.year }}</span>
+        <span class="sp-brand__sub">{% if ama_chain %}AMA / SMX{% elif series.name in ('MXON', 'MXoN') %}MXoN{% elif series.name == 'Supercross' %}AMA Supercross{% elif series.name == 'Motocross' %}AMA Pro Motocross{% else %}{{ series.name }}{% endif %} {{ series.year }}</span>
       </div>
       <div class="flex items-center gap-2">
         {% if session.username %}
@@ -653,7 +653,7 @@
     <!-- Season meta -->
     <section class="sp-panel">
       <div class="sp-panel__head">
-        <h2>{% if series.name in ('MXON', 'MXoN') %}MXoN{% elif series.name == 'Supercross' %}AMA Supercross{% elif series.name == 'Motocross' %}AMA Pro Motocross{% else %}{{ series.name }}{% endif %} {{ series.year }}</h2>
+        <h2>{% if ama_chain %}AMA / SMX{% elif series.name in ('MXON', 'MXoN') %}MXoN{% elif series.name == 'Supercross' %}AMA Supercross{% elif series.name == 'Motocross' %}AMA Pro Motocross{% else %}{{ series.name }}{% endif %} {{ series.year }}</h2>
       </div>
       <div class="sp-panel__body">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -818,12 +818,25 @@
         <h2><span class="mx-heading-icon">{{ mx_icon('calendar') }}<span>Race schema</span></span></h2>
       </div>
       <p class="px-4 pt-3 pb-0 text-sm text-slate-400">
-        Klicka på en tävling för bana och mer info.
+        {% if schedule_sections %}
+          SX, Pro Motocross och SMX Finals — klicka på en tävling för bana och mer info.
+        {% else %}
+          Klicka på en tävling för bana och mer info.
+        {% endif %}
       </p>
-      <div class="sp-race-grid">
-        {% for comp in competitions %}
-        {% set has_results = competition_results[comp.id]|length > 0 %}
-        {% set user_has_picks = user_picks_status[comp.id].has_picks %}
+      {% if schedule_sections %}
+      <div class="flex flex-wrap gap-2 px-4 pt-3">
+        {% for section in schedule_sections %}
+        <a href="#ama-sched-{{ section.series.id }}"
+           class="sp-link-btn{% if section.is_current %} sp-link-btn--go{% endif %}">{{ section.label }}</a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% macro ama_race_card(comp) -%}
+        {% set has_results = (competition_results.get(comp.id) or [])|length > 0 %}
+        {% set _ps = user_picks_status.get(comp.id) %}
+        {% set user_has_picks = (_ps.has_picks if _ps else false) %}
         {% set cancelled = comp.is_cancelled %}
         {% set maps = competition_trackmaps.get(comp.id, []) %}
         {% set map_url = maps[0] if maps else '' %}
@@ -869,7 +882,7 @@
               {% elif next_race and comp.id == next_race.id %}
                 <span class="sp-badge sp-badge--next">Nästa</span>
               {% else %}
-                <span class="sp-badge sp-badge--tba">Kommande</span>
+                <span class="sp-badge sp-badge--upcoming">Kommande</span>
               {% endif %}
               {% if user_has_picks and not has_results and not cancelled %}
                 <span class="sp-badge sp-badge--picks">Picks klara</span>
@@ -877,8 +890,34 @@
             </div>
           </div>
         </button>
+      {%- endmacro %}
+
+      {% if schedule_sections %}
+        {% for section in schedule_sections %}
+        <div id="ama-sched-{{ section.series.id }}" class="px-4 pt-5 pb-1">
+          <h3 class="text-sm font-extrabold uppercase tracking-wider text-cyan-300/90">{{ section.label }}</h3>
+          <p class="text-xs text-slate-500 mt-0.5">
+            {% if section.series.start_date %}{{ section.series.start_date.strftime('%d %b') }}{% else %}TBA{% endif %}
+            –
+            {% if section.series.end_date %}{{ section.series.end_date.strftime('%d %b %Y') }}{% else %}TBA{% endif %}
+            · {{ section.competitions|length }} races
+          </p>
+        </div>
+        <div class="sp-race-grid">
+          {% for comp in section.competitions %}
+            {{ ama_race_card(comp) }}
+          {% else %}
+            <p class="text-slate-400 text-sm px-4 py-6 col-span-full">Inga tävlingar i kalendern ännu.</p>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="sp-race-grid">
+        {% for comp in competitions %}
+          {{ ama_race_card(comp) }}
         {% endfor %}
       </div>
+      {% endif %}
     </section>
 
     <div id="sp-race-modal" class="sp-map-modal" hidden>
