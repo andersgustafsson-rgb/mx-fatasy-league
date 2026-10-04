@@ -22,11 +22,15 @@ MX_NAME_MATCH_TOKENS: dict[str, list[str]] = {
     "Ironman National": ["ironman"],
 }
 
-# Official 2027 SX track maps (supercrosslive.com, Oct 2026 release — first four)
+# Official 2027 SX track maps (supercrosslive.com, Oct 2026 release)
 SX_2027_TRACKMAP_FILES: dict[str, list[str]] = {
     "Anaheim 1": ["trackmaps/2027/anaheim1.jpg"],
     "San Diego": ["trackmaps/2027/sandiego.jpg"],
     "Anaheim 2": ["trackmaps/2027/anaheim2.jpg"],
+    "San Antonio": ["trackmaps/2027/sanantonio.jpg"],
+    "Tampa": ["trackmaps/2027/tampa.jpg"],
+    "Glendale": ["trackmaps/2027/glendale.jpg"],
+    "Detroit": ["trackmaps/2027/detroit.jpg"],
     "Baltimore": ["trackmaps/2027/baltimore.jpg"],
 }
 
