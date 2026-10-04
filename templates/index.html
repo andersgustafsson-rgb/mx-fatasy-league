@@ -3372,16 +3372,18 @@
               <div class="home-ui-panel__head">
                 <div class="flex items-center justify-center gap-3">
                   <img src="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" alt="MX Fantasy League" class="h-8 w-auto">
-                  <h2 id="home-fantasy-lb-title"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span data-i18n="lb.smx">SMX Topplista</span></span></h2>
+                  <h2 id="home-fantasy-lb-title"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Fantasy Topplistor</span></span></h2>
                 </div>
               </div>
               <div class="home-ui-panel__body">
-                <div id="season-leaderboard-list">
-                  <div class="text-center text-slate-400 py-4">
-                    <div class="animate-spin inline-block w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full"></div>
-                    <span class="ml-2 text-xs">Laddar...</span>
-                  </div>
+                <p class="text-xs text-slate-400 mb-3 text-center sm:text-left">
+                  AMA / SMX är kombinerad tippa (SX + MX + SMX). WSX, MXoN och MXGP har egna listor — oberoende av valt seriekort.
+                </p>
+                <div id="leaderboard-fantasy-boards" class="home-standings-grid">
+                  <div class="home-standings-card__empty" style="grid-column:1/-1">Laddar topplistor…</div>
                 </div>
+                <!-- Kept for welcome-chip / legacy expand helpers -->
+                <div id="season-leaderboard-list" class="hidden" aria-hidden="true"></div>
                 <div class="mt-4 text-center">
                   <a href="{{ url_for('my_scores') }}" class="home-ui-link-btn">Visa alla poäng</a>
                   <a href="{{ url_for('finished_series_page') }}" class="home-ui-link-btn">Fantasy-arkiv</a>
@@ -3389,7 +3391,7 @@
     </div>
     </div>
     
-    <div class="home-ui-panel mb-6">
+    <div class="home-ui-panel mb-6" id="season-team-lb-panel">
       <div class="home-ui-panel__head">
         <h2><span class="mx-heading-icon">{{ mx_icon('users') }}<span data-i18n="lb.season_team">Säsongsteam Topplista</span></span></h2>
       </div>
@@ -4038,162 +4040,65 @@
     }
 
     async function fetchSeasonLeaderboard() {
-      const c = document.getElementById("season-leaderboard-list");
+      const listEl = document.getElementById("season-leaderboard-list");
       const titleEl = document.getElementById("home-fantasy-lb-title");
       const requestId = (window.seasonLeaderboardRequestId || 0) + 1;
       window.seasonLeaderboardRequestId = requestId;
-      c.innerHTML = homeLbLoading('cyan');
 
-      const isWSX = homeSelectedSeries === 'WSX';
-      const isMXON = homeSelectedSeries === 'MXON';
-      const isMXGP = homeSelectedSeries === 'MXGP';
-      const isTippaOnly = isTippaOnlyHomeSeries(homeSelectedSeries);
       if (titleEl) {
-        if (isMXON) {
-          titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>MXoN Fantasy 2026</span></span>`;
-        } else if (isMXGP) {
-          titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>MXGP Fantasy 2027</span></span>`;
-        } else if (isWSX) {
-          titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>WSX Fantasy 2026</span></span>`;
-        } else {
-          titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>SMX Leaderboard</span></span>`;
-        }
+        titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>Fantasy Topplistor</span></span>`;
       }
-      // Season-team is AMA-only — hide when browsing tippa-only series
-      const seasonTeamPanel = document.getElementById('season-team-leaderboard-list')?.closest('.home-ui-panel');
-      if (seasonTeamPanel) seasonTeamPanel.style.display = isTippaOnly ? 'none' : '';
+      // Season-team is AMA-only but always shown on Topplista (not tied to series card)
+      const seasonTeamPanel = document.getElementById('season-team-lb-panel')
+        || document.getElementById('season-team-leaderboard-list')?.closest('.home-ui-panel');
+      if (seasonTeamPanel) seasonTeamPanel.style.display = '';
 
       try {
-        let leaderboard;
-        if (isWSX || isMXON || isMXGP) {
-          const lbUrl = isMXON
-            ? `/get_mxon_leaderboard?year=2026`
-            : isMXGP
-              ? `/get_mxgp_leaderboard?year=2027`
-              : `/get_wsx_leaderboard?year=2026`;
-          const res = await fetch(lbUrl);
-          if (requestId !== window.seasonLeaderboardRequestId) return;
-          if (!res.ok) {
-            c.innerHTML = `<p class="text-red-400 text-center">Kunde inte hämta ${isMXON ? 'MXoN' : isMXGP ? 'MXGP' : 'WSX'}-leaderboard</p>`;
-            return;
-          }
-          const payload = await res.json();
-          if (payload.error) {
-            c.innerHTML = '<p class="text-red-400 text-center">Fel: ' + payload.error + '</p>';
-            return;
-          }
-          leaderboard = Array.isArray(payload.leaderboard) ? payload.leaderboard : [];
-        } else {
-          const res = await fetch(`/get_season_leaderboard`);
-          if (requestId !== window.seasonLeaderboardRequestId) return;
-          if (!res.ok) {
-            const errorText = await res.text();
-            console.error("Leaderboard fetch failed:", res.status, errorText);
-            c.innerHTML = '<p class="text-red-400 text-center">Kunde inte hämta leaderboard: ' + res.status + '</p>';
-            return;
-          }
-          leaderboard = await res.json();
-          if (leaderboard.error) {
-            console.error("Leaderboard error:", leaderboard.error);
-            c.innerHTML = '<p class="text-red-400 text-center">Fel i leaderboard: ' + leaderboard.error + '</p>';
-            return;
-          }
-          if (!Array.isArray(leaderboard)) {
-            console.error("Leaderboard is not an array:", leaderboard);
-            c.innerHTML = '<p class="text-red-400 text-center">Ogiltigt svar från server</p>';
-            return;
-          }
-        }
-
-        if (requestId !== window.seasonLeaderboardRequestId) return;
-
-        if (leaderboard.length === 0) {
-          c.innerHTML = homeLbEmpty(
-            isMXON
-              ? 'Inga MXoN-poäng ännu — highscoren fylls efter Ernée.'
-              : isMXGP
-              ? 'Inga MXGP-poäng ännu — highscoren fylls när tippa öppnar 2027.'
-              : isWSX
-              ? 'Inga WSX-poäng ännu — highscoren fylls efter Canadian GP.'
-              : 'Inga poäng registrerade ännu.',
-            'cyan'
-          );
-          return;
-        }
-
-        // Store leaderboard data globally for expand/collapse
-        window.seasonLeaderboardData = leaderboard;
-
-        if (!isTippaOnly && titleEl && leaderboard[0] && leaderboard[0].combined) {
-          titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>Total highscore</span></span>`;
-        }
-
-        const pointsLabel = isMXON
-          ? 'MXoN poäng'
-          : isMXGP
-            ? 'MXGP poäng'
-            : isWSX
-              ? 'WSX poäng'
-              : 'SMX poäng';
-        applyWelcomeSidebarPoints(leaderboard, pointsLabel);
-
-        if (requestId !== window.seasonLeaderboardRequestId) return;
-        seasonLeaderboardExpanded = false;
-
-        const initialCount = Math.min(15, leaderboard.length);
-        const remainingCount = leaderboard.length - initialCount;
-        let rowsHtml = '';
-
-        leaderboard.forEach((row, i) => {
-          const name = `<a href="/profile/${row.user_id}" class="hover:text-cyan-200 transition-colors" title="Visa ${row.display_name || row.username}">${row.display_name || row.username}${row.team_name ? ` <span class="text-xs font-normal text-gray-400">/ ${row.team_name}</span>` : ''}</a>`;
-          const delta = deltaIcon(row.delta === null || row.delta === undefined ? 0 : Number(row.delta));
-          const sub = row.combined
-            ? `Tippa ${Number(row.tippa_points || 0).toLocaleString('sv-SE')} · Team ${Number(row.team_points || 0).toLocaleString('sv-SE')}`
-            : '';
-          rowsHtml += homeLbRow(i + 1, name, row.total_points, {
-            hidden: i >= 15,
-            extraRight: delta,
-            sub,
-          });
+        // Combined boards on Topplista tab (AMA = SX+MX+SMX)
+        await loadFantasyStandingsBoards({
+          rootId: 'leaderboard-fantasy-boards',
+          topN: 15,
+          loadingText: 'Laddar topplistor…',
         });
+        if (requestId !== window.seasonLeaderboardRequestId) return;
 
-        c.innerHTML = homeLbPanel(rowsHtml, 'cyan');
-
-        if (leaderboard.length > 15) {
-          const expandBtn = document.createElement("div");
-          expandBtn.className = "mt-4 text-center";
-          expandBtn.id = "expand-leaderboard-btn-container";
-          expandBtn.innerHTML = `
-            <button id="expand-leaderboard-btn"
-                    onclick="toggleSeasonLeaderboard()"
-                    class="w-full text-xs text-cyan-300 hover:text-white transition-colors bg-gray-950/50 rounded-lg px-2 py-1.5 border border-gray-700">
-              ${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa fler (${remainingCount} till)
-            </button>
-          `;
-          c.appendChild(expandBtn);
+        // AMA combined rows for welcome chips / legacy store
+        let amaRows = [];
+        try {
+          amaRows = await _fetchLeaderboardRows('/get_season_leaderboard');
+        } catch (e) {
+          console.warn('AMA leaderboard for chips:', e);
         }
+        if (requestId !== window.seasonLeaderboardRequestId) return;
+        window.seasonLeaderboardData = amaRows;
+        if (listEl) {
+          listEl.innerHTML = '';
+        }
+        applyWelcomeSidebarPoints(amaRows, 'AMA poäng');
       } catch (e) {
         console.error("Leaderboard error:", e);
-        c.innerHTML = '<p class="text-red-400 text-center" style="text-shadow: 0 0 5px rgba(248, 113, 113, 0.3);">Kunde inte hämta leaderboard: ' + e.message + '</p>';
+        const boards = document.getElementById('leaderboard-fantasy-boards');
+        if (boards) {
+          boards.innerHTML = `<p class="text-red-400 text-center" style="grid-column:1/-1">Kunde inte hämta topplistor: ${_escHome(e.message || e)}</p>`;
+        }
       }
     }
 
-    // Expand/collapse season leaderboard
+    // Expand/collapse season leaderboard (legacy helper; Topplista uses standings cards)
     let seasonLeaderboardExpanded = false;
     function toggleSeasonLeaderboard() {
       const leaderboardList = document.getElementById('season-leaderboard-list');
       const entries = leaderboardList ? leaderboardList.querySelectorAll('.leaderboard-entry') : [];
       const btn = document.getElementById('expand-leaderboard-btn');
+      if (!btn) return;
       const totalCount = entries.length;
       const hiddenCount = totalCount - 15;
       
       if (!seasonLeaderboardExpanded) {
-        // Show all entries
         entries.forEach(entry => entry.classList.remove('hidden'));
         btn.innerHTML = `${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa färre (visar alla ${totalCount})`;
         seasonLeaderboardExpanded = true;
       } else {
-        // Show only first 15
         entries.forEach((entry, index) => {
           if (index >= 15) {
             entry.classList.add('hidden');
@@ -4222,20 +4127,24 @@
         ? `<a href="/profile/${uid}" class="hover:text-cyan-200 transition-colors">${_escHome(name)}</a>`
         : _escHome(name);
       const pts = Number(row.total_points || 0);
-      return homeLbRow(rank, nameHtml, pts);
+      const sub = row.combined
+        ? `Tippa ${Number(row.tippa_points || 0).toLocaleString('sv-SE')} · Team ${Number(row.team_points || 0).toLocaleString('sv-SE')}`
+        : '';
+      return homeLbRow(rank, nameHtml, pts, { sub });
     }
 
-    function renderHomeStandingsCard(board) {
+    function renderHomeStandingsCard(board, { topN = 5 } = {}) {
       const rows = Array.isArray(board.rows) ? board.rows : [];
-      const top = rows.slice(0, 5);
-      const rest = rows.slice(5);
+      const n = Math.max(1, Number(topN) || 5);
+      const top = rows.slice(0, n);
+      const rest = rows.slice(n);
       const meName = (window.currentUsername || '').toString().trim().toLowerCase();
       let meHtml = '';
       if (meName && rows.length) {
         const idx = rows.findIndex(
           (r) => (r.username || '').toString().trim().toLowerCase() === meName
         );
-        if (idx >= 5) {
+        if (idx >= n) {
           const me = rows[idx];
           meHtml = `<div class="home-standings-card__me">Du · #${idx + 1} · ${Number(me.total_points || 0)}p</div>`;
         }
@@ -4245,12 +4154,11 @@
         body = `<p class="home-standings-card__empty">${_escHome(board.empty || 'Inga poäng ännu.')}</p>`;
       } else {
         const topHtml = top.map((r, i) => _standingsRowHtml(r, i + 1)).join('');
-        const restHtml = rest.map((r, i) => _standingsRowHtml(r, i + 6)).join('');
+        const restHtml = rest.map((r, i) => _standingsRowHtml(r, i + n + 1)).join('');
+        const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
         const expand = rest.length
-          ? `<button type="button" class="home-standings-card__expand" data-standings-expand>${
-              (typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en')
-                ? `Show all (${rows.length})`
-                : `Visa alla (${rows.length})`
+          ? `<button type="button" class="home-standings-card__expand" data-standings-expand data-standings-topn="${n}">${
+              isEn ? `Show all (${rows.length})` : `Visa alla (${rows.length})`
             }</button>
             <div class="home-standings-card__rest" hidden data-standings-rest>${restHtml}</div>`
           : '';
@@ -4272,28 +4180,25 @@
           const card = btn.closest('.home-standings-card');
           const rest = card && card.querySelector('[data-standings-rest]');
           if (!rest) return;
+          const topN = Number(btn.getAttribute('data-standings-topn') || 5) || 5;
           const open = rest.hasAttribute('hidden');
           if (open) rest.removeAttribute('hidden');
           else rest.setAttribute('hidden', '');
           const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
-          const n = rest.querySelectorAll('.leaderboard-entry').length + 5;
+          const total = rest.querySelectorAll('.leaderboard-entry').length + topN;
           btn.textContent = open
-            ? (isEn ? 'Show top 5' : 'Visa top 5')
-            : (isEn ? `Show all (${n})` : `Visa alla (${n})`);
+            ? (isEn ? `Show top ${topN}` : `Visa top ${topN}`)
+            : (isEn ? `Show all (${total})` : `Visa alla (${total})`);
         });
       });
     }
 
-    async function fetchHomeStandingsBoards() {
-      const root = document.getElementById('home-standings-boards');
-      if (!root) return;
-      const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
-      root.innerHTML = `<div class="home-standings-card__empty" style="grid-column:1/-1">${isEn ? 'Loading…' : 'Laddar ställningar…'}</div>`;
-      const boards = [
+    function fantasyStandingsBoardDefs(isEn) {
+      return [
         {
           id: 'ama',
           title: 'AMA / SMX',
-          sub: isEn ? 'Tippa + team' : 'Tippa + team',
+          sub: isEn ? 'SX · MX · SMX tippa' : 'SX · MX · SMX tippa',
           empty: isEn ? 'No AMA points yet.' : 'Inga AMA-poäng ännu.',
           load: () => _fetchLeaderboardRows('/get_season_leaderboard'),
         },
@@ -4319,6 +4224,19 @@
           load: () => _fetchLeaderboardRows('/get_mxgp_leaderboard?year=2027', { wrapKey: 'leaderboard' }),
         },
       ];
+    }
+
+    async function loadFantasyStandingsBoards({
+      rootId = 'home-standings-boards',
+      topN = 5,
+      loadingText = null,
+    } = {}) {
+      const root = document.getElementById(rootId);
+      if (!root) return [];
+      const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+      const loading = loadingText || (isEn ? 'Loading…' : 'Laddar ställningar…');
+      root.innerHTML = `<div class="home-standings-card__empty" style="grid-column:1/-1">${loading}</div>`;
+      const boards = fantasyStandingsBoardDefs(isEn);
       const settled = await Promise.all(
         boards.map(async (b) => {
           try {
@@ -4330,10 +4248,16 @@
           }
         })
       );
-      root.innerHTML = settled.map(renderHomeStandingsCard).join('');
+      root.innerHTML = settled.map((b) => renderHomeStandingsCard(b, { topN })).join('');
       bindHomeStandingsExpand(root);
+      return settled;
+    }
+
+    async function fetchHomeStandingsBoards() {
+      await loadFantasyStandingsBoards({ rootId: 'home-standings-boards', topN: 5 });
     }
     window.fetchHomeStandingsBoards = fetchHomeStandingsBoards;
+    window.loadFantasyStandingsBoards = loadFantasyStandingsBoards;
 
     async function fetchSeasonTeamLeaderboard() {
       const c = document.getElementById("season-team-leaderboard-list");
