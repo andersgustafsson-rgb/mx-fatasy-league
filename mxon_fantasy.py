@@ -1131,27 +1131,37 @@ def mxon_class_winners_for_series(series_id: int) -> list[dict]:
 
 
 def fantasy_mxon_leaderboard_for_year(year: int = 2026) -> list[dict]:
-    """Simple MXoN tippa leaderboard from CompetitionScore totals."""
+    """MXoN tippa leaderboard from CompetitionScore, with FinishedSeriesStats fallback."""
+    from collections import defaultdict
+
     from models import SeasonTeam, User
 
     comps = mxon_competitions_for_year(int(year))
     season_ids = [int(c.id) for c in comps]
-    if not season_ids:
-        return []
 
-    from collections import defaultdict
-
-    by_uc: dict[tuple[int, int], CompetitionScore] = {}
-    for s in CompetitionScore.query.filter(
-        CompetitionScore.competition_id.in_(season_ids)
-    ).all():
-        k = (int(s.user_id), int(s.competition_id))
-        prev = by_uc.get(k)
-        if prev is None or int(s.score_id or 0) > int(prev.score_id or 0):
-            by_uc[k] = s
     totals: dict[int, int] = defaultdict(int)
-    for s in by_uc.values():
-        totals[int(s.user_id)] += int(s.total_points or 0)
+    if season_ids:
+        by_uc: dict[tuple[int, int], CompetitionScore] = {}
+        for s in CompetitionScore.query.filter(
+            CompetitionScore.competition_id.in_(season_ids)
+        ).all():
+            k = (int(s.user_id), int(s.competition_id))
+            prev = by_uc.get(k)
+            if prev is None or int(s.score_id or 0) > int(prev.score_id or 0):
+                by_uc[k] = s
+        for s in by_uc.values():
+            totals[int(s.user_id)] += int(s.total_points or 0)
+
+    # After archive (or if scores were wiped): fall back to Fantasy-arkiv rows
+    if not totals:
+        mxon = Series.query.filter(
+            Series.year == int(year),
+            Series.name.in_(("MXON", "MXoN")),
+        ).first()
+        if mxon:
+            for row in FinishedSeriesStats.query.filter_by(series_id=int(mxon.id)).all():
+                totals[int(row.user_id)] = int(row.total_points or 0)
+
     if not totals:
         return []
 

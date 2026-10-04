@@ -4213,13 +4213,15 @@ def build_series_status_list() -> list[dict]:
             except Exception:
                 picks_preseason = False
 
-        # Finished seasons without upcoming races belong in Fantasy-arkiv, not Välj Serie
+        # Finished seasons without upcoming races belong in Fantasy-arkiv, not Välj Serie.
+        # Exception: MXoN stays selectable so the home topplista remains after archive.
         if (
             not under_construction
             and not is_currently_active
             and next_race is None
             and s.end_date
             and current_date > s.end_date
+            and series_code != "MXON"
         ):
             continue
 
@@ -18072,8 +18074,9 @@ def archive_wsx_and_reset_points():
 
 @app.post("/admin/archive_mxon_and_reset_points")
 def archive_mxon_and_reset_points():
-    """Archive MXoN tippa into FinishedSeriesStats, wipe CompetitionScores, mark series finished.
+    """Archive MXoN tippa into FinishedSeriesStats and mark series finished.
 
+    Keeps CompetitionScore so the home MXoN topplista stays after archive.
     JSON optional: { "year": 2026 }. Keeps MxonNationResult / picks / class results.
     """
     if not is_admin_user():
@@ -18149,10 +18152,7 @@ def archive_mxon_and_reset_points():
         archived_count = _write_finished_series_stats(mxon_series.id, write_payload)
         db.session.flush()
 
-        deleted_count = CompetitionScore.query.filter(
-            CompetitionScore.competition_id.in_(comp_ids)
-        ).delete(synchronize_session=False)
-
+        # Keep CompetitionScore — home topplista (/get_mxon_leaderboard) reads live scores.
         mxon_series.is_active = False
         # Fantasy-arkiv lists series with end_date < today — ensure it shows immediately
         today = get_today()
@@ -18162,12 +18162,17 @@ def archive_mxon_and_reset_points():
             mxon_series.end_date = today - timedelta(days=1)
 
         db.session.commit()
+        try:
+            global _SERIES_STATUS_CACHE
+            _SERIES_STATUS_CACHE = None
+        except Exception:
+            pass
 
         return jsonify({
             "success": True,
             "message": (
-                f"MXoN {year} arkiverad! {archived_count} spelare i Fantasy-arkivet, "
-                f"{deleted_count} tippa-poängposter raderade. Nationsresultat behålls."
+                f"MXoN {year} arkiverad! {archived_count} spelare i Fantasy-arkivet. "
+                f"Tippa-poäng behålls så topplistan syns kvar på MXoN-kortet. Nationsresultat behålls."
             ),
             "archive_summary": {
                 "series": "MXON",
@@ -18179,7 +18184,7 @@ def archive_mxon_and_reset_points():
                 "top_10": stats_list[:10],
             },
             "archived_users": archived_count,
-            "deleted_scores": deleted_count,
+            "deleted_scores": 0,
         })
     except Exception as e:
         import traceback
