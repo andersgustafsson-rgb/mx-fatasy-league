@@ -3377,7 +3377,7 @@
               </div>
               <div class="home-ui-panel__body">
                 <p class="text-xs text-slate-400 mb-3 text-center sm:text-left">
-                  AMA / SMX är kombinerad tippa (SX + MX + SMX). WSX, MXoN och MXGP har egna listor — oberoende av valt seriekort.
+                  AMA / SMX är kombinerad tippa + säsongsteam (SX + MX + SMX). WSX, MXoN och MXGP har egna listor — oberoende av valt seriekort.
                 </p>
                 <div id="leaderboard-fantasy-boards" class="home-standings-grid">
                   <div class="home-standings-card__empty" style="grid-column:1/-1">Laddar topplistor…</div>
@@ -3389,27 +3389,6 @@
                   <a href="{{ url_for('finished_series_page') }}" class="home-ui-link-btn">Fantasy-arkiv</a>
       </div>
     </div>
-    </div>
-    
-    <div class="home-ui-panel mb-6" id="season-team-lb-panel">
-      <div class="home-ui-panel__head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('users') }}<span data-i18n="lb.season_team">Säsongsteam Topplista</span></span></h2>
-      </div>
-      <div class="home-ui-panel__body">
-        <div id="season-team-leaderboard-list">
-          <div class="text-center text-slate-400 py-4">
-            <div class="animate-spin inline-block w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full"></div>
-            <span class="ml-2 text-xs">Laddar...</span>
-          </div>
-        </div>
-        <div class="mt-4 text-center">
-          {% if is_logged_in and my_team %}
-          <a href="{{ url_for('season_team_page') }}" class="home-ui-link-btn">Visa mitt säsongsteam</a>
-          {% else %}
-          <a href="{{ url_for('season_team_builder') }}" class="home-ui-link-btn">Skapa säsongsteam</a>
-          {% endif %}
-        </div>
-      </div>
     </div>
 
     <div class="home-ui-panel mb-6">
@@ -4048,10 +4027,6 @@
       if (titleEl) {
         titleEl.innerHTML = `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>Fantasy Topplistor</span></span>`;
       }
-      // Season-team is AMA-only but always shown on Topplista (not tied to series card)
-      const seasonTeamPanel = document.getElementById('season-team-lb-panel')
-        || document.getElementById('season-team-leaderboard-list')?.closest('.home-ui-panel');
-      if (seasonTeamPanel) seasonTeamPanel.style.display = '';
 
       try {
         // Combined boards on Topplista tab (AMA = SX+MX+SMX)
@@ -4198,7 +4173,7 @@
         {
           id: 'ama',
           title: 'AMA / SMX',
-          sub: isEn ? 'SX · MX · SMX tippa' : 'SX · MX · SMX tippa',
+          sub: isEn ? 'SX · MX · SMX · team' : 'SX · MX · SMX · team',
           empty: isEn ? 'No AMA points yet.' : 'Inga AMA-poäng ännu.',
           load: () => _fetchLeaderboardRows('/get_season_leaderboard'),
         },
@@ -4260,26 +4235,8 @@
     window.loadFantasyStandingsBoards = loadFantasyStandingsBoards;
 
     async function fetchSeasonTeamLeaderboard() {
-      const c = document.getElementById("season-team-leaderboard-list");
-      if (!c) return;
-      c.innerHTML = homeLbLoading('green');
-      try {
-        const res = await fetch(`/get_season_team_leaderboard`);
-        const leaderboard = await res.json();
-        if (leaderboard.length === 0) {
-          c.innerHTML = homeLbEmpty('Inga säsongsteam ännu.', 'green');
-        } else {
-          let rowsHtml = '';
-          leaderboard.forEach((row, i) => {
-            const name = `<a href="/season_team/view/${row.user_id}" class="hover:text-green-200 transition-colors" title="Säsongsteam — ${row.display_name || row.username}">${row.display_name || row.username}${row.team_name ? ` <span class="text-xs font-normal text-gray-400">/ ${row.team_name}</span>` : ''}</a>`;
-            rowsHtml += homeLbRow(i + 1, name, row.total_points);
-          });
-          c.innerHTML = homeLbPanel(rowsHtml, 'green');
-        }
-      } catch (e) {
-        console.error("Season team leaderboard error:", e);
-        c.innerHTML = '<p class="text-red-400 text-center text-sm py-3">Kunde inte hämta säsongsteam leaderboard: ' + e.message + '</p>';
-      }
+      // Season-team points are included in AMA / SMX combined highscore — no separate LB.
+      return;
     }
 
     async function fetchSeasonTeamStats() {
@@ -6260,7 +6217,6 @@
 
         if (targetTab === 'leaderboard') {
           fetchSeasonLeaderboard();
-          fetchSeasonTeamLeaderboard();
           fetchLeagueLeaderboard();
           fetchWeeklyFunStats();
         } else if (targetTab === 'games') {
