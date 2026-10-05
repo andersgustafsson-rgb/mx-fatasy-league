@@ -536,16 +536,23 @@
         ? `<span class="font-black text-emerald-300 tabular-nums shrink-0">+${pts}p</span>`
         : `<span class="text-slate-500 shrink-0">0p</span>`;
       const name = (row.rider_name || '').trim() || '—';
+      const flag = row.flag_url
+        ? `<img src="${row.flag_url}" alt="" class="w-5 h-3.5 object-cover rounded-sm shrink-0 border border-slate-600/50 mt-0.5" loading="lazy">`
+        : '';
+      const actualLabel = row.actual != null && Number(row.actual) > 0
+        ? `Kom P${row.actual}`
+        : 'Ej i resultat';
       return `<div class="py-2.5 px-3 rounded-lg border ${bg} space-y-2">
         <div class="flex items-start gap-2">
           <span class="text-base shrink-0 leading-none mt-0.5">${icon}</span>
+          ${flag}
           <span class="font-bold text-white text-sm leading-snug break-words flex-1">${name}</span>
           <span class="shrink-0 sm:hidden">${ptsHtml}</span>
         </div>
         <div class="flex flex-wrap items-center gap-1.5 text-xs pl-6">
           <span class="px-2 py-0.5 rounded bg-cyan-950/60 text-cyan-100 border border-cyan-800/40">Du: P${row.predicted}</span>
           <span class="text-slate-500">→</span>
-          <span class="px-2 py-0.5 rounded font-bold ${actualCls}">Kom P${row.actual}</span>
+          <span class="px-2 py-0.5 rounded font-bold ${actualCls}">${actualLabel}</span>
           <span class="hidden sm:inline">${ptsHtml}</span>
         </div>
         ${row.hint ? `<p class="text-[10px] text-slate-400 pl-6">${row.hint}</p>` : ''}
@@ -582,6 +589,16 @@
       }
       const picked = (row.picked_name||row.rider_name||'—').trim();
       const actual = (row.actual_name||'').trim();
+      if (row.kind === 'class_favorite') {
+        const actualHtml = actual
+          ? `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> → vann <strong class="text-amber-200">${actual}</strong></span>`
+          : `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> <span class="text-rose-300/90">(resultat saknas)</span></span>`;
+        return `<div class="py-2.5 px-3 rounded-lg border border-slate-700/60 bg-slate-900/40 space-y-1.5">
+          <div class="flex items-center justify-between gap-2"><span class="text-xs font-bold uppercase text-slate-500">${row.label||'Klass'}</span><span>${icon}</span></div>
+          <div class="text-sm leading-snug">${actualHtml}</div>
+          <div class="flex items-center justify-between gap-2"><span class="text-[10px] text-slate-500">${row.hint||''}</span><span class="font-bold tabular-nums text-sm ${ok?'text-emerald-300':'text-slate-500'}">${ptsTxt}</span></div>
+        </div>`;
+      }
       const actualHtml = actual
         ? `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> → holeshot <strong class="text-amber-200">${actual}</strong></span>`
         : `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> <span class="text-rose-300/90">(resultat saknas)</span></span>`;
@@ -609,10 +626,15 @@
       const listEl    = document.getElementById('detail-list');
       const totalEl   = document.getElementById('detail-total');
       if (titleEl) titleEl.textContent = comp.name||'Dina poäng';
-      if (subEl) subEl.textContent = [comp.series,'Jämför din gissning med resultatet'].filter(Boolean).join(' · ');
-
       const seriesU = String(comp.series || '').toUpperCase();
-      const showSeasonTeam = !viewingUser && (!seriesU || ['SX', 'MX', 'SMX'].includes(seriesU));
+      const isMxon = data.kind === 'mxon' || seriesU === 'MXON';
+      if (subEl) {
+        subEl.textContent = isMxon
+          ? [comp.series || 'MXON', 'Nationstippa + klassfavoriter'].filter(Boolean).join(' · ')
+          : [comp.series,'Jämför din gissning med resultatet'].filter(Boolean).join(' · ');
+      }
+
+      const showSeasonTeam = !viewingUser && !isMxon && (!seriesU || ['SX', 'MX', 'SMX'].includes(seriesU));
       const noSeasonTeam = showSeasonTeam && (!seasonTeam || seasonTeam.error === 'no_team' || seasonTeam._missing);
       let stPts = null;
       if (showSeasonTeam && seasonTeam && !seasonTeam.error && seasonTeam.before_team !== true && seasonTeam.counts_for_team !== false) {
@@ -621,7 +643,24 @@
 
       if (summaryEl) {
         summaryEl.classList.remove('hidden');
-        let cards = `
+        let cards;
+        if (isMxon) {
+          cards = `
+          <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
+            <div class="text-[10px] text-slate-500 uppercase">Nationer</div>
+            <div class="font-black text-white tabular-nums">${sum.race_points??0}p</div>
+          </div>
+          <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
+            <div class="text-[10px] text-slate-500 uppercase">Klassfavoriter</div>
+            <div class="font-black text-white tabular-nums">${sum.holeshot_points??0}p</div>
+          </div>
+          <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
+            <div class="text-[10px] text-slate-500 uppercase">Totalt</div>
+            <div class="font-black text-emerald-300 tabular-nums">${data.total??0}p</div>
+          </div>`;
+          summaryEl.className = 'mt-3 grid grid-cols-3 gap-2 text-center';
+        } else {
+          cards = `
           <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
             <div class="text-[10px] text-slate-500 uppercase">Race picks</div>
             <div class="font-black text-white tabular-nums">${sum.race_points??0}p</div>
@@ -634,25 +673,28 @@
             <div class="text-[10px] text-slate-500 uppercase">Wildcard</div>
             <div class="font-black text-white tabular-nums">${sum.wildcard_points??0}p</div>
           </div>`;
-        if (showSeasonTeam) {
-          cards += noSeasonTeam
-            ? `<div class="rounded-lg bg-amber-950/40 border border-amber-400/35 p-2">
-                <div class="text-[10px] text-amber-300/90 uppercase">Säsongsteam</div>
-                <div class="font-black text-amber-100 tabular-nums">0p</div>
-              </div>`
-            : `<div class="rounded-lg bg-cyan-950/35 border border-cyan-500/30 p-2">
-                <div class="text-[10px] text-cyan-300/80 uppercase">Säsongsteam</div>
-                <div class="font-black text-cyan-100 tabular-nums">${stPts == null ? '—' : `${stPts}p`}</div>
-              </div>`;
+          if (showSeasonTeam) {
+            cards += noSeasonTeam
+              ? `<div class="rounded-lg bg-amber-950/40 border border-amber-400/35 p-2">
+                  <div class="text-[10px] text-amber-300/90 uppercase">Säsongsteam</div>
+                  <div class="font-black text-amber-100 tabular-nums">0p</div>
+                </div>`
+              : `<div class="rounded-lg bg-cyan-950/35 border border-cyan-500/30 p-2">
+                  <div class="text-[10px] text-cyan-300/80 uppercase">Säsongsteam</div>
+                  <div class="font-black text-cyan-100 tabular-nums">${stPts == null ? '—' : `${stPts}p`}</div>
+                </div>`;
+          }
+          summaryEl.className = showSeasonTeam
+            ? 'mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center'
+            : 'mt-3 grid grid-cols-3 gap-2 text-center';
         }
         summaryEl.innerHTML = cards;
-        summaryEl.className = showSeasonTeam
-          ? 'mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center'
-          : 'mt-3 grid grid-cols-3 gap-2 text-center';
       }
       const tippaTotal = data.total??0;
       if (totalEl) {
-        if (noSeasonTeam) {
+        if (isMxon) {
+          totalEl.textContent = `Totalt MXoN: ${tippaTotal}p`;
+        } else if (noSeasonTeam) {
           totalEl.textContent = `Tippa ${tippaTotal}p · Säsongsteam 0p (saknas)`;
         } else {
           totalEl.textContent = stPts == null
@@ -663,32 +705,43 @@
       if (!listEl) return;
       const labels = data.labels||{};
       let html = '';
-      html += renderSection((labels.primary||'450cc')+' — dina placeringar', sec.picks_450, renderPickRow);
-      html += renderSection((labels.secondary||'250cc')+' — dina placeringar', sec.picks_250, renderPickRow);
-      if (sec.holeshot?.length) {
-        html += '<div><h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Holeshot</h4><div class="space-y-2">';
-        sec.holeshot.forEach(r=>{html+=renderSimpleRow(r);});
-        html += '</div></div>';
-      }
-      if (sec.wildcard?.length) {
-        html += '<div><h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Wildcard</h4><div class="space-y-2">';
-        sec.wildcard.forEach(r=>{html+=renderSimpleRow(r);});
-        html += '</div></div>';
+      if (isMxon) {
+        html += renderSection(labels.primary || 'Nationer (topp 5)', sec.picks_450, renderPickRow);
+        if (sec.holeshot?.length) {
+          html += '<div><h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Klassfavoriter</h4><div class="space-y-2">';
+          sec.holeshot.forEach(r=>{html+=renderSimpleRow(r);});
+          html += '</div></div>';
+        }
+      } else {
+        html += renderSection((labels.primary||'450cc')+' — dina placeringar', sec.picks_450, renderPickRow);
+        html += renderSection((labels.secondary||'250cc')+' — dina placeringar', sec.picks_250, renderPickRow);
+        if (sec.holeshot?.length) {
+          html += '<div><h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Holeshot</h4><div class="space-y-2">';
+          sec.holeshot.forEach(r=>{html+=renderSimpleRow(r);});
+          html += '</div></div>';
+        }
+        if (sec.wildcard?.length) {
+          html += '<div><h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Wildcard</h4><div class="space-y-2">';
+          sec.wildcard.forEach(r=>{html+=renderSimpleRow(r);});
+          html += '</div></div>';
+        }
       }
       if (sec.other?.length) sec.other.forEach(r=>{html+=renderSimpleRow(r);});
       if (!html) html = '<p class="text-slate-500 text-center py-4">Inga picks registrerade för detta race.</p>';
       let stHtml = '';
-      if (noSeasonTeam) {
-        stHtml = `<div class="pt-2 border-t border-amber-500/25">
-          <div class="rounded-xl border border-amber-400/35 bg-amber-950/30 px-3 py-3">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-amber-300 mb-1">OBS · säsongsteam saknades</p>
-            <p class="text-sm font-bold text-amber-50 mb-1">De poängen gick förlorade</p>
-            <p class="text-xs text-slate-300 leading-relaxed mb-3">Utan lag fick du 0p från säsongsteam i det här racet. Tippa räknades — men förarpoängen från laget uteblev. Skapa lag till nästa AMA-race.</p>
-            <a href="/season_team_builder" class="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-900 text-xs font-extrabold">Skapa säsongsteam →</a>
-          </div>
-        </div>`;
-      } else if (showSeasonTeam) {
-        stHtml = renderSeasonTeamSection(seasonTeam);
+      if (!isMxon) {
+        if (noSeasonTeam) {
+          stHtml = `<div class="pt-2 border-t border-amber-500/25">
+            <div class="rounded-xl border border-amber-400/35 bg-amber-950/30 px-3 py-3">
+              <p class="text-[11px] font-bold uppercase tracking-wider text-amber-300 mb-1">OBS · säsongsteam saknades</p>
+              <p class="text-sm font-bold text-amber-50 mb-1">De poängen gick förlorade</p>
+              <p class="text-xs text-slate-300 leading-relaxed mb-3">Utan lag fick du 0p från säsongsteam i det här racet. Tippa räknades — men förarpoängen från laget uteblev. Skapa lag till nästa AMA-race.</p>
+              <a href="/season_team_builder" class="inline-flex items-center justify-center px-3 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-900 text-xs font-extrabold">Skapa säsongsteam →</a>
+            </div>
+          </div>`;
+        } else if (showSeasonTeam) {
+          stHtml = renderSeasonTeamSection(seasonTeam);
+        }
       }
       listEl.innerHTML = html + stHtml;
     }

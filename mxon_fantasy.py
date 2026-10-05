@@ -1034,6 +1034,144 @@ def calculate_mxon_scores(competition_id: int) -> dict:
     }
 
 
+def build_mxon_results_detail(user_id: int, competition_id: int) -> dict:
+    """Structured MXoN score breakdown for Mina poäng detail modal (same shape as AMA)."""
+    comp = Competition.query.get(int(competition_id))
+    results = MxonNationResult.query.filter_by(competition_id=int(competition_id)).all()
+    actual_by_nation = {int(r.nation_id): int(r.position) for r in results}
+    nation_by_id: dict[int, MxonNation] = {}
+    for r in results:
+        n = r.nation or MxonNation.query.get(r.nation_id)
+        if n:
+            nation_by_id[int(n.id)] = n
+
+    picks = (
+        MxonNationPick.query.filter_by(
+            user_id=int(user_id), competition_id=int(competition_id)
+        )
+        .order_by(MxonNationPick.position.asc())
+        .all()
+    )
+    nation_rows: list[dict] = []
+    race_points = 0
+    for p in picks:
+        nid = int(p.nation_id)
+        n = p.nation or nation_by_id.get(nid) or MxonNation.query.get(nid)
+        code = (n.code if n else "") or ""
+        name = (n.name if n else None) or f"Nation #{nid}"
+        pred = int(p.position)
+        actual = actual_by_nation.get(nid)
+        points = calculate_nation_pick_points(pred, actual)
+        race_points += points
+        if actual is None:
+            status = "miss"
+            hint = "Nationen finns inte i resultatet → 0p"
+            diff = 0
+            actual_out = 0
+        else:
+            diff = abs(pred - int(actual))
+            actual_out = int(actual)
+            if points == 25:
+                status = "perfect"
+                hint = "Exakt rätt plats → +25p"
+            elif points > 0:
+                status = "close"
+                hint = f"{diff} {'plats' if diff == 1 else 'platser'} fel → +{points}p"
+            else:
+                status = "miss"
+                hint = "Utanför poängzonen → 0p"
+        nation_rows.append(
+            {
+                "kind": "pick",
+                "status": status,
+                "rider_name": name,
+                "flag_url": flag_image_url(code) if code else None,
+                "code": code or None,
+                "predicted": pred,
+                "actual": actual_out,
+                "points": int(points),
+                "diff": int(diff),
+                "hint": hint,
+            }
+        )
+
+    class_winners = get_class_results(int(competition_id))
+    class_picks = get_user_class_picks(int(user_id), int(competition_id))
+    class_rows: list[dict] = []
+    class_points = 0
+    for key in MXON_CLASS_KEYS:
+        label = MXON_CLASS_LABELS.get(key, key.upper())
+        picked = class_picks.get(key)
+        winner = class_winners.get(key)
+        if not picked and not winner:
+            continue
+        picked_name = (picked or {}).get("name") or "—"
+        picked_rider = (picked or {}).get("rider_name") or ""
+        if picked_rider and picked_rider != "—":
+            picked_display = f"{picked_name} ({picked_rider})"
+        else:
+            picked_display = picked_name
+        actual_name = (winner or {}).get("name") or ""
+        actual_rider = (winner or {}).get("rider_name") or ""
+        if actual_name and actual_rider and actual_rider != "—":
+            actual_display = f"{actual_name} ({actual_rider})"
+        else:
+            actual_display = actual_name
+        ok = bool(
+            picked
+            and winner
+            and int(picked.get("nation_id") or 0) == int(winner.get("nation_id") or 0)
+        )
+        pts = CLASS_FAVORITE_POINTS if ok else 0
+        class_points += pts
+        class_rows.append(
+            {
+                "kind": "class_favorite",
+                "status": "correct" if ok else "wrong",
+                "label": label,
+                "picked_name": picked_display,
+                "rider_name": picked_display,
+                "actual_name": actual_display,
+                "points": int(pts),
+                "hint": (
+                    f"Rätt klassfavorit → +{CLASS_FAVORITE_POINTS}p"
+                    if ok
+                    else f"Fel klassfavorit → 0p (rätt: {actual_display or '—'})"
+                ),
+            }
+        )
+
+    total = int(race_points) + int(class_points)
+    return {
+        "ok": True,
+        "kind": "mxon",
+        "competition": {
+            "id": int(competition_id),
+            "name": comp.name if comp else None,
+            "series": (comp.series if comp else None) or "MXON",
+            "event_date": comp.event_date.isoformat() if comp and comp.event_date else None,
+        },
+        "total": total,
+        "summary": {
+            "race_points": int(race_points),
+            "holeshot_points": int(class_points),
+            "wildcard_points": 0,
+        },
+        "sections": {
+            "picks_450": nation_rows,
+            "picks_250": [],
+            "holeshot": class_rows,
+            "wildcard": [],
+            "other": [],
+        },
+        "labels": {
+            "primary": "Nationer (topp 5)",
+            "secondary": "",
+        },
+        "breakdown": [],
+    }
+
+
 def mxon_competitions_for_year(year: int = 2026) -> list[Competition]:
     series = Series.query.filter(
         Series.year == int(year),

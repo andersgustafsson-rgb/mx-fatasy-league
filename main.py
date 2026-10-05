@@ -11199,6 +11199,14 @@ def _my_scores_payload(uid: int, series_filter: str, wsx_year: int | None) -> tu
             .first()
             is not None
         )
+        series_u = (r.series or "").upper()
+        if series_u == "MXON" and not has_results:
+            try:
+                from mxon_fantasy import mxon_has_official_results
+
+                has_results = mxon_has_official_results(int(r.competition_id))
+            except Exception:
+                has_results = bool(r.total_points)
         scores.append({
             "competition_id": r.competition_id,
             "name": r.name,
@@ -22220,6 +22228,11 @@ def get_my_race_results(competition_id):
     
     uid = session["user_id"]
     try:
+        comp = Competition.query.get(competition_id)
+        if comp and (comp.series or "").upper() == "MXON":
+            from mxon_fantasy import build_mxon_results_detail
+
+            return jsonify(build_mxon_results_detail(uid, competition_id))
         return jsonify(_build_race_results_detail(uid, competition_id, dedupe_picks=False))
     except Exception as e:
         db.session.rollback()
@@ -22235,6 +22248,11 @@ def get_user_race_results(username: str, competition_id: int):
     db.session.rollback()
     
     try:
+        comp = Competition.query.get(competition_id)
+        if comp and (comp.series or "").upper() == "MXON":
+            from mxon_fantasy import build_mxon_results_detail
+
+            return jsonify(build_mxon_results_detail(user.id, competition_id))
         return jsonify(_build_race_results_detail(user.id, competition_id, dedupe_picks=True))
     except Exception as e:
         db.session.rollback()

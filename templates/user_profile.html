@@ -506,17 +506,24 @@
       const pts = Number(row.points || 0);
       const ptsHtml = pts > 0 ? `<span class="font-black text-emerald-300 tabular-nums shrink-0">+${pts}p</span>` : `<span class="text-slate-500 shrink-0">0p</span>`;
       const name = (row.rider_name || "").trim() || "—";
+      const flag = row.flag_url
+        ? `<img src="${row.flag_url}" alt="" class="w-5 h-3.5 object-cover rounded-sm shrink-0 border border-slate-600/50 mt-0.5" loading="lazy">`
+        : "";
+      const actualLabel = row.actual != null && Number(row.actual) > 0
+        ? `Kom P${row.actual}`
+        : "Ej i resultat";
       return `
         <div class="py-2.5 px-3 rounded-lg border ${bg} space-y-2">
           <div class="flex items-start gap-2">
             <span class="text-base shrink-0 leading-none mt-0.5">${icon}</span>
+            ${flag}
             <span class="font-bold text-white text-sm sm:text-base leading-snug break-words flex-1">${name}</span>
             <span class="shrink-0 sm:hidden">${ptsHtml}</span>
           </div>
           <div class="flex flex-wrap items-center gap-1.5 text-xs pl-6">
             <span class="px-2 py-0.5 rounded bg-cyan-950/60 text-cyan-100 border border-cyan-800/40">Gissade: P${row.predicted}</span>
             <span class="text-slate-500">→</span>
-            <span class="px-2 py-0.5 rounded font-bold ${actualCls}">Kom P${row.actual}</span>
+            <span class="px-2 py-0.5 rounded font-bold ${actualCls}">${actualLabel}</span>
             <span class="hidden sm:inline">${ptsHtml}</span>
           </div>
           ${row.hint ? `<p class="text-[10px] text-slate-400 pl-6">${row.hint}</p>` : ""}
@@ -561,6 +568,22 @@
       }
       const picked = (row.picked_name || row.rider_name || "—").trim();
       const actual = (row.actual_name || "").trim();
+      if (row.kind === "class_favorite") {
+        const actualHtml = actual
+          ? `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> → vann <strong class="text-amber-200">${actual}</strong></span>`
+          : `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong></span>`;
+        return `<div class="py-2.5 px-3 rounded-lg border border-slate-700/60 bg-slate-900/40 space-y-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-bold uppercase text-slate-500">${row.label || "Klass"}</span>
+            <span class="text-base shrink-0">${icon}</span>
+          </div>
+          <div class="text-sm leading-snug">${actualHtml}</div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] text-slate-500">${row.hint || ""}</span>
+            <span class="font-bold tabular-nums text-sm ${ok ? "text-emerald-300" : "text-slate-500"}">${ptsTxt}</span>
+          </div>
+        </div>`;
+      }
       const actualHtml = actual
         ? `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> → holeshot <strong class="text-amber-200">${actual}</strong></span>`
         : `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong></span>`;
@@ -590,6 +613,8 @@
       const sum = data.summary || {};
       const sec = data.sections || {};
       const displayName = {{ (target_user.display_name or target_user.username)|tojson }};
+      const seriesU = String(comp.series || "").toUpperCase();
+      const isMxon = data.kind === "mxon" || seriesU === "MXON";
 
       const titleEl = document.getElementById("detail-modal-title");
       const subEl = document.getElementById("detail-modal-sub");
@@ -599,12 +624,29 @@
 
       if (titleEl) titleEl.textContent = comp.name || "Poängdetalj";
       if (subEl) {
-        const bits = [comp.series, `${displayName} · gissning vs resultat`].filter(Boolean);
+        const bits = isMxon
+          ? [comp.series || "MXON", `${displayName} · nationer + klassfavoriter`].filter(Boolean)
+          : [comp.series, `${displayName} · gissning vs resultat`].filter(Boolean);
         subEl.textContent = bits.join(" · ");
       }
       if (summaryEl) {
         summaryEl.classList.remove("hidden");
-        summaryEl.innerHTML = `
+        if (isMxon) {
+          summaryEl.innerHTML = `
+          <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
+            <div class="text-[10px] text-slate-500 uppercase">Nationer</div>
+            <div class="font-black text-white tabular-nums">${sum.race_points ?? 0}p</div>
+          </div>
+          <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
+            <div class="text-[10px] text-slate-500 uppercase">Klassfavoriter</div>
+            <div class="font-black text-white tabular-nums">${sum.holeshot_points ?? 0}p</div>
+          </div>
+          <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
+            <div class="text-[10px] text-slate-500 uppercase">Totalt</div>
+            <div class="font-black text-emerald-300 tabular-nums">${data.total ?? 0}p</div>
+          </div>`;
+        } else {
+          summaryEl.innerHTML = `
           <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
             <div class="text-[10px] text-slate-500 uppercase">Race picks</div>
             <div class="font-black text-white tabular-nums">${sum.race_points ?? 0}p</div>
@@ -617,22 +659,37 @@
             <div class="text-[10px] text-slate-500 uppercase">Wildcard</div>
             <div class="font-black text-white tabular-nums">${sum.wildcard_points ?? 0}p</div>
           </div>`;
+        }
       }
-      if (totalEl) totalEl.textContent = `Totalt: ${data.total ?? 0}p`;
+      if (totalEl) {
+        totalEl.textContent = isMxon
+          ? `Totalt MXoN: ${data.total ?? 0}p`
+          : `Totalt: ${data.total ?? 0}p`;
+      }
       if (!listEl) return;
 
+      const labels = data.labels || {};
       let html = "";
-      html += renderSection("450cc — placeringar", sec.picks_450, renderPickRow);
-      html += renderSection("250cc — placeringar", sec.picks_250, renderPickRow);
-      if (sec.holeshot && sec.holeshot.length) {
-        html += "<div><h4 class=\"text-xs font-bold uppercase tracking-wider text-slate-500 mb-2\">Holeshot</h4><div class=\"space-y-2\">";
-        sec.holeshot.forEach((r) => { html += renderSimpleRow(r); });
-        html += "</div></div>";
-      }
-      if (sec.wildcard && sec.wildcard.length) {
-        html += "<div><h4 class=\"text-xs font-bold uppercase tracking-wider text-slate-500 mb-2\">Wildcard</h4><div class=\"space-y-2\">";
-        sec.wildcard.forEach((r) => { html += renderSimpleRow(r); });
-        html += "</div></div>";
+      if (isMxon) {
+        html += renderSection(labels.primary || "Nationer (topp 5)", sec.picks_450, renderPickRow);
+        if (sec.holeshot && sec.holeshot.length) {
+          html += "<div><h4 class=\"text-xs font-bold uppercase tracking-wider text-slate-500 mb-2\">Klassfavoriter</h4><div class=\"space-y-2\">";
+          sec.holeshot.forEach((r) => { html += renderSimpleRow(r); });
+          html += "</div></div>";
+        }
+      } else {
+        html += renderSection("450cc — placeringar", sec.picks_450, renderPickRow);
+        html += renderSection("250cc — placeringar", sec.picks_250, renderPickRow);
+        if (sec.holeshot && sec.holeshot.length) {
+          html += "<div><h4 class=\"text-xs font-bold uppercase tracking-wider text-slate-500 mb-2\">Holeshot</h4><div class=\"space-y-2\">";
+          sec.holeshot.forEach((r) => { html += renderSimpleRow(r); });
+          html += "</div></div>";
+        }
+        if (sec.wildcard && sec.wildcard.length) {
+          html += "<div><h4 class=\"text-xs font-bold uppercase tracking-wider text-slate-500 mb-2\">Wildcard</h4><div class=\"space-y-2\">";
+          sec.wildcard.forEach((r) => { html += renderSimpleRow(r); });
+          html += "</div></div>";
+        }
       }
       if (sec.other && sec.other.length) {
         sec.other.forEach((r) => { html += renderSimpleRow(r); });
