@@ -2330,7 +2330,7 @@
     .home-standings-grid {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 0.75rem;
+      gap: 0.55rem;
     }
     @media (min-width: 768px) {
       .home-standings-grid {
@@ -2342,61 +2342,192 @@
       border-radius: 0.55rem;
       border: 1px solid rgba(71, 85, 105, 0.45);
       background: #1a2436;
-      padding: 0.75rem 0.85rem 0.85rem;
+      padding: 0;
       min-height: 0;
+      overflow: hidden;
     }
     .home-standings-card__head {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       justify-content: space-between;
       gap: 0.5rem;
-      margin-bottom: 0.55rem;
-      padding-bottom: 0.45rem;
-      border-bottom: 1px solid rgba(51, 65, 85, 0.7);
+      width: 100%;
+      margin: 0;
+      padding: 0.65rem 0.8rem;
+      border: none;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.55);
+      background: rgba(15, 23, 42, 0.35);
+      text-align: left;
+      color: inherit;
+      font: inherit;
+      cursor: default;
+    }
+    .home-standings-card__head-main {
+      min-width: 0;
+      flex: 1;
+    }
+    .home-standings-card__title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.45rem;
+      flex-wrap: wrap;
     }
     .home-standings-card__title {
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 800;
       color: #f1f5f9;
       letter-spacing: 0.01em;
+      margin: 0;
     }
     .home-standings-card__sub {
-      font-size: 0.65rem;
+      font-size: 0.62rem;
       font-weight: 650;
       color: #94a3b8;
       text-transform: uppercase;
       letter-spacing: 0.04em;
       white-space: nowrap;
     }
+    .home-standings-card__peek {
+      display: none;
+      margin: 0.2rem 0 0;
+      font-size: 0.7rem;
+      line-height: 1.25;
+      color: #94a3b8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .home-standings-card__peek strong {
+      color: #e2e8f0;
+      font-weight: 700;
+    }
+    .home-standings-card__chev {
+      display: none;
+      flex-shrink: 0;
+      width: 1.35rem;
+      height: 1.35rem;
+      border-radius: 999px;
+      border: 1px solid rgba(71, 85, 105, 0.55);
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 0.65rem;
+      font-weight: 800;
+      transition: transform 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+    .home-standings-card__body {
+      padding: 0.35rem 0.55rem 0.65rem;
+    }
     .home-standings-card__rows {
       display: flex;
       flex-direction: column;
-      gap: 0.28rem;
+      gap: 0;
     }
-    .home-standings-card .home-lb-row {
-      padding: 0.35rem 0.5rem;
-      background: #222e42;
+    /* Compact standings rows — no big empty boxes */
+    .home-standings-card .home-lb-row,
+    .home-standings-card .home-standings-row {
+      display: grid;
+      grid-template-columns: 1.65rem minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.32rem 0.35rem;
+      margin: 0;
+      border-radius: 0;
+      border: none;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+      background: transparent;
+      min-height: 0;
     }
+    .home-standings-card .home-lb-row:last-child,
+    .home-standings-card .home-standings-row:last-child {
+      border-bottom: none;
+    }
+    .home-standings-card .home-lb-row:hover,
+    .home-standings-card .home-standings-row:hover {
+      background: rgba(34, 46, 66, 0.55);
+    }
+    .home-standings-card .home-standings-row__rank {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.45rem;
+      height: 1.45rem;
+      border-radius: 0.35rem;
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      background: rgba(51, 65, 85, 0.55);
+      color: #cbd5e1;
+    }
+    .home-standings-card .home-standings-row__rank--1 {
+      background: rgba(234, 179, 8, 0.22);
+      color: #fde68a;
+    }
+    .home-standings-card .home-standings-row__rank--2 {
+      background: rgba(34, 211, 238, 0.18);
+      color: #a5f3fc;
+    }
+    .home-standings-card .home-standings-row__rank--3 {
+      background: rgba(74, 222, 128, 0.16);
+      color: #bbf7d0;
+    }
+    .home-standings-card .home-standings-row__name {
+      min-width: 0;
+      font-size: 0.8rem;
+      font-weight: 650;
+      color: #f1f5f9;
+      line-height: 1.2;
+    }
+    .home-standings-card .home-standings-row__name a {
+      color: inherit;
+    }
+    .home-standings-card .home-standings-row__name a:hover {
+      color: #a5f3fc;
+    }
+    .home-standings-card .home-standings-row__sub {
+      display: block;
+      margin-top: 0.08rem;
+      font-size: 0.58rem;
+      font-weight: 600;
+      color: #64748b;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .home-standings-card .home-standings-row__pts {
+      font-size: 0.8rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      padding: 0.12rem 0.4rem;
+      border-radius: 0.3rem;
+      background: rgba(15, 23, 42, 0.55);
+    }
+    .home-standings-card .home-standings-row__pts--1 { color: #fde68a; }
+    .home-standings-card .home-standings-row__pts--2 { color: #a5f3fc; }
+    .home-standings-card .home-standings-row__pts--3 { color: #bbf7d0; }
+    .home-standings-card .home-standings-row__pts--n { color: #e2e8f0; }
     .home-standings-card__me {
-      margin-top: 0.45rem;
-      padding: 0.4rem 0.55rem;
-      border-radius: 0.4rem;
+      margin: 0.35rem 0.15rem 0;
+      padding: 0.35rem 0.5rem;
+      border-radius: 0.35rem;
       border: 1px dashed rgba(34, 211, 238, 0.35);
       background: rgba(8, 51, 68, 0.35);
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 650;
       color: #a5f3fc;
     }
     .home-standings-card__expand {
       display: block;
-      width: 100%;
-      margin-top: 0.55rem;
-      padding: 0.4rem 0.5rem;
-      border-radius: 0.4rem;
-      border: 1px solid rgba(71, 85, 105, 0.55);
-      background: rgba(15, 23, 42, 0.55);
+      width: calc(100% - 0.3rem);
+      margin: 0.4rem 0.15rem 0;
+      padding: 0.35rem 0.5rem;
+      border-radius: 0.35rem;
+      border: 1px solid rgba(71, 85, 105, 0.45);
+      background: rgba(15, 23, 42, 0.45);
       color: #67e8f9;
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       font-weight: 700;
       text-align: center;
       cursor: pointer;
@@ -2411,16 +2542,68 @@
     .home-standings-card__rest {
       display: flex;
       flex-direction: column;
-      gap: 0.28rem;
-      margin-top: 0.35rem;
-      padding-top: 0.35rem;
-      border-top: 1px solid rgba(51, 65, 85, 0.55);
+      gap: 0;
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 1px solid rgba(51, 65, 85, 0.4);
     }
     .home-standings-card__empty {
       font-size: 0.78rem;
       color: #94a3b8;
       text-align: center;
       padding: 0.65rem 0.25rem;
+    }
+
+    /* Mobile accordion: one standings board open at a time */
+    @media (max-width: 767px) {
+      .home-standings-grid.home-standings-accordion {
+        gap: 0.4rem;
+      }
+      .home-standings-accordion .home-standings-card__head {
+        cursor: pointer;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .home-standings-accordion .home-standings-card__chev {
+        display: inline-flex;
+      }
+      .home-standings-accordion .home-standings-card--collapsed .home-standings-card__body {
+        display: none;
+      }
+      .home-standings-accordion .home-standings-card--collapsed .home-standings-card__head {
+        border-bottom: none;
+        padding-top: 0.55rem;
+        padding-bottom: 0.55rem;
+      }
+      .home-standings-accordion .home-standings-card--collapsed .home-standings-card__peek {
+        display: block;
+      }
+      .home-standings-accordion .home-standings-card--collapsed .home-standings-card__sub {
+        display: none;
+      }
+      .home-standings-accordion .home-standings-card--expanded .home-standings-card__peek {
+        display: none;
+      }
+      .home-standings-accordion .home-standings-card--expanded .home-standings-card__chev {
+        transform: rotate(90deg);
+        color: #67e8f9;
+        border-color: rgba(103, 232, 249, 0.4);
+      }
+      .home-standings-accordion .home-standings-card--expanded {
+        border-color: rgba(103, 232, 249, 0.28);
+      }
+    }
+    @media (min-width: 768px) {
+      .home-standings-card__peek,
+      .home-standings-card__chev {
+        display: none !important;
+      }
+      .home-standings-card__body {
+        display: block !important;
+      }
+      .home-standings-card--collapsed .home-standings-card__body {
+        display: block !important;
+      }
     }
     .home-race-hero #active-now-badge {
       border: 1px solid #3d4f66;
@@ -4105,14 +4288,36 @@
       const sub = row.combined
         ? `Tippa ${Number(row.tippa_points || 0).toLocaleString('sv-SE')} · Team ${Number(row.team_points || 0).toLocaleString('sv-SE')}`
         : '';
-      return homeLbRow(rank, nameHtml, pts, { sub });
+      const topClass = rank <= 3 ? String(rank) : 'n';
+      return `<div class="leaderboard-entry home-standings-row">
+        <span class="home-standings-row__rank home-standings-row__rank--${topClass}">${rank}</span>
+        <div class="home-standings-row__name min-w-0">
+          <div class="truncate">${nameHtml}</div>
+          ${sub ? `<span class="home-standings-row__sub">${_escHome(sub)}</span>` : ''}
+        </div>
+        <span class="home-standings-row__pts home-standings-row__pts--${topClass}">${pts.toLocaleString('sv-SE')}p</span>
+      </div>`;
     }
 
-    function renderHomeStandingsCard(board, { topN = 5 } = {}) {
+    function _standingsPeekText(board, isEn) {
+      const rows = Array.isArray(board.rows) ? board.rows : [];
+      if (!rows.length) {
+        return board.empty || (isEn ? 'No points yet' : 'Inga poäng ännu');
+      }
+      const top = rows[0];
+      const name = top.display_name || top.username || '?';
+      const pts = Number(top.total_points || 0).toLocaleString('sv-SE');
+      return isEn
+        ? `#1 ${_escHome(name)} · ${pts}p · ${rows.length} players`
+        : `#1 ${_escHome(name)} · ${pts}p · ${rows.length} spelare`;
+    }
+
+    function renderHomeStandingsCard(board, { topN = 5, expanded = true } = {}) {
       const rows = Array.isArray(board.rows) ? board.rows : [];
       const n = Math.max(1, Number(topN) || 5);
       const top = rows.slice(0, n);
       const rest = rows.slice(n);
+      const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
       const meName = (window.currentUsername || '').toString().trim().toLowerCase();
       let meHtml = '';
       if (meName && rows.length) {
@@ -4124,34 +4329,43 @@
           meHtml = `<div class="home-standings-card__me">Du · #${idx + 1} · ${Number(me.total_points || 0)}p</div>`;
         }
       }
-      let body;
+      let bodyInner;
       if (!rows.length) {
-        body = `<p class="home-standings-card__empty">${_escHome(board.empty || 'Inga poäng ännu.')}</p>`;
+        bodyInner = `<p class="home-standings-card__empty">${_escHome(board.empty || 'Inga poäng ännu.')}</p>`;
       } else {
         const topHtml = top.map((r, i) => _standingsRowHtml(r, i + 1)).join('');
         const restHtml = rest.map((r, i) => _standingsRowHtml(r, i + n + 1)).join('');
-        const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
         const expand = rest.length
           ? `<button type="button" class="home-standings-card__expand" data-standings-expand data-standings-topn="${n}">${
               isEn ? `Show all (${rows.length})` : `Visa alla (${rows.length})`
             }</button>
             <div class="home-standings-card__rest" hidden data-standings-rest>${restHtml}</div>`
           : '';
-        body = `<div class="home-standings-card__rows" data-standings-top>${topHtml}</div>${meHtml}${expand}`;
+        bodyInner = `<div class="home-standings-card__rows" data-standings-top>${topHtml}</div>${meHtml}${expand}`;
       }
-      return `<article class="home-standings-card" data-board="${_escHome(board.id)}">
-        <div class="home-standings-card__head">
-          <h3 class="home-standings-card__title">${_escHome(board.title)}</h3>
-          <span class="home-standings-card__sub">${_escHome(board.sub || '')}</span>
-        </div>
-        ${body}
+      const expandClass = expanded
+        ? 'home-standings-card--expanded'
+        : 'home-standings-card--collapsed';
+      return `<article class="home-standings-card ${expandClass}" data-board="${_escHome(board.id)}" data-standings-card>
+        <button type="button" class="home-standings-card__head" data-standings-toggle aria-expanded="${expanded ? 'true' : 'false'}">
+          <div class="home-standings-card__head-main">
+            <div class="home-standings-card__title-row">
+              <h3 class="home-standings-card__title">${_escHome(board.title)}</h3>
+              <span class="home-standings-card__sub">${_escHome(board.sub || '')}</span>
+            </div>
+            <p class="home-standings-card__peek">${_standingsPeekText(board, isEn)}</p>
+          </div>
+          <span class="home-standings-card__chev" aria-hidden="true">›</span>
+        </button>
+        <div class="home-standings-card__body">${bodyInner}</div>
       </article>`;
     }
 
     function bindHomeStandingsExpand(root) {
       if (!root) return;
       root.querySelectorAll('[data-standings-expand]').forEach((btn) => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
           const card = btn.closest('.home-standings-card');
           const rest = card && card.querySelector('[data-standings-rest]');
           if (!rest) return;
@@ -4166,6 +4380,40 @@
             : (isEn ? `Show all (${total})` : `Visa alla (${total})`);
         });
       });
+    }
+
+    function bindHomeStandingsAccordion(root) {
+      if (!root) return;
+      root.classList.add('home-standings-accordion');
+      root.querySelectorAll('[data-standings-toggle]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          // Desktop: all stay open via CSS; still allow toggle on mobile only
+          if (window.matchMedia && window.matchMedia('(min-width: 768px)').matches) {
+            return;
+          }
+          const card = btn.closest('[data-standings-card]');
+          if (!card) return;
+          const wasOpen = card.classList.contains('home-standings-card--expanded');
+          root.querySelectorAll('[data-standings-card]').forEach((c) => {
+            c.classList.remove('home-standings-card--expanded');
+            c.classList.add('home-standings-card--collapsed');
+            const t = c.querySelector('[data-standings-toggle]');
+            if (t) t.setAttribute('aria-expanded', 'false');
+          });
+          if (!wasOpen) {
+            card.classList.add('home-standings-card--expanded');
+            card.classList.remove('home-standings-card--collapsed');
+            btn.setAttribute('aria-expanded', 'true');
+          }
+        });
+      });
+    }
+
+    function _pickDefaultStandingsBoard(boards) {
+      const scored = boards.findIndex(
+        (b) => Array.isArray(b.rows) && b.rows.some((r) => Number(r.total_points || 0) > 0)
+      );
+      return scored >= 0 ? scored : 0;
     }
 
     function fantasyStandingsBoardDefs(isEn) {
@@ -4223,8 +4471,20 @@
           }
         })
       );
-      root.innerHTML = settled.map((b) => renderHomeStandingsCard(b, { topN })).join('');
+      const defaultIdx = _pickDefaultStandingsBoard(settled);
+      const isMobile =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(max-width: 767px)').matches;
+      root.innerHTML = settled
+        .map((b, i) =>
+          renderHomeStandingsCard(b, {
+            topN,
+            expanded: isMobile ? i === defaultIdx : true,
+          })
+        )
+        .join('');
       bindHomeStandingsExpand(root);
+      bindHomeStandingsAccordion(root);
       return settled;
     }
 
