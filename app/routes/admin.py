@@ -29,9 +29,11 @@ from models import (
 	db,
 	Competition,
 	CompetitionResult,
+	CompetitionScore,
 	HoleshotPick,
 	League,
 	LeagueRequest,
+	MxonNationResult,
 	PicksSnapshot,
 	RacePick,
 	Rider,
@@ -929,6 +931,128 @@ def admin_page():
 		return f"<h1>Database Error</h1><p>{e}</p>"
 
 
+def _last_completed_tippa_competition() -> Competition | None:
+	"""Newest finished tippa race (AMA / WSX / MXON / MXGP) with official results."""
+	today = get_today()
+	ama_ids = {
+		row[0]
+		for row in db.session.query(CompetitionResult.competition_id).distinct().all()
+	}
+	try:
+		mxon_ids = {
+			row[0]
+			for row in db.session.query(MxonNationResult.competition_id).distinct().all()
+		}
+	except Exception:
+		mxon_ids = set()
+	ids = list(ama_ids | mxon_ids)
+	if not ids:
+		return None
+	return (
+		Competition.query.filter(Competition.id.in_(ids))
+		.filter(Competition.event_date.isnot(None))
+		.filter(Competition.event_date <= today)
+		.order_by(Competition.event_date.desc(), Competition.id.desc())
+		.first()
+	)
+
+
+def _recent_completed_tippa_competitions(limit: int = 6) -> list[Competition]:
+	today = get_today()
+	ama_ids = {
+		row[0]
+		for row in db.session.query(CompetitionResult.competition_id).distinct().all()
+	}
+	try:
+		mxon_ids = {
+			row[0]
+			for row in db.session.query(MxonNationResult.competition_id).distinct().all()
+		}
+	except Exception:
+		mxon_ids = set()
+	ids = list(ama_ids | mxon_ids)
+	if not ids:
+		return []
+	return (
+		Competition.query.filter(Competition.id.in_(ids))
+		.filter(Competition.event_date.isnot(None))
+		.filter(Competition.event_date <= today)
+		.order_by(Competition.event_date.desc(), Competition.id.desc())
+		.limit(int(limit))
+		.all()
+	)
+
+
+def _admin_last_race_stats() -> dict:
+	"""Tippa engagement + scoring snapshot for the most recent finished race."""
+	from main import _competition_picks_assessment
+
+	comp = _last_completed_tippa_competition()
+	if not comp:
+		return {"ok": True, "competition": None}
+
+	assessment = _competition_picks_assessment(comp)
+	tippare = int(assessment.get("users_started") or 0)
+	complete = int(assessment.get("users_complete") or 0)
+	partial = int(assessment.get("users_partial") or 0)
+
+	scores = CompetitionScore.query.filter_by(competition_id=int(comp.id)).all()
+	scored = len(scores)
+	pts = [int(s.total_points or 0) for s in scores]
+	avg_pts = round(sum(pts) / len(pts), 1) if pts else 0
+	max_pts = max(pts) if pts else 0
+	hs_hits = sum(1 for s in scores if int(s.holeshot_points or 0) > 0)
+	wc_hits = sum(1 for s in scores if int(getattr(s, "wildcard_points", 0) or 0) > 0)
+
+	top_name = None
+	top_user_id = None
+	if scores:
+		best = max(scores, key=lambda s: int(s.total_points or 0))
+		top_user_id = int(best.user_id) if best.user_id else None
+		if top_user_id:
+			u = User.query.get(top_user_id)
+			if u:
+				top_name = (u.display_name or u.username or f"#{top_user_id}").strip()
+
+	history = []
+	for c in reversed(_recent_completed_tippa_competitions(6)):
+		try:
+			a = _competition_picks_assessment(c)
+			n = int(a.get("users_started") or 0)
+		except Exception:
+			n = 0
+		history.append(
+			{
+				"id": int(c.id),
+				"name": c.name,
+				"series": c.series,
+				"event_date": c.event_date.isoformat() if c.event_date else None,
+				"tippare": n,
+			}
+		)
+
+	return {
+		"ok": True,
+		"competition": {
+			"id": int(comp.id),
+			"name": comp.name,
+			"series": comp.series,
+			"event_date": comp.event_date.isoformat() if comp.event_date else None,
+		},
+		"tippare": tippare,
+		"complete": complete,
+		"partial": partial,
+		"scored": scored,
+		"avg_points": avg_pts,
+		"max_points": max_pts,
+		"top_user": top_name,
+		"top_user_id": top_user_id,
+		"holeshot_hits": hs_hits,
+		"wildcard_hits": wc_hits,
+		"history": history,
+	}
+
+
 @bp.get("/admin/api/dashboard")
 @login_required
 def admin_dashboard_stats():
@@ -1047,6 +1171,12 @@ def admin_dashboard_stats():
 		except Exception:
 			pending_reqs = 0
 
+	last_race = None
+	try:
+		last_race = _admin_last_race_stats()
+	except Exception as last_err:
+		last_race = {"ok": False, "error": str(last_err)}
+
 	return jsonify(
 		{
 			"ok": True,
@@ -1069,6 +1199,7 @@ def admin_dashboard_stats():
 				"series": visit_series,
 			},
 			"picks": picks,
+			"last_race": last_race,
 			"season_teams": _table_count("season_teams"),
 			"leagues": _table_count("leagues"),
 			"pending_league_requests": pending_reqs,

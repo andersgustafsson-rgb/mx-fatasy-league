@@ -153,6 +153,57 @@
         .ap-kpi--warn { border-color: rgba(251, 191, 36, 0.35); }
         .ap-kpi--ok .ap-kpi__value { color: #6ee7b7; }
         .ap-kpi--hot { border-color: rgba(34, 211, 238, 0.4); box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.12), 0 12px 28px rgba(0,0,0,0.18); }
+
+        .ap-last-race {
+            margin: 0 0 1.25rem;
+            border: 1px solid var(--ap-line);
+            border-radius: 0.9rem;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.25));
+            padding: 0.85rem 0.95rem 0.95rem;
+        }
+        .ap-last-race__head {
+            display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+            gap: 0.35rem 0.75rem; margin-bottom: 0.7rem;
+        }
+        .ap-last-race__eyebrow {
+            font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em;
+            text-transform: uppercase; color: #64748b;
+        }
+        .ap-last-race__title {
+            font-family: "Barlow Condensed", sans-serif; font-weight: 800;
+            font-size: 1.25rem; color: #f1f5f9; letter-spacing: 0.01em;
+        }
+        .ap-last-race__sub { font-size: 0.78rem; color: var(--ap-muted); }
+        .ap-last-race__grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.55rem;
+        }
+        @media (min-width: 720px) {
+            .ap-last-race__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
+        @media (min-width: 1100px) {
+            .ap-last-race__grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+        }
+        .ap-last-race__card {
+            border: 1px solid rgba(71, 85, 105, 0.4);
+            border-radius: 0.65rem;
+            background: rgba(26, 36, 54, 0.65);
+            padding: 0.55rem 0.65rem;
+            min-height: 4.4rem;
+        }
+        .ap-last-race__card .lbl {
+            font-size: 0.62rem; font-weight: 700; letter-spacing: 0.07em;
+            text-transform: uppercase; color: #64748b; margin-bottom: 0.2rem;
+        }
+        .ap-last-race__card .val {
+            font-family: "Barlow Condensed", sans-serif; font-weight: 800;
+            font-size: 1.45rem; line-height: 1; color: #f8fafc;
+        }
+        .ap-last-race__card .meta {
+            margin-top: 0.25rem; font-size: 0.72rem; color: var(--ap-muted);
+        }
+        .ap-last-race__card .meta strong { color: #67e8f9; }
         .ap-ring {
             --pct: 0;
             width: 3.1rem; height: 3.1rem; border-radius: 9999px; flex-shrink: 0;
@@ -708,6 +759,51 @@
                     <div class="ap-kpi__meta" id="kpi-next-race-meta">—</div>
                 </button>
             </div>
+
+            <div class="ap-last-race" id="apLastRace" hidden>
+                <div class="ap-last-race__head">
+                    <div>
+                        <div class="ap-last-race__eyebrow">Senaste race</div>
+                        <div class="ap-last-race__title" id="lr-name">–</div>
+                    </div>
+                    <div class="ap-last-race__sub" id="lr-sub">—</div>
+                </div>
+                <div class="ap-last-race__grid">
+                    <div class="ap-last-race__card">
+                        <div class="lbl">Tippare</div>
+                        <div class="val" id="lr-tippare">–</div>
+                        <div class="meta" id="lr-tippare-meta">startade picks</div>
+                    </div>
+                    <div class="ap-last-race__card">
+                        <div class="lbl">Klara picks</div>
+                        <div class="val" id="lr-complete">–</div>
+                        <div class="meta" id="lr-complete-meta">kompletta</div>
+                    </div>
+                    <div class="ap-last-race__card">
+                        <div class="lbl">Poäng satta</div>
+                        <div class="val" id="lr-scored">–</div>
+                        <div class="meta" id="lr-scored-meta">CompetitionScore</div>
+                    </div>
+                    <div class="ap-last-race__card">
+                        <div class="lbl">Snittpoäng</div>
+                        <div class="val" id="lr-avg">–</div>
+                        <div class="meta" id="lr-avg-meta">per tippare</div>
+                    </div>
+                    <div class="ap-last-race__card">
+                        <div class="lbl">Högst</div>
+                        <div class="val" id="lr-max">–</div>
+                        <div class="meta" id="lr-max-meta">vinnare</div>
+                    </div>
+                    <div class="ap-last-race__card">
+                        <div class="lbl">Holeshot</div>
+                        <div class="val" id="lr-hs">–</div>
+                        <div class="meta" id="lr-hs-meta">träffar</div>
+                    </div>
+                </div>
+                <div class="ap-spark" id="lr-tippare-spark" aria-hidden="true" style="margin-top:0.65rem;height:2rem;"></div>
+                <p class="ap-dash-note" style="margin:0.35rem 0 0;" id="lr-history-meta">Tippare senaste racen</p>
+            </div>
+
             <p class="ap-dash-note" id="apDashErr" style="display:none;color:#fbbf24;"></p>
             <!-- Keep legacy visit strip ids for existing JS helpers -->
             <div class="hidden" aria-hidden="true">
@@ -2658,7 +2754,10 @@
                     setRing('kpi-picks-ring', pct, `${pct}%`);
                     setMeter('kpi-picks-meter-fill', pct);
                     set('kpi-picks-missing', String(missing));
-                    set('kpi-picks-missing-meta', `av ${total} tippare`);
+                    const partial = Number(p.users_partial || 0);
+                    set('kpi-picks-missing-meta', partial
+                        ? `av ${total} tippare · ${partial} ofullständiga`
+                        : `av ${total} tippare`);
                     setRing('kpi-missing-ring', missingPct, `${missingPct}%`);
                     set('kpi-next-race', p.competition_name);
                     const lockBits = [];
@@ -2677,6 +2776,43 @@
                     setRing('kpi-missing-ring', 0, '–');
                     set('kpi-next-race', '–');
                     set('kpi-next-race-meta', '—');
+                }
+
+                const lr = data.last_race || {};
+                const lrWrap = document.getElementById('apLastRace');
+                if (lrWrap) {
+                    if (lr.ok !== false && lr.competition) {
+                        lrWrap.hidden = false;
+                        const c = lr.competition;
+                        set('lr-name', c.name || '–');
+                        const subBits = [c.series, c.event_date].filter(Boolean);
+                        set('lr-sub', subBits.join(' · '));
+                        set('lr-tippare', String(lr.tippare ?? 0));
+                        set('lr-tippare-meta', `${lr.partial || 0} ofullständiga`);
+                        set('lr-complete', String(lr.complete ?? 0));
+                        const tip = Math.max(1, Number(lr.tippare) || 1);
+                        const completePct = Math.round((Number(lr.complete || 0) / tip) * 100);
+                        set('lr-complete-meta', `${completePct}% av tippare`);
+                        set('lr-scored', String(lr.scored ?? 0));
+                        set('lr-scored-meta', tip ? `${Math.round((Number(lr.scored || 0) / tip) * 100)}% av tippare` : 'poäng rader');
+                        set('lr-avg', lr.avg_points != null ? String(lr.avg_points) : '–');
+                        set('lr-avg-meta', 'snitt totalpoäng');
+                        set('lr-max', lr.max_points != null ? `${lr.max_points}p` : '–');
+                        set('lr-max-meta', lr.top_user ? String(lr.top_user) : 'högst poäng');
+                        set('lr-hs', String(lr.holeshot_hits ?? 0));
+                        const wc = Number(lr.wildcard_hits || 0);
+                        set('lr-hs-meta', wc ? `${wc} wildcard-träffar` : 'holeshot-poäng > 0');
+                        const hist = lr.history || [];
+                        setSpark('lr-tippare-spark', hist.map((h) => h.tippare));
+                        if (hist.length) {
+                            set(
+                                'lr-history-meta',
+                                'Tippare senaste racen: ' + hist.map((h) => `${h.series || '?'} ${h.tippare}`).join(' · ')
+                            );
+                        }
+                    } else {
+                        lrWrap.hidden = true;
+                    }
                 }
 
                 // Keep legacy visit ids in sync
