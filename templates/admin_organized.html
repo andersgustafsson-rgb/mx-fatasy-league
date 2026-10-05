@@ -2002,6 +2002,27 @@
 
                     <article class="ap-hub-card">
                         <div>
+                            <p class="ap-hub-card__eyebrow">2b · Nummer</p>
+                            <h3 class="ap-hub-card__title">AMA 2027 national numbers</h3>
+                        </div>
+                        <p class="ap-hub-card__desc">
+                            Uppdaterar tippa-startnummer (450/250) enligt AMA/Racer X 29 sep 2026
+                            (Davies #5, DiFrancesco #10, Prado #61, Coenen #64/#79 …).
+                            Lägger till saknade: Chisholm, Clout, Larwood.
+                            <strong>#1-titelplattor skrivs inte</strong> — career/national behålls.
+                        </p>
+                        <div class="ap-hub-card__actions">
+                            <button type="button" id="btn-ama-numbers-dry" class="ap-btn ap-btn--sm">
+                                Testa först (sparar inte)
+                            </button>
+                            <button type="button" id="btn-ama-numbers-apply" class="ap-btn ap-btn--primary">
+                                Ladda nummer
+                            </button>
+                        </div>
+                    </article>
+
+                    <article class="ap-hub-card">
+                        <div>
                             <p class="ap-hub-card__eyebrow">3 · Säsongsteam</p>
                             <h3 class="ap-hub-card__title">Arkivera &amp; nollställ lag</h3>
                         </div>
@@ -3022,6 +3043,51 @@
         }
         window.applySeasonTeamPrices2027 = applySeasonTeamPrices2027;
 
+        async function applyAma2027Numbers(dryRun) {
+            const isDry = !!dryRun;
+            const label = isDry ? 'Testa AMA 2027-nummer (ingen sparning)' : 'Ladda AMA 2027-nummer pa riktigt';
+            if (!window.confirm(
+                label + '?\n\n' +
+                '- Byter startnummer pa 450cc/250cc tippa-forare\n' +
+                '- Kalla: AMA / Racer X 29 sep 2026\n' +
+                '- Lagger till Chisholm #11, Clout #78, Larwood #89 om de saknas\n' +
+                '- #1-titelplattor skrivs INTE (career/national behalls)\n' +
+                '- WSX / MXGP / MX2-rader ororda\n\n' +
+                (isDry ? 'Bara visar hur manga som skulle andras.' : 'Gor nar tippa/roster far visa 2027-nummer.')
+            )) {
+                return;
+            }
+            try {
+                const response = await fetch('/admin/riders/apply_ama_2027_numbers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        dry_run: isDry,
+                        ensure_missing: true,
+                    }),
+                });
+                const result = await response.json().catch(function () { return {}; });
+                if (response.ok && result.ok) {
+                    var extra = '';
+                    var preview = result.changes_preview || [];
+                    if (preview.length) {
+                        extra = '\n\nExempel:\n' + preview.slice(0, 12).map(function (u) {
+                            return '#' + u.old + ' → #' + u.new + '  ' + u.name;
+                        }).join('\n');
+                    }
+                    if (result.missing_in_db && result.missing_in_db.length && isDry) {
+                        extra += '\n\nSaknas (skapas vid apply): ' + result.missing_in_db.join(', ');
+                    }
+                    window.alert((isDry ? 'TEST: ' : '') + (result.message || 'OK') + extra);
+                } else {
+                    window.alert('Fel: ' + (result.error || ('HTTP ' + response.status)));
+                }
+            } catch (error) {
+                window.alert('Fel: ' + (error && error.message ? error.message : error));
+            }
+        }
+        window.applyAma2027Numbers = applyAma2027Numbers;
+
         document.addEventListener('DOMContentLoaded', function () {
             var dryBtn = document.getElementById('btn-season-prices-dry');
             var applyBtn = document.getElementById('btn-season-prices-apply');
@@ -3035,6 +3101,20 @@
                 applyBtn.addEventListener('click', function (e) {
                     e.preventDefault();
                     applySeasonTeamPrices2027(false);
+                });
+            }
+            var numDry = document.getElementById('btn-ama-numbers-dry');
+            var numApply = document.getElementById('btn-ama-numbers-apply');
+            if (numDry) {
+                numDry.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    applyAma2027Numbers(true);
+                });
+            }
+            if (numApply) {
+                numApply.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    applyAma2027Numbers(false);
                 });
             }
             var clearPenBtn = document.getElementById('btn-clear-transfer-penalties');

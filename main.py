@@ -25107,6 +25107,67 @@ def apply_season_team_prices_2027_endpoint():
         return jsonify({"error": str(e)}), 500
 
 
+@app.post("/admin/riders/apply_ama_2027_numbers")
+def apply_ama_2027_national_numbers_endpoint():
+    """Apply official AMA 2027 national/career numbers to 450cc + 250cc tippa riders."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    dry_run = bool(body.get("dry_run"))
+    ensure_missing = body.get("ensure_missing", True)
+    if isinstance(ensure_missing, str):
+        ensure_missing = ensure_missing.strip().lower() not in ("0", "false", "no")
+
+    try:
+        from ama_2027_national_numbers import (
+            SOURCE_DATE,
+            SOURCE_URL,
+            apply_ama_2027_number_plan,
+            plan_ama_2027_number_updates,
+        )
+
+        riders = Rider.query.filter(Rider.class_name.in_(["450cc", "250cc"])).all()
+        plan = plan_ama_2027_number_updates(riders)
+        result = apply_ama_2027_number_plan(
+            plan,
+            rider_model=Rider,
+            db_session=db.session,
+            riders_query=Rider.query,
+            dry_run=dry_run,
+            ensure_missing=ensure_missing,
+        )
+        result["ok"] = True
+        result["source_url"] = SOURCE_URL
+        result["source_date"] = SOURCE_DATE
+        s = (result.get("plan_summary") or plan.get("summary") or {})
+        ensure = result.get("ensure") or {}
+        create_key = "would_create" if dry_run else "created"
+        n_create = len(ensure.get(create_key) or [])
+        if dry_run:
+            result["message"] = (
+                f"TEST — skulle byta nummer på {result.get('would_update', 0)} förare "
+                f"(redan ok: {s.get('already_ok', 0)}). "
+                f"Skulle lägga till {n_create} saknade "
+                f"(Chisholm / Clout / Larwood). "
+                f"#1-titelplattor skrivs inte — bara career/national."
+            )
+        else:
+            result["message"] = (
+                f"Uppdaterade {len(result.get('updated') or [])} förare "
+                f"({result.get('conflicts_resolved') or 0} nummerkonflikter lösta). "
+                f"Lade till {n_create} saknade. "
+                f"Källa AMA/Racer X {SOURCE_DATE}."
+            )
+            if result.get("errors"):
+                result["message"] += f" Fel: {len(result['errors'])}."
+        return jsonify(result)
+    except Exception as e:
+        db.session.rollback()
+        print(f"apply_ama_2027_national_numbers: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.post("/admin/archive_ama_season_and_reset")
 def archive_ama_season_and_reset():
     """
