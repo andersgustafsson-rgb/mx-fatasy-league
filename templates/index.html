@@ -3213,7 +3213,7 @@
                   <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Fantasy-ställningar</span></span></h2>
                 </div>
                 <div class="home-ui-panel__body">
-                  <p class="text-xs text-slate-400 mb-3 text-center sm:text-left">Top 5 per serie — syns alltid, oberoende av kortet ovan.</p>
+                  <p class="text-xs text-slate-400 mb-3 text-center sm:text-left">Top 5 per serie — på mobil: öppna en lista i taget.</p>
                   <div id="home-standings-boards" class="home-standings-grid">
                     <div class="home-standings-card__empty col-span-full">Laddar ställningar…</div>
                   </div>
@@ -4267,15 +4267,23 @@
       }
     }
 
-    async function _fetchLeaderboardRows(url, { wrapKey = null } = {}) {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(String(res.status));
-      const payload = await res.json();
-      if (payload && payload.error) throw new Error(payload.error);
-      if (wrapKey) {
-        return Array.isArray(payload[wrapKey]) ? payload[wrapKey] : [];
+    async function _fetchLeaderboardRows(url, { wrapKey = null, timeoutMs = 12000 } = {}) {
+      const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = ctrl
+        ? setTimeout(() => ctrl.abort(), Math.max(3000, Number(timeoutMs) || 12000))
+        : null;
+      try {
+        const res = await fetch(url, ctrl ? { signal: ctrl.signal } : undefined);
+        if (!res.ok) throw new Error(String(res.status));
+        const payload = await res.json();
+        if (payload && payload.error) throw new Error(payload.error);
+        if (wrapKey) {
+          return Array.isArray(payload[wrapKey]) ? payload[wrapKey] : [];
+        }
+        return Array.isArray(payload) ? payload : [];
+      } finally {
+        if (timer) clearTimeout(timer);
       }
-      return Array.isArray(payload) ? payload : [];
     }
 
     function _standingsRowHtml(row, rank) {
@@ -4460,32 +4468,40 @@
       const loading = loadingText || (isEn ? 'Loading…' : 'Laddar ställningar…');
       root.innerHTML = `<div class="home-standings-card__empty" style="grid-column:1/-1">${loading}</div>`;
       const boards = fantasyStandingsBoardDefs(isEn);
-      const settled = await Promise.all(
-        boards.map(async (b) => {
-          try {
-            const rows = await b.load();
-            return { ...b, rows };
-          } catch (e) {
-            console.warn('standings board', b.id, e);
-            return { ...b, rows: [], empty: isEn ? 'Could not load.' : 'Kunde inte ladda.' };
-          }
-        })
-      );
-      const defaultIdx = _pickDefaultStandingsBoard(settled);
-      const isMobile =
-        typeof window.matchMedia === 'function' &&
-        window.matchMedia('(max-width: 767px)').matches;
-      root.innerHTML = settled
-        .map((b, i) =>
-          renderHomeStandingsCard(b, {
-            topN,
-            expanded: isMobile ? i === defaultIdx : true,
+      try {
+        const settled = await Promise.all(
+          boards.map(async (b) => {
+            try {
+              const rows = await b.load();
+              return { ...b, rows };
+            } catch (e) {
+              console.warn('standings board', b.id, e);
+              return { ...b, rows: [], empty: isEn ? 'Could not load.' : 'Kunde inte ladda.' };
+            }
           })
-        )
-        .join('');
-      bindHomeStandingsExpand(root);
-      bindHomeStandingsAccordion(root);
-      return settled;
+        );
+        const defaultIdx = _pickDefaultStandingsBoard(settled);
+        const isMobile =
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia('(max-width: 767px)').matches;
+        root.innerHTML = settled
+          .map((b, i) =>
+            renderHomeStandingsCard(b, {
+              topN,
+              expanded: isMobile ? i === defaultIdx : true,
+            })
+          )
+          .join('');
+        bindHomeStandingsExpand(root);
+        bindHomeStandingsAccordion(root);
+        return settled;
+      } catch (e) {
+        console.error('loadFantasyStandingsBoards', e);
+        root.innerHTML = `<div class="home-standings-card__empty" style="grid-column:1/-1">${
+          isEn ? 'Could not load standings.' : 'Kunde inte ladda ställningar.'
+        }</div>`;
+        return [];
+      }
     }
 
     async function fetchHomeStandingsBoards() {
@@ -7301,12 +7317,13 @@
         updateAmaOnlyHomeUi();
         // Countdown first so power ranking gets the right competition_id
         await fetchRealCountdownData();
+        // Home standings first (visible); Topplista / chips can load after without blocking the UI.
+        await fetchHomeStandingsBoards();
         await Promise.all([
           fetchWeeklyFunStats(),
           fetchRiderSpotlight(),
           fetchPowerRanking(),
           fetchSeasonLeaderboard(),
-          fetchHomeStandingsBoards(),
         ]);
       } catch (error) {
         console.error('Error loading series:', error);
@@ -7315,7 +7332,7 @@
           el.innerHTML = '<div class="text-center text-red-400 py-8">Fel vid laddning av serier</div>';
         }
         const boards = document.getElementById('home-standings-boards');
-        if (boards) {
+        if (boards && /Laddar ställningar/i.test(boards.textContent || '')) {
           boards.innerHTML = '<div class="home-standings-card__empty" style="grid-column:1/-1">Kunde inte ladda serier</div>';
         }
       }
