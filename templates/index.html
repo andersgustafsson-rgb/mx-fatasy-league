@@ -3124,7 +3124,7 @@
         <div class="tab-content">
           <!-- Race Info Tab -->
           <div id="race-info" class="tab-panel active">
-            {% if season_team_promo_live and season_team_promo_copy and is_logged_in %}
+            {% if season_team_promo_live and season_team_promo_copy and is_logged_in and not my_team %}
             <div id="stw-promo-home-banner" class="mb-6 rounded-xl border border-cyan-400/50 bg-gradient-to-r from-cyan-950/80 via-slate-900 to-slate-900 p-4 sm:p-5 shadow-lg shadow-cyan-500/10">
               <div class="flex flex-col lg:flex-row lg:items-start gap-4">
                 <div class="min-w-0 flex-1">
@@ -3144,11 +3144,7 @@
                   </a>
                 </div>
                 <div class="shrink-0 flex flex-col gap-2 w-full lg:w-auto lg:min-w-[11.5rem]">
-                  {% if my_team %}
-                  <a href="{{ url_for('season_team_page') }}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-extrabold text-sm transition">{{ season_team_promo_copy.cta_has }} →</a>
-                  {% else %}
                   <a href="{{ url_for('season_team_builder') }}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-extrabold text-sm transition">{{ season_team_promo_copy.cta }} →</a>
-                  {% endif %}
                 </div>
               </div>
               {% if season_team_promo_copy.notice %}
