@@ -70,12 +70,13 @@ def season_team_promo_copy(*, combined: bool | None = None) -> dict[str, str | l
     how = [
         "Välj 2×450 + 2×250 inom 2 milj budget",
         "Dina förare ger poäng varje race efter placering",
-        "Byte kostar 50 tippa-poäng per förare",
+        "Byten gratis tills tippa låser för säsongens första race — sen 50 p/förare",
         "Gäller SX, MX och SMX — inte WSX",
     ]
     reset_notice = (
         "Detta är laget som gäller för 2027-säsongen — inte ett test. "
-        "Bygg nu så är du redo när SX/MX/SMX drar igång."
+        "Bygg nu så är du redo när SX/MX/SMX drar igång. "
+        "Du kan byta gratis tills tippa låser för säsongens första race."
     )
     if combined:
         return {

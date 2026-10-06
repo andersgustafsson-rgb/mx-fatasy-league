@@ -401,12 +401,25 @@
           <h2 class="stw-display text-3xl text-white mb-2">Så funkar det</h2>
           <p class="text-slate-400 text-sm leading-relaxed max-w-xl">
             Bygg ett lag för hela säsongen. Du får poäng varje race utifrån hur dina förare kör —
-            och kan byta ut förare senare mot en poängkostnad.
+            och kan byta ut förare senare{% if season_team_transfers_free %} gratis tills tippa låser för säsongens första race{% else %} mot en poängkostnad{% endif %}.
           </p>
           <div class="mt-4 rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 leading-relaxed max-w-xl">
-            <strong class="text-amber-200">Inför 2027-säsongen:</strong>
+            <strong class="text-amber-200">Inför {{ season_team_transfer_window.season_year | default(2027) }}-säsongen:</strong>
             laget du bygger nu är ditt riktiga säsongsteam — inte ett test.
-            Teampoäng räknas in i highscoren när SX, MX och SMX 2027 drar igång.
+            Teampoäng räknas in i highscoren när SX, MX och SMX drar igång.
+            {% if season_team_transfers_free %}
+            <span class="block mt-2 text-amber-50/95">
+              <strong class="text-amber-200">Gratis byten gäller nu:</strong>
+              du kan byta förare utan poängkostnad tills tippa låser för säsongens första race
+              {% if season_team_transfer_window.lock_race_name %}
+              ({{ season_team_transfer_window.lock_race_name }}){% endif %}.
+              Därefter kostar varje byte 50 tippa-poäng.
+            </span>
+            {% else %}
+            <span class="block mt-2 text-amber-50/95">
+              Tippa har låst för säsongens första race — byten kostar nu <strong>50 tippa-poäng</strong> per förare.
+            </span>
+            {% endif %}
           </div>
           <div class="stw-rule-grid mt-5">
             <div class="stw-rule">
@@ -426,8 +439,13 @@
             </div>
             <div class="stw-rule">
               <span class="kicker">Byte</span>
+              {% if season_team_transfers_free %}
+              <strong>Gratis nu</strong>
+              <span class="desc">Tills tippa låser för säsongens första race — sen 50 p/förare</span>
+              {% else %}
               <strong>50 poäng</strong>
-              <span class="desc">Per förare du byter ut senare</span>
+              <span class="desc">Per förare du byter ut</span>
+              {% endif %}
             </div>
           </div>
           <button type="button" class="stw-btn stw-btn--go stw-intro-cta" id="btn-intro-start">
@@ -438,7 +456,13 @@
         <!-- ROSTER (edit mode home) -->
         <section class="stw-view" data-view="roster" id="view-roster">
           <h2 class="stw-display text-3xl text-white mb-1">Ditt lag</h2>
-          <p class="text-slate-400 text-sm mb-4">Markera vem som åker ut, välj ersättare — 50 poäng per byte (MX-klassbyte kan vara gratis).</p>
+          <p class="text-slate-400 text-sm mb-4">
+            {% if season_team_transfers_free %}
+            Markera vem som åker ut, välj ersättare — <strong class="text-emerald-300">gratis byten</strong> tills tippa låser för säsongens första race (sen 50 p/förare). MX-klassbyte kan vara gratis även efteråt.
+            {% else %}
+            Markera vem som åker ut, välj ersättare — 50 poäng per byte (MX-klassbyte kan vara gratis).
+            {% endif %}
+          </p>
           <div id="mx-promo-banner" class="hidden mb-4 p-3 rounded-xl border border-emerald-600/40 bg-emerald-950/40 text-emerald-100 text-sm"></div>
           <div id="swap-locked-banner" class="hidden mb-4 p-3 rounded-xl border border-rose-500/40 bg-rose-950/40 text-rose-100 text-sm"></div>
           {% if has_existing_team and team_slot_count is defined and team_slot_count < 4 %}
@@ -517,6 +541,7 @@
   <script>
     const allRiders = {{ riders | tojson | safe }};
     const hasExistingTeam = {{ has_existing_team | default(false) | tojson | safe }};
+    const transfersFree = {{ season_team_transfers_free | default(false) | tojson | safe }};
     const existingIds = {{ existing_team_riders | default([]) | tojson | safe }};
     const existingRiderObjs = {{ existing_team_rider_objs | default([]) | tojson | safe }};
     const originalTeamName = {% if has_existing_team %}{{ existing_team.team_name | tojson | safe }}{% else %}""{% endif %};
@@ -608,16 +633,19 @@
     }
 
     function penaltyPoints() {
+      if (transfersFree) return 0;
       return penalizedChanges() * 50;
     }
 
     /** True if user can pay for `extra` additional paid swaps from current draft. */
     function canAffordExtraPaidSwaps(extra) {
+      if (transfersFree) return true;
       const n = Math.max(0, parseInt(extra, 10) || 0);
       return userPoints >= (penalizedChanges() + n) * 50;
     }
 
     function paidSwapBlockedMessage(needPts) {
+      if (transfersFree) return "";
       const need = needPts != null ? needPts : 50;
       return `För få poäng (${userPoints}) — byten kostar ${need} p. Fyll tom plats eller gratis MX-klassbyte går fortfarande.`;
     }
@@ -878,8 +906,9 @@
           return;
         }
         document.getElementById("pick-title").textContent = `Ersätt ${out.name}`;
-        document.getElementById("pick-sub").textContent =
-          `Samma klass (${out.class}) · kostar 50 poäng (gratis vid MX-klassbyte).`;
+        document.getElementById("pick-sub").textContent = transfersFree
+          ? `Samma klass (${out.class}) · gratis byte (tills tippa låser för säsongens första race).`
+          : `Samma klass (${out.class}) · kostar 50 poäng (gratis vid MX-klassbyte).`;
         document.getElementById("pick-hint").textContent = "1 byte";
         updateBudgetUI(4, null);
         document.getElementById("picked-slots").innerHTML =
@@ -974,7 +1003,7 @@
 
       const locked = document.getElementById("swap-locked-banner");
       if (locked) {
-        if (hasExistingTeam && userPoints < 50) {
+        if (hasExistingTeam && !transfersFree && userPoints < 50) {
           locked.classList.remove("hidden");
           locked.innerHTML =
             `<strong class="text-rose-200">Inga byten just nu.</strong> ` +
@@ -987,7 +1016,11 @@
 
       const cost = document.getElementById("edit-cost-box");
       const p = penaltyPoints();
-      if (p > 0) {
+      if (transfersFree && penalizedChanges() > 0) {
+        cost.classList.remove("hidden");
+        cost.innerHTML =
+          `Byten är <strong class="text-emerald-300">gratis</strong> tills tippa låser för säsongens första race.`;
+      } else if (p > 0) {
         cost.classList.remove("hidden");
         cost.innerHTML = `Kostnad vid sparning: <strong>${p} poäng</strong> (${penalizedChanges()} byte). Saldo: <strong>${userPoints} p</strong>.`;
       } else {
@@ -1064,16 +1097,18 @@
       document.getElementById("confirm-points").textContent = userPoints + " p";
       const box = document.getElementById("confirm-cost");
       const p = penaltyPoints();
-      if (hasExistingTeam && p > 0) {
+      if (hasExistingTeam && transfersFree && penalizedChanges() > 0) {
+        box.classList.remove("hidden");
+        box.innerHTML =
+          `Byten är <strong class="text-emerald-300">gratis</strong> tills tippa låser för säsongens första race.`;
+      } else if (hasExistingTeam && p > 0) {
         box.classList.remove("hidden");
         box.innerHTML = `Detta byte kostar <strong>${p} poäng</strong> (${penalizedChanges()} förare). Efteråt: <strong>${userPoints - p} p</strong>.`;
       } else if (hasExistingTeam) {
         box.classList.remove("hidden");
-        box.innerHTML = `Inga poängstraff — bara namnändring eller gratis klassbyte/fyllnad.`;
-        if (penalizedChanges() === 0 && myTeam.every((r, i) => String(r.id) === String(existingIds[i]) || baselineIds.has(r.id)) &&
-            [...baselineIds].every((id) => myTeam.some((r) => String(r.id) === String(id)))) {
-          // keep message
-        }
+        box.innerHTML = transfersFree
+          ? `Inga poängstraff — byten är gratis tills tippa låser för säsongens första race.`
+          : `Inga poängstraff — bara namnändring eller gratis klassbyte/fyllnad.`;
       } else {
         box.classList.add("hidden");
       }

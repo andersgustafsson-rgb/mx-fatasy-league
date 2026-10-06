@@ -1103,6 +1103,61 @@ def ama_competition_clause():
     )
 
 
+def _season_team_target_year() -> int:
+    """AMA calendar year the season team is built for (upcoming SX/MX/SMX)."""
+    today = get_today()
+    upcoming = (
+        Competition.query.filter(
+            Competition.event_date.isnot(None),
+            Competition.event_date >= today,
+            Competition.series.in_(("SX", "MX", "SMX")),
+        )
+        .order_by(Competition.event_date.asc(), Competition.id.asc())
+        .first()
+    )
+    if upcoming and upcoming.event_date:
+        return int(upcoming.event_date.year)
+    return int(_current_racing_season_year())
+
+
+def _first_ama_race_of_season(season_year: int | None = None) -> Competition | None:
+    """Earliest SX/MX/SMX race in the season-team target year (by event_date)."""
+    year = int(season_year or _season_team_target_year())
+    return (
+        Competition.query.filter(
+            Competition.event_date.isnot(None),
+            db.extract("year", Competition.event_date) == year,
+            Competition.series.in_(("SX", "MX", "SMX")),
+        )
+        .order_by(Competition.event_date.asc(), Competition.id.asc())
+        .first()
+    )
+
+
+def season_team_transfers_are_free() -> bool:
+    """Free roster changes until tippa locks for the season's first AMA race."""
+    first = _first_ama_race_of_season()
+    if first is None:
+        return True
+    # Deadline (not preseason): free while tippa is still open / not yet due.
+    return not is_picks_deadline_passed(first)
+
+
+def season_team_transfer_window_info() -> dict:
+    """UI flags + lock race for season-team builder / info copy."""
+    year = _season_team_target_year()
+    first = _first_ama_race_of_season(year)
+    free = True if first is None else not is_picks_deadline_passed(first)
+    return {
+        "free": free,
+        "season_year": year,
+        "lock_race_name": (first.name if first else None),
+        "lock_race_date": (
+            first.event_date.isoformat() if first and first.event_date else None
+        ),
+    }
+
+
 def _home_default_countdown_series() -> str:
     """Default countdown series for homepage (never auto-select WSX/MXON)."""
     for series_code in ("SX", "MX", "SMX"):
@@ -11066,6 +11121,7 @@ def season_team_builder():
             )
 
         season_team_count = SeasonTeam.query.count()
+        transfer_window = season_team_transfer_window_info()
 
         html = render_template(
             "season_team_builder.html",
@@ -11078,6 +11134,8 @@ def season_team_builder():
             team_slot_count=team_slot_count,
             mx_promotion_offers=mx_promotion_offers,
             season_team_count=season_team_count,
+            season_team_transfers_free=transfer_window["free"],
+            season_team_transfer_window=transfer_window,
         )
         resp = make_response(html)
         resp.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
@@ -13118,6 +13176,9 @@ def save_season_team():
         is_team_change = False
         riders_changed = 0
         penalty_points = 0
+        transfers_free = False
+        current_rider_ids = set()
+        new_rider_ids = set()
         
         if not team:
             # First time creating team - no penalty; no retroactive race points
@@ -13145,8 +13206,9 @@ def save_season_team():
             riders_changed = count_penalized_rider_changes(
                 current_rider_ids, new_rider_ids
             )
-            penalty_points = riders_changed * 50  # 50 points per changed rider
-            
+            transfers_free = season_team_transfers_are_free()
+            penalty_points = 0 if transfers_free else riders_changed * 50
+
             # Check if user has enough AMA tippa points for the penalty
             # (same pool as get_user_total_points / highscore — not WSX/MXON/MXGP)
             if penalty_points > 0:
@@ -13209,15 +13271,17 @@ def save_season_team():
         if is_team_change:
             if penalty_points > 0:
                 return jsonify({"message": f"Team uppdaterat! -{penalty_points} poäng för {riders_changed} bytade förare."}), 200
-            elif len(current_rider_ids - new_rider_ids) > 0:
+            elif riders_changed > 0 or len(current_rider_ids - new_rider_ids) > 0:
+                if transfers_free:
+                    return jsonify({
+                        "message": (
+                            "Team uppdaterat! Byten är gratis tills tippa låser "
+                            "för säsongens första race."
+                        )
+                    }), 200
                 return jsonify({"message": "Team uppdaterat! MX-klassbyte utan poängstraff."}), 200
             else:
-                # Check if name changed
-                old_name = SeasonTeam.query.filter_by(user_id=uid).first()
-                if old_name and old_name.team_name != team_name:
-                    return jsonify({"message": f"Teamnamn uppdaterat till '{team_name}'! Inga poängstraff (inga förare byttes)."}), 200
-                else:
-                    return jsonify({"message": "Team uppdaterat! Inga poängstraff (inga ändringar gjorda)."}), 200
+                return jsonify({"message": "Team uppdaterat! Inga poängstraff."}), 200
         else:
             return jsonify({"message": "Team sparat!"}), 200
             
