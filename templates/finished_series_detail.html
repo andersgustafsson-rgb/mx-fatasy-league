@@ -545,13 +545,48 @@
             <span class="font-orbit text-xs tracking-wider text-cyan-300/90 uppercase">Alla placeringar</span>
             <span class="text-[10px] text-gray-500">{{ leaderboard|length }} spelare</span>
           </div>
-          <div class="overflow-x-auto">
-            <table class="lb-table w-full text-sm min-w-[640px]">
+
+          {# Mobile: rank + name + points always visible (no side-scroll) #}
+          <div class="sm:hidden divide-y divide-white/5">
+            {% for row in leaderboard %}
+            <div class="flex items-center gap-3 px-3 py-3 {% if is_logged_in and row.user_id == current_user_id %}bg-cyan-500/10{% endif %}">
+              <div class="w-9 shrink-0 flex justify-center">
+                {% if row.rank <= 3 %}
+                  <span class="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-orbit font-black
+                    {% if row.rank == 1 %}bg-gradient-to-br from-amber-300 to-amber-700 text-amber-950 shadow-lg shadow-amber-500/20
+                    {% elif row.rank == 2 %}bg-gradient-to-br from-slate-200 to-slate-600 text-slate-900
+                    {% else %}bg-gradient-to-br from-orange-300 to-orange-800 text-white{% endif %}">{{ row.rank }}</span>
+                {% else %}
+                  <span class="text-gray-500 font-orbit text-xs">{{ row.rank }}</span>
+                {% endif %}
+              </div>
+              <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                {{ user_face(row, 'w-9 h-9') }}
+                <div class="min-w-0">
+                  {% if is_logged_in and current_user_id is not none and row.user_id != current_user_id %}
+                    <a href="{{ url_for('view_user_profile', user_id=row.user_id) }}" class="font-semibold text-white hover:text-cyan-300 transition-colors block truncate text-sm">{{ row.display_name }}</a>
+                  {% else %}
+                    <a href="{{ url_for('user_race_results', user_id=row.user_id) }}" class="font-semibold text-white hover:text-cyan-300 transition-colors block truncate text-sm">{{ row.display_name }}</a>
+                  {% endif %}
+                  <span class="text-[10px] text-gray-500 truncate block">{{ row.competitions_participated }} omg.</span>
+                </div>
+              </div>
+              <div class="shrink-0 text-right pl-2">
+                <div class="font-orbit font-bold text-cyan-300 tabular-nums text-base leading-none">{{ row.total_points }}</div>
+                <div class="text-[9px] uppercase tracking-wider text-gray-500 mt-0.5">p</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          {# Desktop / tablet: full breakdown table #}
+          <div class="hidden sm:block overflow-x-auto">
+            <table class="lb-table w-full text-sm">
               <thead>
                 <tr class="text-left text-gray-400 bg-black/35">
                   <th class="px-3 py-3 w-12 text-center font-orbit text-[10px]">#</th>
                   <th class="px-3 py-3">Spelare</th>
-                  <th class="px-2 py-3 text-center hidden sm:table-cell">Race</th>
+                  <th class="px-2 py-3 text-center">Race</th>
                   <th class="px-2 py-3 text-center hidden md:table-cell">Holeshot</th>
                   <th class="px-2 py-3 text-center hidden md:table-cell">Wildcard</th>
                   <th class="px-2 py-3 text-center">Omg.</th>
@@ -584,7 +619,7 @@
                       </div>
                     </div>
                   </td>
-                  <td class="px-2 py-2.5 text-center tabular-nums text-gray-300 hidden sm:table-cell">{{ row.race_points }}</td>
+                  <td class="px-2 py-2.5 text-center tabular-nums text-gray-300">{{ row.race_points }}</td>
                   <td class="px-2 py-2.5 text-center tabular-nums text-gray-300 hidden md:table-cell">{{ row.holeshot_points }}</td>
                   <td class="px-2 py-2.5 text-center tabular-nums text-gray-300 hidden md:table-cell">{{ row.wildcard_points }}</td>
                   <td class="px-2 py-2.5 text-center tabular-nums text-gray-400">{{ row.competitions_participated }}</td>

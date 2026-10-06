@@ -937,6 +937,53 @@ def get_class_results(competition_id: int) -> dict[str, dict]:
     return out
 
 
+def build_mxon_official_board(competition_id: int) -> dict[str, Any]:
+    """Nation classification + class winners for Förarresultat / public display."""
+    cid = int(competition_id)
+    nations: list[dict[str, Any]] = []
+    sweden: dict[str, Any] | None = None
+    for r in (
+        MxonNationResult.query.filter_by(competition_id=cid)
+        .order_by(MxonNationResult.position.asc())
+        .all()
+    ):
+        n = r.nation or MxonNation.query.get(r.nation_id)
+        code = ((n.code if n else "") or "").upper()
+        item = {
+            "place": int(r.position),
+            "code": code or None,
+            "name": (n.name if n else None) or code or "?",
+            "flag_url": flag_image_url(code) if code else None,
+            "flag_emoji": (n.flag_emoji if n else None) or flag_emoji_for_code(code),
+        }
+        nations.append(item)
+        if code == "SWE":
+            sweden = item
+
+    class_winners: list[dict[str, Any]] = []
+    for key in MXON_CLASS_KEYS:
+        row = get_class_results(cid).get(key) or {}
+        if not row:
+            continue
+        code = (row.get("code") or "").upper()
+        class_winners.append(
+            {
+                "class": MXON_CLASS_LABELS.get(key, key.upper()),
+                "code": code or None,
+                "name": row.get("name") or code or "?",
+                "rider_name": row.get("rider_name") or "—",
+                "flag_url": flag_image_url(code) if code else None,
+            }
+        )
+
+    return {
+        "nations": nations,
+        "sweden": sweden,
+        "class_winners": class_winners,
+        "has_results": bool(nations),
+    }
+
+
 def set_nation_results(competition_id: int, ordered_nation_ids: list[int]) -> int:
     """Replace official nation order (1..n) for a competition. Returns count."""
     if not ordered_nation_ids:

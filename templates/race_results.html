@@ -124,45 +124,180 @@
     .rr-picker {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.65rem;
     }
     @media (min-width: 640px) {
-      .rr-picker { gap: 0.85rem; }
+      .rr-picker { gap: 0.75rem; }
+    }
+    .rr-page-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .rr-page-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #f1f5f9;
+      line-height: 1.2;
+    }
+    @media (min-width: 640px) {
+      .rr-page-title { font-size: 1.2rem; }
+    }
+    .rr-page-home {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 0.55rem;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(30, 41, 59, 0.75);
+      color: #e2e8f0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .rr-page-home:hover {
+      border-color: rgba(34, 211, 238, 0.45);
+      color: #a5f3fc;
+      background: rgba(51, 65, 85, 0.95);
     }
     .rr-series-tabs {
       display: flex;
       flex-wrap: nowrap;
-      gap: 0.4rem;
+      gap: 0.45rem;
       overflow-x: auto;
-      padding-bottom: 0.15rem;
+      padding: 0.15rem 0 0.25rem;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: thin;
     }
     .rr-series-tab {
       flex: 0 0 auto;
-      border-radius: 0.45rem;
-      border: 1px solid rgba(148, 163, 184, 0.35);
-      background: rgba(30, 41, 59, 0.85);
-      color: #cbd5e1;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
+      border-radius: 0.55rem;
+      border: 1.5px solid rgba(148, 163, 184, 0.45);
+      background: rgba(30, 41, 59, 0.95);
+      color: #e2e8f0;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
       text-transform: uppercase;
-      padding: 0.45rem 0.7rem;
+      padding: 0.55rem 0.85rem;
       text-decoration: none;
-      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
       white-space: nowrap;
     }
     .rr-series-tab:hover {
-      border-color: rgba(34, 211, 238, 0.45);
-      color: #e2e8f0;
-      background: rgba(51, 65, 85, 0.95);
+      border-color: rgba(34, 211, 238, 0.55);
+      color: #fff;
+      background: rgba(51, 65, 85, 1);
     }
     .rr-series-tab.is-active {
-      border-color: rgba(34, 211, 238, 0.75);
-      background: rgba(8, 47, 73, 0.95);
+      border-color: rgba(34, 211, 238, 0.9);
+      background: rgba(8, 47, 73, 1);
       color: #a5f3fc;
-      box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.25);
+      box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.28);
+    }
+    .rr-series-tab.state-soon:not(.is-active) {
+      opacity: 0.78;
+      border-style: dashed;
+    }
+    .rr-series-tab.state-done:not(.is-active) {
+      opacity: 0.72;
+      background: rgba(15, 23, 42, 0.75);
+    }
+    .rr-tab-tag {
+      display: inline-block;
+      margin-left: 0.35rem;
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #67e8f9;
+      opacity: 0.9;
+    }
+    .rr-tab-tag--soon { color: #fcd34d; }
+    .rr-tab-tag--done { color: #94a3b8; }
+    .rr-series-tab.tone-ama.is-active {
+      box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.28);
+    }
+    .rr-subtabs {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .rr-subtabs-label,
+    .rr-finished-label {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-right: 0.15rem;
+    }
+    .rr-subtab {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.4rem 0.8rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: #cbd5e1;
+      border: 1.5px solid rgba(148, 163, 184, 0.4);
+      background: rgba(30, 41, 59, 0.85);
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    .rr-subtab:hover {
+      color: #f8fafc;
+      border-color: rgba(148, 163, 184, 0.7);
+    }
+    .rr-subtab.is-active {
+      color: #0f172a;
+      background: linear-gradient(180deg, #fde68a, #f59e0b);
+      border-color: rgba(245, 158, 11, 0.9);
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+    }
+    .rr-finished-row {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 0.45rem;
+      padding-top: 0.15rem;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+    .rr-finished-tab {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem 0.8rem;
+      border-radius: 0.55rem;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-decoration: none;
+      color: #e2e8f0;
+      border: 1.5px solid rgba(148, 163, 184, 0.4);
+      background: rgba(30, 41, 59, 0.9);
+      transition: color 0.15s, border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      white-space: nowrap;
+    }
+    .rr-finished-tab:hover {
+      color: #fff;
+      border-color: rgba(52, 211, 153, 0.55);
+    }
+    .rr-finished-tab.is-active {
+      color: #ecfdf5;
+      border-color: rgba(52, 211, 153, 0.75);
+      background: rgba(6, 78, 59, 0.65);
+      box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.28);
     }
     .rr-race-row {
       display: grid;
@@ -180,7 +315,7 @@
     .rr-race-label {
       display: block;
       font-size: 0.65rem;
-      font-weight: 600;
+      font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: #94a3b8;
@@ -191,7 +326,7 @@
       appearance: none;
       -webkit-appearance: none;
       border-radius: 0.55rem;
-      border: 1px solid rgba(148, 163, 184, 0.4);
+      border: 1.5px solid rgba(148, 163, 184, 0.45);
       background:
         linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98))
           padding-box,
@@ -225,84 +360,6 @@
       padding-bottom: 0.35rem;
       white-space: nowrap;
     }
-    .rr-subtabs {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.35rem;
-      margin-top: 0.55rem;
-    }
-    .rr-subtabs-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #64748b;
-      margin-right: 0.15rem;
-    }
-    .rr-subtab {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.3rem 0.7rem;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      text-decoration: none;
-      color: #94a3b8;
-      border: 1px solid rgba(148, 163, 184, 0.28);
-      background: rgba(15, 23, 42, 0.55);
-      transition: color 0.15s, border-color 0.15s, background 0.15s;
-    }
-    .rr-subtab:hover {
-      color: #e2e8f0;
-      border-color: rgba(148, 163, 184, 0.5);
-    }
-    .rr-subtab.is-active {
-      color: #0f172a;
-      background: linear-gradient(180deg, #fde68a, #f59e0b);
-      border-color: rgba(245, 158, 11, 0.8);
-    }
-    .rr-finished-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.4rem;
-      margin-top: 0.65rem;
-      padding-top: 0.55rem;
-      border-top: 1px solid rgba(71, 85, 105, 0.45);
-    }
-    .rr-finished-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #64748b;
-      margin-right: 0.1rem;
-    }
-    .rr-finished-tab {
-      display: inline-flex;
-      align-items: center;
-      padding: 0.28rem 0.65rem;
-      border-radius: 0.45rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-decoration: none;
-      color: #94a3b8;
-      border: 1px solid rgba(100, 116, 139, 0.35);
-      background: rgba(15, 23, 42, 0.4);
-      transition: color 0.15s, border-color 0.15s, background 0.15s;
-    }
-    .rr-finished-tab:hover {
-      color: #e2e8f0;
-      border-color: rgba(148, 163, 184, 0.55);
-    }
-    .rr-finished-tab.is-active {
-      color: #ecfdf5;
-      border-color: rgba(52, 211, 153, 0.55);
-      background: rgba(6, 78, 59, 0.45);
-    }
     .rr-finished-tab.tone-sx.is-active {
       color: #ecfeff;
       border-color: rgba(34, 211, 238, 0.55);
@@ -316,6 +373,70 @@
     }
     .rr-series-tab.tone-mxgp.is-active {
       box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.45);
+    }
+    .rr-series-tab.tone-mxon.is-active,
+    .rr-finished-tab.tone-mxon.is-active {
+      box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.5);
+      border-color: rgba(52, 211, 153, 0.55);
+      color: #a7f3d0;
+      background: rgba(6, 78, 59, 0.45);
+    }
+    .mxon-nation-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.55rem 0.75rem;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(15, 23, 42, 0.45);
+    }
+    .mxon-nation-row--podium-1 {
+      border-color: rgba(251, 191, 36, 0.45);
+      background: linear-gradient(90deg, rgba(251, 191, 36, 0.12), rgba(15, 23, 42, 0.4));
+    }
+    .mxon-nation-row--podium-2 {
+      border-color: rgba(203, 213, 225, 0.35);
+      background: linear-gradient(90deg, rgba(148, 163, 184, 0.12), rgba(15, 23, 42, 0.4));
+    }
+    .mxon-nation-row--podium-3 {
+      border-color: rgba(251, 146, 60, 0.4);
+      background: linear-gradient(90deg, rgba(249, 115, 22, 0.1), rgba(15, 23, 42, 0.4));
+    }
+    .mxon-nation-row--swe {
+      outline: 1px solid rgba(34, 211, 238, 0.35);
+    }
+    .mxon-podium {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+    @media (min-width: 640px) {
+      .mxon-podium {
+        grid-template-columns: 1fr 1.15fr 1fr;
+        align-items: end;
+      }
+      .mxon-podium__slot--1 { order: 2; }
+      .mxon-podium__slot--2 { order: 1; }
+      .mxon-podium__slot--3 { order: 3; }
+    }
+    .mxon-podium__slot {
+      text-align: center;
+      border-radius: 1rem;
+      padding: 1rem 0.75rem;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(15, 23, 42, 0.55);
+    }
+    .mxon-podium__slot--1 {
+      border-color: rgba(251, 191, 36, 0.45);
+      background: linear-gradient(180deg, rgba(251, 191, 36, 0.16), rgba(15, 23, 42, 0.55));
+      padding-top: 1.35rem;
+      padding-bottom: 1.35rem;
+    }
+    .mxon-podium__slot--2 {
+      border-color: rgba(203, 213, 225, 0.35);
+    }
+    .mxon-podium__slot--3 {
+      border-color: rgba(251, 146, 60, 0.35);
     }
     details.race-details > summary {
       cursor: pointer;
@@ -585,14 +706,15 @@
   {% set show_smx_standings = series_filter in ('', 'all', 'AMA', 'SMX') and championship_totals is defined and championship_totals.get('show_smx_section') %}
   {% set show_smx_playoffs = series_filter in ('', 'all', 'AMA', 'SMX') and championship_totals is defined and championship_totals.get('show_smx_playoffs_section') %}
   {% set show_wsx_standings = series_filter in ('', 'all', 'AMA', 'WSX') %}
-  {% set standings_primary = series_filter in ('SX', 'MX', 'SMX', 'WSX', 'MXGP') %}
+  {% set standings_primary = series_filter in ('SX', 'MX', 'SMX', 'AMA', 'WSX', 'MXGP') %}
   {% set competitions_newest_first = competitions|reverse|list %}
   {% set series_finished = season_wrap is defined and season_wrap and season_wrap.get('finished') %}
   {% set standings_above_races = series_finished %}
   {% set year_filter = year_filter if year_filter is defined else none %}
   {% set available_years = available_years if available_years is defined else [] %}
-  {% set series_groups = series_groups if series_groups is defined else {'active': [], 'finished': []} %}
+  {% set series_groups = series_groups if series_groups is defined else {'tabs': [], 'active': [], 'finished': [], 'upcoming': []} %}
   {% set series_bucket = series_bucket if series_bucket is defined else 'active' %}
+  {% set series_tabs = series_groups.get('tabs') or ((series_groups.get('active') or []) + (series_groups.get('upcoming') or []) + (series_groups.get('finished') or [])) %}
   {% set active_series_tabs = series_groups.get('active') or [] %}
   {% set finished_series_tabs = series_groups.get('finished') or [] %}
 
@@ -696,28 +818,32 @@
 
   <div class="mx-auto w-full max-w-[min(100%,90rem)] px-4 sm:px-8 lg:px-10 pb-16">
     <!-- Serie + race picker -->
-    <nav class="sticky top-0 z-30 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 bg-slate-950/90 backdrop-blur-md border-b border-slate-600/50 mb-6" aria-label="Välj serie och tävling">
+    <nav class="sticky top-0 z-30 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 bg-slate-950/95 backdrop-blur-md border-b border-slate-600/50 mb-5" aria-label="Välj serie och tävling">
       <div class="rr-picker max-w-[min(100%,90rem)] mx-auto">
-        <p class="rr-subtabs-label mb-1.5">Aktiva serier</p>
-        <div class="rr-series-tabs" role="tablist" aria-label="Aktiva serier">
-          {% if active_series_tabs %}
-            {% for tab in active_series_tabs %}
-              <a href="{{ url_for('race_results_page', series=tab.code, year=tab.year) }}"
-                 class="rr-series-tab tone-{{ tab.tone }} {% if series_filter == tab.code and series_bucket == 'active' %}is-active{% endif %}"
-                 {% if series_filter == tab.code and series_bucket == 'active' %}aria-current="page"{% endif %}>{{ tab.label }}</a>
-            {% endfor %}
-          {% else %}
-            <span class="text-slate-500 text-sm py-1">Inga aktiva serier just nu</span>
-          {% endif %}
+        <div class="rr-page-bar">
+          <h1 class="rr-page-title">
+            {% if series_filter == 'WSX' %}WSX
+            {% elif series_filter == 'AMA' %}AMA / SMX
+            {% elif series_filter in ('SX', 'MX', 'SMX') %}AMA / SMX
+            {% elif series_filter == 'MXGP' %}MXGP
+            {% elif series_filter == 'MXON' %}MXoN
+            {% else %}Förarresultat{% endif %}{% if year_filter %} · {{ year_filter }}{% endif %}
+          </h1>
+          <a href="{{ url_for('index') }}" class="rr-page-home">← Start</a>
         </div>
 
-        {% if finished_series_tabs %}
-        <div class="rr-finished-row" aria-label="Avslutade serier">
-          <span class="rr-finished-label">Avslutade</span>
-          {% for tab in finished_series_tabs %}
+        {% if series_tabs %}
+        <div class="rr-series-tabs" role="tablist" aria-label="Serie">
+          {% for tab in series_tabs %}
             <a href="{{ url_for('race_results_page', series=tab.code, year=tab.year) }}"
-               class="rr-finished-tab tone-{{ tab.tone }} {% if series_filter == tab.code and series_bucket == 'finished' %}is-active{% endif %}"
-               {% if series_filter == tab.code and series_bucket == 'finished' %}aria-current="page"{% endif %}>{{ tab.label }}</a>
+               class="rr-series-tab tone-{{ tab.tone }} state-{{ tab.state or ('done' if tab.finished else 'live') }} {% if series_filter == tab.code and tab.year == year_filter %}is-active{% elif series_filter == tab.code and series_tabs|selectattr('code','equalto',tab.code)|list|length == 1 %}is-active{% endif %}"
+               {% if series_filter == tab.code and (tab.year == year_filter or (series_tabs|selectattr('code','equalto',tab.code)|list|length == 1)) %}aria-current="page"{% endif %}>
+              {{ tab.label }}
+              {% if tab.state == 'live' %}<span class="rr-tab-tag">live</span>
+              {% elif tab.state == 'soon' %}<span class="rr-tab-tag rr-tab-tag--soon">snart</span>
+              {% elif tab.state == 'done' %}<span class="rr-tab-tag rr-tab-tag--done">{{ tab.year }}</span>
+              {% endif %}
+            </a>
           {% endfor %}
         </div>
         {% endif %}
@@ -755,36 +881,6 @@
         </div>
       </div>
     </nav>
-
-    <!-- Header -->
-    <div class="relative rounded-2xl overflow-hidden mb-6 shadow-2xl border border-slate-500/30">
-      <div class="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-800 to-slate-900"></div>
-      <div class="absolute inset-0 opacity-30 bg-[url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M30 0L60 30 30 60 0 30z\' fill=\'none\' stroke=\'%23fff\' stroke-width=\'0.5\' opacity=\'0.15\'/%3E%3C/svg%3E')]"></div>
-      <div class="relative p-5 sm:p-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight mb-1 drop-shadow-lg">
-            {% if series_filter == 'WSX' %}WSX förarresultat
-            {% elif series_filter == 'SX' %}AMA Supercross förarresultat
-            {% elif series_filter == 'MX' %}AMA Pro Motocross förarresultat
-            {% elif series_filter == 'SMX' %}SMX förarresultat
-            {% elif series_filter == 'MXGP' %}MXGP förarresultat
-            {% else %}Förarresultat{% endif %}{% if year_filter %} · {{ year_filter }}{% endif %}
-          </h1>
-          <p class="text-blue-100/90 text-sm max-w-xl">
-            Officiella <strong class="text-white font-semibold">förar</strong>resultat och serieledare — inte fantasy-spelarnas topplista.
-            {% if series_finished %}
-              Säsongen är avslutad — slutställning och pallen visas först, sedan enskilda race.
-            {% else %}
-              Välj serie ovan, sedan tävling i listan. Senaste med resultat öppnas först.
-            {% endif %}
-          </p>
-        </div>
-        <a href="{{ url_for('index') }}"
-           class="shrink-0 inline-flex items-center justify-center bg-white/15 hover:bg-white/25 text-white font-bold py-2.5 px-5 rounded-xl border border-white/30 backdrop-blur text-sm transition-colors">
-          ← Startsidan
-        </a>
-      </div>
-    </div>
 
     {% if series_finished and season_wrap %}
     <aside class="mb-6 rounded-2xl border border-amber-500/35 bg-gradient-to-r from-amber-950/50 via-slate-900/80 to-slate-900/60 px-4 sm:px-5 py-4 shadow-lg" aria-label="Säsongsstatus">
@@ -848,7 +944,103 @@
         <div class="px-4 sm:px-5 pb-5 pt-4">
 
           {% set results = competition_results[comp.id] %}
-          {% if results.results or results.holeshots %}
+          {% set mxon_nations = results.mxon_nations if results.mxon_nations is defined else [] %}
+          {% set mxon_sweden = results.mxon_sweden if results.mxon_sweden is defined else none %}
+          {% set mxon_classes = results.mxon_class_winners if results.mxon_class_winners is defined else [] %}
+          {% if (comp.series or '')|upper == 'MXON' %}
+            {% if mxon_nations %}
+              {% set n1 = mxon_nations[0] if mxon_nations|length > 0 else none %}
+              {% set n2 = mxon_nations[1] if mxon_nations|length > 1 else none %}
+              {% set n3 = mxon_nations[2] if mxon_nations|length > 2 else none %}
+              <div class="mb-6">
+                <h3 class="text-base font-bold mb-3 text-emerald-200 flex items-center gap-2">
+                  <span class="text-emerald-400">◆</span> Nationspall
+                </h3>
+                <div class="mxon-podium mb-5">
+                  {% if n2 %}
+                  <div class="mxon-podium__slot mxon-podium__slot--2">
+                    {% if n2.flag_url %}<img src="{{ n2.flag_url }}" alt="" class="w-12 h-8 object-cover rounded mx-auto mb-2 ring-1 ring-slate-300/40">{% endif %}
+                    <div class="text-slate-200 font-black text-xl tracking-wide">2</div>
+                    <div class="text-white font-bold text-sm mt-1">{{ n2.name }}</div>
+                    <div class="text-slate-400 text-xs font-mono mt-0.5">{{ n2.code }}</div>
+                  </div>
+                  {% endif %}
+                  {% if n1 %}
+                  <div class="mxon-podium__slot mxon-podium__slot--1">
+                    {% if n1.flag_url %}<img src="{{ n1.flag_url }}" alt="" class="w-14 h-9 object-cover rounded mx-auto mb-2 ring-2 ring-amber-400/50">{% endif %}
+                    <div class="text-amber-300 font-black text-3xl tracking-wide">1</div>
+                    <div class="text-white font-black mt-1">{{ n1.name }}</div>
+                    <div class="text-cyan-300/80 text-xs font-mono mt-0.5">{{ n1.code }}</div>
+                  </div>
+                  {% endif %}
+                  {% if n3 %}
+                  <div class="mxon-podium__slot mxon-podium__slot--3">
+                    {% if n3.flag_url %}<img src="{{ n3.flag_url }}" alt="" class="w-12 h-8 object-cover rounded mx-auto mb-2 ring-1 ring-orange-400/40">{% endif %}
+                    <div class="text-orange-300 font-black text-xl tracking-wide">3</div>
+                    <div class="text-white font-bold text-sm mt-1">{{ n3.name }}</div>
+                    <div class="text-slate-400 text-xs font-mono mt-0.5">{{ n3.code }}</div>
+                  </div>
+                  {% endif %}
+                </div>
+
+                {% if mxon_sweden %}
+                <div class="mb-5 rounded-xl border border-cyan-500/30 bg-cyan-950/25 px-4 py-3 flex items-center gap-3">
+                  {% if mxon_sweden.flag_url %}
+                    <img src="{{ mxon_sweden.flag_url }}" alt="" class="w-10 h-7 object-cover rounded ring-1 ring-cyan-400/40 shrink-0">
+                  {% endif %}
+                  <div class="min-w-0">
+                    <p class="text-[10px] uppercase tracking-[0.16em] text-cyan-300/80 font-bold">Sverige</p>
+                    <p class="text-white font-semibold text-sm">Plats {{ mxon_sweden.place }} · {{ mxon_sweden.name }}</p>
+                  </div>
+                </div>
+                {% endif %}
+
+                {% if mxon_classes %}
+                <h3 class="text-base font-bold mb-3 text-slate-200 flex items-center gap-2">
+                  <span class="text-amber-300">◆</span> Klassvinnare
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+                  {% for cw in mxon_classes %}
+                  <div class="rounded-xl border border-white/10 bg-slate-900/40 p-4 text-center">
+                    <div class="text-[10px] font-bold tracking-[0.18em] uppercase text-emerald-300/90 mb-2">{{ cw.class }}</div>
+                    {% if cw.flag_url %}<img src="{{ cw.flag_url }}" alt="" class="w-10 h-7 object-cover rounded mx-auto mb-2">{% endif %}
+                    <div class="text-white font-bold text-sm">{{ cw.name }}</div>
+                    <div class="text-slate-400 text-xs mt-1 truncate">{{ cw.rider_name }}</div>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% endif %}
+
+                <details class="race-details group bg-slate-900/40 rounded-lg border border-emerald-700/35">
+                  <summary class="px-4 py-3 text-sm font-semibold text-emerald-300 hover:bg-slate-700/30 rounded-lg transition-colors">
+                    Visa hela nationsordningen ({{ mxon_nations|length }})
+                  </summary>
+                  <div class="px-3 pb-3 pt-1 space-y-1.5">
+                    {% for n in mxon_nations %}
+                    <div class="mxon-nation-row {% if n.place == 1 %}mxon-nation-row--podium-1{% elif n.place == 2 %}mxon-nation-row--podium-2{% elif n.place == 3 %}mxon-nation-row--podium-3{% endif %} {% if n.code == 'SWE' %}mxon-nation-row--swe{% endif %}">
+                      <span class="inline-flex w-8 h-8 items-center justify-center rounded-full text-xs font-black text-white shrink-0
+                        {% if n.place == 1 %}bg-amber-500 text-amber-950{% elif n.place == 2 %}bg-slate-400 text-slate-900{% elif n.place == 3 %}bg-orange-700{% else %}bg-slate-700{% endif %}">{{ n.place }}</span>
+                      {% if n.flag_url %}
+                        <img src="{{ n.flag_url }}" alt="" class="w-9 h-6 object-cover rounded shrink-0 ring-1 ring-white/15">
+                      {% else %}
+                        <span class="text-lg shrink-0">{{ n.flag_emoji or '🏳️' }}</span>
+                      {% endif %}
+                      <div class="min-w-0 flex-1">
+                        <div class="text-white font-semibold text-sm truncate">{{ n.name }}</div>
+                        <div class="text-[11px] text-slate-400 font-mono">{{ n.code }}</div>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </details>
+              </div>
+            {% else %}
+              <div class="text-center text-slate-500 py-10">
+                <p class="text-base font-medium text-slate-400">Inga MXoN-resultat ännu</p>
+                <p class="text-sm mt-1 text-slate-500">Nationsordningen visas här när admin har registrerat den.</p>
+              </div>
+            {% endif %}
+          {% elif results.results or results.holeshots %}
             {% if comp.series == 'WSX' %}
               {% set results450 = results.results | selectattr('class_name', 'equalto', 'wsx_sx1') | list %}
               {% set label450 = 'WSX SX1' %}
@@ -1047,6 +1239,7 @@
       {% endfor %}
     </div>
 
+    {% if series_filter != 'MXON' %}
     <section class="mb-8 rounded-2xl border border-slate-600/45 bg-slate-800/30 shadow-xl overflow-hidden" aria-labelledby="rider-search-heading">
       <div class="px-4 sm:px-6 py-3 bg-gradient-to-r from-slate-900/70 to-slate-800/40 border-b border-slate-600/40">
         <h2 id="rider-search-heading" class="text-base font-bold text-white flex items-center gap-2">
@@ -1062,15 +1255,16 @@
           <div class="flex items-center gap-2">
             <select id="rider-search-series"
                     class="bg-slate-950/35 border border-slate-700/60 rounded-xl px-3 py-2.5 text-sm text-slate-100 outline-none">
-              {% if series_filter in ('SX', 'MX', 'SMX', 'WSX') %}
+              {% if series_filter == 'AMA' %}
+                <option value="AMA" selected>AMA / SMX</option>
+              {% elif series_filter in ('SX', 'MX', 'SMX', 'WSX', 'MXGP', 'MXON') %}
                 <option value="{{ series_filter }}" selected>{{ series_filter }}</option>
               {% else %}
                 <option value="all">Alla serier</option>
-                <option value="SX">SX</option>
-                <option value="MX">MX</option>
-                <option value="SMX">SMX</option>
+                <option value="AMA">AMA / SMX</option>
                 <option value="WSX">WSX</option>
-                <option value="MXON">MXON</option>
+                <option value="MXGP">MXGP</option>
+                <option value="MXON">MXoN</option>
               {% endif %}
             </select>
             <button id="rider-search-clear"
@@ -1098,6 +1292,7 @@
         <div id="rider-search-empty" class="hidden mt-3 text-slate-500 text-sm">Ingen matchning.</div>
       </div>
     </section>
+    {% endif %}
 
     {% if not standings_above_races %}
       {{ render_championship_totals(
@@ -1166,7 +1361,12 @@
       }
 
       var filtered = riderPoints.filter(function (row) {
-        if (series !== "all" && row.series !== series) return false;
+        var rowSeries = String(row.series || "").toUpperCase();
+        if (series === "AMA") {
+          if (["SX", "MX", "SMX"].indexOf(rowSeries) < 0) return false;
+        } else if (series !== "all" && rowSeries !== String(series).toUpperCase()) {
+          return false;
+        }
         return normalize(row.rider_name).includes(q);
       });
 

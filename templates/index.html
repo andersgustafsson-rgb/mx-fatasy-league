@@ -5118,17 +5118,18 @@
     window.openSeasonTeamLeaderboard = openOthersSeasonTeams;
 
     function seriesNextRaceSortKey(serie) {
-      const uc = serie && serie.under_construction ? 10000 : 0;
+      // Soonest upcoming race first; teasers next; finished (e.g. MXoN) last.
       const d = serie && serie.days_until_next_race;
-      if (Number.isFinite(d) && d >= 0) return uc + d;
-      if (serie && serie.is_active) return uc + 500;
+      if (Number.isFinite(d) && d >= 0) return d;
+      if (serie && serie.is_active) return 500;
       const untilStart = serie && serie.days_until_start;
-      if (Number.isFinite(untilStart) && untilStart > 0) return uc + 1000 + untilStart;
-      return uc + 9999;
+      if (Number.isFinite(untilStart) && untilStart > 0) return 1000 + untilStart;
+      if (serie && serie.under_construction) return 5000;
+      return 9000;
     }
 
     function sortSeriesByNextRace(seriesList) {
-      const order = { SX: 1, MX: 2, SMX: 3, WSX: 4, MXON: 5, MXGP: 6 };
+      const order = { SX: 1, MX: 2, SMX: 3, WSX: 4, MXGP: 5, MXON: 6 };
       return [...(Array.isArray(seriesList) ? seriesList : [])].sort((a, b) => {
         const ka = seriesNextRaceSortKey(a);
         const kb = seriesNextRaceSortKey(b);
@@ -5220,8 +5221,9 @@
 
     function updateAmaOnlyHomeUi() {
       const isMXON = homeSelectedSeries === 'MXON';
-      const seriesQ = homeSelectedSeries
-        ? `?series=${encodeURIComponent(homeSelectedSeries)}`
+      const linkSeries = isAmaHomeSeries(homeSelectedSeries) ? 'AMA' : homeSelectedSeries;
+      const seriesQ = linkSeries
+        ? `?series=${encodeURIComponent(linkSeries)}`
         : '';
       const resultsLink = document.getElementById('quick-action-race-results');
       if (resultsLink) resultsLink.href = '/race_results' + seriesQ;
@@ -7065,18 +7067,10 @@
           return;
         }
         
-        // AMA = ett kort; närmaste race överst bland övriga
-        const sortedSeries = sortSeriesByNextRace(collapseAmaSeriesForHome(series));
-        const nextUpCode = resolveDefaultHomeSeries(sortedSeries);
+        // AMA = ett kort; närmaste kommande race överst; avslutade sist (vald = highlight only)
+        const orderedSeries = sortSeriesByNextRace(collapseAmaSeriesForHome(series));
+        const nextUpCode = resolveDefaultHomeSeries(orderedSeries);
         const featuredCode = homeSelectedSeries || nextUpCode;
-        const orderedSeries = [
-          ...sortedSeries.filter((s) =>
-            homeSeriesCodesMatch(s.series_code || seriesNameToCode(s.name), featuredCode)
-          ),
-          ...sortedSeries.filter(
-            (s) => !homeSeriesCodesMatch(s.series_code || seriesNameToCode(s.name), featuredCode)
-          ),
-        ];
         
         function formatIsoDateSv(iso) {
           if (!iso) return '';

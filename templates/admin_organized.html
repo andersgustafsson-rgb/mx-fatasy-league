@@ -204,6 +204,123 @@
             margin-top: 0.25rem; font-size: 0.72rem; color: var(--ap-muted);
         }
         .ap-last-race__card .meta strong { color: #67e8f9; }
+
+        .ap-health {
+            margin: 0 0 1.15rem;
+            border: 1px solid rgba(34, 211, 238, 0.22);
+            border-radius: 1rem;
+            background:
+                radial-gradient(ellipse 80% 60% at 0% 0%, rgba(34, 211, 238, 0.08), transparent 55%),
+                linear-gradient(180deg, rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.35));
+            padding: 0.9rem 1rem 1rem;
+        }
+        .ap-health__head {
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+            gap: 0.5rem 0.85rem; margin-bottom: 0.8rem;
+        }
+        .ap-health__eyebrow {
+            font-size: 0.65rem; font-weight: 800; letter-spacing: 0.12em;
+            text-transform: uppercase; color: #67e8f9;
+        }
+        .ap-health__title {
+            font-family: "Barlow Condensed", sans-serif; font-weight: 800;
+            font-size: 1.35rem; color: #f8fafc; letter-spacing: 0.01em;
+        }
+        .ap-health__dir {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.35rem 0.7rem; border-radius: 999px;
+            font-size: 0.75rem; font-weight: 800; letter-spacing: 0.04em;
+            text-transform: uppercase; border: 1px solid transparent;
+        }
+        .ap-health__dir--up {
+            color: #052e1a; background: linear-gradient(180deg, #6ee7b7, #34d399);
+            border-color: rgba(16, 185, 129, 0.5);
+        }
+        .ap-health__dir--flat {
+            color: #1e293b; background: linear-gradient(180deg, #e2e8f0, #94a3b8);
+            border-color: rgba(148, 163, 184, 0.45);
+        }
+        .ap-health__dir--down {
+            color: #450a0a; background: linear-gradient(180deg, #fca5a5, #f87171);
+            border-color: rgba(248, 113, 113, 0.45);
+        }
+        .ap-health__grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.55rem;
+            margin-bottom: 0.85rem;
+        }
+        @media (min-width: 900px) {
+            .ap-health__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        .ap-health__card {
+            border: 1px solid rgba(71, 85, 105, 0.45);
+            border-radius: 0.7rem;
+            background: rgba(26, 36, 54, 0.7);
+            padding: 0.6rem 0.7rem;
+            min-height: 4.6rem;
+        }
+        .ap-health__card .lbl {
+            font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em;
+            text-transform: uppercase; color: #64748b; margin-bottom: 0.2rem;
+        }
+        .ap-health__card .val {
+            font-family: "Barlow Condensed", sans-serif; font-weight: 800;
+            font-size: 1.55rem; line-height: 1; color: #f8fafc;
+        }
+        .ap-health__card .delta { font-size: 0.85rem; font-weight: 700; margin-left: 0.25rem; }
+        .ap-health__card .delta.up { color: #6ee7b7; }
+        .ap-health__card .delta.down { color: #fca5a5; }
+        .ap-health__card .delta.flat { color: #94a3b8; }
+        .ap-health__card .meta { margin-top: 0.3rem; font-size: 0.72rem; color: var(--ap-muted); }
+        .ap-health__charts {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+        @media (min-width: 900px) {
+            .ap-health__charts { grid-template-columns: 1.4fr 1fr; }
+        }
+        .ap-health__chart {
+            border: 1px solid rgba(71, 85, 105, 0.4);
+            border-radius: 0.75rem;
+            background: rgba(15, 23, 42, 0.45);
+            padding: 0.65rem 0.7rem 0.55rem;
+            min-height: 9.5rem;
+        }
+        .ap-health__chart h3 {
+            margin: 0 0 0.55rem;
+            font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em;
+            text-transform: uppercase; color: #94a3b8;
+        }
+        .ap-bars {
+            display: flex; align-items: flex-end; gap: 0.28rem;
+            height: 6.5rem; width: 100%;
+            overflow-x: auto; -webkit-overflow-scrolling: touch;
+            padding-bottom: 1.1rem;
+        }
+        .ap-bars__col {
+            flex: 1 0 auto; min-width: 1.15rem; max-width: 2.4rem;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+            height: 100%;
+        }
+        .ap-bars__col i {
+            display: block; width: 100%; border-radius: 0.25rem 0.25rem 0.1rem 0.1rem;
+            background: linear-gradient(180deg, #22d3ee, #0891b2);
+            min-height: 3px;
+        }
+        .ap-bars__col span {
+            font-size: 0.58rem; color: #64748b;
+            max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            margin-top: 0.25rem;
+        }
+        .ap-bars--users .ap-bars__col i {
+            background: linear-gradient(180deg, #a78bfa, #7c3aed);
+        }
+        .ap-health__empty {
+            font-size: 0.8rem; color: #64748b; padding: 1.5rem 0.5rem; text-align: center;
+        }
+
         .ap-ring {
             --pct: 0;
             width: 3.1rem; height: 3.1rem; border-radius: 9999px; flex-shrink: 0;
@@ -678,7 +795,7 @@
             <div>
                 <p class="ap-eyebrow">MX Fantasy</p>
                 <h1 class="ap-title" id="apSectionTitle">Översikt</h1>
-                <p class="ap-sub" id="apSectionSub">KPI:er och genvägar — välj sektion i menyn</p>
+                <p class="ap-sub" id="apSectionSub">Sajthälsa, KPI:er och genvägar</p>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
                 <button type="button" class="ap-btn ap-btn--sm" onclick="loadAdminDashboard()">Uppdatera KPI</button>
@@ -688,6 +805,49 @@
 
         <!-- Overview dashboard -->
         <div id="overview" class="section-panel active">
+            <div class="ap-health" id="apSiteHealth" hidden>
+                <div class="ap-health__head">
+                    <div>
+                        <div class="ap-health__eyebrow">Sajthälsa</div>
+                        <div class="ap-health__title">Går sidan åt rätt håll?</div>
+                        <p class="ap-dash-note" style="margin:0.2rem 0 0;" id="sh-horizon-note">Riktning baserad på hela tippahistoriken</p>
+                    </div>
+                    <div class="ap-health__dir ap-health__dir--flat" id="sh-direction" title="">–</div>
+                </div>
+                <div class="ap-health__grid">
+                    <div class="ap-health__card">
+                        <div class="lbl">Användare</div>
+                        <div class="val"><span id="sh-users-total">–</span><span class="delta flat" id="sh-users-delta"></span></div>
+                        <div class="meta" id="sh-users-meta">+0 / 7d · +0 / 30d</div>
+                    </div>
+                    <div class="ap-health__card">
+                        <div class="lbl">Aktiva tippare</div>
+                        <div class="val" id="sh-active-tippers">–</div>
+                        <div class="meta">senaste 30 dagarna</div>
+                    </div>
+                    <div class="ap-health__card">
+                        <div class="lbl">Completion</div>
+                        <div class="val" id="sh-completion">–</div>
+                        <div class="meta" id="sh-completion-meta">kompletta picks</div>
+                    </div>
+                    <div class="ap-health__card">
+                        <div class="lbl">Besökare 7d</div>
+                        <div class="val" id="sh-visits-week">–</div>
+                        <div class="meta" id="sh-visits-meta">unika</div>
+                    </div>
+                </div>
+                <div class="ap-health__charts">
+                    <div class="ap-health__chart">
+                        <h3>Tippare per race</h3>
+                        <div class="ap-bars" id="sh-tippare-bars" aria-label="Tippare per race"></div>
+                    </div>
+                    <div class="ap-health__chart">
+                        <h3>Nya användare / vecka</h3>
+                        <div class="ap-bars ap-bars--users" id="sh-signup-bars" aria-label="Nya användare per vecka"></div>
+                    </div>
+                </div>
+            </div>
+
             <p class="ap-dash-note">Klicka ett kort för att hoppa till rätt sektion.</p>
             <div class="ap-kpi-grid" id="apKpiGrid">
                 <button type="button" class="ap-kpi" onclick="showSection('user-management')" data-kpi="users-today">
@@ -763,7 +923,7 @@
             <div class="ap-last-race" id="apLastRace" hidden>
                 <div class="ap-last-race__head">
                     <div>
-                        <div class="ap-last-race__eyebrow">Senaste race</div>
+                        <div class="ap-last-race__eyebrow">Senaste race · detalj</div>
                         <div class="ap-last-race__title" id="lr-name">–</div>
                     </div>
                     <div class="ap-last-race__sub" id="lr-sub">—</div>
@@ -2598,7 +2758,7 @@
         }
 
         const AP_SECTION_META = {
-            overview: { title: 'Översikt', sub: 'KPI:er och genvägar — välj sektion i menyn' },
+            overview: { title: 'Översikt', sub: 'Sajthälsa, KPI:er och genvägar' },
             'race-results': { title: 'SMX', sub: 'Importera resultat, holeshot och manuell inmatning' },
             'wsx-results': { title: 'WSX', sub: 'WSX-resultat och verktyg' },
             'mxgp-scaffold': { title: 'MXGP', sub: 'MXGP-scaffold' },
@@ -2694,6 +2854,35 @@
                     return `<span class="${on.trim()}" style="height:${h}%"></span>`;
                 }).join('');
             };
+            const setBars = (id, items, { valueKey = 'count', labelKey = 'week' } = {}) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const rows = Array.isArray(items) ? items : [];
+                if (!rows.length) {
+                    el.innerHTML = '<div class="ap-health__empty">Ingen data ännu</div>';
+                    return;
+                }
+                const vals = rows.map((r) => Number(r[valueKey]) || 0);
+                const max = Math.max(1, ...vals);
+                el.innerHTML = rows.map((r, i) => {
+                    const v = vals[i];
+                    const h = Math.max(4, Math.round((v / max) * 100));
+                    let label = String(r[labelKey] || '');
+                    if (labelKey === 'week' && label.includes('-W')) {
+                        label = 'W' + label.split('-W')[1];
+                    } else if (labelKey === 'short') {
+                        label = label.slice(0, 6);
+                    }
+                    const title = r.name || r.week || label;
+                    return `<div class="ap-bars__col" title="${String(title).replace(/"/g, '&quot;')}: ${v}"><i style="height:${h}%"></i><span>${label}</span></div>`;
+                }).join('');
+            };
+            const fmtDelta = (n) => {
+                const v = Number(n) || 0;
+                if (v > 0) return { cls: 'up', text: `+${v}` };
+                if (v < 0) return { cls: 'down', text: String(v) };
+                return { cls: 'flat', text: '±0' };
+            };
             try {
                 const res = await fetch('/admin/api/dashboard');
                 const data = await res.json();
@@ -2717,6 +2906,63 @@
                 const v = data.visits || {};
                 const p = data.picks || {};
                 const series = v.series || [];
+                const sh = data.site_health || {};
+                const shWrap = document.getElementById('apSiteHealth');
+                if (shWrap && sh.ok !== false) {
+                    shWrap.hidden = false;
+                    const dir = sh.direction || 'flat';
+                    const dirEl = document.getElementById('sh-direction');
+                    if (dirEl) {
+                        dirEl.className = 'ap-health__dir ap-health__dir--' + dir;
+                        const arrow = dir === 'up' ? '▲' : (dir === 'down' ? '▼' : '●');
+                        dirEl.textContent = `${arrow} ${sh.direction_label || dir}`;
+                        const det = sh.direction_detail || {};
+                        const tipBits = [];
+                        if (det.tippare_early_avg != null && det.tippare_late_avg != null) {
+                            tipBits.push(`tippare ${det.tippare_early_avg}→${det.tippare_late_avg} (×${det.tippare_ratio ?? '–'})`);
+                        } else {
+                            tipBits.push(`tippare×${det.tippare_ratio ?? '–'}`);
+                        }
+                        tipBits.push(`signups 90d×${det.signup_ratio ?? '–'}`);
+                        if (det.tippare_races) tipBits.push(`${det.tippare_races} race`);
+                        dirEl.title = tipBits.join(' · ');
+                        const note = document.getElementById('sh-horizon-note');
+                        if (note) {
+                            note.textContent = det.horizon === 'sedan start'
+                                ? 'Riktning: tidig vs sen tippa-historia + users 90 dagar'
+                                : 'Riktning baserad på längre trend';
+                        }
+                    }
+                    const su = sh.users || {};
+                    set('sh-users-total', String(su.total ?? u.total ?? 0));
+                    const d7 = fmtDelta(su.delta_7);
+                    const deltaEl = document.getElementById('sh-users-delta');
+                    if (deltaEl) {
+                        deltaEl.className = 'delta ' + d7.cls;
+                        deltaEl.textContent = ' ' + d7.text + ' 7d';
+                    }
+                    set('sh-users-meta', `+${su.delta_7 ?? 0} / 7d · +${su.delta_30 ?? 0} / 30d`);
+                    set('sh-active-tippers', String(sh.active_tippers_30d ?? 0));
+                    const comp = sh.completion || {};
+                    set('sh-completion', comp.rate != null ? `${comp.rate}%` : '–');
+                    set('sh-completion-meta', comp.races
+                        ? `snitt kompletta · ${comp.races} race`
+                        : 'kompletta picks');
+                    set('sh-visits-week', String(v.week_uv ?? 0));
+                    set('sh-visits-meta', v.peak_uv
+                        ? `unika · peak ${v.peak_uv}`
+                        : 'unika senaste 7 dagarna');
+                    setBars('sh-tippare-bars', sh.tippare_per_race || [], {
+                        valueKey: 'tippare',
+                        labelKey: 'short',
+                    });
+                    setBars('sh-signup-bars', (su.weekly || []), {
+                        valueKey: 'count',
+                        labelKey: 'week',
+                    });
+                } else if (shWrap) {
+                    shWrap.hidden = true;
+                }
 
                 set('kpi-users-today', String(u.today ?? 0));
                 const names = (u.today_names || []).filter(Boolean);

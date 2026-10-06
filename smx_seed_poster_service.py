@@ -428,6 +428,333 @@ def _render_story(data: dict[str, Any], *, class_key: str) -> bytes:
     return buf.getvalue()
 
 
+def _pick_action_hero_static() -> str:
+    """Prefer a live gate-drop still; fall back to SMX playoff venue art."""
+    candidates = [
+        "trackmaps/pro_motocross/10063_startsalignmediamx25ironman018.webp",
+        "trackmaps/pro_motocross/9027_starts_alignmedia_mx24_unadilla_027.webp",
+        "trackmaps/smx/smx_playoff1_columbus_poster.jpg",
+        "trackmaps/smx/smx_final_ridgedale_poster.jpg",
+    ]
+    for rel in candidates:
+        if (Path("static") / rel).is_file():
+            return f"/static/{rel}"
+    return "/static/trackmaps/smx/smx_playoff1_columbus_poster.jpg"
+
+
+def render_smx_playoff_announce_png() -> bytes:
+    """Facebook feed poster — cinematic action + seed/LCQ story (no ranking list)."""
+    from PIL import ImageDraw
+
+    from hype_poster_service import (
+        W_FB,
+        H_FB,
+        _paint_cinematic_backdrop,
+        _series_colors,
+    )
+    from social_recap_service import (
+        GOLD,
+        MUTED,
+        WHITE,
+        _draw_styled_text,
+        _load_brand_logo,
+        _load_display_font,
+        _load_font_px,
+        _text_width,
+    )
+
+    accent, accent2 = _series_colors("SMX")
+    data = {"hero_static": _pick_action_hero_static(), "series": "SMX"}
+    img = _paint_cinematic_backdrop(W_FB, H_FB, data, accent)
+    draw = ImageDraw.Draw(img)
+    margin = 44
+    top_h = 78
+
+    draw.rectangle([0, 0, W_FB, top_h], fill=(6, 10, 20))
+    draw.rectangle([0, top_h, W_FB, top_h + 4], fill=accent)
+
+    logo = _load_brand_logo(56)
+    if logo:
+        img.paste(logo, (margin, (top_h - logo.size[1]) // 2), logo)
+        brand_x = margin + logo.size[0] + 12
+    else:
+        brand_x = margin
+    _draw_styled_text(
+        draw, (brand_x, top_h // 2 - 8), "MX FANTASY LEAGUE", _load_display_font(24, bold=True), accent, anchor="lm"
+    )
+    _draw_styled_text(
+        draw, (brand_x, top_h // 2 + 14), "TIPPA GRATIS", _load_font_px(15, bold=True), GOLD, anchor="lm"
+    )
+
+    pill = "SMX · PLAYOFFS"
+    pf = _load_font_px(16, bold=True)
+    pw = _text_width(pf, pill) + 26
+    ph = 30
+    draw.rounded_rectangle(
+        [W_FB - margin - pw, (top_h - ph) // 2, W_FB - margin, (top_h - ph) // 2 + ph],
+        radius=15,
+        fill=(accent[0] // 5, accent[1] // 5, accent[2] // 5),
+        outline=accent,
+        width=2,
+    )
+    _draw_styled_text(draw, (W_FB - margin - pw // 2, top_h // 2), pill, pf, WHITE, anchor="mm")
+
+    # Bottom story card
+    panel_h = 340
+    x0, y0 = margin, H_FB - margin - panel_h
+    x1, y1 = W_FB - margin, H_FB - margin
+    draw.rounded_rectangle([x0, y0, x1, y1], radius=22, fill=(8, 12, 24), outline=accent, width=2)
+    draw.rectangle([x0 + 18, y0, x1 - 18, y0 + 4], fill=GOLD)
+
+    pad = 36
+    y = y0 + 22
+    _draw_styled_text(draw, (x0 + pad, y), "SEEDNINGEN ÄR KLAR", _load_font_px(16, bold=True), accent2, anchor="lt")
+    y += 34
+    _draw_styled_text(
+        draw, (x0 + pad, y), "SMX PLAYOFFS 2026", _load_display_font(48, bold=True), WHITE, anchor="lt"
+    )
+    y += 58
+    _draw_styled_text(
+        draw,
+        (x0 + pad, y),
+        "12 sep Columbus  ·  19 sep Carson  ·  26 sep Final",
+        _load_font_px(18, bold=True),
+        GOLD,
+        anchor="lt",
+    )
+    y += 40
+
+    # Two story chips — seed vs LCQ (no names/list)
+    chip_gap = 16
+    chip_w = (x1 - x0 - pad * 2 - chip_gap) // 2
+    chip_h = 78
+    # Seeded
+    draw.rounded_rectangle(
+        [x0 + pad, y, x0 + pad + chip_w, y + chip_h],
+        radius=14,
+        fill=EMERALD_BG,
+        outline=EMERALD,
+        width=2,
+    )
+    _draw_styled_text(
+        draw, (x0 + pad + 18, y + 18), "DIREKTKVAL", _load_font_px(14, bold=True), EMERALD, anchor="lt"
+    )
+    _draw_styled_text(
+        draw, (x0 + pad + 18, y + 42), "Seed #1–20", _load_display_font(26, bold=True), WHITE, anchor="lt"
+    )
+    # LCQ
+    lx = x0 + pad + chip_w + chip_gap
+    draw.rounded_rectangle(
+        [lx, y, lx + chip_w, y + chip_h],
+        radius=14,
+        fill=AMBER_BG,
+        outline=AMBER,
+        width=2,
+    )
+    _draw_styled_text(
+        draw, (lx + 18, y + 18), "LCQ / WILD CARD", _load_font_px(14, bold=True), AMBER, anchor="lt"
+    )
+    _draw_styled_text(
+        draw, (lx + 18, y + 42), "#21–30 · ej auto-kvalade", _load_display_font(22, bold=True), WHITE, anchor="lt"
+    )
+    y += chip_h + 22
+
+    # CTA row
+    _draw_styled_text(
+        draw,
+        (x0 + pad, y + 8),
+        "Tippa bland topp 30 — LCQ som inte går vidare ger 0 p",
+        _load_font_px(16, bold=True),
+        MUTED,
+        anchor="lt",
+    )
+    btn_w, btn_h = 320, 52
+    bx0 = x1 - pad - btn_w
+    draw.rounded_rectangle([bx0, y, x1 - pad, y + btn_h], radius=14, fill=accent)
+    _draw_styled_text(
+        draw,
+        (bx0 + btn_w // 2, y + btn_h // 2),
+        "TIPPA NU · mx-fantasy.se",
+        _load_display_font(18, bold=True),
+        (8, 15, 30),
+        anchor="mm",
+    )
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
+
+
+def _load_live_backdrop(width: int, height: int):
+    """Cinematic AI/photo plate under the accurate seed lists."""
+    from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
+
+    from hype_poster_service import _cover_crop
+
+    candidates = [
+        Path("static") / "posters" / "smx_2026_seed_backdrop.png",
+        Path("static") / "posters" / "smx_2026_playoffs_fb_live.png",
+    ]
+    base = Image.new("RGB", (width, height), (10, 14, 28))
+    for p in candidates:
+        if p.is_file():
+            try:
+                photo = Image.open(p).convert("RGB")
+                photo = _cover_crop(photo, width, height)
+                photo = ImageEnhance.Contrast(photo).enhance(1.08)
+                photo = ImageEnhance.Color(photo).enhance(1.05)
+                base = photo
+                break
+            except Exception:
+                continue
+
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    # Keep some action visible on the right; darken list zones
+    od.rectangle([0, 0, width, height], fill=(4, 8, 18, 70))
+    for y in range(0, 110):
+        a = int(170 * (1 - y / 110))
+        od.line([(0, y), (width, y)], fill=(0, 0, 0, a))
+    # Soft left wash for columns
+    for x in range(0, int(width * 0.72)):
+        t = 1 - x / (width * 0.72)
+        a = int(95 * (t ** 1.2))
+        od.line([(x, 90), (x, height)], fill=(4, 8, 18, a))
+    # Bottom fade for footer
+    bot = int(height * 0.22)
+    for i, y in enumerate(range(height - bot, height)):
+        t = i / max(bot - 1, 1)
+        od.line([(0, y), (width, y)], fill=(4, 8, 18, int(40 + 160 * t)))
+
+    streak = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(streak)
+    for i in range(4):
+        y0 = int(height * 0.15) + i * 80
+        sd.line(
+            [(-40, y0), (width + 40, y0 + int(height * 0.1))],
+            fill=(52, 211, 153, 18 - i * 3),
+            width=2,
+        )
+    streak = streak.filter(ImageFilter.GaussianBlur(1.2))
+
+    out = base.convert("RGBA")
+    out = Image.alpha_composite(out, overlay)
+    out = Image.alpha_composite(out, streak)
+    return out.convert("RGB")
+
+
+def render_smx_seed_live_png() -> bytes:
+    """Facebook poster: lively action plate + official Combined lists (seed vs LCQ)."""
+    from PIL import ImageDraw
+
+    from social_recap_service import (
+        GOLD,
+        MUTED,
+        WHITE,
+        _draw_styled_text,
+        _load_brand_logo,
+        _load_display_font,
+        _load_font_px,
+        _text_width,
+    )
+
+    data = build_smx_seed_poster_data()
+    img = _load_live_backdrop(W_FB, H_FB)
+    draw = ImageDraw.Draw(img)
+    margin = 28
+    top_h = 72
+
+    draw.rectangle([0, 0, W_FB, top_h], fill=(6, 10, 20))
+    draw.rectangle([0, top_h, W_FB, top_h + 3], fill=EMERALD)
+
+    logo = _load_brand_logo(48)
+    if logo:
+        img.paste(logo, (margin, (top_h - logo.size[1]) // 2), logo)
+        brand_x = margin + logo.size[0] + 10
+    else:
+        brand_x = margin
+    _draw_styled_text(
+        draw, (brand_x, top_h // 2 - 8), "MX FANTASY LEAGUE", _load_display_font(22, bold=True), EMERALD, anchor="lm"
+    )
+    _draw_styled_text(
+        draw, (brand_x, top_h // 2 + 12), "mx-fantasy.se", _load_font_px(14, bold=True), GOLD, anchor="lm"
+    )
+
+    _draw_styled_text(
+        draw, (W_FB // 2, 10), "SMX PLAYOFFS 2026", _load_display_font(34, bold=True), WHITE, anchor="mt"
+    )
+    _draw_styled_text(
+        draw,
+        (W_FB // 2, 44),
+        "Combined efter Ironman  ·  1–20 seedade  ·  21–30 LCQ",
+        _load_font_px(16, bold=True),
+        GOLD,
+        anchor="mt",
+    )
+
+    pill = "SEEDNINGEN ÄR KLAR"
+    pf = _load_font_px(14, bold=True)
+    pw = _text_width(pf, pill) + 22
+    ph = 26
+    draw.rounded_rectangle(
+        [W_FB - margin - pw, (top_h - ph) // 2, W_FB - margin, (top_h - ph) // 2 + ph],
+        radius=13,
+        fill=AMBER_BG,
+        outline=AMBER,
+        width=2,
+    )
+    _draw_styled_text(draw, (W_FB - margin - pw // 2, top_h // 2), pill, pf, AMBER, anchor="mm")
+
+    y = top_h + 14
+    col_w = (W_FB - margin * 3) // 2
+    col_h = H_FB - y - 42
+    _draw_class_column(
+        img, draw, x=margin, y=y, width=col_w, height=col_h, title="450cc", rows=data["450"]
+    )
+    _draw_class_column(
+        img,
+        draw,
+        x=margin * 2 + col_w,
+        y=y,
+        width=col_w,
+        height=col_h,
+        title="250cc",
+        rows=data["250"],
+    )
+
+    _draw_styled_text(
+        draw,
+        (W_FB // 2, H_FB - 16),
+        "Tippa bland topp 30 · LCQ måste kvala in via Wild Card · annars 0 p  ·  mx-fantasy.se",
+        _load_font_px(15, bold=True),
+        MUTED,
+        anchor="mm",
+    )
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
+
+
+def facebook_caption_smx_playoffs() -> str:
+    return "\n".join(
+        [
+            "🏁 SMX Playoffs 2026 — seedningen är klar!",
+            "",
+            "✅ Topp 20 = direktkvalade (seedade)",
+            "⚠️ #21–30 = LCQ / Wild Card — måste kvala in",
+            "",
+            "Tippa bland topp 30. LCQ som inte går vidare = 0 poäng.",
+            "",
+            "📅 12 sep Columbus · 19 sep Carson · 26 sep Final",
+            "",
+            "👉 mx-fantasy.se",
+            "",
+            "#SMX #SuperMotocross #MXFantasy #Motocross #FantasyLeague",
+        ]
+    )
+
+
 def save_smx_seed_posters(out_dir: str | Path | None = None) -> dict[str, Path]:
     """Write facebook + story PNGs under static/posters/."""
     out = Path(out_dir or Path("static") / "posters")
@@ -437,8 +764,12 @@ def save_smx_seed_posters(out_dir: str | Path | None = None) -> dict[str, Path]:
         "facebook": out / "smx_2026_seeding_facebook.png",
         "story_450": out / "smx_2026_seeding_story_450.png",
         "story_250": out / "smx_2026_seeding_story_250.png",
+        "announce": out / "smx_2026_playoffs_facebook.png",
+        "live": out / "smx_2026_playoffs_fb_live.png",
     }
     paths["facebook"].write_bytes(pair["facebook"])
     paths["story_450"].write_bytes(pair["450"])
     paths["story_250"].write_bytes(pair["250"])
+    paths["announce"].write_bytes(render_smx_playoff_announce_png())
+    paths["live"].write_bytes(render_smx_seed_live_png())
     return paths

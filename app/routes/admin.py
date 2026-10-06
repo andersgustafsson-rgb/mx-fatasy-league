@@ -983,6 +983,275 @@ def _recent_completed_tippa_competitions(limit: int = 6) -> list[Competition]:
 	)
 
 
+def _admin_site_health() -> dict:
+	"""Season/site growth metrics for admin overview (direction + charts)."""
+	from collections import defaultdict
+
+	today = get_today()
+	now = datetime.utcnow()
+	d7 = now - timedelta(days=7)
+	d14 = now - timedelta(days=14)
+	d30 = now - timedelta(days=30)
+	week_start = now - timedelta(days=84)  # ~12 weeks
+
+	def _user_created_between(start: datetime, end: datetime | None = None) -> int:
+		q = User.query.filter(User.created_at.isnot(None), User.created_at >= start)
+		if end is not None:
+			q = q.filter(User.created_at < end)
+		try:
+			return int(q.count() or 0)
+		except Exception:
+			return 0
+
+	users_total = 0
+	try:
+		users_total = int(User.query.count() or 0)
+	except Exception:
+		users_total = 0
+
+	delta_7 = _user_created_between(d7)
+	delta_7_prev = _user_created_between(d14, d7)
+	delta_30 = _user_created_between(d30)
+
+	# Weekly signup series (oldest → newest)
+	weekly: list[dict] = []
+	try:
+		recent_users = (
+			User.query.filter(User.created_at.isnot(None), User.created_at >= week_start)
+			.with_entities(User.created_at)
+			.all()
+		)
+		bucket: dict[str, int] = defaultdict(int)
+		for (created,) in recent_users:
+			if not created:
+				continue
+			iso = created.isocalendar()
+			key = f"{iso.year}-W{iso.week:02d}"
+			bucket[key] += 1
+		# Fill empty weeks for a continuous sparkline
+		cursor = week_start.date() if hasattr(week_start, "date") else week_start
+		if isinstance(cursor, datetime):
+			cursor = cursor.date()
+		end_d = today
+		seen: list[str] = []
+		while cursor <= end_d:
+			iso = cursor.isocalendar()
+			key = f"{iso.year}-W{iso.week:02d}"
+			if not seen or seen[-1] != key:
+				seen.append(key)
+			cursor += timedelta(days=1)
+		weekly = [{"week": k, "count": int(bucket.get(k, 0))} for k in seen[-12:]]
+	except Exception:
+		weekly = []
+
+	# Active tippare last 30 days (any tippa activity)
+	active_ids: set[int] = set()
+	try:
+		for model in (RacePick, HoleshotPick, WildcardPick):
+			rows = (
+				db.session.query(model.user_id)
+				.filter(model.created_at.isnot(None), model.created_at >= d30)
+				.distinct()
+				.all()
+			)
+			active_ids.update(int(r[0]) for r in rows if r[0] is not None)
+	except Exception:
+		pass
+	try:
+		from models import MxonNationPick
+
+		# MxonNationPick has no created_at — use competitions in the last 30 days
+		cutoff_day = today - timedelta(days=30)
+		mxon_comp_ids = [
+			int(r[0])
+			for r in db.session.query(Competition.id)
+			.filter(
+				db.func.upper(Competition.series) == "MXON",
+				Competition.event_date.isnot(None),
+				Competition.event_date >= cutoff_day,
+			)
+			.all()
+			if r[0] is not None
+		]
+		if mxon_comp_ids:
+			rows = (
+				db.session.query(MxonNationPick.user_id)
+				.filter(MxonNationPick.competition_id.in_(mxon_comp_ids))
+				.distinct()
+				.all()
+			)
+			active_ids.update(int(r[0]) for r in rows if r[0] is not None)
+	except Exception:
+		pass
+	active_tippers_30d = len(active_ids)
+
+	# Tippare per race (distinct users with race/MXoN picks)
+	tippare_map: dict[int, int] = defaultdict(int)
+	try:
+		for cid, n in (
+			db.session.query(RacePick.competition_id, db.func.count(db.func.distinct(RacePick.user_id)))
+			.group_by(RacePick.competition_id)
+			.all()
+		):
+			if cid is not None:
+				tippare_map[int(cid)] = max(tippare_map[int(cid)], int(n or 0))
+	except Exception:
+		pass
+	try:
+		from models import MxonNationPick
+
+		for cid, n in (
+			db.session.query(
+				MxonNationPick.competition_id,
+				db.func.count(db.func.distinct(MxonNationPick.user_id)),
+			)
+			.group_by(MxonNationPick.competition_id)
+			.all()
+		):
+			if cid is not None:
+				tippare_map[int(cid)] = max(tippare_map[int(cid)], int(n or 0))
+	except Exception:
+		pass
+
+	# Prefer current season year races with tippa; fall back to last N with picks
+	season_year = today.year
+	all_comps = (
+		Competition.query.filter(
+			Competition.id.in_(list(tippare_map.keys()) or [-1]),
+			Competition.event_date.isnot(None),
+		)
+		.order_by(Competition.event_date.asc(), Competition.id.asc())
+		.all()
+	)
+	all_comps = [c for c in all_comps if tippare_map.get(int(c.id), 0) > 0]
+
+	# Chart: keep recent window readable; direction uses full history below
+	chart_comps = list(all_comps)
+	year_comps = [c for c in chart_comps if c.event_date and c.event_date.year >= season_year - 1]
+	if len(year_comps) >= 4:
+		chart_comps = year_comps
+	chart_comps = chart_comps[-24:]
+
+	tippare_per_race = [
+		{
+			"id": int(c.id),
+			"name": c.name,
+			"series": (c.series or "").upper(),
+			"event_date": c.event_date.isoformat() if c.event_date else None,
+			"tippare": int(tippare_map.get(int(c.id), 0)),
+			"short": (c.name or "")[:18],
+		}
+		for c in chart_comps
+	]
+
+	# Completion: average complete/started over last finished races (reuse assessment)
+	completion_rate = None
+	completion_n = 0
+	try:
+		from main import _competition_picks_assessment
+
+		rates = []
+		for c in reversed(_recent_completed_tippa_competitions(6)):
+			a = _competition_picks_assessment(c)
+			started = int(a.get("users_started") or 0)
+			complete = int(a.get("users_complete") or 0)
+			if started > 0:
+				rates.append(100.0 * complete / started)
+		if rates:
+			completion_rate = round(sum(rates) / len(rates), 1)
+			completion_n = len(rates)
+	except Exception:
+		pass
+
+	# Direction = long horizon (almost since start), not last few races.
+	# Tippare: first half of all tippa-races vs second half → "bigger races than early days?"
+	# Users: last 90d signups vs prior 90d → growth, not weekend noise / off-weeks.
+	all_vals = [int(tippare_map.get(int(c.id), 0)) for c in all_comps]
+	tip_score = 0
+	tip_ratio = 1.0
+	tip_early_avg = None
+	tip_late_avg = None
+	tip_races_n = len(all_vals)
+	if tip_races_n >= 6:
+		mid = tip_races_n // 2
+		early = all_vals[:mid]
+		late = all_vals[mid:]
+		tip_early_avg = sum(early) / len(early)
+		tip_late_avg = sum(late) / len(late)
+		tip_ratio = (tip_late_avg / tip_early_avg) if tip_early_avg else 1.0
+		# Soft bands — long-term needs clearer move than ±8%
+		if tip_ratio >= 1.12:
+			tip_score = 2
+		elif tip_ratio <= 0.88:
+			tip_score = -2
+	elif tip_races_n >= 2:
+		tip_early_avg = float(all_vals[0])
+		tip_late_avg = float(all_vals[-1])
+		tip_ratio = (tip_late_avg / tip_early_avg) if tip_early_avg else 1.0
+		if tip_ratio >= 1.2:
+			tip_score = 1
+		elif tip_ratio <= 0.8:
+			tip_score = -1
+
+	d90 = now - timedelta(days=90)
+	d180 = now - timedelta(days=180)
+	delta_90 = _user_created_between(d90)
+	delta_90_prev = _user_created_between(d180, d90)
+	user_score = 0
+	if delta_90_prev > 0:
+		user_ratio = delta_90 / delta_90_prev
+	elif delta_90 > 0:
+		user_ratio = 1.25  # first growth window — treat as up
+	else:
+		user_ratio = 1.0
+	if user_ratio >= 1.15:
+		user_score = 1
+	elif user_ratio <= 0.85 and delta_90_prev > 0:
+		user_score = -1
+
+	score = tip_score + user_score
+	if score > 0:
+		direction = "up"
+		direction_label = "Uppåt"
+	elif score < 0:
+		direction = "down"
+		direction_label = "Nedåt"
+	else:
+		direction = "flat"
+		direction_label = "Platt"
+
+	return {
+		"ok": True,
+		"direction": direction,
+		"direction_label": direction_label,
+		"direction_detail": {
+			"horizon": "sedan start",
+			"tippare_ratio": round(tip_ratio, 2),
+			"tippare_early_avg": round(tip_early_avg, 1) if tip_early_avg is not None else None,
+			"tippare_late_avg": round(tip_late_avg, 1) if tip_late_avg is not None else None,
+			"tippare_races": tip_races_n,
+			"signup_ratio": round(user_ratio, 2),
+			"signups_90d": delta_90,
+			"signups_90d_prev": delta_90_prev,
+			"score": score,
+		},
+		"users": {
+			"total": users_total,
+			"delta_7": delta_7,
+			"delta_7_prev": delta_7_prev,
+			"delta_30": delta_30,
+			"delta_90": delta_90,
+			"weekly": weekly,
+		},
+		"active_tippers_30d": active_tippers_30d,
+		"completion": {
+			"rate": completion_rate,
+			"races": completion_n,
+		},
+		"tippare_per_race": tippare_per_race,
+	}
+
+
 def _admin_last_race_stats() -> dict:
 	"""Tippa engagement + scoring snapshot for the most recent finished race."""
 	from main import _competition_picks_assessment
@@ -1177,6 +1446,12 @@ def admin_dashboard_stats():
 	except Exception as last_err:
 		last_race = {"ok": False, "error": str(last_err)}
 
+	site_health = None
+	try:
+		site_health = _admin_site_health()
+	except Exception as health_err:
+		site_health = {"ok": False, "error": str(health_err)}
+
 	return jsonify(
 		{
 			"ok": True,
@@ -1200,6 +1475,7 @@ def admin_dashboard_stats():
 			},
 			"picks": picks,
 			"last_race": last_race,
+			"site_health": site_health,
 			"season_teams": _table_count("season_teams"),
 			"leagues": _table_count("leagues"),
 			"pending_league_requests": pending_reqs,

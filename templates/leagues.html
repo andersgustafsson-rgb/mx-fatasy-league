@@ -416,7 +416,7 @@
                   <img src="{{ url_for('league_image', league_id=league.id) }}" alt=""
                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                 {% endif %}
-                <div class="lg-card__banner-ph{% if league.image_url %} hidden{% endif %}" {% if league.image_url %}style="display:none"{% endif %}>
+                <div class="lg-card__banner-ph" {% if league.image_url %}style="display:none"{% endif %}>
                   {{ mx_icon('trophy', 'mx-icon--2xl') }}
                 </div>
                 {% if rank and total %}

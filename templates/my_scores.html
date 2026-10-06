@@ -13,24 +13,32 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0.35rem 0.85rem;
+      padding: 0.45rem 0.9rem;
       border-radius: 999px;
-      font-size: 0.78rem;
-      font-weight: 700;
-      border: 1.5px solid rgba(100,116,139,0.45);
-      background: rgba(30,41,59,0.7);
-      color: #94a3b8;
+      font-size: 0.8rem;
+      font-weight: 800;
+      border: 1.5px solid rgba(148,163,184,0.45);
+      background: rgba(30,41,59,0.9);
+      color: #cbd5e1;
       cursor: pointer;
-      transition: background 0.13s, border-color 0.13s, color 0.13s;
+      transition: background 0.13s, border-color 0.13s, color 0.13s, box-shadow 0.13s;
       white-space: nowrap;
       text-decoration: none;
     }
-    .series-btn:hover { border-color: rgba(148,163,184,0.7); color: #e2e8f0; }
-    .series-btn.is-active { border-color: rgba(34,211,238,0.7); background: rgba(8,47,73,0.7); color: #67e8f9; }
+    .series-btn:hover { border-color: rgba(148,163,184,0.75); color: #f1f5f9; }
+    .series-btn.is-active {
+      border-color: rgba(34,211,238,0.85);
+      background: rgba(8,47,73,0.85);
+      color: #67e8f9;
+      box-shadow: 0 0 0 2px rgba(34,211,238,0.22);
+    }
+    .series-btn[data-series="AMA"].is-active { border-color: rgba(34,211,238,0.7); background: rgba(8,47,73,0.65); color: #67e8f9; }
     .series-btn[data-series="SX"].is-active  { border-color: rgba(34,211,238,0.7); background: rgba(8,47,73,0.65); color: #67e8f9; }
     .series-btn[data-series="MX"].is-active  { border-color: rgba(52,211,153,0.6); background: rgba(6,78,59,0.55); color: #6ee7b7; }
     .series-btn[data-series="SMX"].is-active { border-color: rgba(167,139,250,0.6); background: rgba(88,28,135,0.45); color: #c4b5fd; }
     .series-btn[data-series="WSX"].is-active { border-color: rgba(251,191,36,0.6);  background: rgba(120,53,15,0.45); color: #fde68a; }
+    .series-btn[data-series="MXON"].is-active { border-color: rgba(52,211,153,0.6); background: rgba(6,78,59,0.5); color: #6ee7b7; }
+    .series-btn[data-series="MXGP"].is-active { border-color: rgba(248,113,113,0.55); background: rgba(127,29,29,0.4); color: #fca5a5; }
     .series-btn[data-series="all"].is-active { border-color: rgba(148,163,184,0.55); background: rgba(51,65,85,0.6); color: #cbd5e1; }
 
     tr.row-hidden { display: none; }
@@ -131,24 +139,22 @@
     {% set total_smx = (scores | selectattr('series','equalto','SMX') | map(attribute='total_points') | sum) if scores else 0 %}
 
     <!-- Rubrik -->
-    <header class="relative rounded-2xl overflow-hidden mb-6 shadow-2xl border border-slate-500/25">
-      <div class="absolute inset-0 bg-gradient-to-br from-cyan-600/60 via-indigo-900/70 to-slate-950"></div>
-      <div class="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_20%_10%,rgba(255,255,255,0.2),transparent_40%)]"></div>
-      <div class="relative p-5 sm:p-7 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div class="min-w-0">
-          <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-lg truncate">
-            {% if viewing_user %}Poänghistorik · {{ viewing_user }}
-            {% elif series_filter == 'WSX' %}Mina poäng · WSX{% if wsx_year %} {{ wsx_year }}{% endif %}
-            {% elif series_filter in ('SX','MX','SMX') %}Mina poäng · {{ series_filter }}
-            {% else %}Mina poäng{% endif %}
-          </h1>
-          <p class="text-slate-200/80 text-sm mt-1.5">
-            Din poäng per tävling — nyaste överst. Klicka på en körd rad för detaljvy.
-          </p>
-        </div>
-        <a href="{% if viewing_user %}{{ url_for('user_stats_page', username=viewing_user) }}{% else %}{{ url_for('index') }}{% endif %}"
-           class="rp-btn rp-btn--secondary rp-btn--sm shrink-0">← Tillbaka</a>
+    <header class="mb-5 flex items-center justify-between gap-3">
+      <div class="min-w-0">
+        <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight truncate">
+          {% if viewing_user %}Poänghistorik · {{ viewing_user }}
+          {% elif series_filter == 'WSX' %}Mina poäng · WSX{% if wsx_year %} {{ wsx_year }}{% endif %}
+          {% elif series_filter in ('SX','MX','SMX','AMA') %}Mina poäng · AMA / SMX
+          {% elif series_filter == 'MXON' %}Mina poäng · MXoN
+          {% elif series_filter == 'MXGP' %}Mina poäng · MXGP
+          {% else %}Mina poäng{% endif %}
+        </h1>
+        <p class="text-slate-400 text-sm mt-0.5 hidden sm:block">
+          Poäng per tävling — nyaste överst. Klicka på en körd rad för detaljvy.
+        </p>
       </div>
+      <a href="{% if viewing_user %}{{ url_for('user_stats_page', username=viewing_user) }}{% else %}{{ url_for('index') }}{% endif %}"
+         class="rp-btn rp-btn--secondary rp-btn--sm shrink-0">← Tillbaka</a>
     </header>
 
     {% if scores %}
@@ -207,11 +213,10 @@
           <!-- Seriefilterknappar -->
           <div class="flex flex-wrap gap-1.5 items-center">
             <button type="button" class="series-btn is-active" data-series="all">Alla</button>
-            <button type="button" class="series-btn" data-series="SX">SX</button>
-            <button type="button" class="series-btn" data-series="MX">MX</button>
-            <button type="button" class="series-btn" data-series="SMX">SMX</button>
+            <button type="button" class="series-btn" data-series="AMA">AMA / SMX</button>
             <button type="button" class="series-btn" data-series="WSX">WSX</button>
-            <button type="button" class="series-btn" data-series="MXON">MXON</button>
+            <button type="button" class="series-btn" data-series="MXON">MXoN</button>
+            <button type="button" class="series-btn" data-series="MXGP">MXGP</button>
             <span class="mx-1 text-slate-700">|</span>
             <button type="button" class="series-btn" data-status="completed" id="btn-status-completed">Körda</button>
             <button type="button" class="series-btn" data-status="pending" id="btn-status-pending">Kommande</button>
@@ -392,7 +397,10 @@
         const year   = tr.dataset.year || '';
 
         const okName   = !q || name.includes(q);
-        const okSeries = activeSeries === 'all' || series === activeSeries;
+        const amaCodes = ['SX', 'MX', 'SMX'];
+        const okSeries = activeSeries === 'all'
+          || series === activeSeries
+          || (activeSeries === 'AMA' && amaCodes.includes(series));
         const okStatus = activeStatus === 'all' || status === activeStatus;
         const isOlder  = year && year < latestYear;
 
@@ -634,7 +642,7 @@
           : [comp.series,'Jämför din gissning med resultatet'].filter(Boolean).join(' · ');
       }
 
-      const showSeasonTeam = !viewingUser && !isMxon && (!seriesU || ['SX', 'MX', 'SMX'].includes(seriesU));
+      const showSeasonTeam = !viewingUser && !isMxon && (!seriesU || ['SX', 'MX', 'SMX', 'AMA'].includes(seriesU));
       const noSeasonTeam = showSeasonTeam && (!seasonTeam || seasonTeam.error === 'no_team' || seasonTeam._missing);
       let stPts = null;
       if (showSeasonTeam && seasonTeam && !seasonTeam.error && seasonTeam.before_team !== true && seasonTeam.counts_for_team !== false) {
@@ -792,7 +800,7 @@
     async function fetchSeasonTeamDetails(compId, series) {
       if (viewingUser) return null;
       const seriesU = String(series || '').toUpperCase();
-      if (seriesU && !['SX', 'MX', 'SMX'].includes(seriesU)) return null;
+      if (seriesU && !['SX', 'MX', 'SMX', 'AMA'].includes(seriesU)) return null;
       try {
         const res = await fetch(`/get_season_team_competition_details/${compId}`);
         if (res.status === 404) {

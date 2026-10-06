@@ -4032,15 +4032,15 @@ def build_series_status_list() -> list[dict]:
         )
     ).all()
 
-    # SX/MX first on homepage; tippa-only cards after
+    # Tie-break only — real card order is next-race / finished-last in _series_sort_key
     series_order = {
         "Supercross": 1,
         "Motocross": 2,
         "SMX Finals": 3,
         "WSX": 4,
-        "MXON": 5,
-        "MXoN": 5,
-        "MXGP": 6,
+        "MXGP": 5,
+        "MXON": 6,
+        "MXoN": 6,
     }
     all_series.sort(key=lambda s: series_order.get(s.name, 999))
 
@@ -4288,18 +4288,21 @@ def build_series_status_list() -> list[dict]:
         best_by_family[key] = item if prev is None else _prefer_series_card(prev, item)
     series_data = list(best_by_family.values())
 
-    # Sort: soonest next race first. Under-construction teasers after live tippa.
+    # Sort: soonest next race first; under-construction teasers next; finished last.
     def _series_sort_key(item: dict):
-        uc = 1 if item.get("under_construction") else 0
         d = item.get("days_until_next_race")
+        name = item.get("name") or ""
+        tie = series_order.get(name, 999)
         if isinstance(d, int) and d >= 0:
-            return (uc, 0, d, series_order.get(item.get("name") or "", 999))
+            return (0, d, tie)
         if item.get("is_active"):
-            return (uc, 1, 0, series_order.get(item.get("name") or "", 999))
+            return (1, 0, tie)
         until_start = item.get("days_until_start")
         if isinstance(until_start, int) and until_start > 0:
-            return (uc, 2, until_start, series_order.get(item.get("name") or "", 999))
-        return (uc, 3, 9999, series_order.get(item.get("name") or "", 999))
+            return (2, until_start, tie)
+        if item.get("under_construction"):
+            return (3, 0, tie)
+        return (4, 9999, tie)
 
     series_data.sort(key=_series_sort_key)
 
@@ -19215,6 +19218,13 @@ def _race_results_available_years(series_filter: str) -> list[int]:
             .all()
         ):
             years.add(int(y))
+    if code in ("", "ALL", "MXON"):
+        for (y,) in (
+            db.session.query(Series.year)
+            .filter(Series.name == "MXON", Series.year.isnot(None))
+            .all()
+        ):
+            years.add(int(y))
 
     return sorted(years, reverse=True)
 
@@ -19235,22 +19245,24 @@ def _race_results_default_year(series_filter: str, available: list[int]) -> int:
 
 
 def _race_results_series_tab_groups(year: int) -> dict:
-    """Split förarresultat series into live (active) vs finished archive tabs.
+    """Series chips for /race_results: AMA collapsed; live only when picks are open.
 
-    Active tabs follow each series' own live season year (SMX 2026, MXGP 2027, …).
-    Finished tabs use the selected archive year (SX/MX 2026, older WSX, …).
+    States:
+      live — tippa window open (picks not preseason-locked)
+      soon — season exists but picks not open yet / under construction
+      done — finished archive for the selected year (or latest MXoN)
     """
     today = get_today()
-    catalog = [
-        ("SX", "AMA Supercross", "Supercross", "sx"),
-        ("MX", "AMA Pro Motocross", "Motocross", "mx"),
-        ("SMX", "SMX Finals", "SMX Finals", "smx"),
+    tippa_catalog = [
         ("WSX", "WSX", "WSX", "wsx"),
         ("MXGP", "MXGP", "MXGP", "mxgp"),
+        ("MXON", "MXoN", "MXON", "mxon"),
     ]
-    active: list[dict] = []
-    finished: list[dict] = []
-    seen_active: set[str] = set()
+    ama_parts = (
+        ("SX", "Supercross"),
+        ("MX", "Motocross"),
+        ("SMX", "SMX Finals"),
+    )
 
     def _is_finished(row: Series | None, code: str, y: int) -> bool:
         if row and row.end_date and today > row.end_date:
@@ -19268,8 +19280,91 @@ def _race_results_series_tab_groups(year: int) -> dict:
             return True
         return False
 
-    # Live seasons: latest Series row per name that is not past end_date
-    for code, label, series_name, tone in catalog:
+    def _next_upcoming(codes: tuple[str, ...] | list[str]):
+        return (
+            Competition.query.filter(
+                db.func.upper(Competition.series).in_([c.upper() for c in codes]),
+                Competition.event_date.isnot(None),
+                Competition.event_date >= today,
+            )
+            .order_by(Competition.event_date.asc())
+            .first()
+        )
+
+    def _picks_live_for(codes: tuple[str, ...] | list[str]) -> bool:
+        nxt = _next_upcoming(codes)
+        if nxt is None:
+            return False
+        try:
+            return not is_picks_preseason_locked(nxt)
+        except Exception:
+            return True
+
+    tabs: list[dict] = []
+
+    # --- AMA / SMX (one chip) ---
+    ama_live_year = None
+    for _code, series_name in ama_parts:
+        rows = (
+            Series.query.filter_by(name=series_name)
+            .order_by(Series.year.desc())
+            .all()
+        )
+        for row in rows:
+            if row.end_date and today > row.end_date:
+                continue
+            y = int(row.year) if row.year else int(year)
+            if _is_finished(row, _code, y):
+                continue
+            if ama_live_year is None or y > ama_live_year:
+                ama_live_year = y
+            break
+
+    if ama_live_year is not None:
+        picks_live = _picks_live_for(("SX", "MX", "SMX"))
+        tabs.append(
+            {
+                "code": "AMA",
+                "label": "AMA / SMX",
+                "tone": "ama",
+                "finished": False,
+                "year": int(ama_live_year),
+                "state": "live" if picks_live else "soon",
+            }
+        )
+
+    ama_fin_any = False
+    for _code, series_name in ama_parts:
+        row = Series.query.filter_by(name=series_name, year=int(year)).first()
+        has_comps = (
+            db.session.query(Competition.id)
+            .filter(
+                db.func.upper(Competition.series) == _code,
+                Competition.event_date.isnot(None),
+                db.extract("year", Competition.event_date) == int(year),
+            )
+            .first()
+            is not None
+        )
+        if (row or has_comps) and _is_finished(row, _code, int(year)):
+            ama_fin_any = True
+            break
+    if ama_fin_any and not any(
+        t["code"] == "AMA" and int(t["year"]) == int(year) for t in tabs
+    ):
+        tabs.append(
+            {
+                "code": "AMA",
+                "label": "AMA / SMX",
+                "tone": "ama",
+                "finished": True,
+                "year": int(year),
+                "state": "done",
+            }
+        )
+
+    # --- WSX / MXGP / MXON ---
+    for code, label, series_name, tone in tippa_catalog:
         rows = (
             Series.query.filter_by(name=series_name)
             .order_by(Series.year.desc())
@@ -19281,24 +19376,28 @@ def _race_results_series_tab_groups(year: int) -> dict:
                 continue
             live = row
             break
-        if live is None:
-            continue
-        y = int(live.year) if live.year else int(year)
-        if _is_finished(live, code, y):
-            continue
-        active.append(
-            {
-                "code": code,
-                "label": label,
-                "tone": tone,
-                "finished": False,
-                "year": y,
-            }
-        )
-        seen_active.add(code)
 
-    # Finished archive for the selected year (and WSX older seasons when on WSX)
-    for code, label, series_name, tone in catalog:
+        if live is not None:
+            y = int(live.year) if live.year else int(year)
+            if not _is_finished(live, code, y):
+                under_construction = bool(getattr(live, "under_construction", False))
+                if under_construction:
+                    state = "soon"
+                elif _picks_live_for((code,)):
+                    state = "live"
+                else:
+                    state = "soon"
+                tabs.append(
+                    {
+                        "code": code,
+                        "label": label,
+                        "tone": tone,
+                        "finished": False,
+                        "year": y,
+                        "state": state,
+                    }
+                )
+
         row = Series.query.filter_by(name=series_name, year=int(year)).first()
         has_year_comps = (
             db.session.query(Competition.id)
@@ -19310,22 +19409,61 @@ def _race_results_series_tab_groups(year: int) -> dict:
             .first()
             is not None
         )
-        if not row and not has_year_comps:
-            continue
-        if not _is_finished(row, code, int(year)):
-            # Still live for this year → already in active (or skip)
-            continue
-        finished.append(
-            {
-                "code": code,
-                "label": label,
-                "tone": tone,
-                "finished": True,
-                "year": int(year),
-            }
-        )
+        if (row or has_year_comps) and _is_finished(row, code, int(year)):
+            if not any(t["code"] == code and int(t["year"]) == int(year) for t in tabs):
+                tabs.append(
+                    {
+                        "code": code,
+                        "label": label,
+                        "tone": tone,
+                        "finished": True,
+                        "year": int(year),
+                        "state": "done",
+                    }
+                )
 
-    return {"active": active, "finished": finished}
+    if not any(t["code"] == "MXON" for t in tabs):
+        mxon_rows = (
+            Series.query.filter_by(name="MXON")
+            .order_by(Series.year.desc())
+            .all()
+        )
+        for row in mxon_rows:
+            y = int(row.year) if row.year else int(year)
+            if not _is_finished(row, "MXON", y):
+                continue
+            tabs.append(
+                {
+                    "code": "MXON",
+                    "label": "MXoN",
+                    "tone": "mxon",
+                    "finished": True,
+                    "year": y,
+                    "state": "done",
+                }
+            )
+            break
+
+    state_rank = {"live": 0, "soon": 1, "done": 2}
+    code_rank = {"AMA": 0, "WSX": 1, "MXGP": 2, "MXON": 3}
+    tabs.sort(
+        key=lambda t: (
+            state_rank.get(t.get("state") or "done", 9),
+            code_rank.get(t.get("code") or "", 9),
+            -int(t.get("year") or 0),
+        )
+    )
+
+    active = [t for t in tabs if t.get("state") == "live"]
+    upcoming = [t for t in tabs if t.get("state") == "soon"]
+    finished = [t for t in tabs if t.get("state") == "done"]
+    return {
+        "tabs": tabs,
+        "active": active,
+        "upcoming": upcoming,
+        "finished": finished,
+    }
+
 
 
 @app.get("/race_results")
@@ -19333,7 +19471,10 @@ def race_results_page():
     """Show actual race results for all competitions"""
     try:
         series_filter = (request.args.get("series") or "").strip().upper()
-        if series_filter not in ("WSX", "SX", "MX", "SMX", "AMA", "MXGP", "MXON"):
+        # SX/MX/SMX collapse into one AMA / SMX chip
+        if series_filter in ("SX", "MX", "SMX"):
+            series_filter = "AMA"
+        if series_filter not in ("WSX", "AMA", "MXGP", "MXON"):
             series_filter = ""
 
         # Year first (needed for finished-archive tabs); may be overridden by active tab year
@@ -19346,33 +19487,39 @@ def race_results_page():
             year_filter = _race_results_default_year(series_filter, all_years)
 
         series_groups = _race_results_series_tab_groups(year_filter)
-        active_by_code = {t["code"]: t for t in series_groups["active"]}
-        finished_by_code = {t["code"]: t for t in series_groups["finished"]}
+        tabs = series_groups.get("tabs") or []
+        tab_by_code = {t["code"]: t for t in tabs}
+        active_by_code = {t["code"]: t for t in series_groups.get("active") or []}
+        finished_by_code = {t["code"]: t for t in series_groups.get("finished") or []}
 
-        # Default to first active series (SMX / WSX / MXGP…) — not a finished AMA series
+        # Default: first live tippa series, else first soon, else first tab
         if not series_filter:
-            if series_groups["active"]:
-                series_filter = series_groups["active"][0]["code"]
-                year_filter = int(series_groups["active"][0]["year"])
-            elif series_groups["finished"]:
-                series_filter = series_groups["finished"][0]["code"]
-                year_filter = int(series_groups["finished"][0]["year"])
+            pick = (
+                (series_groups.get("active") or [None])[0]
+                or (series_groups.get("upcoming") or [None])[0]
+                or (tabs[0] if tabs else None)
+            )
+            if pick:
+                series_filter = pick["code"]
+                year_filter = int(pick["year"])
 
-        # If user opens an active series without year, use that series' live year
-        if series_filter in active_by_code and not year_raw:
-            year_filter = int(active_by_code[series_filter]["year"])
+        # If user opens a live/soon series without year, use that series' year
+        if series_filter in tab_by_code and not year_raw:
+            year_filter = int(tab_by_code[series_filter]["year"])
 
-        # Rebuild groups if year changed after defaulting to an active series
+        # Rebuild groups if year changed after defaulting
         series_groups = _race_results_series_tab_groups(year_filter)
-        active_by_code = {t["code"]: t for t in series_groups["active"]}
-        finished_by_code = {t["code"]: t for t in series_groups["finished"]}
+        tabs = series_groups.get("tabs") or []
+        tab_by_code = {t["code"]: t for t in tabs}
+        active_by_code = {t["code"]: t for t in series_groups.get("active") or []}
+        finished_by_code = {t["code"]: t for t in series_groups.get("finished") or []}
 
+        sel = tab_by_code.get(series_filter) or {}
+        state = sel.get("state") or (
+            "done" if series_filter in finished_by_code else "live" if series_filter in active_by_code else "soon"
+        )
         series_bucket = (
-            "finished"
-            if series_filter in finished_by_code
-            else "active"
-            if series_filter in active_by_code
-            else "active"
+            "finished" if state == "done" else "active" if state == "live" else "upcoming"
         )
 
         available_years = _race_results_available_years(series_filter) or [year_filter]
@@ -19598,15 +19745,35 @@ def race_results_page():
                     }
                 )
 
+        # MXoN: official board is nations + class winners (not CompetitionResult)
+        mxon_comp_ids = [
+            int(c.id)
+            for c in competitions
+            if (c.series or "").upper() == "MXON"
+        ]
+        if mxon_comp_ids:
+            from mxon_fantasy import build_mxon_official_board
+
+            for mid in mxon_comp_ids:
+                board = build_mxon_official_board(mid)
+                bucket = competition_results.setdefault(
+                    mid, {"results": [], "holeshots": []}
+                )
+                bucket["mxon_nations"] = board.get("nations") or []
+                bucket["mxon_sweden"] = board.get("sweden")
+                bucket["mxon_class_winners"] = board.get("class_winners") or []
+
         today = get_today()
         latest_competition_id = None
         earliest_upcoming_id = None
         earliest_upcoming_date = None
 
         for comp in competitions:
+            bucket = competition_results.get(comp.id) or {}
             has_results = (
-                len(competition_results[comp.id]["results"]) > 0
-                or len(competition_results[comp.id]["holeshots"]) > 0
+                len(bucket.get("results") or []) > 0
+                or len(bucket.get("holeshots") or []) > 0
+                or len(bucket.get("mxon_nations") or []) > 0
             )
 
             if has_results:
