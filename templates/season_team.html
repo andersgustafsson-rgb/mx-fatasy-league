@@ -352,8 +352,9 @@
             </div>
             {% if is_own_team and user_total_points is not none %}
             <div class="st-stat">
-              <div class="lbl">Poäng för byten</div>
+              <div class="lbl">Dina spelpoäng</div>
               <div class="val ok">{{ user_total_points or 0 }} <span style="font-size:0.85rem;opacity:.7">p</span></div>
+              <div class="text-[10px] text-slate-500 mt-1 leading-snug">Highscore / tippa — byten dras härifrån</div>
             </div>
             {% endif %}
             <div class="st-stat">
@@ -384,6 +385,42 @@
             {% endfor %}
           </div>
 
+          {% if riders %}
+          <h3 class="st-section-title" style="margin-top:1.35rem">Kostnad</h3>
+          <div class="st-table-wrap overflow-x-auto">
+            <table class="st-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Förare</th>
+                  <th class="c">Klass</th>
+                  <th class="r">Pris</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for rider in riders|sort(attribute='price', reverse=true) %}
+                <tr>
+                  <td class="text-slate-400 tabular-nums">{{ rider.rider_number or '—' }}</td>
+                  <td class="font-semibold text-slate-100">{{ rider.name }}</td>
+                  <td class="text-center text-slate-400">{{ rider.class_name }}</td>
+                  <td class="text-right font-bold tabular-nums text-emerald-400">{{ "{:,.0f}".format(rider.price or 0).replace(",", " ") }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" class="text-slate-400 font-semibold" style="border-top:1px solid rgba(51,65,85,0.75)">Totalt</td>
+                  <td class="text-right font-bold tabular-nums text-amber-300" style="border-top:1px solid rgba(51,65,85,0.75)">{{ "{:,.0f}".format(ns.budget).replace(",", " ") }}</td>
+                </tr>
+                <tr>
+                  <td colspan="3" class="text-slate-500 text-xs">Budget kvar (av 2 000 000)</td>
+                  <td class="text-right font-bold tabular-nums text-cyan-300 text-xs">{{ "{:,.0f}".format(2000000 - ns.budget).replace(",", " ") }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          {% endif %}
+
           {% if is_own_team | default(true) %}
           <div class="st-actions">
             <a class="st-btn st-btn--primary" href="{{ url_for('season_team_builder') }}">Ändra team →</a>
@@ -397,7 +434,7 @@
           <h3 class="st-section-title">Poäng per tävling</h3>
           <div class="st-tip">
             <strong>Tips:</strong> Klicka på en körd tävling för poängfördelning per förare.
-            <span class="note"><span class="mx-heading-icon">{{ mx_icon('alert') }}</span> Bara SX · MX · SMX (säsongsteam). Tippa-only (WSX / MXGP / MXON) visas inte. Race före laget skapades ger 0 p.</span>
+            <span class="note"><span class="mx-heading-icon">{{ mx_icon('alert') }}</span> Visar SX · MX · SMX för innevarande säsongsteam-år. Race före laget skapades ger ingen teampoäng.</span>
           </div>
           <div id="season-team-competitions">
             <p class="text-slate-500 text-center text-sm py-6">Laddar tävlingar…</p>
@@ -451,8 +488,12 @@
 
         const all = (data.competitions || []).slice();
         all.sort((a, b) => (b.event_date || '').localeCompare(a.event_date || ''));
+        const seasonYear = data.season_year || null;
+        const scoredCount = typeof data.scored_race_count === 'number'
+          ? data.scored_race_count
+          : all.filter((c) => c.has_results && !c.before_team).length;
 
-        const state = { showAll: false, status: 'all', series: 'all', q: '' };
+        const state = { showAll: false, status: scoredCount > 0 ? 'all' : 'waiting', series: 'all', q: '' };
         const uniqueSeries = Array.from(new Set(all.map(c => c.series).filter(Boolean))).sort();
 
         function passesFilters(comp) {
@@ -484,8 +525,9 @@
           let ptsClass = 'text-slate-500';
           let ptsText = String(comp.total_points);
           if (beforeTeam) { ptsClass = 'text-slate-600'; ptsText = '—'; }
-          else if (hasResults && comp.total_points > 0) ptsClass = 'text-emerald-400';
-          else if (hasResults && comp.total_points === 0) ptsClass = 'text-rose-400';
+          else if (!hasResults) { ptsClass = 'text-slate-600'; ptsText = '—'; }
+          else if (comp.total_points > 0) ptsClass = 'text-emerald-400';
+          else if (comp.total_points === 0) ptsClass = 'text-rose-400';
 
           return `
             <tr ${onClick} class="${canClick ? 'is-click' : ''}">
@@ -517,10 +559,17 @@
             ? `Visar ${filtered.length} tävlingar`
             : `Visar ${Math.min(6, filtered.length)} av ${filtered.length}`;
 
-          let html = `
+          const preseasonBanner = scoredCount === 0
+            ? `<div class="mb-3 rounded-xl border border-cyan-500/25 bg-cyan-950/35 px-3 py-2.5 text-sm text-cyan-100/95 leading-relaxed">
+                <strong class="text-cyan-200">Inga teampoäng ännu${seasonYear ? ` · ${seasonYear}` : ''}.</strong>
+                Listan visar kommande AMA-race — poäng dyker upp här när säsongen startat och resultat är inlagda.
+              </div>`
+            : '';
+
+          let html = preseasonBanner + `
             <div class="st-filters">
               <div class="st-filter-row">
-                <div class="st-filter-meta">${showingText}</div>
+                <div class="st-filter-meta">${showingText}${seasonYear ? ` · ${seasonYear}` : ''}</div>
                 <div class="st-pills">
                   <button type="button" data-status="all" class="${pillClass('all')}">Alla</button>
                   <button type="button" data-status="done" class="${pillClass('done')}">${typeof mxIcon==='function'?mxIcon('check-circle'):''} Kört</button>

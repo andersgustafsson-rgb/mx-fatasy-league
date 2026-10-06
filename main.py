@@ -9511,7 +9511,8 @@ def build_season_team_competition_points(user_id: int) -> tuple[dict | None, str
 
     team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
     rider_ids = [tr.rider_id for tr in team_riders]
-    # AMA only (SX/MX/SMX) — never WSX / MXON / MXGP tippa races.
+    season_year = _season_team_target_year()
+    # AMA only (SX/MX/SMX) for the active season-team year — never WSX / MXON / MXGP.
     competitions = (
         Competition.query.filter(ama_competition_clause()).all()
     )
@@ -9526,6 +9527,8 @@ def build_season_team_competition_points(user_id: int) -> tuple[dict | None, str
     competition_points = []
     for comp in competitions:
         if is_tippa_only_series(getattr(comp, "series", None)):
+            continue
+        if comp.event_date and int(comp.event_date.year) != int(season_year):
             continue
         counts = season_team_counts_competition(team, comp)
         comp_points = 0
@@ -9594,8 +9597,15 @@ def build_season_team_competition_points(user_id: int) -> tuple[dict | None, str
             }
         )
 
+    scored = [
+        c
+        for c in competition_points
+        if c.get("has_results") and c.get("counts_for_team") and not c.get("before_team")
+    ]
     return {
         "competitions": competition_points,
+        "season_year": int(season_year),
+        "scored_race_count": len(scored),
         "team_created_at": team.created_at.isoformat() if team.created_at else None,
     }, None
 

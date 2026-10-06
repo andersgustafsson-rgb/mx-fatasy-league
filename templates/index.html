@@ -4571,9 +4571,35 @@
           `;
           return;
         }
+
+        const seasonYear = data.season_year || null;
+        const scoredRaceCount = typeof data.scored_race_count === 'number'
+          ? data.scored_race_count
+          : (data.competitions || []).filter((c) => c.has_results && !c.before_team).length;
+
+        // Pre-season: no scored AMA races yet — avoid a wall of zeros.
+        if (scoredRaceCount === 0) {
+          const upcoming = (data.competitions || [])
+            .filter((c) => !c.has_results && !c.before_team)
+            .slice()
+            .sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''));
+          const next = upcoming[0];
+          const nextLine = next
+            ? `Nästa: <strong>${next.name}</strong>${next.event_date ? ` · ${next.event_date}` : ''}`
+            : 'Kalendern laddas när AMA-racen närmar sig.';
+          container.innerHTML = `
+            <div class="rounded-2xl border border-cyan-200/70 dark:border-cyan-700/50 bg-gradient-to-br from-cyan-50 to-sky-100 dark:from-cyan-950/50 dark:to-slate-900/60 p-4 shadow-md">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-cyan-700/80 dark:text-cyan-300/80">Säsongsteam${seasonYear ? ` ${seasonYear}` : ''}</div>
+              <p class="mt-1 text-sm font-semibold text-cyan-950 dark:text-cyan-50">Inga teampoäng ännu — säsongen har inte startat.</p>
+              <p class="mt-1 text-xs text-cyan-900/75 dark:text-cyan-100/70">${nextLine}</p>
+              <a href="${window.seasonTeamPageUrl || '/season_team'}" class="inline-block mt-3 text-xs font-bold text-cyan-700 dark:text-cyan-300 hover:underline">Visa kalender →</a>
+            </div>
+          `;
+          return;
+        }
         
         // Calculate statistics
-        const competitionsWithPoints = data.competitions.filter(c => c.has_results && c.total_points > 0);
+        const competitionsWithPoints = data.competitions.filter(c => c.has_results && !c.before_team && c.total_points > 0);
         const totalPoints = competitionsWithPoints.reduce((sum, c) => sum + c.total_points, 0);
         const avgPoints = competitionsWithPoints.length > 0 ? Math.round(totalPoints / competitionsWithPoints.length) : 0;
         const bestCompetition = competitionsWithPoints.length > 0 
@@ -4635,7 +4661,7 @@
         
         // Show recent competitions — horisontell snabbnavigering (chips)
         const recentCompetitions = data.competitions
-          .filter(c => c.has_results)
+          .filter(c => c.has_results && !c.before_team)
           .slice(-6)
           .reverse();
         

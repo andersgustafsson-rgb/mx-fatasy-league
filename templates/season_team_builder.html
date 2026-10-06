@@ -413,11 +413,12 @@
               du kan byta förare utan poängkostnad tills tippa låser för säsongens första race
               {% if season_team_transfer_window.lock_race_name %}
               ({{ season_team_transfer_window.lock_race_name }}){% endif %}.
-              Därefter kostar varje byte 50 tippa-poäng.
+              Därefter dras <strong>50 poäng från din highscore</strong> (dina spel-/tippa-poäng) per förare du byter.
             </span>
             {% else %}
             <span class="block mt-2 text-amber-50/95">
-              Tippa har låst för säsongens första race — byten kostar nu <strong>50 tippa-poäng</strong> per förare.
+              Tippa har låst för säsongens första race — varje byte drar
+              <strong>50 poäng från din highscore</strong> (dina spel-/tippa-poäng).
             </span>
             {% endif %}
           </div>
@@ -441,10 +442,10 @@
               <span class="kicker">Byte</span>
               {% if season_team_transfers_free %}
               <strong>Gratis nu</strong>
-              <span class="desc">Tills tippa låser för säsongens första race — sen 50 p/förare</span>
+              <span class="desc">Sen: −50 p från highscore per förare</span>
               {% else %}
-              <strong>50 poäng</strong>
-              <span class="desc">Per förare du byter ut</span>
+              <strong>−50 poäng</strong>
+              <span class="desc">Från din highscore per förare</span>
               {% endif %}
             </div>
           </div>
@@ -458,9 +459,9 @@
           <h2 class="stw-display text-3xl text-white mb-1">Ditt lag</h2>
           <p class="text-slate-400 text-sm mb-4">
             {% if season_team_transfers_free %}
-            Markera vem som åker ut, välj ersättare — <strong class="text-emerald-300">gratis byten</strong> tills tippa låser för säsongens första race (sen 50 p/förare). MX-klassbyte kan vara gratis även efteråt.
+            Markera vem som åker ut, välj ersättare — <strong class="text-emerald-300">gratis byten</strong> tills tippa låser för säsongens första race (sen −50 p från highscore per förare). MX-klassbyte kan vara gratis även efteråt.
             {% else %}
-            Markera vem som åker ut, välj ersättare — 50 poäng per byte (MX-klassbyte kan vara gratis).
+            Markera vem som åker ut, välj ersättare — <strong>50 poäng dras från din highscore</strong> per byte (MX-klassbyte kan vara gratis).
             {% endif %}
           </p>
           <div id="mx-promo-banner" class="hidden mb-4 p-3 rounded-xl border border-emerald-600/40 bg-emerald-950/40 text-emerald-100 text-sm"></div>
@@ -647,7 +648,7 @@
     function paidSwapBlockedMessage(needPts) {
       if (transfersFree) return "";
       const need = needPts != null ? needPts : 50;
-      return `För få poäng (${userPoints}) — byten kostar ${need} p. Fyll tom plats eller gratis MX-klassbyte går fortfarande.`;
+      return `För få spelpoäng (${userPoints}) — byten drar ${need} p från highscore. Fyll tom plats eller gratis MX-klassbyte går fortfarande.`;
     }
 
     function renderStepNav() {
@@ -908,7 +909,7 @@
         document.getElementById("pick-title").textContent = `Ersätt ${out.name}`;
         document.getElementById("pick-sub").textContent = transfersFree
           ? `Samma klass (${out.class}) · gratis byte (tills tippa låser för säsongens första race).`
-          : `Samma klass (${out.class}) · kostar 50 poäng (gratis vid MX-klassbyte).`;
+          : `Samma klass (${out.class}) · −50 p från highscore (gratis vid MX-klassbyte).`;
         document.getElementById("pick-hint").textContent = "1 byte";
         updateBudgetUI(4, null);
         document.getElementById("picked-slots").innerHTML =
@@ -1007,7 +1008,7 @@
           locked.classList.remove("hidden");
           locked.innerHTML =
             `<strong class="text-rose-200">Inga byten just nu.</strong> ` +
-            `Du har <strong>${userPoints} p</strong> — ett byte kostar 50. ` +
+            `Du har <strong>${userPoints} p</strong> i highscore — ett byte drar 50 p. ` +
             `Du kan fortfarande fylla tom plats eller använda gratis MX-klassbyte.`;
         } else {
           locked.classList.add("hidden");
@@ -1022,7 +1023,7 @@
           `Byten är <strong class="text-emerald-300">gratis</strong> tills tippa låser för säsongens första race.`;
       } else if (p > 0) {
         cost.classList.remove("hidden");
-        cost.innerHTML = `Kostnad vid sparning: <strong>${p} poäng</strong> (${penalizedChanges()} byte). Saldo: <strong>${userPoints} p</strong>.`;
+        cost.innerHTML = `Kostnad vid sparning: <strong>−${p} p från highscore</strong> (${penalizedChanges()} byte). Saldo: <strong>${userPoints} p</strong>.`;
       } else {
         cost.classList.add("hidden");
       }
@@ -1103,7 +1104,7 @@
           `Byten är <strong class="text-emerald-300">gratis</strong> tills tippa låser för säsongens första race.`;
       } else if (hasExistingTeam && p > 0) {
         box.classList.remove("hidden");
-        box.innerHTML = `Detta byte kostar <strong>${p} poäng</strong> (${penalizedChanges()} förare). Efteråt: <strong>${userPoints - p} p</strong>.`;
+        box.innerHTML = `Detta byte drar <strong>${p} poäng från din highscore</strong> (${penalizedChanges()} förare). Efteråt: <strong>${userPoints - p} p</strong>.`;
       } else if (hasExistingTeam) {
         box.classList.remove("hidden");
         box.innerHTML = transfersFree
@@ -1242,7 +1243,7 @@
           return;
         }
         const ok = confirm(
-          `Du byter ${penalizedChanges()} förare.\nKostnad: ${p} poäng.\n\nFortsätt?`
+          `Du byter ${penalizedChanges()} förare.\n−${p} poäng från din highscore.\n\nFortsätt?`
         );
         if (!ok) return;
       }
