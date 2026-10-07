@@ -2823,7 +2823,7 @@
                   class="tab-btn rp-tab-btn tab-season-team-btn{% if season_team_promo_live and is_logged_in and not my_team %} stw-promo-glow{% endif %}" data-tab="season-team"
                   {% if season_team_promo_live and is_logged_in and not my_team and season_team_promo_copy %}data-promo-hint="{{ season_team_promo_copy.tab_hint }}"{% endif %}
                   {% if is_logged_in and my_team %}data-i18n="tab.team"{% else %}data-i18n="tab.team.create"{% endif %}>
-                  {% if is_logged_in and my_team %}Säsongsteam{% else %}Skapa säsongsteam{% endif %}
+                  {% if is_logged_in and my_team %}Mitt säsongsteam{% else %}Skapa säsongsteam{% endif %}
                 </button>
                 <button type="button" class="tab-btn rp-tab-btn settings-btn" data-tab="settings"><span class="sm:hidden" data-i18n="tab.settings.short">Inst.</span><span class="hidden sm:inline" data-i18n="tab.settings">Inställningar</span></button>
                 <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn" target="_blank" title="Öppna spelmanualen i ny flik" data-i18n="tab.manual">Manual</a>
@@ -2929,7 +2929,7 @@
               <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page tab-season-team-btn{% if season_team_promo_live and not my_team %} stw-promo-glow{% endif %}" data-tab="season-team"
                 {% if season_team_promo_live and not my_team and season_team_promo_copy %}data-promo-hint="{{ season_team_promo_copy.tab_hint }}"{% endif %}
                 {% if is_logged_in and my_team %}data-i18n="tab.team"{% else %}data-i18n="tab.team.create"{% endif %}>
-                {% if is_logged_in and my_team %}Säsongsteam{% else %}Skapa säsongsteam{% endif %}
+                {% if is_logged_in and my_team %}Mitt säsongsteam{% else %}Skapa säsongsteam{% endif %}
               </button>
               <a href="{{ url_for('manual_page') }}" class="home-sidebar-foot__btn home-sidebar-foot__page" target="_blank" rel="noopener" data-i18n="tab.manual">Manual</a>
               <button type="button" class="tab-btn home-sidebar-foot__btn settings-btn" data-tab="settings" data-i18n="tab.settings">Inställningar</button>
@@ -3270,7 +3270,7 @@
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     </span>
-                    <span class="home-inner-tile__label" data-i18n="home.season_team">Säsongsteam</span>
+                    <span class="home-inner-tile__label" data-i18n="home.season_team">Mitt säsongsteam</span>
                   </a>
                   {% else %}
                   <a href="{{ url_for('season_team_builder') }}" id="quick-action-season-team"
@@ -3699,7 +3699,7 @@
           <div id="season-team" class="tab-panel hidden">
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-6 md:mb-8">
               <div class="min-w-0 bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg">
-                <h2 id="season-team-panel-title" class="text-xl sm:text-2xl font-bold text-slate-100 mb-4 leading-tight break-words"><span class="mx-heading-icon"><span class="shrink-0">{{ mx_icon('user') }}</span><span class="min-w-0" data-season-team-title>{% if is_logged_in and my_team %}Säsongsteam{% else %}Skapa ditt säsongsteam{% endif %}</span></span></h2>
+                <h2 id="season-team-panel-title" class="text-xl sm:text-2xl font-bold text-slate-100 mb-4 leading-tight break-words"><span class="mx-heading-icon"><span class="shrink-0">{{ mx_icon('user') }}</span><span class="min-w-0" data-season-team-title>{% if is_logged_in and my_team %}Mitt säsongsteam{% else %}Skapa ditt säsongsteam{% endif %}</span></span></h2>
                 {% if is_logged_in and my_team %}
                   <div id="season-team-has-team" class="rounded-xl border border-green-700/50 bg-gradient-to-br from-gray-900 via-gray-800 to-emerald-900/20 p-4 sm:p-5 shadow-inner">
                     <div class="flex items-start justify-between gap-3 mb-4">
@@ -4541,11 +4541,11 @@
         if (fallback) fallback.classList.remove('hidden');
         if (titleEl) {
           const span = titleEl.querySelector('[data-season-team-title]');
-          if (span) span.textContent = 'Säsongsteam';
+          if (span) span.textContent = 'Mitt säsongsteam';
         }
         document.querySelectorAll('.tab-season-team-btn').forEach((btn) => {
           btn.setAttribute('data-i18n', 'tab.team');
-          const label = (typeof MxI18n !== 'undefined') ? (MxI18n.t('tab.team') || 'Säsongsteam') : 'Säsongsteam';
+          const label = (typeof MxI18n !== 'undefined') ? (MxI18n.t('tab.team') || 'Mitt säsongsteam') : 'Mitt säsongsteam';
           btn.textContent = label;
         });
         const quickTeam = document.getElementById('quick-action-season-team');
@@ -4554,7 +4554,7 @@
           const ql = quickTeam.querySelector('.home-inner-tile__label');
           if (ql) {
             ql.setAttribute('data-i18n', 'home.season_team');
-            ql.textContent = (typeof MxI18n !== 'undefined' && MxI18n.t('home.season_team')) || 'Säsongsteam';
+            ql.textContent = (typeof MxI18n !== 'undefined' && MxI18n.t('home.season_team')) || 'Mitt säsongsteam';
           }
           quickTeam.classList.remove('home-action-tile--create');
         }
@@ -5985,8 +5985,8 @@
               <p class="st-under-picks__eyebrow st-under-picks__eyebrow--warn">${isEn ? 'Note · no season team' : 'OBS · säsongsteam saknas'}</p>
               <h3 class="st-under-picks__title">${isEn ? 'Points are left on the table' : 'Poäng går förlorade utan lag'}</h3>
               <p class="st-under-picks__missing-text">${isEn
-                ? 'Race picks still score — but without a season team your riders give <strong>0p</strong> each round. Build 2×450 + 2×250 before the gate drops.'
-                : 'Tippa räknas som vanligt — men utan säsongsteam får du <strong>0p</strong> från förarna varje race. 2×450 + 2×250, 2 milj budget. Skapa laget innan start.'}</p>
+                ? 'Race picks still score — but without a season team you miss team points all season. Build 2×450 + 2×250 now (swaps free until tippa locks for the first race).'
+                : 'Tippa räknas som vanligt — men utan säsongsteam missar du teampoäng hela säsongen. Bygg 2×450 + 2×250 nu (byten gratis tills tippa låser för första racet).'}</p>
             </div>
             <a href="/season_team_builder" class="st-under-picks__cta">${isEn ? 'Create season team →' : 'Skapa säsongsteam →'}</a>
           </div>
@@ -6050,6 +6050,8 @@
       const hasAny = top6.length > 0 || hs450 || hs250 || wildcard || qualMxgp || qualMx2;
 
       if (!hasAny) {
+        const seriesForTeam = isWSX ? 'WSX' : (isMXGP ? 'MXGP' : 'SMX');
+        const seasonTeamHtml = _homeSeasonTeamStripHtml(seriesForTeam);
         panel.innerHTML = `
           <div class="mb-4">
             <div class="flex items-center gap-2 mb-3">
@@ -6058,7 +6060,8 @@
             </div>
             <p class="text-sm text-gray-200 mb-3">${isEn ? 'Make your picks before the race starts!' : 'Gör dina picks innan racet startar!'}</p>
             <a href="${_escHome(openHref)}" class="text-cyan-300 underline text-sm font-semibold">${isEn ? 'Set picks →' : 'Sätt picks →'}</a>
-          </div>`;
+          </div>
+          ${seasonTeamHtml}`;
         return;
       }
 

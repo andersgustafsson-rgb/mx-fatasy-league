@@ -960,7 +960,19 @@
       {% endif %}
     </div>
     {% endif %}
-    
+
+    <div id="season-team-after-picks-nudge" class="hidden mb-4 p-4 rounded-xl border border-amber-400/45 bg-gradient-to-r from-amber-950/50 via-slate-900 to-slate-900">
+      <p class="text-[11px] font-bold uppercase tracking-wider text-amber-300 mb-1">Tips · säsongsteam</p>
+      <p class="font-bold text-white text-base mb-1">Tippat klart — bygg laget också</p>
+      <p class="text-sm text-slate-300 mb-3 leading-relaxed">
+        Utan säsongsteam missar du teampoäng hela säsongen. 2×450 + 2×250 inom 2 milj —
+        byten är gratis tills tippa låser för säsongens första race.
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <a href="{{ url_for('season_team_builder') }}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-900 font-extrabold text-sm transition">Skapa säsongsteam →</a>
+        <button type="button" id="season-team-after-picks-dismiss" class="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 font-bold text-sm transition">Senare</button>
+      </div>
+    </div>
     {% if out_ids %}
     {% set _out_label_450 = 'SX1' if competition.series == 'WSX' else ('MXGP' if (competition.series or '')|upper == 'MXGP' else '450cc') %}
     {% set _out_label_250 = 'SX2' if competition.series == 'WSX' else ('MX2' if (competition.series or '')|upper == 'MXGP' else '250cc') %}
@@ -1340,6 +1352,10 @@
   const isWSXSeries = competitionSeries === 'WSX';
   const isMXGPSeries = String(competitionSeries || '').toUpperCase() === 'MXGP';
   const isSMXSeries = competitionSeries === 'SMX';
+  const isAmaSeasonTeamSeries = !isWSXSeries && !isMXGPSeries
+    && !['MXON', 'MXGP'].includes(String(competitionSeries || '').toUpperCase());
+  const hasSeasonTeam = {{ has_season_team | default(false) | tojson }};
+  window.__HAS_SEASON_TEAM__ = hasSeasonTeam;
   const skipsWildcard = isWSXSeries || isMXGPSeries;
   const tippaClass450 = isWSXSeries ? 'wsx_sx1' : (isMXGPSeries ? 'mxgp' : '450cc');
   const tippaClass250 = isWSXSeries ? 'wsx_sx2' : (isMXGPSeries ? 'mx2' : '250cc');
@@ -4024,6 +4040,9 @@ function onPickChange(cls, pos, riderId = null) {
           } else {
             alert(data.message || "Dina val har sparats!");
           }
+          if (typeof maybeShowSeasonTeamAfterPicksNudge === 'function') {
+            maybeShowSeasonTeamAfterPicksNudge();
+          }
         } else {
           alert(data.error || "Ett fel uppstod vid sparning.");
         }
@@ -4291,6 +4310,26 @@ function onPickChange(cls, pos, riderId = null) {
       updateSaveButtonVisibility();
     }
     window.markPicksAsSaved = markPicksAsSaved;
+
+    function maybeShowSeasonTeamAfterPicksNudge() {
+      if (hasSeasonTeam || !isAmaSeasonTeamSeries) return;
+      try {
+        if (sessionStorage.getItem('stw_after_picks_nudge_dismissed') === '1') return;
+      } catch (_) {}
+      const el = document.getElementById('season-team-after-picks-nudge');
+      if (!el) return;
+      el.classList.remove('hidden');
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) {}
+      const dismiss = document.getElementById('season-team-after-picks-dismiss');
+      if (dismiss && !dismiss._bound) {
+        dismiss._bound = true;
+        dismiss.addEventListener('click', () => {
+          el.classList.add('hidden');
+          try { sessionStorage.setItem('stw_after_picks_nudge_dismissed', '1'); } catch (_) {}
+        });
+      }
+    }
+    window.maybeShowSeasonTeamAfterPicksNudge = maybeShowSeasonTeamAfterPicksNudge;
     
     document.addEventListener("DOMContentLoaded", () => {
       const prepFold = document.getElementById('race-prep-mobile-fold');

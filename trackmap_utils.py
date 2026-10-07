@@ -22,7 +22,8 @@ MX_NAME_MATCH_TOKENS: dict[str, list[str]] = {
     "Ironman National": ["ironman"],
 }
 
-# Official 2027 SX track maps (supercrosslive.com, Oct 2026 release)
+# Official 2027 SX track maps (Racer X / SMX League gallery, Oct 2026).
+# Daytona is intentionally omitted — released later.
 SX_2027_TRACKMAP_FILES: dict[str, list[str]] = {
     "Anaheim 1": ["trackmaps/2027/anaheim1.jpg"],
     "San Diego": ["trackmaps/2027/sandiego.jpg"],
@@ -31,7 +32,15 @@ SX_2027_TRACKMAP_FILES: dict[str, list[str]] = {
     "Tampa": ["trackmaps/2027/tampa.jpg"],
     "Glendale": ["trackmaps/2027/glendale.jpg"],
     "Detroit": ["trackmaps/2027/detroit.jpg"],
+    "Arlington": ["trackmaps/2027/arlington.jpg"],
+    "Indianapolis": ["trackmaps/2027/indianapolis.jpg"],
+    "Seattle": ["trackmaps/2027/seattle.jpg"],
+    "Foxborough": ["trackmaps/2027/foxborough.jpg"],
     "Baltimore": ["trackmaps/2027/baltimore.jpg"],
+    "East Rutherford": ["trackmaps/2027/eastrutherford.jpg"],
+    "Pittsburgh": ["trackmaps/2027/pittsburgh.jpg"],
+    "Denver": ["trackmaps/2027/denver.jpg"],
+    "Salt Lake City": ["trackmaps/2027/saltlakecity.jpg"],
 }
 
 
