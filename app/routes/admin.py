@@ -47,58 +47,11 @@ from models import (
 
 bp = Blueprint('admin', __name__, url_prefix='')  # keep same absolute paths
 
+from auth_helpers import is_admin_user, login_required  # noqa: E402
 
-# Minimal copies of helpers to avoid circular imports with main.py
 
 def get_today() -> date:
 	return date.today()
-
-
-def is_admin_user() -> bool:
-	"""Check if current user is admin via DB flag only (no username hardcodes)."""
-	username = session.get("username")
-	user_id = session.get("user_id")
-	try:
-		user = None
-		if username:
-			user = User.query.filter_by(username=username).first()
-		if user is None and user_id:
-			try:
-				user = User.query.get(int(user_id))
-			except Exception:
-				user = None
-		if user and getattr(user, "is_admin", False):
-			if user.username and not username:
-				session["username"] = user.username
-			return True
-	except Exception:
-		pass
-	return False
-
-
-def _requested_next_path() -> str:
-	path = (request.full_path or request.path or "/").strip()
-	if path.endswith("?"):
-		path = path[:-1]
-	return path or "/"
-
-
-def login_required(f):
-	@wraps(f)
-	def decorated_function(*args, **kwargs):
-		if "user_id" not in session:
-			return redirect(url_for("login", next=_requested_next_path()))
-		# session timeout handling (match main.py)
-		if "login_time" in session:
-			try:
-				login_time = datetime.fromisoformat(session["login_time"])
-				if datetime.utcnow() - login_time > timedelta(hours=24):
-					session.clear()
-					return redirect(url_for("login", next=_requested_next_path()))
-			except Exception:
-				pass
-		return f(*args, **kwargs)
-	return decorated_function
 
 
 def _norm_name_for_match(s: str) -> str:

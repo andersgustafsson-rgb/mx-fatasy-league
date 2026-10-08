@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
 
+from auth_helpers import is_admin_user
 from models import Competition, CompetitionResult, Rider, db
 from services.results_import import (
     _clear_wsx_competition_results,
@@ -34,7 +35,7 @@ def _main():
 @bp.post('/fetch_racerx_results')
 def fetch_racerx_results():
     """Hämta RacerX-resultat som text (för preview/klistra in). Skriver inte till DB."""
-    if not _main().is_admin_user():
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     try:
         from racerx_results_fetch import (
@@ -99,7 +100,7 @@ def fetch_racerx_results():
 @bp.post('/parse_racerx_url')
 def parse_racerx_url():
     """Läs tävling + klass från Racer X-URL (fyller dropdowns, hämtar inte resultat)."""
-    if not _main().is_admin_user():
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     try:
         from racerx_results_fetch import match_competition_for_racerx, parse_racerx_results_url
@@ -139,7 +140,7 @@ def parse_racerx_url():
 
 @bp.post('/bulk_preview_results')
 def bulk_preview_results():
-    if not _main().is_admin_user():
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     _main()._ensure_competition_result_moto_columns()
     try:
@@ -258,7 +259,7 @@ def bulk_preview_results():
 
 @bp.post('/bulk_import_results')
 def bulk_import_results():
-    if not _main().is_admin_user():
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     _main()._ensure_competition_result_moto_columns()
     try:
@@ -398,7 +399,7 @@ def bulk_import_results():
 @bp.post("/fetch_wsx_official_results")
 def fetch_wsx_official_results():
     """Hämta official WSX results + preview (skriver INTE till DB)."""
-    if not _main().is_admin_user():
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     try:
         from wsx_official_results_fetch import (
@@ -495,7 +496,7 @@ def fetch_wsx_official_results():
 @bp.post("/import_wsx_official_results")
 def import_wsx_official_results():
     """Importera tidigare previewade WSX-rader. Ersätter valda klassers resultat."""
-    if not _main().is_admin_user():
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     _main()._ensure_competition_result_moto_columns()
     try:
@@ -616,7 +617,7 @@ def sync_wsx_official_results():
     """
     One-shot: ensure roster → fetch official WSX.com → replace SX1/SX2 results → recalc.
     """
-    if not _main().is_admin_user():
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     _main()._ensure_competition_result_moto_columns()
     try:
@@ -774,7 +775,7 @@ def sync_wsx_official_results():
 @bp.post("/clear_competition_class_results")
 def clear_competition_class_results():
     """Remove imported results for one class only (e.g. wrong RacerX import). Keeps picks."""
-    if not _main().is_admin_user():
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     _main()._ensure_competition_result_moto_columns()
     try:

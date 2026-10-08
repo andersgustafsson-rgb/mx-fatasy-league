@@ -86,6 +86,38 @@ def create_app() -> Flask:
 	except Exception:
 		pass
 
+	try:
+		from .routes.auth import bp as auth_bp  # noqa: F401
+		app.register_blueprint(auth_bp)
+		for _alias, _rule in (
+			("login", "/login"),
+			("register", "/register"),
+			("logout", "/logout"),
+			("forgot_password", "/forgot_password"),
+			("reset_password", "/reset_password"),
+			("auth_google_start", "/auth/google"),
+			("auth_google_callback", "/auth/google/callback"),
+			("auth_google_complete", "/auth/google/complete"),
+		):
+			try:
+				bp_ep = f"auth.{_alias}"
+				if bp_ep in app.view_functions and _alias not in app.view_functions:
+					_methods = None
+					for _r in app.url_map.iter_rules():
+						if _r.endpoint == bp_ep:
+							_methods = list(_r.methods - {"HEAD", "OPTIONS"}) or None
+							break
+					app.add_url_rule(
+						_rule,
+						endpoint=_alias,
+						view_func=app.view_functions[bp_ep],
+						methods=_methods,
+					)
+			except Exception:
+				pass
+	except Exception:
+		pass
+
 	# Backward-compat endpoint alias so templates using url_for('admin_page') still work
 	try:
 		if 'admin.admin_page' in app.view_functions and 'admin_page' not in app.view_functions:

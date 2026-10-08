@@ -15,26 +15,7 @@ from models import (
 )
 from datetime import datetime
 
-def is_admin_user() -> bool:
-	"""Check if current user is admin via DB flag only (no username hardcodes)."""
-	username = session.get("username")
-	user_id = session.get("user_id")
-	try:
-		user = None
-		if username:
-			user = User.query.filter_by(username=username).first()
-		if user is None and user_id:
-			try:
-				user = User.query.get(int(user_id))
-			except Exception:
-				user = None
-		if user and getattr(user, "is_admin", False):
-			if user.username and not username:
-				session["username"] = user.username
-			return True
-	except Exception:
-		pass
-	return False
+from auth_helpers import is_admin_user
 
 
 def _ensure_quali_start_time_column() -> None:

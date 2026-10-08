@@ -23,6 +23,7 @@ Mål: tunnare `main.py`, logik i `services/` och routes i `app/routes/`.
 | 7 | Dubbletter + bulk/WSX import-routes | ✅ Klar | Tidrapport/reminders-dubbletter bort; import-routes → `results_admin` |
 | 8 | **WSX seed/roster** → `wsx_fantasy.py` | ✅ Klar | Calendar/roster/entry sync ute ur `main.py`; re-export oförändrade call sites |
 | 9 | **AMA/SMX seed** → `ama_series_seed.py` | ✅ Klar | 2026 dates + SMX meta + boot-orchestrator; 2027 calendar kvar i `ama_2027_calendar` |
+| 10 | **Auth** → `auth_helpers.py` + `app/routes/auth.py` | ✅ Klar | Login/register/OAuth/logout; delade helpers; endpoint-alias behåller `url_for('login')` |
 
 ## Skiva 1 ✅
 
@@ -80,5 +81,12 @@ stannar i `main` (UI); seed anropar dem lazy.
 `run_ama_smx_boot_seeds` / `ensure_ama_2027_calendar_with_trackmaps` → `ama_series_seed.py`.
 `ama_2027_calendar.py` och `official_smx_2026.py` orörda som källor.
 
-**Nästa kandidater:** auth → helpers + blueprint; CSV upload-routes;
-league challenges → service; root-script quarantine.
+## Skiva 10 ✅
+
+`is_admin_user` / `login_required` / OAuth helpers → `auth_helpers.py`.  
+Login/register/forgot/reset/Google/logout → `app/routes/auth.py`.  
+`admin.py` / `api.py` / `results_admin.py` använder shared helpers (inga lokala kopior).  
+Bare endpoints (`login`, `register`, …) aliasas som public-skivan.
+
+**Nästa kandidater:** CSV upload-routes; league challenges → service;
+root-script quarantine; AMA tippa-routes.
