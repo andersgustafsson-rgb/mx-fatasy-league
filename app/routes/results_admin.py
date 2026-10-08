@@ -846,19 +846,15 @@ def upload_entry_list():
             # Save to data folder
             filename = f"data/{file.filename}"
             file.save(filename)
-            print(f"DEBUG: File uploaded to {filename}")
             
             # Debug: Check if file exists and show first few lines
             from pathlib import Path
             if Path(filename).exists():
-                print(f"DEBUG: File exists, size: {Path(filename).stat().st_size} bytes")
                 with open(filename, 'r', encoding='utf-8') as f:
                     lines = f.readlines()[:10]
-                    print(f"DEBUG: First 10 lines of {filename}:")
                     for i, line in enumerate(lines, 1):
                         print(f"  {i}: {line.strip()}")
             else:
-                print(f"DEBUG: File does not exist after upload!")
             
             return jsonify({
                 "success": True,
@@ -900,10 +896,6 @@ def import_entry_lists_new():
         east_file = Path("data/Entry_List_250_east.csv")
         four_fifty_file = Path("data/Entry_List_450.csv")
         
-        print(f"DEBUG: Checking files:")
-        print(f"DEBUG: 250 West exists: {west_file.exists()}")
-        print(f"DEBUG: 250 East exists: {east_file.exists()}")
-        print(f"DEBUG: 450 exists: {four_fifty_file.exists()}")
         
         # Only parse files that were recently uploaded (check modification time)
         import time
@@ -914,45 +906,32 @@ def import_entry_lists_new():
             file_age = current_time - west_file.stat().st_mtime
             if file_age < recent_threshold:
                 entry_lists.append(("data/Entry_List_250_west.csv", "250cc"))
-                print(f"DEBUG: ✅ Found recent 250 West file (age: {file_age:.0f}s)")
             else:
-                print(f"DEBUG: ⏰ Skipping old 250 West file (age: {file_age:.0f}s)")
         
         if east_file.exists():
             file_age = current_time - east_file.stat().st_mtime
             if file_age < recent_threshold:
                 entry_lists.append(("data/Entry_List_250_east.csv", "250cc"))
-                print(f"DEBUG: ✅ Found recent 250 East file (age: {file_age:.0f}s)")
             else:
-                print(f"DEBUG: ⏰ Skipping old 250 East file (age: {file_age:.0f}s)")
             
         if four_fifty_file.exists():
             file_age = current_time - four_fifty_file.stat().st_mtime
             if file_age < recent_threshold:
                 entry_lists.append(("data/Entry_List_450.csv", "450cc"))
-                print(f"DEBUG: ✅ Found recent 450 file (age: {file_age:.0f}s)")
             else:
-                print(f"DEBUG: ⏰ Skipping old 450 file (age: {file_age:.0f}s)")
         
-        print(f"DEBUG: Will parse {len(entry_lists)} files: {[f[0] for f in entry_lists]}")
         
         all_riders = []
         results = {}
         
         for csv_file, class_name in entry_lists:
             csv_path = Path(csv_file)
-            print(f"DEBUG: Looking for file: {csv_path}")
-            print(f"DEBUG: File exists: {csv_path.exists()}")
             
             if csv_path.exists():
-                print(f"DEBUG: Parsing {csv_file} for class {class_name}")
                 riders = parse_csv_simple(csv_path, class_name)
-                print(f"DEBUG: Found {len(riders)} riders in {csv_file}")
-                print(f"DEBUG: Riders from {csv_file}: {[r['number'] for r in riders[:5]]}...")  # Show first 5 rider numbers
                 all_riders.extend(riders)
                 results[class_name] = len(riders)
             else:
-                print(f"DEBUG: File not found: {csv_file}")
                 results[class_name] = f"File not found: {csv_file}"
         
         # Show preview
@@ -1073,18 +1052,12 @@ def import_entry_lists():
         
         for csv_file, class_name in entry_lists:
             csv_path = Path(csv_file)
-            print(f"DEBUG: Looking for file: {csv_path}")
-            print(f"DEBUG: File exists: {csv_path.exists()}")
             
             if csv_path.exists():
-                print(f"DEBUG: Parsing {csv_file} for class {class_name}")
                 riders = parse_csv_simple(csv_path, class_name)
-                print(f"DEBUG: Found {len(riders)} riders in {csv_file}")
-                print(f"DEBUG: Riders from {csv_file}: {[r['number'] for r in riders[:5]]}...")  # Show first 5 rider numbers
                 all_riders.extend(riders)
                 results[class_name] = len(riders)
             else:
-                print(f"DEBUG: File not found: {csv_file}")
                 results[class_name] = f"File not found: {csv_file}"
         
         # Show preview
@@ -1742,7 +1715,6 @@ def import_race_results_complete():
     
     try:
         data = request.get_json()
-        print(f"🔍 DEBUG: Received data: {data}")
         
         competition_id = data.get('competition_id')
         results_250 = data.get('results_250')
@@ -1750,8 +1722,6 @@ def import_race_results_complete():
         holeshot_250 = data.get('holeshot_250')
         holeshot_450 = data.get('holeshot_450')
         
-        print(f"🔍 DEBUG: Parsed data - competition_id: {competition_id}, results_250: {results_250}, results_450: {results_450}")
-        print(f"🔍 DEBUG: holeshot_250: {holeshot_250}, holeshot_450: {holeshot_450}")
         
         if not all([competition_id, results_250, results_450, holeshot_250, holeshot_450]):
             return jsonify({"error": "Missing required data"}), 400
@@ -1766,7 +1736,6 @@ def import_race_results_complete():
         
         # Parse and import 250cc results
         if results_250 and os.path.exists(results_250):
-            print(f"🔍 DEBUG: Checking 250cc file: {results_250} - exists: {os.path.exists(results_250)}")
             try:
                 with open(results_250, 'r', encoding='utf-8') as file:
                     lines = file.readlines()
@@ -1780,7 +1749,6 @@ def import_race_results_complete():
                     if line.startswith('"') and line.endswith('"'):
                         line = line[1:-1]  # Remove first and last quote
                     
-                    print(f"🔍 DEBUG: 250cc row {i}: {[line]}")
                     
                     # Parse the line format: "1        38   Haiden Deegan        Yamaha        1                   1 (1)             Temecula, CA"
                     parts = line.split()
@@ -1800,7 +1768,6 @@ def import_race_results_complete():
                             
                             if rider_name_parts and position:
                                 rider_name = ' '.join(rider_name_parts)
-                                print(f"🔍 DEBUG: Parsed - #{rider_number} {rider_name} at position {position}")
                                 
                                 # Find rider in database
                                 rider = Rider.query.filter_by(
@@ -1826,19 +1793,15 @@ def import_race_results_complete():
                                         db.session.add(new_result)
                                     
                                     imported_count += 1
-                                    print(f"🔍 DEBUG: Added 250cc result for {rider.name} at position {position}")
                                 
                         except (ValueError, IndexError) as e:
-                            print(f"🔍 DEBUG: Error parsing 250cc row {i}: {e}")
                             errors.append(f"250cc row {i}: Could not parse line")
             
             except Exception as e:
-                print(f"🔍 DEBUG: Error reading 250cc file: {e}")
                 errors.append(f"Error reading 250cc file: {str(e)}")
         
         # Parse and import 450cc results
         if results_450 and os.path.exists(results_450):
-            print(f"🔍 DEBUG: Checking 450cc file: {results_450} - exists: {os.path.exists(results_450)}")
             try:
                 with open(results_450, 'r', encoding='utf-8') as file:
                     lines = file.readlines()
@@ -1852,7 +1815,6 @@ def import_race_results_complete():
                     if line.startswith('"') and line.endswith('"'):
                         line = line[1:-1]  # Remove first and last quote
                     
-                    print(f"🔍 DEBUG: 450cc row {i}: {[line]}")
                     
                     # Parse the line format: "1        3    Eli Tomac             Yamaha        1                   1 (1)             Cortez, CO"
                     parts = line.split()
@@ -1872,7 +1834,6 @@ def import_race_results_complete():
                             
                             if rider_name_parts and position:
                                 rider_name = ' '.join(rider_name_parts)
-                                print(f"🔍 DEBUG: Parsed - #{rider_number} {rider_name} at position {position}")
                                 
                                 # Find rider in database
                                 rider = Rider.query.filter_by(
@@ -1898,14 +1859,11 @@ def import_race_results_complete():
                                         db.session.add(new_result)
                                     
                                     imported_count += 1
-                                    print(f"🔍 DEBUG: Added 450cc result for {rider.name} at position {position}")
                                 
                         except (ValueError, IndexError) as e:
-                            print(f"🔍 DEBUG: Error parsing 450cc row {i}: {e}")
                             errors.append(f"450cc row {i}: Could not parse line")
             
             except Exception as e:
-                print(f"🔍 DEBUG: Error reading 450cc file: {e}")
                 errors.append(f"Error reading 450cc file: {str(e)}")
         
         # Add holeshot results
@@ -1917,7 +1875,6 @@ def import_race_results_complete():
                     class_name="250cc"
                 )
                 db.session.add(holeshot_250_result)
-                print(f"🔍 DEBUG: Added 250cc holeshot result for rider {holeshot_250}")
             
             if holeshot_450:
                 holeshot_450_result = HoleshotResult(
@@ -1926,10 +1883,8 @@ def import_race_results_complete():
                     class_name="450cc"
                 )
                 db.session.add(holeshot_450_result)
-                print(f"🔍 DEBUG: Added 450cc holeshot result for rider {holeshot_450}")
         
         except Exception as e:
-            print(f"🔍 DEBUG: Error adding holeshot results: {e}")
             errors.append(f"Error adding holeshot results: {str(e)}")
         
         # Note: Wildcard results are calculated automatically from the full 450cc results
@@ -1939,12 +1894,9 @@ def import_race_results_complete():
         db.session.commit()
         
         # Calculate scores for all users after importing results
-        print(f"🔍 DEBUG: Calculating scores for competition {competition_id}...")
         try:
             _main().calculate_scores(competition_id)
-            print(f"🔍 DEBUG: Scores calculated successfully")
         except Exception as e:
-            print(f"🔍 DEBUG: Error calculating scores: {str(e)}")
             errors.append(f"Error calculating scores: {str(e)}")
         
         return jsonify({

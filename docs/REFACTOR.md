@@ -25,6 +25,7 @@ Mål: tunnare `main.py`, logik i `services/` och routes i `app/routes/`.
 | 9 | **AMA/SMX seed** → `ama_series_seed.py` | ✅ Klar | 2026 dates + SMX meta + boot-orchestrator; 2027 calendar kvar i `ama_2027_calendar` |
 | 10 | **Auth** → `auth_helpers.py` + `app/routes/auth.py` | ✅ Klar | Login/register/OAuth/logout; delade helpers; endpoint-alias behåller `url_for('login')` |
 | 11 | **CSV upload/import** → `results_admin.py` | ✅ Klar | Entry-list + race-results CSV; död unreachable kod bort |
+| 12 | **Debug hygiene** | ✅ Klar | Root test/debug-skript → `scripts/archive/`; obsolete SX-fixar bort; öppna debug-URL:er gated |
 
 ## Skiva 1 ✅
 
@@ -96,5 +97,12 @@ Entry-list upload/import + race-results CSV (`upload_*`, `preview_*`, `import_*`
 Oanvänd unreachable dubblett efter `import_race_results_complete` borttagen.  
 Samma URL:er (blueprint utan prefix) — admin UI oförändrad.
 
-**Nästa kandidater:** league challenges → service; root-script quarantine;
-AMA tippa-routes.
+## Skiva 12 ✅
+
+1. **15 root-skript** (test_/debug_/fix_/check_/quick_) → `scripts/archive/`.
+2. **Obsolete one-shots bort** (Anaheim1/San Diego/Canadian time-fixar, test_countdown, debug_250cc, m.m.).
+3. **Öppna debug/fix-URL:er** utan admin → `_reject_dev_bootstrap()` (404 i prod).
+4. Mindre DEBUG-printbrus i `results_admin` CSV-kod.
+
+**Nästa kandidater:** league challenges → service; fler admin-only legacy `/fix_*`
+som redan är schema-patches; AMA tippa-routes.

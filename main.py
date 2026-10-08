@@ -89,11 +89,13 @@ from ama_series_seed import (  # noqa: F401 — re-export for boot/admin/call si
 )
 
 from auth_helpers import (  # noqa: F401 — re-export for routes/decorators
+    _dev_bootstrap_allowed,
     _ensure_google_oauth_columns,
     _google_login_enabled,
     _login_user_session,
     _looks_like_email,
     _redirect_to_login,
+    _reject_dev_bootstrap,
     _requested_next_path,
     _safe_next_url,
     _suggest_username_from_google,
@@ -13696,202 +13698,6 @@ def migrate_start_time():
         print(f"Migration error: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/competitions/fix_canadian_gp_time', methods=['POST'])
-def fix_canadian_gp_time():
-    """Fix Canadian GP start_time to 17:00"""
-    if not is_admin_user():
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    try:
-        from datetime import time
-        
-        # Find Canadian GP
-        canadian_gp = Competition.query.filter(
-            Competition.name.ilike('%canadian%')
-        ).first()
-        
-        if not canadian_gp:
-            return jsonify({'error': 'Canadian GP not found'}), 404
-        
-        # Set start_time to 17:00
-        canadian_gp.start_time = time(17, 0)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': f'Updated {canadian_gp.name} start_time to 17:00',
-            'competition': {
-                'id': canadian_gp.id,
-                'name': canadian_gp.name,
-                'start_time': '17:00'
-            }
-        })
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error fixing Canadian GP time: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/competitions/fix_san_diego_time', methods=['POST'])
-def fix_san_diego_time():
-    """Fix San Diego start_time to 11:30 AM PT (deadline for picks: 9:30 AM PT)"""
-    if not is_admin_user():
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    try:
-        from datetime import time
-        
-        # Find San Diego
-        san_diego = Competition.query.filter(
-            Competition.name.ilike('%san diego%')
-        ).first()
-        
-        if not san_diego:
-            return jsonify({'error': 'San Diego competition not found'}), 404
-        
-        # Set start_time to 11:30 AM (11:30) so deadline for picks is 9:30 AM PT (2 hours before)
-        # Use direct SQL update since start_time setter might not commit
-        db.session.execute(
-            db.text("UPDATE competitions SET start_time = :start_time, timezone = :timezone WHERE id = :id"),
-            {'start_time': time(11, 30), 'timezone': 'America/Los_Angeles', 'id': san_diego.id}
-        )
-        db.session.commit()
-        
-        # Refresh the object to get updated values
-        db.session.refresh(san_diego)
-        
-        return jsonify({
-            'success': True,
-            'message': f'Updated {san_diego.name} start_time to 11:30 AM PT (deadline for picks: 9:30 AM PT)',
-            'competition': {
-                'id': san_diego.id,
-                'name': san_diego.name,
-                'start_time': '11:30',
-                'timezone': san_diego.timezone or 'America/Los_Angeles',
-                'deadline': '09:30'  # 2 hours before race
-            }
-        })
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error fixing San Diego time: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/competitions/fix_anaheim1', methods=['POST'])
-def fix_anaheim1():
-    """Fix Anaheim 1 event_date to 2026-01-10, timezone to PT, and start_time to 4:00 PM (16:00) = Sunday Jan 11, 1:00 AM GMT+1"""
-    if not is_admin_user():
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    try:
-        from datetime import time, date
-        
-        # Find Anaheim 1
-        anaheim1 = Competition.query.filter(
-            Competition.name.ilike('%anaheim 1%')
-        ).first()
-        
-        if not anaheim1:
-            return jsonify({'error': 'Anaheim 1 not found'}), 404
-        
-        # Set event_date to 2026-01-10
-        anaheim1.event_date = date(2026, 1, 10)
-        
-        # Set timezone to PT
-        if hasattr(anaheim1, 'timezone'):
-            anaheim1.timezone = 'America/Los_Angeles'
-        
-        # Set start_time to 11:30 AM PT (11:30) = Sunday Jan 11, 8:30 PM GMT+1 (picks deadline will be 9:30 AM PT, 2h before)
-        if hasattr(anaheim1, 'start_time'):
-            anaheim1.start_time = time(11, 30)
-        
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': f'Updated {anaheim1.name}: event_date=2026-01-10, timezone=America/Los_Angeles, start_time=11:30 AM (11:30)',
-            'competition': {
-                'id': anaheim1.id,
-                'name': anaheim1.name,
-                'event_date': '2026-01-10',
-                'timezone': 'America/Los_Angeles',
-                'start_time': '11:30'
-            }
-        })
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error fixing Anaheim 1: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/competitions/debug_anaheim1_countdown', methods=['GET'])
-def debug_anaheim1_countdown():
-    """Debug Anaheim 1 countdown calculation"""
-    try:
-        from datetime import datetime, date, time, timedelta
-        
-        # Find Anaheim 1
-        anaheim1 = Competition.query.filter(
-            Competition.name.ilike('%anaheim 1%')
-        ).first()
-        
-        if not anaheim1:
-            return jsonify({'error': 'Anaheim 1 not found'}), 404
-        
-        # Get current UTC time
-        now_utc = datetime.utcnow()
-        
-        # Get competition details
-        event_date = anaheim1.event_date
-        timezone = getattr(anaheim1, 'timezone', 'America/Los_Angeles')
-        start_time = anaheim1.start_time if hasattr(anaheim1, 'start_time') and anaheim1.start_time else time(11, 30)
-        
-        # Calculate race datetime in local time
-        race_datetime_local = datetime.combine(event_date, start_time)
-        
-        # Convert to UTC
-        timezone_offsets = {
-            'America/Los_Angeles': -8,  # PST (UTC-8 in winter)
-        }
-        utc_offset = timezone_offsets.get(timezone, -8)
-        race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
-        
-        # Calculate deadline (2 hours before race)
-        deadline_datetime_utc = race_datetime_utc - timedelta(hours=2)
-        
-        # Calculate differences
-        race_diff = race_datetime_utc - now_utc
-        deadline_diff = deadline_datetime_utc - now_utc
-        
-        # Format countdown
-        def format_countdown(td):
-            total_seconds = int(td.total_seconds())
-            if total_seconds <= 0:
-                return {"days": 0, "hours": 0, "minutes": 0, "seconds": 0}
-            days = total_seconds // 86400
-            hours = (total_seconds % 86400) // 3600
-            minutes = (total_seconds % 3600) // 60
-            seconds = total_seconds % 60
-            return {"days": days, "hours": hours, "minutes": minutes, "seconds": seconds}
-        
-        return jsonify({
-            'competition': {
-                'name': anaheim1.name,
-                'event_date': str(event_date),
-                'timezone': timezone,
-                'start_time': str(start_time),
-            },
-            'current_time_utc': now_utc.isoformat(),
-            'race_datetime_local': race_datetime_local.isoformat(),
-            'race_datetime_utc': race_datetime_utc.isoformat(),
-            'deadline_datetime_utc': deadline_datetime_utc.isoformat(),
-            'utc_offset': utc_offset,
-            'countdown_to_deadline': format_countdown(deadline_diff),
-            'countdown_to_race': format_countdown(race_diff),
-        })
-    except Exception as e:
-        import traceback
-        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
-
 @app.route('/api/competitions/update_seasons_to_2026', methods=['POST'])
 def update_seasons_to_2026():
     """Update all 2025 series and competitions to 2026"""
@@ -14559,6 +14365,8 @@ def fix_database_tables():
 @app.route('/fix_database')
 def fix_database_page():
     """Simple page to fix database issues"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     return '''
     <!DOCTYPE html>
     <html>
@@ -21528,6 +21336,8 @@ def restore_rider_images():
 @app.get("/debug_my_points")
 def debug_my_points():
     """Debug endpoint for current user to check their points"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
     
@@ -22765,6 +22575,8 @@ def fix_league_images():
 @app.get("/fix_my_league_images")
 def fix_my_league_images():
     """Fix league images for current user's leagues only"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
     
@@ -23402,6 +23214,8 @@ def _ensure_league_membership_unique() -> None:
 @app.get("/fix_league_memberships_column")
 def fix_league_memberships_column():
     """Fix missing joined_at column in league_memberships table"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         from sqlalchemy import inspect
         
@@ -23517,6 +23331,8 @@ def add_profile_columns():
 @app.get("/fix_profile_columns")
 def fix_profile_columns():
     """Fix profile columns - no login required for debugging"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     print("DEBUG: fix_profile_columns called")
     
     try:
@@ -23638,6 +23454,8 @@ def fix_profile_picture_column():
 @app.get("/fix_column_public")
 def fix_column_public():
     """Fix profile_picture_url column - no login required for emergency fix"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     
     try:
         # Rollback any existing transaction first
@@ -24648,6 +24466,8 @@ def view_user_profile(user_id):
 @app.get("/fix_column_now")
 def fix_column_now():
     """Emergency fix for profile picture column - no login required"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         # Rollback any existing transaction first
         db.session.rollback()
@@ -24984,6 +24804,8 @@ def health_check():
 @app.get("/fix_database")
 def fix_database_route():
     """Fix database by creating all tables and data"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         # Create all tables
         db.create_all()
@@ -26192,6 +26014,8 @@ def force_recreate_data():
 @app.get("/debug_riders")
 def debug_riders():
     """Debug riders in database"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     if "user_id" not in session:
         return _redirect_to_login()
     
@@ -26378,20 +26202,6 @@ def debug_users():
     except Exception as e:
         return f"Error: {str(e)}"
 
-@app.get("/simple_debug")
-def simple_debug():
-    """Simple debug route — admin only"""
-    if not is_admin_user():
-        _reject_dev_bootstrap()
-    try:
-        users = User.query.all()
-        result = f"Total users: {len(users)}\n"
-        for user in users:
-            result += f"ID {user.id}: {user.username}\n"
-        return result
-    except Exception as e:
-        return f"Error: {str(e)}"
-
 @app.get("/check_anaheim2")
 def check_anaheim2():
     """Check if Anaheim 2 simulation worked"""
@@ -26424,61 +26234,6 @@ def check_anaheim2():
         
     except Exception as e:
         return jsonify({"error": str(e)})
-
-@app.post("/fix_anaheim1_results")
-def fix_anaheim1_results():
-    """Fix Anaheim 1 results by adding Jett Lawrence at position 2"""
-    if not is_admin_user():
-        return jsonify({"error": "admin_only"}), 403
-    
-    try:
-        # Find Anaheim 1 competition
-        anaheim1 = Competition.query.filter_by(name="Anaheim 1").first()
-        if not anaheim1:
-            return jsonify({"error": "Anaheim 1 competition not found"})
-        
-        # Find Jett Lawrence rider
-        jett = Rider.query.filter_by(name="Jett Lawrence", class_name="450cc").first()
-        if not jett:
-            return jsonify({"error": "Jett Lawrence not found in database"})
-        
-        # Get current results for Anaheim 1
-        current_results = CompetitionResult.query.filter_by(competition_id=anaheim1.id).all()
-        
-        # Check if Jett already has a result
-        jett_result = CompetitionResult.query.filter_by(
-            competition_id=anaheim1.id,
-            rider_id=jett.id
-        ).first()
-        
-        if jett_result:
-            return jsonify({"error": "Jett Lawrence already has a result"})
-        
-        # Move all positions 2+ down by 1 to make room for Jett at position 2
-        for result in current_results:
-            if result.position >= 2:
-                result.position += 1
-        
-        # Add Jett Lawrence at position 2
-        new_jett_result = CompetitionResult(
-            competition_id=anaheim1.id,
-            rider_id=jett.id,
-            position=2
-        )
-        db.session.add(new_jett_result)
-        
-        db.session.commit()
-        
-        return jsonify({
-            "success": True,
-            "message": f"Added Jett Lawrence at position 2 and moved other riders down",
-            "jett_rider_id": jett.id,
-            "jett_rider_number": jett.rider_number
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
 
 @app.get("/recalculate_san_diego")
 def recalculate_san_diego():
@@ -26800,6 +26555,8 @@ def debug_csv_row(competition_id, row_number):
 @app.get("/debug_competitions")
 def debug_competitions():
     """List all competitions with their IDs"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         competitions = Competition.query.order_by(Competition.event_date.asc()).all()
         
@@ -26823,6 +26580,8 @@ def debug_competitions():
 @app.get("/debug_wildcard/<int:competition_id>")
 def debug_wildcard(competition_id):
     """Debug wildcard picks and results for a competition"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         # Get competition
         competition = Competition.query.get(competition_id)
@@ -26879,63 +26638,6 @@ def debug_wildcard(competition_id):
             "wildcard_picks": wildcard_data,
             "actual_results": results_data,
             "wildcard_matches": matches
-        })
-        
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-@app.get("/debug_anaheim1")
-def debug_anaheim1():
-    """Debug Anaheim 1 results to see what's missing"""
-    try:
-        # Find Anaheim 1 competition
-        anaheim1 = Competition.query.filter_by(name="Anaheim 1").first()
-        if not anaheim1:
-            return jsonify({"error": "Anaheim 1 competition not found"})
-        
-        # Get all results for Anaheim 1, ordered by class and position
-        results = CompetitionResult.query.filter_by(competition_id=anaheim1.id).order_by(CompetitionResult.position.asc()).all()
-        
-        # Get rider names for each result
-        results_with_names = []
-        for result in results:
-            rider = Rider.query.get(result.rider_id)
-            results_with_names.append({
-                "position": result.position,
-                "rider_id": result.rider_id,
-                "rider_name": rider.name if rider else "Unknown",
-                "rider_number": rider.rider_number if rider else "Unknown",
-                "class_name": rider.class_name if rider else "Unknown"
-            })
-        
-        # Check for missing positions per class
-        class_positions = {}
-        for result in results_with_names:
-            class_name = result["class_name"]
-            if class_name not in class_positions:
-                class_positions[class_name] = []
-            class_positions[class_name].append(result["position"])
-        
-        missing_positions_per_class = {}
-        for class_name, positions in class_positions.items():
-            missing_positions = []
-            if positions:
-                max_pos = max(positions)
-                for i in range(1, max_pos + 1):
-                    if i not in positions:
-                        missing_positions.append(i)
-            missing_positions_per_class[class_name] = missing_positions
-        
-        return jsonify({
-            "competition": {
-                "id": anaheim1.id,
-                "name": anaheim1.name,
-                "date": anaheim1.event_date.isoformat() if anaheim1.event_date else None
-            },
-            "total_results": len(results),
-            "class_positions": class_positions,
-            "missing_positions_per_class": missing_positions_per_class,
-            "all_results": results_with_names
         })
         
     except Exception as e:
@@ -27356,6 +27058,8 @@ def add_bulletin_reaction(post_id):
 @app.route("/fix_bulletin_columns")
 def fix_bulletin_columns():
     """Fix missing columns in bulletin_posts table"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     if session.get('username') != 'test':
         return jsonify({"error": "admin_only"}), 403
     
@@ -27498,6 +27202,8 @@ def migrate_admin_column():
 @app.route("/fix_database_transaction")
 def fix_database_transaction():
     """Fix failed database transactions"""
+    if not _dev_bootstrap_allowed():
+        _reject_dev_bootstrap()
     try:
         # Rollback any failed transactions
         db.session.rollback()
@@ -27701,112 +27407,6 @@ def fix_duplicate_scores():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/fix_anaheim1_duplicates")
-def fix_anaheim1_duplicates():
-    """Fix duplicate scores and results specifically for Anaheim 1"""
-    try:
-        if not is_admin_user():
-            return jsonify({"error": "admin_only"}), 403
-        
-        from sqlalchemy import func
-        
-        # Find Anaheim 1 competition
-        anaheim1 = Competition.query.filter(
-            Competition.name.ilike('%anaheim 1%')
-        ).first()
-        
-        if not anaheim1:
-            return jsonify({"error": "Anaheim 1 competition not found"}), 404
-        
-        comp_id = anaheim1.id
-        comp_name = anaheim1.name
-        
-        # Fix duplicate scores for Anaheim 1
-        score_duplicates = (
-            db.session.query(
-                CompetitionScore.user_id,
-                func.count(CompetitionScore.score_id).label('count')
-            )
-            .filter(CompetitionScore.competition_id == comp_id)
-            .group_by(CompetitionScore.user_id)
-            .having(func.count(CompetitionScore.score_id) > 1)
-            .all()
-        )
-        
-        fixed_scores = 0
-        for user_id, count in score_duplicates:
-            scores = CompetitionScore.query.filter_by(
-                user_id=user_id,
-                competition_id=comp_id
-            ).order_by(CompetitionScore.score_id.desc()).all()
-            
-            # Keep the most recent one, delete the rest
-            for score in scores[1:]:
-                db.session.delete(score)
-                fixed_scores += 1
-        
-        # Fix duplicate results for Anaheim 1
-        result_duplicates = (
-            db.session.query(
-                CompetitionResult.rider_id,
-                func.count(CompetitionResult.result_id).label('count')
-            )
-            .filter(CompetitionResult.competition_id == comp_id)
-            .group_by(CompetitionResult.rider_id)
-            .having(func.count(CompetitionResult.result_id) > 1)
-            .all()
-        )
-        
-        fixed_results = 0
-        for rider_id, count in result_duplicates:
-            results = CompetitionResult.query.filter_by(
-                rider_id=rider_id,
-                competition_id=comp_id
-            ).order_by(CompetitionResult.result_id.desc()).all()
-            
-            # Keep the most recent one, delete the rest
-            for result in results[1:]:
-                db.session.delete(result)
-                fixed_results += 1
-        
-        db.session.commit()
-        
-        # Recalculate scores for Anaheim 1
-        scores_before = CompetitionScore.query.filter_by(competition_id=comp_id).count()
-        try:
-            calculate_scores(comp_id)
-            scores_after = CompetitionScore.query.filter_by(competition_id=comp_id).count()
-            recalculated = True
-            print(f"✅ Recalculated scores for Anaheim 1: {scores_before} -> {scores_after} score entries")
-        except Exception as e:
-            print(f"❌ Error recalculating scores: {e}")
-            import traceback
-            traceback.print_exc()
-            recalculated = False
-            scores_after = scores_before
-        
-        return jsonify({
-            "success": True,
-            "message": f"Fixed duplicates for {comp_name}",
-            "competition": {
-                "id": comp_id,
-                "name": comp_name
-            },
-            "fixed_scores": fixed_scores,
-            "score_duplicates_found": len(score_duplicates),
-            "fixed_results": fixed_results,
-            "result_duplicates_found": len(result_duplicates),
-            "scores_recalculated": recalculated,
-            "scores_before": scores_before,
-            "scores_after": scores_after if recalculated else scores_before
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        import traceback
-        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route("/create_hampus_admin")
@@ -28018,42 +27618,6 @@ def admin_leagues():
         
     except Exception as e:
         print(f"Error loading leagues: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/admin/rename_test_to_spliffan", methods=['POST'])
-def rename_test_to_spliffan():
-    """Rename test account to spliffan - one-time operation"""
-    if not is_admin_user():
-        return jsonify({"error": "admin_only"}), 403
-    
-    try:
-        test_user = User.query.filter_by(username='test').first()
-        if not test_user:
-            return jsonify({"error": "Test user not found"}), 404
-        
-        # Check if spliffan already exists
-        existing = User.query.filter_by(username='spliffan').first()
-        if existing:
-            return jsonify({"error": "Username 'spliffan' is already taken"}), 400
-        
-        old_username = test_user.username
-        test_user.username = 'spliffan'
-        
-        # Update CrossDinoHighScore if it exists
-        try:
-            CrossDinoHighScore.query.filter_by(player_name=old_username).update({"player_name": 'spliffan'})
-        except:
-            pass
-        
-        db.session.commit()
-        
-        return jsonify({
-            "message": "Användarnamn ändrat från 'test' till 'spliffan'"
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error renaming test to spliffan: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/admin/update_username/<int:user_id>", methods=['POST'])
@@ -28303,20 +27867,6 @@ def cleanup_duplicate_users():
         print(f"Error cleaning up duplicate users: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route("/debug_session")
-def debug_session():
-    """Debug session data — admin only"""
-    if not is_admin_user():
-        _reject_dev_bootstrap()
-    return jsonify({
-        "user_id": session.get("user_id"),
-        "username": session.get("username"),
-        "is_admin": True,
-        "all_session": dict(session)
-    })
-
-
-# API routes for admin panel
 @app.route("/api/races")
 def api_races():
     """Get all races for admin panel"""
@@ -28368,27 +27918,6 @@ def debug_simulation_status():
             "current_time_type": str(type(current_time))
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/reset_test_simulation")
-def reset_test_simulation():
-    """Reset test simulation to start fresh"""
-    if not is_admin_user():
-        return jsonify({"error": "Unauthorized"}), 403
-    
-    try:
-        # Update global simulation with fresh start time
-        simulation = GlobalSimulation.query.first()
-        if simulation:
-            now = datetime.utcnow()
-            simulation.start_time = now.isoformat()
-            simulation.simulated_time = now.isoformat()
-            db.session.commit()
-            return jsonify({"message": "Test simulation reset successfully", "new_start_time": simulation.start_time})
-        else:
-            return jsonify({"error": "No simulation found"}), 404
-    except Exception as e:
-        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 @app.route("/debug_missing_bike_brands")
@@ -28874,44 +28403,6 @@ def get_smx_qualification_250cc():
         print(f"ERROR in get_smx_qualification_250cc: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/debug_250cc")
-def debug_250cc():
-    """Debug endpoint to check 250cc riders and their results"""
-    try:
-        # Get all 250cc riders
-        riders_250 = Rider.query.filter_by(class_name='250cc').all()
-        
-        debug_info = {
-            'total_250cc_riders': len(riders_250),
-            'riders': []
-        }
-        
-        for rider in riders_250:
-            # Get all results for this rider
-            sx_results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
-                CompetitionResult.rider_id == rider.id,
-                Series.name.ilike('%supercross%')
-            ).all()
-            
-            mx_results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
-                CompetitionResult.rider_id == rider.id,
-                Series.name.ilike('%motocross%')
-            ).all()
-            
-            debug_info['riders'].append({
-                'name': rider.name,
-                'coast_250': rider.coast_250,
-                'sx_results_count': len(sx_results),
-                'mx_results_count': len(mx_results),
-                'sx_positions': [r.position for r in sx_results if r.position],
-                'mx_positions': [r.position for r in mx_results if r.position]
-            })
-        
-        return jsonify(debug_info)
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 @app.route("/api/series_leaders")
 def get_series_leaders():
     """Get current leaders for each series and SMX overview"""
@@ -29058,189 +28549,6 @@ def api_wsx_leaders():
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
-
-@app.route("/test_countdown")
-def test_countdown():
-    """Test countdown with simulated time - for development only"""
-    try:
-        # Get the next race first to base our test scenarios on
-        next_race_date = (
-            Competition.query
-            .filter(Competition.event_date >= datetime.utcnow().date())
-            .order_by(Competition.event_date)
-            .first()
-        )
-        
-        if not next_race_date:
-            return jsonify({"error": "No upcoming races found for testing"})
-        
-        # Create race datetime for testing using actual start_time if available
-        race_date = next_race_date.event_date
-        if hasattr(next_race_date, 'start_time') and next_race_date.start_time:
-            race_datetime_local = datetime.combine(race_date, next_race_date.start_time)
-        else:
-            # Default to 8pm if no start_time set
-            race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=20, minute=0))
-        
-        # Convert to UTC for testing
-        timezone_offsets = {
-            'America/Los_Angeles': -8,  # PST
-            'America/Denver': -7,       # MST  
-            'America/Phoenix': -7,      # MST (no DST)
-            'America/Chicago': -6,      # CST
-            'America/New_York': -5,     # EST
-            'America/Argentina/Buenos_Aires': -3
-        }
-        
-        timezone = getattr(next_race_date, 'timezone', 'America/Los_Angeles')
-        utc_offset = timezone_offsets.get(timezone, -8)
-        race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
-        
-        # Simulate different times for testing - create a fake race that's closer
-        # Use a fake race date that's closer to now for testing
-        fake_race_date = datetime.utcnow() + timedelta(days=1)  # Tomorrow
-        fake_race_datetime_utc = fake_race_date.replace(hour=20, minute=0, second=0, microsecond=0)
-        
-        test_scenarios = {
-            "race_in_3h": fake_race_datetime_utc - timedelta(hours=3),  # 3 hours before fake race
-            "race_in_1h": fake_race_datetime_utc - timedelta(hours=1),  # 1 hour before fake race (picks locked)
-            "race_in_30m": fake_race_datetime_utc - timedelta(minutes=30),  # 30 minutes before fake race
-            "race_tomorrow": fake_race_datetime_utc - timedelta(days=1),  # 1 day before fake race
-        }
-        
-        # Get the scenario from query parameter
-        scenario = request.args.get('scenario', 'race_in_3h')
-        simulated_time = test_scenarios.get(scenario, datetime.utcnow() + timedelta(hours=3))
-        
-        # Set the simulated time in session for global use (for backward compatibility, but we'll use global database state)
-        session['simulation_active'] = True
-        session['simulated_time'] = simulated_time.isoformat()
-        session['simulation_start_time'] = datetime.utcnow().isoformat()
-        session['initial_simulated_time'] = simulated_time.isoformat()
-        session['test_scenario'] = scenario  # Store the scenario for race_countdown to use
-        
-        # Also set global simulation state for cross-device sync using database
-        # Create or update global simulation record
-        try:
-            # Rollback any existing transaction first
-            db.session.rollback()
-            
-            db.session.execute(db.text("""
-                INSERT INTO global_simulation (id, active, simulated_time, start_time, scenario) 
-                VALUES (1, :active, :simulated_time, :start_time, :scenario)
-                ON CONFLICT (id) DO UPDATE SET 
-                    active = :active,
-                    simulated_time = :simulated_time,
-                    start_time = :start_time,
-                    scenario = :scenario
-            """), {
-                'active': True,
-                'simulated_time': simulated_time.isoformat(),
-                'start_time': datetime.utcnow().isoformat(),
-                'scenario': scenario
-            })
-            db.session.commit()
-        except Exception as e:
-            print(f"DEBUG: Error setting global simulation (table might not exist): {e}")
-            # Rollback and fallback to app globals if database table doesn't exist yet
-            db.session.rollback()
-            app.global_simulation_active = True
-            app.global_simulated_time = simulated_time.isoformat()
-            app.global_simulation_start_time = datetime.utcnow().isoformat()
-            app.global_initial_simulated_time = simulated_time.isoformat()
-        
-        # Get next upcoming race (use simulated time for testing)
-        next_race = (
-            Competition.query
-            .filter(Competition.event_date >= simulated_time.date())
-            .order_by(Competition.event_date)
-            .first()
-        )
-        
-        if not next_race:
-            return jsonify({
-                "error": "No upcoming races found",
-                "simulated_time": simulated_time.isoformat(),
-                "scenario": scenario
-            })
-        
-        # Race time mapping (8pm local time for each race)
-        # Use actual start_time from competition if available, otherwise default to 8pm
-        if hasattr(next_race, 'start_time') and next_race.start_time:
-            race_hour = next_race.start_time.hour
-            race_minute = next_race.start_time.minute
-        else:
-            # Default to 8pm if no start_time set
-            race_hour, race_minute = 20, 0
-        
-        # Create race datetime in local timezone
-        race_date = next_race.event_date
-        race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
-        
-        # Convert to UTC for countdown calculation
-        timezone_offsets = {
-            'America/Los_Angeles': -8,  # PST
-            'America/Denver': -7,       # MST  
-            'America/Phoenix': -7,      # MST (no DST)
-            'America/Chicago': -6,      # CST
-            'America/New_York': -5,     # EST
-            'America/Argentina/Buenos_Aires': -3
-        }
-        
-        timezone = getattr(next_race, 'timezone', 'America/Los_Angeles')
-        utc_offset = timezone_offsets.get(timezone, -8)
-        
-        # Convert local time to UTC
-        race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
-        
-        # Calculate time differences using simulated time
-        # For countdown, we need to use the current simulated time, not the fixed simulated time
-        current_simulated_time = get_current_time()
-        time_to_race = fake_race_datetime_utc - current_simulated_time
-        time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - current_simulated_time
-        
-        # Check if picks are locked (2 hours before race)
-        picks_locked = time_to_deadline.total_seconds() <= 0
-        
-        return jsonify({
-            "success": True,
-            "next_race": {
-                "name": f"Test Race ({scenario})",
-                "date": fake_race_date.date().isoformat(),
-                "timezone": "UTC",
-                "local_time": "20:00",
-                "utc_time": fake_race_datetime_utc.isoformat()
-            },
-            "countdown": {
-                "race_start": {
-                    "total_seconds": max(0, int(time_to_race.total_seconds())),
-                    "days": max(0, time_to_race.days),
-                    "hours": max(0, time_to_race.seconds // 3600),
-                    "minutes": max(0, (time_to_race.seconds % 3600) // 60),
-                    "seconds": max(0, time_to_race.seconds % 60)
-                },
-                "pick_deadline": {
-                    "total_seconds": max(0, int(time_to_deadline.total_seconds())),
-                    "days": max(0, time_to_deadline.days),
-                    "hours": max(0, time_to_deadline.seconds // 3600),
-                    "minutes": max(0, (time_to_deadline.seconds % 3600) // 60),
-                    "seconds": max(0, time_to_deadline.seconds % 60)
-                }
-            },
-            "picks_locked": picks_locked,
-            "simulated_time": simulated_time.isoformat(),
-            "scenario": scenario,
-            "available_scenarios": list(test_scenarios.keys())
-        })
-        
-    except Exception as e:
-        print(f"Error in test countdown: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/test_countdown_page")
-def test_countdown_page():
-    """Test countdown page with scenario buttons"""
-    return render_template('test_countdown.html')
 
 @app.route("/set_simulated_time")
 def set_simulated_time():

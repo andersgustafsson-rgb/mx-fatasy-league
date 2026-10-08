@@ -9,8 +9,24 @@ import re
 from datetime import datetime, timedelta
 from functools import wraps
 
-from flask import flash, redirect, request, session, url_for
+from flask import abort, flash, redirect, request, session, url_for
 from models import User, db
+
+
+def _dev_bootstrap_allowed() -> bool:
+    """Legacy create/debug bootstrap URLs — off by default; never on Render."""
+    if str(os.environ.get("RENDER", "")).lower() in ("1", "true", "yes"):
+        return False
+    return str(os.environ.get("ALLOW_DEV_BOOTSTRAP", "")).strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def _reject_dev_bootstrap():
+    """404 so scanners don't learn that the route exists."""
+    abort(404)
 
 
 def is_admin_user() -> bool:
