@@ -1185,6 +1185,8 @@ def _normalize_countdown_series(raw: str | None) -> str | None:
         "MXON": "MXON",
         "MXONATIONS": "MXON",
         "MOTOCROSSOFNATIONS": "MXON",
+        "MXSM": "MXSM",
+        "MOTOCROSSSM": "MXSM",
     }
     return aliases.get(key)
 
@@ -1608,6 +1610,21 @@ def admin_seed_mxgp():
         info = ensure_mxgp_scaffold()
         invalidate_series_status_cache()
         return jsonify({"message": "MXGP scaffold seeded/verified", **info})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/admin/seed_mxsm", methods=["GET", "POST"])
+def admin_seed_mxsm():
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    try:
+        from mxsm_fantasy import ensure_mxsm_scaffold
+
+        info = ensure_mxsm_scaffold()
+        invalidate_series_status_cache()
+        return jsonify({"message": "MXSM scaffold seeded/verified", **info})
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
@@ -7993,6 +8010,8 @@ def series_page(series_id):
             series_code = "MXON"
         elif series.name == "MXGP":
             series_code = "MXGP"
+        elif series.name == "MXSM":
+            series_code = "MXSM"
 
         next_race = None
         if ama_chain:
@@ -8280,8 +8299,22 @@ def race_picks_page(competition_id):
             if not is_admin_user():
                 flash("MXGP är under construction.", "info")
                 return redirect(url_for("index"))
-    
-    
+
+    if (getattr(comp, "series", None) or "").upper() == "MXSM":
+        try:
+            from mxsm_fantasy import mxsm_user_can_play
+
+            if not mxsm_user_can_play(is_admin=is_admin_user()):
+                flash(
+                    "MXSM är under construction — tippa öppnar till 2027-säsongen.",
+                    "info",
+                )
+                return redirect(url_for("index"))
+        except Exception:
+            if not is_admin_user():
+                flash("MXSM är under construction.", "info")
+                return redirect(url_for("index"))
+
     # Use the unified picks lock check function
     picks_locked = is_picks_locked(comp)
     preseason_locked = is_picks_preseason_locked(comp)
@@ -19407,6 +19440,13 @@ def init_database():
                     invalidate_series_status_cache()
                 except Exception as seed_err:
                     print(f"Warning: MXGP scaffold seed failed: {seed_err}")
+                try:
+                    from mxsm_fantasy import ensure_mxsm_scaffold
+
+                    ensure_mxsm_scaffold()
+                    invalidate_series_status_cache()
+                except Exception as seed_err:
+                    print(f"Warning: MXSM scaffold seed failed: {seed_err}")
             except Exception as e:
                 print(f"Warning: Could not create tables (they may already exist): {e}")
             

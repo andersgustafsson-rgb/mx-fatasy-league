@@ -90,6 +90,7 @@ def build_series_status_list() -> list[dict]:
         "MXGP": 5,
         "MXON": 6,
         "MXoN": 6,
+        "MXSM": 7,
     }
     all_series.sort(key=lambda s: series_order.get(s.name, 999))
 
@@ -110,6 +111,9 @@ def build_series_status_list() -> list[dict]:
             continue
         # One MXGP homepage card only (2027 UC). Keep 2026 series in DB for calendar/admin.
         if s.name == "MXGP" and int(getattr(s, "year", 0) or 0) != 2027:
+            continue
+        # MXSM: homepage shows 2027 UC card only.
+        if s.name == "MXSM" and int(getattr(s, "year", 0) or 0) != 2027:
             continue
         # AMA tippa: once next year's Series exists, drop prior year from Välj Serie
         # (finished seasons live in Fantasy-arkiv — not as Avslutad/Startar-om twins).
@@ -135,6 +139,8 @@ def build_series_status_list() -> list[dict]:
             series_code = "MXON"
         elif s.name == "MXGP":
             series_code = "MXGP"
+        elif s.name == "MXSM":
+            series_code = "MXSM"
 
         series_year = int(getattr(s, "year", 0) or 0)
 
@@ -217,6 +223,13 @@ def build_series_status_list() -> list[dict]:
                             ),
                             None,
                         )
+            except Exception:
+                under_construction = True
+        elif series_code == "MXSM":
+            try:
+                from mxsm_fantasy import mxsm_public_play_enabled
+
+                under_construction = not mxsm_public_play_enabled()
             except Exception:
                 under_construction = True
 

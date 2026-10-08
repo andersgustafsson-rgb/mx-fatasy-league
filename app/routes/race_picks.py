@@ -363,6 +363,18 @@ def save_picks():
             if not is_admin_user():
                 return jsonify({"error": "MXGP är under construction."}), 403
 
+    if series_u == "MXSM":
+        try:
+            from mxsm_fantasy import mxsm_user_can_play
+
+            if not mxsm_user_can_play(is_admin=is_admin_user()):
+                return jsonify({
+                    "error": "MXSM är under construction — tippa öppnar till 2027."
+                }), 403
+        except Exception:
+            if not is_admin_user():
+                return jsonify({"error": "MXSM är under construction."}), 403
+
     # Use the unified picks lock check function
     picks_locked = is_picks_locked(comp)
 

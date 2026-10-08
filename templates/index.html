@@ -1014,8 +1014,20 @@
       background-color: #0f172a !important;
       min-height: 180px;
     }
+    /* MXSM — dark slate + subtle blue/yellow nod (Swedish), no photo yet */
+    .bg-mxsm {
+      background-image:
+        linear-gradient(145deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 58, 95, 0.88) 55%, rgba(15, 23, 42, 0.95) 100%),
+        radial-gradient(ellipse at 80% 20%, rgba(254, 240, 138, 0.12), transparent 50%) !important;
+      background-size: cover !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      background-color: #0f172a !important;
+      min-height: 180px;
+    }
     .home-series-card.bg-mxon:hover,
     .home-series-card.bg-mxgp:hover,
+    .home-series-card.bg-mxsm:hover,
     .home-series-card.bg-wsx:hover,
     .home-series-card.bg-supercross:hover,
     .home-series-card.bg-motocross:hover,
@@ -4957,6 +4969,8 @@
       const n = String(name || '').toLowerCase();
       if (n.includes('mxon') || n === 'mxon') return 'MXON';
       if (n.includes('mxgp')) return 'MXGP';
+      // MXSM before generic motocross / smx so it does not map to AMA MX or SMX
+      if (n.includes('mxsm') || n === 'motocross sm' || n.includes('motocrosssm')) return 'MXSM';
       if (n.includes('wsx')) return 'WSX';
       if (n.includes('supercross')) return 'SX';
       if (n.includes('smx')) return 'SMX';
@@ -5015,15 +5029,19 @@
       if (code === 'SX' || raw === 'Supercross') label = 'AMA Supercross';
       else if (code === 'MX' || raw === 'Motocross') label = 'AMA Pro Motocross';
       else if (code === 'MXON' || raw === 'MXON' || raw === 'MXoN') label = 'MXoN';
+      else if (code === 'MXSM' || raw === 'MXSM') label = 'MXSM';
       const year = serie?.year;
       if (year && (code === 'SX' || code === 'MX' || code === 'SMX' || raw === 'SMX Finals')) {
         return `${label} (${year})`;
+      }
+      if (year && code === 'MXSM') {
+        return `MXSM · Motocross SM (${year})`;
       }
       return label;
     }
 
     function isTippaOnlyHomeSeries(code) {
-      return code === 'WSX' || code === 'MXON' || code === 'MXGP';
+      return code === 'WSX' || code === 'MXON' || code === 'MXGP' || code === 'MXSM';
     }
 
     /** AMA series for season-team LB (hidden on tippa-only MXON/WSX/MXGP). */
@@ -5144,7 +5162,7 @@
     }
 
     function sortSeriesByNextRace(seriesList) {
-      const order = { SX: 1, MX: 2, SMX: 3, WSX: 4, MXGP: 5, MXON: 6 };
+      const order = { SX: 1, MX: 2, SMX: 3, WSX: 4, MXGP: 5, MXON: 6, MXSM: 7 };
       return [...(Array.isArray(seriesList) ? seriesList : [])].sort((a, b) => {
         const ka = seriesNextRaceSortKey(a);
         const kb = seriesNextRaceSortKey(b);
@@ -5194,7 +5212,8 @@
       if (preferred === 'WSX' && validCodes.has('WSX')) return 'WSX';
       if (preferred === 'MXON' && validCodes.has('MXON')) return 'MXON';
       if (preferred === 'MXGP' && validCodes.has('MXGP')) return 'MXGP';
-      if (preferred && preferred !== 'WSX' && preferred !== 'MXON' && preferred !== 'MXGP' && validCodes.has(preferred)) return preferred;
+      if (preferred === 'MXSM' && validCodes.has('MXSM')) return 'MXSM';
+      if (preferred && preferred !== 'WSX' && preferred !== 'MXON' && preferred !== 'MXGP' && preferred !== 'MXSM' && validCodes.has(preferred)) return preferred;
       return validCodes.has(nextActive) ? nextActive : 'SX';
     }
 
@@ -5981,7 +6000,7 @@
 
     function _homeSeasonTeamStripHtml(seriesCode) {
       const seriesU = String(seriesCode || '').toUpperCase();
-      if (['WSX', 'MXON', 'MXGP'].includes(seriesU)) return '';
+      if (['WSX', 'MXON', 'MXGP', 'MXSM'].includes(seriesU)) return '';
       const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
       const st = window.__HOME_SEASON_TEAM__;
       const riders = Array.isArray(st?.riders) ? st.riders : [];
@@ -7246,6 +7265,8 @@
             backgroundClass = 'bg-wsx';
           } else if (nameLower.includes('mxgp') || codeLower === 'mxgp') {
             backgroundClass = 'bg-mxgp';
+          } else if (codeLower === 'mxsm' || nameLower.includes('mxsm')) {
+            backgroundClass = 'bg-mxsm';
           } else if (nameLower.includes('motocross') || codeLower === 'mx') {
             backgroundClass = 'bg-motocross';
           }
@@ -7259,6 +7280,8 @@
             inlineBg = 'background-image: url(\"/static/images/mxon/ernee_aerial.jpg\") !important; background-size: cover !important; background-position: center 40% !important; background-repeat: no-repeat !important; background-color: transparent !important;';
           } else if (backgroundClass === 'bg-mxgp') {
             inlineBg = 'background-image: url("/static/images/mxgp_hero.jpg") !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; background-color: transparent !important;';
+          } else if (backgroundClass === 'bg-mxsm') {
+            inlineBg = 'background-color: #0f172a !important; background-image: linear-gradient(145deg, rgba(15,23,42,0.92), rgba(30,58,95,0.88), rgba(15,23,42,0.95)) !important;';
           }
 
           const hintText = isSelected
