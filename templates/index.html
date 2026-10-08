@@ -7085,10 +7085,35 @@
           return;
         }
         
-        // AMA = ett kort; närmaste kommande race överst; avslutade sist (vald = highlight only)
-        const orderedSeries = sortSeriesByNextRace(collapseAmaSeriesForHome(series));
+        // AMA = ett kort; närmaste kommande race överst; avslutade → Fantasy-arkiv
+        const eligible = (Array.isArray(series) ? series : []).filter((s) => {
+          if (!s) return false;
+          if (s.under_construction) return true;
+          if (s.next_race) return true;
+          if (s.is_active) return true;
+          return false;
+        });
+        const orderedSeries = sortSeriesByNextRace(collapseAmaSeriesForHome(eligible));
         const nextUpCode = resolveDefaultHomeSeries(orderedSeries);
         const featuredCode = homeSelectedSeries || nextUpCode;
+
+        // Adapt grid to card count — avoid empty 2-col cells when few series
+        const nCards = orderedSeries.length;
+        const gridCols =
+          nCards <= 1
+            ? 'grid-cols-1'
+            : nCards === 2
+              ? 'grid-cols-1 sm:grid-cols-2'
+              : 'grid-cols-1 md:grid-cols-2';
+        seriesContainer.className = `grid ${gridCols} gap-4 home-series-accordion`;
+
+        if (!orderedSeries.length) {
+          const emptyMsg = (typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en')
+            ? 'No series found'
+            : 'Inga serier hittades';
+          seriesContainer.innerHTML = `<div class="text-center text-gray-400 py-8 col-span-full">${emptyMsg}</div>`;
+          return;
+        }
         
         function formatIsoDateSv(iso) {
           if (!iso) return '';

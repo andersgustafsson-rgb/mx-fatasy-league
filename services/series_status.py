@@ -263,14 +263,12 @@ def build_series_status_list() -> list[dict]:
                 picks_preseason = False
 
         # Finished seasons without upcoming races belong in Fantasy-arkiv, not Välj Serie.
-        # Exception: MXoN stays selectable so the home topplista remains after archive.
         if (
             not under_construction
             and not is_currently_active
             and next_race is None
             and s.end_date
             and current_date > s.end_date
-            and series_code != "MXON"
         ):
             continue
 
