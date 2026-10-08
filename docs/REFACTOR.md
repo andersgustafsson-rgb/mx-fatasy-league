@@ -138,5 +138,16 @@ Web Push subscribe/status/admin diagnostics → `app/routes/push_api.py`
 
 `main.py` ~26.0k rader.
 
-**Nästa kandidater:** tippa/race-picks API routes; schema-`_ensure_*`
-när Alembic täcker.
+## Skiva 17a ✅ (säker del — helpers only)
+
+Tippa-domän utan route-flytt:
+- `_my_picks_api_dict`, `_user_picks_status_code`, `_picks_status_summary`,
+  `_initial_wizard_step` → `services/race_picks.py`
+- `_ensure_user_picks_snapshot_if_locked` → `services/picks_snapshots.py`
+- Re-export från `main` — alla call sites oförändrade
+- Portrait-helpers kvar i `main` (lazy `_main()`)
+- Routes (`get_my_picks` / `save_picks` / …) **kvar i main** tills 17b
+
+`main.py` ~25.7k rader.
+
+**Nästa:** skiva 17b tippa API-routes (när 17a är grön i prod); schema-`_ensure_*`.

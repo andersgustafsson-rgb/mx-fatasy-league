@@ -16,7 +16,7 @@ from models import (
     WildcardPick,
     db,
 )
-from services.picks_lock import is_picks_deadline_passed
+from services.picks_lock import is_picks_deadline_passed, is_picks_locked
 
 
 def build_picks_snapshot_payload(user_id: int, competition_id: int) -> dict:
@@ -228,3 +228,43 @@ def auto_ensure_picks_snapshots_if_locked(comp: Competition | None) -> None:
 
 # Back-compat alias
 _auto_ensure_picks_snapshots_if_locked = auto_ensure_picks_snapshots_if_locked
+
+
+def ensure_user_picks_snapshot_if_locked(
+    user_id: int, comp: Competition
+) -> PicksSnapshot | None:
+    """Create a snapshot for one user when picks are locked (not the whole competition)."""
+    if not is_picks_locked(comp):
+        return None
+
+    competition_id = int(comp.id)
+    snap = PicksSnapshot.query.filter_by(user_id=user_id, competition_id=competition_id).first()
+    if snap:
+        return snap
+
+    payload = build_picks_snapshot_payload(user_id, competition_id)
+    has_any = bool(payload.get("race_picks")) or bool(payload.get("holeshot_picks")) or (
+        payload.get("wildcard_pick") is not None
+    )
+    if not has_any:
+        return None
+
+    try:
+        snap = PicksSnapshot(
+            user_id=user_id,
+            competition_id=competition_id,
+            payload_json=json.dumps(payload, separators=(",", ":")),
+            source="auto_lock",
+        )
+        db.session.add(snap)
+        db.session.commit()
+        return snap
+    except Exception:
+        db.session.rollback()
+        return PicksSnapshot.query.filter_by(
+            user_id=user_id, competition_id=competition_id
+        ).first()
+
+
+# Back-compat alias
+_ensure_user_picks_snapshot_if_locked = ensure_user_picks_snapshot_if_locked
