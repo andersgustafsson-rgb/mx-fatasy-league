@@ -130,5 +130,13 @@ direkt. Förarbete till tippa-route-extraktion.
 
 `main.py` ~26.2k rader.
 
-**Nästa kandidater:** tippa/race-picks API routes; push-routes;
-schema-`_ensure_*` när Alembic täcker.
+## Skiva 16 ✅
+
+Web Push subscribe/status/admin diagnostics → `app/routes/push_api.py`
+(samma URL:er, inkl. `/api/push/challenges/*` alias). Test-push i
+`debug_tools` orörd.
+
+`main.py` ~26.0k rader.
+
+**Nästa kandidater:** tippa/race-picks API routes; schema-`_ensure_*`
+när Alembic täcker.
