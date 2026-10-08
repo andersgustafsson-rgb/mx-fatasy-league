@@ -146,8 +146,17 @@ Tippa-domän utan route-flytt:
 - `_ensure_user_picks_snapshot_if_locked` → `services/picks_snapshots.py`
 - Re-export från `main` — alla call sites oförändrade
 - Portrait-helpers kvar i `main` (lazy `_main()`)
-- Routes (`get_my_picks` / `save_picks` / …) **kvar i main** tills 17b
 
-`main.py` ~25.7k rader.
+## Skiva 17b ✅
 
-**Nästa:** skiva 17b tippa API-routes (när 17a är grön i prod); schema-`_ensure_*`.
+Tippa JSON API (samma URL:er):
+- Crowd-helpers → `services/race_picks.py`
+- `get_my_picks`, `crowd_picks_summary`, `get_other_users_picks`,
+  `save_picks`, `clear_my_picks` → `app/routes/race_picks.py`
+- HTML `race_picks_page` kvar i `main`
+- SMX/`_can_view_*` via lazy `_main()`; WSX via `wsx_fantasy`
+- `social_recap_service` importerar crowd-helper direkt
+
+`main.py` ~24.9k rader.
+
+**Nästa:** schema-`_ensure_*` / Alembic; ev. `race_picks_page` HTML senare.

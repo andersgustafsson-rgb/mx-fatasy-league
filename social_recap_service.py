@@ -800,7 +800,7 @@ def _select_fun_facts_for_display(
 
 
 def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str, str]]:
-    from main import _build_crowd_picks_summary
+    from services.race_picks import _build_crowd_picks_summary
 
     crowd = _build_crowd_picks_summary(competition_id, comp, ensure_snapshots=True)
     n_lineups = int(crowd.get("n_lineups") or 0)
