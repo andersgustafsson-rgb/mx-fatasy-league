@@ -399,9 +399,9 @@ def calculate_scores(comp_id: int):
     from main import (  # noqa: WPS433
         invalidate_homepage_result_caches,
         recalculate_season_team_total_points,
-        resolve_league_challenges_for_competition,
         update_league_points_for_competition,
     )
+    from services.league_challenges import resolve_league_challenges_for_competition
 
     all_season_teams = SeasonTeam.query.all()
     for team in all_season_teams:

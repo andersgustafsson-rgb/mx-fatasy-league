@@ -111,5 +111,15 @@ Legacy debug / one-shot fix / test-bootstrap (~46 routes, ~2200 rader) →
 `create_test_data`, `get_smx_qualification_points`, `get_current_time`.
 `main.py` ~27.7k rader. Bonus: tom `else:` i `results_admin` CSV-upload (bröt blueprint).
 
-**Nästa kandidater:** league challenges → service; AMA tippa-routes;
-fler `fix_*`-helpers som redan är schema-patches (kan städas bort när Alembic täcker).
+## Skiva 14 ✅
+
+League challenges (1v1 duels):
+- Domänlogik → `services/league_challenges.py` (~1k rader)
+- API + admin routes → `app/routes/league_challenges.py` (samma URL:er)
+- `shame_for` template global + `league_detail_page` kvar i `main.py`
+- `services/scoring.py` importerar `resolve_league_challenges_for_competition` direkt
+
+`main.py` ~26.4k rader.
+
+**Nästa kandidater:** AMA/tippa race-picks routes; fler schema-`_ensure_*`
+(kan städas när Alembic täcker); push-routes nära challenges.
