@@ -3556,7 +3556,7 @@
               </div>
               <div class="home-ui-panel__body">
                 <p class="text-xs text-slate-400 mb-3 text-center sm:text-left">
-                  AMA / SMX är kombinerad tippa + säsongsteam (SX + MX + SMX). WSX, MXoN och MXGP har egna listor — oberoende av valt seriekort.
+                  AMA / SMX är kombinerad tippa + säsongsteam (SX + MX + SMX). MXoN och MXGP har egna listor — oberoende av valt seriekort.
                 </p>
                 <div id="leaderboard-fantasy-boards" class="home-standings-grid">
                   <div class="home-standings-card__empty" style="grid-column:1/-1">Laddar topplistor…</div>
@@ -4428,13 +4428,6 @@
           sub: isEn ? 'SX · MX · SMX · team' : 'SX · MX · SMX · team',
           empty: isEn ? 'No AMA points yet.' : 'Inga AMA-poäng ännu.',
           load: () => _fetchLeaderboardRows('/get_season_leaderboard'),
-        },
-        {
-          id: 'wsx',
-          title: 'WSX Fantasy',
-          sub: '2026',
-          empty: isEn ? 'No WSX points yet.' : 'Inga WSX-poäng ännu.',
-          load: () => _fetchLeaderboardRows('/get_wsx_leaderboard?year=2026', { wrapKey: 'leaderboard' }),
         },
         {
           id: 'mxon',
