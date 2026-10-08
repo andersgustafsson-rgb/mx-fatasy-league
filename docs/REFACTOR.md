@@ -24,6 +24,7 @@ Mål: tunnare `main.py`, logik i `services/` och routes i `app/routes/`.
 | 8 | **WSX seed/roster** → `wsx_fantasy.py` | ✅ Klar | Calendar/roster/entry sync ute ur `main.py`; re-export oförändrade call sites |
 | 9 | **AMA/SMX seed** → `ama_series_seed.py` | ✅ Klar | 2026 dates + SMX meta + boot-orchestrator; 2027 calendar kvar i `ama_2027_calendar` |
 | 10 | **Auth** → `auth_helpers.py` + `app/routes/auth.py` | ✅ Klar | Login/register/OAuth/logout; delade helpers; endpoint-alias behåller `url_for('login')` |
+| 11 | **CSV upload/import** → `results_admin.py` | ✅ Klar | Entry-list + race-results CSV; död unreachable kod bort |
 
 ## Skiva 1 ✅
 
@@ -88,5 +89,12 @@ Login/register/forgot/reset/Google/logout → `app/routes/auth.py`.
 `admin.py` / `api.py` / `results_admin.py` använder shared helpers (inga lokala kopior).  
 Bare endpoints (`login`, `register`, …) aliasas som public-skivan.
 
-**Nästa kandidater:** CSV upload-routes; league challenges → service;
-root-script quarantine; AMA tippa-routes.
+## Skiva 11 ✅
+
+Entry-list upload/import + race-results CSV (`upload_*`, `preview_*`, `import_*`,
+`get_competitions_for_import`) → `app/routes/results_admin.py`.  
+Oanvänd unreachable dubblett efter `import_race_results_complete` borttagen.  
+Samma URL:er (blueprint utan prefix) — admin UI oförändrad.
+
+**Nästa kandidater:** league challenges → service; root-script quarantine;
+AMA tippa-routes.
