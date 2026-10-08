@@ -121,5 +121,14 @@ League challenges (1v1 duels):
 
 `main.py` ~26.4k rader.
 
-**Nästa kandidater:** AMA/tippa race-picks routes; fler schema-`_ensure_*`
-(kan städas när Alembic täcker); push-routes nära challenges.
+## Skiva 15 ✅
+
+PicksSnapshot helpers → `services/picks_snapshots.py`
+(`build_picks_snapshot_payload`, `ensure_picks_snapshots_for_competition`,
+auto-lock throttle). Re-export från `main`; `social_recap_service` importerar
+direkt. Förarbete till tippa-route-extraktion.
+
+`main.py` ~26.2k rader.
+
+**Nästa kandidater:** tippa/race-picks API routes; push-routes;
+schema-`_ensure_*` när Alembic täcker.

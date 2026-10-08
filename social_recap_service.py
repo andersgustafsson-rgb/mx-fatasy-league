@@ -707,7 +707,10 @@ def _rider_podium(
 
 
 def _iter_pick_payloads(competition_id: int) -> list[tuple[int, dict]]:
-    from main import _build_picks_snapshot_payload, ensure_picks_snapshots_for_competition
+    from services.picks_snapshots import (
+        _build_picks_snapshot_payload,
+        ensure_picks_snapshots_for_competition,
+    )
 
     try:
         ensure_picks_snapshots_for_competition(int(competition_id), source="social_recap")
