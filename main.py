@@ -1474,8 +1474,8 @@ def ensure_wsx_series_and_competitions():
 def ensure_wsx_2026(*, deactivate_2025: bool = True) -> dict:
     """Upsert WSX 2026 Series + GPs (official calendar from worldsupercrosschampionship.com).
 
-    R05 South African GP has city/date TBA — created without event_date until announced.
-    Competitions are matched by (name, series_id) so 2025 rows are never overwritten.
+    Oct 2026: remaining season cancelled after Canadian GP only — soft-cancel those rounds
+    and close the series window so homepage tippa no longer advertises WSX as upcoming.
     """
     from datetime import date as _date
     from datetime import time as _time
@@ -1487,8 +1487,8 @@ def ensure_wsx_2026(*, deactivate_2025: bool = True) -> dict:
             name='WSX',
             year=2026,
             start_date=_date(2026, 8, 8),
-            end_date=_date(2026, 12, 5),
-            is_active=True,
+            end_date=_date(2026, 8, 8),
+            is_active=False,
             points_system='standard',
         )
         db.session.add(wsx)
@@ -1496,8 +1496,9 @@ def ensure_wsx_2026(*, deactivate_2025: bool = True) -> dict:
         created_series = True
     else:
         wsx.start_date = _date(2026, 8, 8)
-        wsx.end_date = _date(2026, 12, 5)
-        wsx.is_active = True
+        # Season ended after Canadian GP (remaining rounds cancelled Oct 2026).
+        wsx.end_date = _date(2026, 8, 8)
+        wsx.is_active = False
 
     if deactivate_2025:
         old = Series.query.filter_by(name='WSX', year=2025).first()
@@ -1506,16 +1507,26 @@ def ensure_wsx_2026(*, deactivate_2025: bool = True) -> dict:
 
     # name, date|None, timezone, start_time HH:MM local (track/show start when known)
     comps_spec = [
-        ('Canadian GP', _date(2026, 8, 8), 'America/Edmonton', '19:30'),  # Calgary / McMahon
-        ('British GP', _date(2026, 10, 10), 'Europe/London', None),  # Birmingham
-        ('Buenos Aires City GP', _date(2026, 10, 24), 'America/Argentina/Buenos_Aires', None),
-        ('Australian GP', _date(2026, 11, 21), 'Australia/Brisbane', None),  # Gold Coast
-        ('South African GP', None, 'Africa/Johannesburg', None),  # city & date TBA
-        ('New Zealand GP', _date(2026, 12, 5), 'Pacific/Auckland', None),  # Christchurch finale
+        ('Canadian GP', _date(2026, 8, 8), 'America/Edmonton', '19:30'),  # Calgary / McMahon — only round that ran
+        ('British GP', _date(2026, 10, 10), 'Europe/London', None),  # Birmingham — cancelled
+        ('Buenos Aires City GP', _date(2026, 10, 24), 'America/Argentina/Buenos_Aires', None),  # cancelled
+        ('Australian GP', _date(2026, 11, 21), 'Australia/Brisbane', None),  # Gold Coast — cancelled
+        ('South African GP', None, 'Africa/Johannesburg', None),  # cancelled (city/date was TBA)
+        ('New Zealand GP', _date(2026, 12, 5), 'Pacific/Auckland', None),  # Christchurch — cancelled
     ]
+    cancelled_rounds = frozenset(
+        {
+            "British GP",
+            "Buenos Aires City GP",
+            "Australian GP",
+            "South African GP",
+            "New Zealand GP",
+        }
+    )
 
     created_comps = 0
     updated_comps = 0
+    cancelled_comps = 0
     comp_ids = []
     for n, d, tz, start_hhmm in comps_spec:
         comp = Competition.query.filter_by(name=n, series_id=wsx.id).first()
@@ -1549,20 +1560,34 @@ def ensure_wsx_2026(*, deactivate_2025: bool = True) -> dict:
                 comp.start_time = _time(hour=hh, minute=mm)
             except Exception:
                 pass
+        if n in cancelled_rounds:
+            if not getattr(comp, "is_cancelled", False):
+                cancelled_comps += 1
+            comp.is_cancelled = True
+        elif n == "Canadian GP":
+            comp.is_cancelled = False
         db.session.flush()
         comp_ids.append(comp.id)
 
     db.session.commit()
+    # Homepage series cards are cached — force refresh after calendar change.
+    global _SERIES_STATUS_CACHE
+    _SERIES_STATUS_CACHE = None
     info = {
         "series_id": wsx.id,
         "year": 2026,
         "created_series": created_series,
         "created_competitions": created_comps,
         "updated_competitions": updated_comps,
+        "cancelled_competitions": cancelled_comps,
         "competition_ids": comp_ids,
         "rounds": [c[0] for c in comps_spec],
+        "season_concluded": True,
     }
-    print(f"[WSX-SEED] WSX 2026 OK series_id={wsx.id} created={created_comps} updated={updated_comps}")
+    print(
+        f"[WSX-SEED] WSX 2026 OK series_id={wsx.id} created={created_comps} "
+        f"updated={updated_comps} cancelled={cancelled_comps} (season ended after Canadian GP)"
+    )
     return info
 
 
