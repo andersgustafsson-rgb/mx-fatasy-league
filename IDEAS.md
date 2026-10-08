@@ -28,7 +28,38 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 | # | Idé | Status | Kommentar |
 |---|-----|--------|-----------|
 | 1 | **MXGP (FIM Motocross World Championship)** | 🚧 Scaffold (admin) | Tippa-only: UC-kort, 2027 provisional kalender (20 GP), trackmaps i `static/trackmaps/MXGP/`, admin test-GP, MXGP+MX2 topp 6 + HS Race 1 + kval (ingen WC). Publik tippa låst tills `MXGP_PUBLIC_PLAY`. Se launch-lista nedan. |
-| 2 | **Svenska SM (motocross)** | 💡 Idé | Nationellt SM — intressant för svensk målgrupp. Scope/klasser/kalender TBD. Bollades 17 sep 2026. |
+| 2 | **MXSM (Motocross SM)** | 🚧 UC-kort 2027 | Seriekort “Kommer 2027”, `mxsm_fantasy.py` (`MXSM_PUBLIC_PLAY=False`), ingen tippa/kalender/roster än. Se roadmap nedan. Bollades 8 okt 2026. |
+
+---
+
+## MXSM roadmap (2027) — glöm inte
+
+**Läge nu:** homepage UC-kort + Series 2027. Väntar på kalender / klasser / förare innan mer kod.
+
+**Riktning (skiss, ej låst i kod):**
+
+| Del | V1-förslag |
+|-----|------------|
+| Tippa | Topp 5 MX1 + topp 5 MX2 (+ holeshot ×2). Skippa wildcard först. |
+| Säsongsteam | Ja, men **mini-team** (t.ex. 3 förare) — eller soft launch tippa-only → team från race 2–3. |
+| Poäng | Egen MXSM-ställning (som MXoN/MXGP), inte blandat med AMA. |
+| Publikt | Låst tills `MXSM_PUBLIC_PLAY` flippas. |
+
+**Feature-roadmap:**
+
+- [x] **UC-seriekort 2027** — `mxsm_fantasy.ensure_mxsm_scaffold`, series_status, tippa-gate.
+- [ ] **Kalender + banor + tider** — när officiell/preliminär lista finns → seed competitions + countdown/schema.
+- [ ] **Klasser + roster / entry** — MX1/MX2 (eller vad SM kallar dem) + nummer.
+- [ ] **Tippa v1** — topp 5+5 + HS; scoring + LB; flippa `MXSM_PUBLIC_PLAY`.
+- [ ] **Mini-säsongsteam** — lättare än AMA (färre slots / lägre budget).
+- [ ] **Derby-race (extra)** — ett utsett race/säsong med tippa-multiplikator (t.ex. ×1,5) + ev. “Derby-kung”-mini-LB. Nästan gratis att bygga.
+- [ ] **Underdog-chip (senare)** — 1×/säsong: markera en tippad underdog → dubbla poäng om hen överpresterar; chip bränns annars.
+- [ ] **Hemmabaneboost (senare)** — per bana: favorit-/hemmakung-lista; bonus om tippad hemmakung levererar. Kräver admin-lista `track → riders`.
+- [ ] **Klubbligor (senare)** — privata ligor scoped till MXSM-poäng (klubb/kompis-paddock), ev. klubbpokal.
+- [ ] **Copy / manual / SEO** — spelmanual + ev. `/tippa-mxsm` när tippa närmar sig.
+- [ ] **Hero-bild till seriekort** — byt gradient mot riktig SM-paddock/bana när ni har foto.
+
+**Medvetet senare / low prio:** live moto2-omlås, väder-mudder-bonus, distrikts-“lokalhjälte”-slot.
 
 ---
 
