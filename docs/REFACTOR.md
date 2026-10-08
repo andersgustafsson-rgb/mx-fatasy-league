@@ -22,6 +22,7 @@ Mål: tunnare `main.py`, logik i `services/` och routes i `app/routes/`.
 | 6 | SEO tippa-sidor → public blueprint | ✅ Klar | Helpers → `services/seo_tippa.py`; routes → `public` |
 | 7 | Dubbletter + bulk/WSX import-routes | ✅ Klar | Tidrapport/reminders-dubbletter bort; import-routes → `results_admin` |
 | 8 | **WSX seed/roster** → `wsx_fantasy.py` | ✅ Klar | Calendar/roster/entry sync ute ur `main.py`; re-export oförändrade call sites |
+| 9 | **AMA/SMX seed** → `ama_series_seed.py` | ✅ Klar | 2026 dates + SMX meta + boot-orchestrator; 2027 calendar kvar i `ama_2027_calendar` |
 
 ## Skiva 1 ✅
 
@@ -73,5 +74,11 @@ WSX 2025/2026 series seed, 2026 roster, Canadian GP entry list, round-only wildc
 och `results_admin` fungerar oförändrat. Portrait-helpers (`_wsx_static_portrait_rel` m.m.)
 stannar i `main` (UI); seed anropar dem lazy.
 
-**Nästa kandidater:** AMA seed-konsolidering; auth → egen blueprint; CSV upload-routes;
+## Skiva 9 ✅
+
+`ensure_ama_2026_series_dates`, `ensure_smx_2026_competition_meta` + boot-orchestrator
+`run_ama_smx_boot_seeds` / `ensure_ama_2027_calendar_with_trackmaps` → `ama_series_seed.py`.
+`ama_2027_calendar.py` och `official_smx_2026.py` orörda som källor.
+
+**Nästa kandidater:** auth → helpers + blueprint; CSV upload-routes;
 league challenges → service; root-script quarantine.
