@@ -197,4 +197,17 @@ MXoN tippa:
 
 `main.py` ~23.8k rader.
 
-**Nästa:** Ligor (user routes); Alembic-parity; ev. `race_picks_page` HTML.
+## Skiva 22 ✅
+
+User-ligor (pages + CRUD):
+- `/leagues`, browse/leaderboard, detail, create/join/leave/edit/delete,
+  request/approve/reject, `/api/leagues/leaderboard|stats`
+  → `app/routes/leagues.py`
+- Digest-helpers (`_league_summary_for_user`, race matrix, …) kvar i `main`
+  (proxied via `_main`) tills ev. skiva 23
+- Bare endpoint-aliaser för `url_for`
+
+`main.py` ~23.2k rader.
+
+**Nästa:** League digest-helpers → `services/leagues.py`; Alembic-parity;
+ev. `race_picks_page` HTML.
