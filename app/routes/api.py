@@ -1018,9 +1018,9 @@ def cancel_competition(competition_id: int):
 		db.session.commit()
 		try:
 			# Drop homepage series-status cache so cancelled races disappear promptly
-			import main as _main
-			if hasattr(_main, '_SERIES_STATUS_CACHE'):
-				_main._SERIES_STATUS_CACHE = None
+			from services.series_status import invalidate_series_status_cache
+
+			invalidate_series_status_cache()
 		except Exception:
 			pass
 		label = 'cancelled' if cancelled else 'återställd'

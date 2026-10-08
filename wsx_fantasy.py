@@ -35,9 +35,9 @@ CLASS_SX2 = "wsx_sx2"
 def _invalidate_series_status_cache() -> None:
     """Clear homepage series-card cache without importing main at module load."""
     try:
-        import main as _main
+        from services.series_status import invalidate_series_status_cache
 
-        _main._SERIES_STATUS_CACHE = None
+        invalidate_series_status_cache()
     except Exception:
         pass
 

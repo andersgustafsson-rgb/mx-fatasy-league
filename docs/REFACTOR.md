@@ -177,5 +177,16 @@ Invite / Pit Pass:
 
 `main.py` ~24.4k rader.
 
-**Nästa:** Alembic-parity audit; ev. `race_picks_page` HTML;
-fler små route-kluster i main.
+## Skiva 20 ✅
+
+Series status (homepage “Välj Serie”):
+- Helpers + cache → `services/series_status.py`
+- `/api/series_status`, `/api/my_series_picks_status` → `app/routes/series_status.py`
+- Cache-invalidering via `invalidate_series_status_cache()` (main/wsx/api)
+
+Även: Track Maps under Spel & underhållning visar bara SX **2027+**
+(2026 dold), titel uppdaterad.
+
+`main.py` ~24.0k rader.
+
+**Nästa:** Alembic-parity; MXoN picks routes; ev. `race_picks_page` HTML.
