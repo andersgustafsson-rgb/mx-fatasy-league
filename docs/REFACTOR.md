@@ -159,4 +159,14 @@ Tippa JSON API (samma URL:er):
 
 `main.py` ~24.9k rader.
 
-**Nästa:** schema-`_ensure_*` / Alembic; ev. `race_picks_page` HTML senare.
+## Skiva 18 ✅ (move-only)
+
+Runtime schema `_ensure_*` + `_sqlite_add_column_if_missing` →
+`services/schema_patches.py`. Re-export från `main` — boot/`init_database`
+oförändrad. **Inga patches borttagna** (Alembic täcker ännu inte allt).
+Din kväll one-shot kvar i `main` (lazy från race_recap ensure).
+
+`main.py` ~24.6k rader.
+
+**Nästa:** invite/share-routes; Alembic-parity audit (skiva 19+);
+ev. `race_picks_page` HTML.
