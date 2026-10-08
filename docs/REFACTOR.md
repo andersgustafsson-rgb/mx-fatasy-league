@@ -189,4 +189,12 @@ Series status (homepage “Välj Serie”):
 
 `main.py` ~24.0k rader.
 
-**Nästa:** Alembic-parity; MXoN picks routes; ev. `race_picks_page` HTML.
+## Skiva 21 ✅
+
+MXoN tippa:
+- `/mxon_picks/<id>`, `/save`, `/mine` → `app/routes/mxon_picks.py`
+- Bare endpoint-aliaser (`mxon_picks_page`, …) för `url_for` / invite / race_picks-redirect
+
+`main.py` ~23.8k rader.
+
+**Nästa:** Ligor (user routes); Alembic-parity; ev. `race_picks_page` HTML.
