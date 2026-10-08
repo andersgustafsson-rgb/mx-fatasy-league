@@ -21,6 +21,7 @@ Mål: tunnare `main.py`, logik i `services/` och routes i `app/routes/`.
 | 5 | Kundmail / Zendesk | ✅ Klar | Routes → `app/routes/kundmail.py`; services fanns redan |
 | 6 | SEO tippa-sidor → public blueprint | ✅ Klar | Helpers → `services/seo_tippa.py`; routes → `public` |
 | 7 | Dubbletter + bulk/WSX import-routes | ✅ Klar | Tidrapport/reminders-dubbletter bort; import-routes → `results_admin` |
+| 8 | **WSX seed/roster** → `wsx_fantasy.py` | ✅ Klar | Calendar/roster/entry sync ute ur `main.py`; re-export oförändrade call sites |
 
 ## Skiva 1 ✅
 
@@ -63,4 +64,14 @@ Siddata → `services/seo_tippa.py`. `url_for('manual_page')` m.m. bevaras via e
    (`fetch_racerx_results`, `bulk_preview/import`, WSX official fetch/import/sync, `clear_competition_class_results`).  
    Anropar `services/results_import` + lazy `main`-helpers (ingen beteendeförändring).
 
-**Nästa kandidater:** CSV entry/results upload-routes; auth → egen blueprint; league challenges → service.
+## Skiva 8 ✅
+
+WSX 2025/2026 series seed, 2026 roster, Canadian GP entry list, round-only wildcards,
+`wsx_roster_query` / `prune_off_roster_wsx_picks` → `wsx_fantasy.py` (samma mönster som MXGP/MXoN).
+
+`main.py` re-exporterar symbolerna så boot, admin (`/admin/seed_wsx*`), `seed_wsx_2026.py`
+och `results_admin` fungerar oförändrat. Portrait-helpers (`_wsx_static_portrait_rel` m.m.)
+stannar i `main` (UI); seed anropar dem lazy.
+
+**Nästa kandidater:** AMA seed-konsolidering; auth → egen blueprint; CSV upload-routes;
+league challenges → service; root-script quarantine.

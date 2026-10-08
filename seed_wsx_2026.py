@@ -14,8 +14,8 @@ os.environ.setdefault("FLASK_ENV", "development")
 os.environ.setdefault("DATABASE_URL", "sqlite:///fantasy_mx_local.db")
 os.environ.pop("RENDER", None)
 
-from main import (  # noqa: E402
-    app,
+from main import app  # noqa: E402
+from wsx_fantasy import (  # noqa: E402
     ensure_wsx_2026,
     ensure_wsx_2026_roster,
     sync_wsx_canadian_gp_entry_list,
