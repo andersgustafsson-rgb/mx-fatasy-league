@@ -362,6 +362,13 @@ def get_weather_for_competition(comp) -> dict[str, Any]:
     unavailable = {"available": False}
     if comp is None or not getattr(comp, "event_date", None):
         return unavailable
+    # Open-Meteo forecast horizon is ~16 days — skip far-future races (no spam/latency).
+    try:
+        event_d = comp.event_date if isinstance(comp.event_date, date) else date.fromisoformat(str(comp.event_date)[:10])
+        if (event_d - date.today()).days > 16:
+            return unavailable
+    except Exception:
+        return unavailable
     geo = resolve_track_geo(getattr(comp, "name", "") or "")
     if not geo:
         return unavailable

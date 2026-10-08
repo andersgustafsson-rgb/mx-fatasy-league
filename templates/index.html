@@ -5296,13 +5296,17 @@
       try {
         const seriesQ = homeSelectedSeries ? `&series=${encodeURIComponent(homeSelectedSeries)}` : '';
         const response = await fetch(`/race_countdown?mode=real${seriesQ}`);
+        if (!response.ok) {
+          throw new Error(`race_countdown HTTP ${response.status}`);
+        }
         const data = await response.json();
-        
-        
+
         if (data.error) {
           document.getElementById('real-countdown-race-name').textContent = 'Inga races';
           document.getElementById('real-race-countdown').textContent = '--:--:--';
           document.getElementById('real-deadline-countdown').textContent = '--:--:--';
+          _realCountdownSeconds.race = null;
+          _realCountdownSeconds.deadline = null;
           updateRaceHeroMeta(null);
           updateRaceDayWeather(null);
           setSidebarRaceVisibility(false);
@@ -5314,12 +5318,16 @@
           return;
         }
 
+        if (!data.next_race || !data.next_race.name) {
+          throw new Error('race_countdown missing next_race');
+        }
+
         if (data.series) {
           homeSelectedSeries = data.series;
           markSelectedSeriesCard(data.series);
           updateAmaOnlyHomeUi();
         }
-        
+
         // Update race name (hero + sidebar)
         setSidebarRaceVisibility(true);
         document.getElementById('real-countdown-race-name').textContent = data.next_race.name;
@@ -5335,7 +5343,7 @@
         updateRaceHeroBackground(data.next_race);
         updateNextMxDaysLabel(data);
         updateRaceDayWeather(data.weather);
-        
+
         // Store seconds and render countdowns locally (avoid polling server every second)
         if (data.countdown && data.countdown.race_start && data.countdown.pick_deadline) {
           _realCountdownSeconds.race = Number(data.countdown.race_start.total_seconds || 0);
@@ -5343,18 +5351,26 @@
           _realCountdownLastSyncMs = Date.now();
         }
         renderRealCountdownsFromSeconds();
-        
-        // Update picks status from real countdown (test countdown removed)
-        updateRealPicksStatus(data);
-        
+
+        // Picks CTA / sidebar — isolate so a UI glitch doesn't wipe the hero title
+        try {
+          updateRealPicksStatus(data);
+        } catch (picksErr) {
+          console.warn('updateRealPicksStatus:', picksErr);
+        }
+
       } catch (error) {
         console.error('Error fetching real countdown data:', error);
-        document.getElementById('real-countdown-race-name').textContent = 'Fel vid laddning';
-        document.getElementById('real-race-countdown').textContent = '--:--:--';
-        document.getElementById('real-deadline-countdown').textContent = '--:--:--';
-        updateRaceHeroMeta(null);
-        updateRaceDayWeather(null);
-        setSidebarRaceVisibility(false);
+        // Keep last good countdown ticking (common during local Flask reload).
+        // Only show hard error if we never synced successfully.
+        if (_realCountdownSeconds.race == null) {
+          document.getElementById('real-countdown-race-name').textContent = 'Fel vid laddning';
+          document.getElementById('real-race-countdown').textContent = '--:--:--';
+          document.getElementById('real-deadline-countdown').textContent = '--:--:--';
+          updateRaceHeroMeta(null);
+          updateRaceDayWeather(null);
+          setSidebarRaceVisibility(false);
+        }
       }
     }
 
