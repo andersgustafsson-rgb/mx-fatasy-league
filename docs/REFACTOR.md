@@ -104,5 +104,12 @@ Samma URL:er (blueprint utan prefix) — admin UI oförändrad.
 3. **Öppna debug/fix-URL:er** utan admin → `_reject_dev_bootstrap()` (404 i prod).
 4. Mindre DEBUG-printbrus i `results_admin` CSV-kod.
 
-**Nästa kandidater:** league challenges → service; fler admin-only legacy `/fix_*`
-som redan är schema-patches; AMA tippa-routes.
+## Skiva 13 ✅
+
+Legacy debug / one-shot fix / test-bootstrap (~46 routes, ~2200 rader) →
+`app/routes/debug_tools.py`. Samma URL:er (ingen prefix). Lazy `_main()` för
+`create_test_data`, `get_smx_qualification_points`, `get_current_time`.
+`main.py` ~27.7k rader. Bonus: tom `else:` i `results_admin` CSV-upload (bröt blueprint).
+
+**Nästa kandidater:** league challenges → service; AMA tippa-routes;
+fler `fix_*`-helpers som redan är schema-patches (kan städas bort när Alembic täcker).

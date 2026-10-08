@@ -854,8 +854,7 @@ def upload_entry_list():
                     lines = f.readlines()[:10]
                     for i, line in enumerate(lines, 1):
                         print(f"  {i}: {line.strip()}")
-            else:
-            
+
             return jsonify({
                 "success": True,
                 "message": f"File {filename} uploaded successfully"
@@ -906,21 +905,17 @@ def import_entry_lists_new():
             file_age = current_time - west_file.stat().st_mtime
             if file_age < recent_threshold:
                 entry_lists.append(("data/Entry_List_250_west.csv", "250cc"))
-            else:
-        
+
         if east_file.exists():
             file_age = current_time - east_file.stat().st_mtime
             if file_age < recent_threshold:
                 entry_lists.append(("data/Entry_List_250_east.csv", "250cc"))
-            else:
-            
+
         if four_fifty_file.exists():
             file_age = current_time - four_fifty_file.stat().st_mtime
             if file_age < recent_threshold:
                 entry_lists.append(("data/Entry_List_450.csv", "450cc"))
-            else:
-        
-        
+
         all_riders = []
         results = {}
         
