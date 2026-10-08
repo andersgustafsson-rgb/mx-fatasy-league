@@ -543,7 +543,6 @@ def debug_clear_my_picks():
         return jsonify({"error": "not_logged_in"}), 401
     
     uid = session["user_id"]
-    print(f"DEBUG: debug_clear_my_picks called for user {uid}")
     
     # Delete all picks for this user
     deleted_picks = RacePick.query.filter_by(user_id=uid).delete()
@@ -552,7 +551,6 @@ def debug_clear_my_picks():
     
     db.session.commit()
     
-    print(f"DEBUG: Deleted {deleted_picks} picks, {deleted_holeshots} holeshots, {deleted_wildcards} wildcards")
     
     return jsonify({
         "message": f"Cleared {deleted_picks} picks, {deleted_holeshots} holeshots, {deleted_wildcards} wildcards",
@@ -758,7 +756,6 @@ def debug_user_scores(username):
     if not user:
         return jsonify({"error": "User not found"}), 404
     
-    print(f"DEBUG: Checking scores for user {username} (ID: {user.id})")
     
     # Get all CompetitionScore entries for this user
     competition_scores = CompetitionScore.query.filter_by(user_id=user.id).all()
@@ -795,11 +792,8 @@ def debug_user_scores(username):
             "competition_name": comp.name if comp else "Unknown",
             "points": score.total_points
         })
-        print(f"DEBUG: {username} has {score.total_points} points from {comp.name if comp else 'Unknown'}")
     
     total_from_scores = sum(s["points"] for s in result["competition_scores"])
-    print(f"DEBUG: {username} total from CompetitionScore: {total_from_scores}")
-    print(f"DEBUG: {username} SeasonTeam total_points: {season_team.total_points if season_team else 0}")
     
     return jsonify(result)
 
@@ -810,7 +804,6 @@ def fix_league_images():
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
-    print("DEBUG: fix_league_images called")
     
     all_leagues = League.query.all()
     fixed_count = 0
@@ -823,7 +816,6 @@ def fix_league_images():
             
             # If image file doesn't exist, clear the image_url
             if not os.path.exists(image_path):
-                print(f"DEBUG: Image file missing for league {league.name}, clearing image_url")
                 league.image_url = None
                 fixed_count += 1
     
@@ -843,7 +835,6 @@ def fix_my_league_images():
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
     
-    print("DEBUG: fix_my_league_images called for user", session["user_id"])
     
     # Get user's leagues
     user_leagues = db.session.query(League).join(LeagueMembership).filter(
@@ -860,7 +851,6 @@ def fix_my_league_images():
             
             # If image file doesn't exist, clear the image_url
             if not os.path.exists(image_path):
-                print(f"DEBUG: Image file missing for user's league {league.name}, clearing image_url")
                 league.image_url = None
                 fixed_count += 1
     
@@ -911,7 +901,6 @@ def fix_profile_columns():
     """Fix profile columns - no login required for debugging"""
     if not _dev_bootstrap_allowed():
         _reject_dev_bootstrap()
-    print("DEBUG: fix_profile_columns called")
     
     try:
         # Rollback any existing transaction first
@@ -930,9 +919,8 @@ def fix_profile_columns():
         for sql in columns_to_add:
             try:
                 db.session.execute(db.text(sql))
-                print(f"DEBUG: Executed: {sql}")
             except Exception as e:
-                print(f"DEBUG: Error executing {sql}: {e}")
+                pass
         
         db.session.commit()
         
@@ -941,7 +929,6 @@ def fix_profile_columns():
             "columns_added": len(columns_to_add)
         })
     except Exception as e:
-        print(f"DEBUG: Error adding profile columns: {e}")
         try:
             db.session.rollback()
         except:
@@ -970,10 +957,9 @@ def fix_column_public():
         if 'postgresql' in str(db.engine.url):
             # PostgreSQL syntax - alter column type
             db.session.execute(db.text("ALTER TABLE users ALTER COLUMN profile_picture_url TYPE TEXT;"))
-            print("DEBUG: Changed profile_picture_url column to TEXT")
         else:
+            pass
             # SQLite doesn't support ALTER COLUMN, but TEXT is default anyway
-            print("DEBUG: SQLite detected - TEXT is default for profile_picture_url")
         
         db.session.commit()
         
@@ -983,7 +969,6 @@ def fix_column_public():
             "status": "success"
         })
     except Exception as e:
-        print(f"DEBUG: Error updating column: {e}")
         try:
             db.session.rollback()
         except:
@@ -1263,7 +1248,6 @@ def fix_column_now():
         if 'postgresql' in str(db.engine.url):
             # PostgreSQL syntax - alter column type
             db.session.execute(db.text("ALTER TABLE users ALTER COLUMN profile_picture_url TYPE TEXT;"))
-            print("DEBUG: Changed profile_picture_url column to TEXT")
             db.session.commit()
             return jsonify({
                 "message": "Profile picture column updated to TEXT - base64 images will now work!",
@@ -1275,7 +1259,6 @@ def fix_column_now():
                 "status": "info"
             })
     except Exception as e:
-        print(f"DEBUG: Error updating column: {e}")
         try:
             db.session.rollback()
         except:
@@ -1295,9 +1278,8 @@ def fix_column_now():
         for sql in columns_to_add:
             try:
                 db.session.execute(db.text(sql))
-                print(f"DEBUG: Executed: {sql}")
             except Exception as e:
-                print(f"DEBUG: Error executing {sql}: {e}")
+                pass
         
         db.session.commit()
         
@@ -1308,7 +1290,6 @@ def fix_column_now():
         
     except Exception as e:
         db.session.rollback()
-        print(f"DEBUG: Error adding profile columns: {e}")
         return jsonify({
             "error": f"Failed to add profile columns: {str(e)}"
         }), 500
@@ -1320,7 +1301,6 @@ def fix_missing_images():
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
-    print("DEBUG: fix_missing_images called")
     
     try:
         riders = Rider.query.all()
@@ -1331,7 +1311,6 @@ def fix_missing_images():
                 # Check if image file exists
                 image_path = os.path.join(current_app.static_folder, rider.image_url)
                 if not os.path.exists(image_path):
-                    print(f"DEBUG: Image file missing for {rider.name}: {rider.image_url}")
                     rider.image_url = None
                     fixed_count += 1
         
@@ -1344,7 +1323,6 @@ def fix_missing_images():
         
     except Exception as e:
         db.session.rollback()
-        print(f"DEBUG: Error fixing missing images: {e}")
         return jsonify({
             "error": f"Failed to fix missing images: {str(e)}"
         }), 500
@@ -1560,7 +1538,6 @@ def fix_database_route():
         
         # Don't create riders here - use rider management as master list
         # Riders should only be created/updated through rider management interface
-        print('DEBUG: Skipping rider creation - use rider management interface instead')
         
         
         db.session.commit()
@@ -1616,7 +1593,6 @@ def create_test_user_route():
     
     # Don't create riders here - use rider management as master list
     # Riders should only be created/updated through rider management interface
-    print("DEBUG: Skipping rider creation in create_test_data - use rider management interface instead")
     if False:  # Never create riders here
         riders_450 = [
             {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 3},

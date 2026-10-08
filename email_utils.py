@@ -93,19 +93,15 @@ def send_email(
         msg.attach(html_part)
         
         # Connect to Gmail SMTP server
-        print(f"DEBUG: Connecting to Gmail SMTP server...")
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()  # Enable encryption
-        print(f"DEBUG: Logging in to Gmail...")
         server.login(gmail_user, gmail_password)
         
         # Send email
-        print(f"DEBUG: Sending email to {to_email}...")
         text = msg.as_string()
         server.sendmail(from_email, to_email, text)
         server.quit()
         
-        print(f"DEBUG: ✅ Email sent successfully to {to_email}")
         return True, None
         
     except smtplib.SMTPAuthenticationError as e:

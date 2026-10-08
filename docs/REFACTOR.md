@@ -209,5 +209,16 @@ User-ligor (pages + CRUD):
 
 `main.py` ~23.2k rader.
 
+## Skiva 23 ✅
+
+Logg-/perf-städ:
+- ~240 `print("DEBUG:…")` bort (main, tippa, scoring, picks_lock, CSV, e-post, …)
+- Boot-rad "pipeline minutes test" → vanlig success-print
+- Scoring: bort "Robban B"-debug + onödig `all_user_picks`-query per user
+  (laddade alla picks utan att använda dem)
+- Duplicate-warnings nedtonade (en rad istället för per-pick spam)
+
+`debug_tools`-routes kvar men gated (admin/dev) — drabbar inte normal trafik.
+
 **Nästa:** League digest-helpers → `services/leagues.py`; Alembic-parity;
 ev. `race_picks_page` HTML.

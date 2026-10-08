@@ -127,11 +127,9 @@ def get_other_users_picks(competition_id):
                 is not None
             )
         
-        print(f"DEBUG: get_other_users_picks - Competition: {comp.name}, picks_locked: {picks_locked}, has_results: {has_results}")
         
         if not _main()._can_view_other_users_picks(comp):
             error_msg = f"Picks måste vara låsta eller race måste vara färdigt för att se andra användares picks (picks_locked={picks_locked}, has_results={has_results})"
-            print(f"DEBUG: get_other_users_picks - Access denied: {error_msg}")
             return jsonify({"error": error_msg}), 403
 
         if series_u == "MXON":
@@ -174,8 +172,6 @@ def get_other_users_picks(competition_id):
         current_user_id = session["user_id"]
         other_users = User.query.filter(User.id != current_user_id).all()
         
-        print(f"DEBUG: Found {len(other_users)} other users")
-        print(f"DEBUG: Competition {comp.name} is WSX: {is_wsx}")
     
         users_picks = []
         for user in other_users:
@@ -215,7 +211,6 @@ def get_other_users_picks(competition_id):
                         "class": rider.class_name,
                         "rider_name": f"#{rider_number} {rider_name} ({bike_brand})"
                     }
-                    print(f"DEBUG: Created pick_data: {pick_data}")
                     
                     # Handle both regular classes and WSX classes
                     if is_wsx:
@@ -296,11 +291,8 @@ def get_other_users_picks(competition_id):
                         "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
                     }
             
-            print(f"DEBUG: User {user.username} - picks: {len(picks)}, holeshot_450: {holeshot_450 is not None}, holeshot_250: {holeshot_250 is not None}, wildcard: {wildcard is not None}")
             
             if picks or holeshot_450 or holeshot_250 or wildcard:  # Only include users who have made any picks
-                print(f"DEBUG: Including user {user.username} - picks_450: {picks_450}")
-                print(f"DEBUG: Including user {user.username} - picks_250: {picks_250}")
                 user_data = {
                     "username": user.username,
                     "display_name": getattr(user, 'display_name', None) or user.username,
@@ -311,12 +303,8 @@ def get_other_users_picks(competition_id):
                     "wildcard": wildcard,
                     "is_wsx": is_wsx  # Include series info for frontend
                 }
-                print(f"DEBUG: Adding user data: {user_data['display_name']} (username: {user_data['username']})")
                 users_picks.append(user_data)
-            else:
-                print(f"DEBUG: Excluding user {user.username} - no picks found")
-        
-        print(f"DEBUG: Returning {len(users_picks)} users with picks")
+
         crowd_payload = None
         try:
             crowd_payload = rp._build_crowd_picks_summary(
@@ -562,10 +550,6 @@ def save_picks():
     deleted_holeshots = HoleshotPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
     deleted_wildcards = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
     deleted_quals = QualifyingPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
-    print(
-        f"DEBUG: Deleted {deleted_picks} old picks, {deleted_holeshots} old holeshots, "
-        f"{deleted_wildcards} old wildcards, {deleted_quals} old qualifying"
-    )
 
     saved_picks = 0
     for p in picks:
@@ -586,7 +570,6 @@ def save_picks():
             )
         )
         saved_picks += 1
-        print(f"DEBUG: Added pick - {rider.name} at position {pos}")
 
     if series_u == "WSX":
         hs_class_450, hs_class_250 = "wsx_sx1", "wsx_sx2"
@@ -673,10 +656,5 @@ def clear_my_picks(competition_id: int):
 
     db.session.commit()
 
-    print(
-        f"DEBUG: clear_my_picks – user_id={uid}, competition_id={competition_id}, "
-        f"deleted race={deleted_race}, holeshot={deleted_holo}, qualifying={deleted_qual}, "
-        f"wildcard_rider_cleared={bool(wc)}"
-    )
 
     return jsonify({"message": "Alla dina val för denna tävling har rensats."}), 200

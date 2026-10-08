@@ -42,7 +42,6 @@ def main():
         
         # Debug: print existing CompetitionImage records
         existing_images = CompetitionImage.query.all()
-        print(f"DEBUG: Found {len(existing_images)} existing CompetitionImage records")
         for img in existing_images:
             print(f"  - Competition {img.competition_id}: {img.image_url}")
         

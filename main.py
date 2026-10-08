@@ -2083,7 +2083,6 @@ def unsubscribe_email():
     if not already:
         user.email_opt_out = True
         db.session.commit()
-        print(f"DEBUG: email_opt_out set for user_id={user.id} ({user.email})")
 
     if request.method == "POST":
         return ("OK", 200)
@@ -6671,20 +6670,15 @@ def admin_rider_recent_results():
 @app.route("/profile")
 def profile_page():
     if "user_id" not in session:
-        print("DEBUG: No user_id in session, redirecting to login")
         return redirect(url_for("login"))
     
-    print(f"DEBUG: User ID in session: {session['user_id']}")
     try:
         # Try to get user with new columns first
         user = User.query.get(session["user_id"])
-        print(f"DEBUG: User query result: {user}")
         if not user:
-            print("DEBUG: User not found, redirecting to index")
             flash("Användare hittades inte.", "error")
             return redirect(url_for("index"))
     except Exception as e:
-        print(f"DEBUG: Error loading user profile (likely missing columns): {e}")
         # Rollback any failed transaction
         try:
             db.session.rollback()
@@ -6693,7 +6687,6 @@ def profile_page():
         
         # Try to add missing columns automatically
         try:
-            print("DEBUG: Attempting to add missing profile columns...")
             columns_to_add = [
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);",
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url TEXT;",
@@ -6710,12 +6703,10 @@ def profile_page():
             try:
                 if 'postgresql' in str(db.engine.url):
                     db.session.execute(db.text("ALTER TABLE users ALTER COLUMN profile_picture_url TYPE TEXT;"))
-                    print("DEBUG: Fixed existing profile_picture_url column to TEXT")
             except Exception as alter_error:
-                print(f"DEBUG: Could not alter column (may already be TEXT): {alter_error}")
+                pass
             
             db.session.commit()
-            print("DEBUG: Successfully added/fixed profile columns")
             
             # Now try to get user again
             user = User.query.get(session["user_id"])
@@ -6723,7 +6714,6 @@ def profile_page():
                 flash("Användare hittades inte.", "error")
                 return redirect(url_for("index"))
         except Exception as e2:
-            print(f"DEBUG: Error adding columns or loading user: {e2}")
             # Rollback any failed transaction
             try:
                 db.session.rollback()
@@ -6753,7 +6743,6 @@ def profile_page():
                         self.created_at = None
                 user = SimpleUser(user.id, user.username, user.password_hash)
             except Exception as e3:
-                print(f"DEBUG: Error with basic user query: {e3}")
                 # Rollback any failed transaction
                 try:
                     db.session.rollback()
@@ -6893,13 +6882,11 @@ def update_profile():
             flash("Användare hittades inte.", "error")
             return redirect(url_for("profile_page"))
     except Exception as e:
-        print(f"DEBUG: Error loading user for update: {e}")
         # Try to fix the column issue automatically
         try:
             if 'postgresql' in str(db.engine.url):
                 db.session.execute(db.text("ALTER TABLE users ALTER COLUMN profile_picture_url TYPE TEXT;"))
                 db.session.commit()
-                print("DEBUG: Fixed profile_picture_url column to TEXT in update_profile")
                 # Try to get user again
                 user = User.query.get(session["user_id"])
                 if not user:
@@ -6909,7 +6896,6 @@ def update_profile():
                 flash("Databasen behöver uppdateras. Kontakta admin.", "error")
                 return redirect(url_for("profile_page"))
         except Exception as fix_error:
-            print(f"DEBUG: Could not fix column: {fix_error}")
             flash("Databasen behöver uppdateras. Kontakta admin.", "error")
             return redirect(url_for("profile_page"))
     
@@ -6944,7 +6930,6 @@ def update_profile():
             user.favorite_team = favorite_team
         except AttributeError:
             # Columns don't exist yet, skip profile updates
-            print("DEBUG: Profile columns don't exist yet, skipping profile updates")
             flash("Profilfunktioner kommer att fungera efter databas-uppdatering.", "info")
         
         # Hantera profilbild - försök base64 först, fallback till fil
@@ -6985,7 +6970,6 @@ def update_profile():
                     print(f"Profile picture saved as base64 (size: {len(base64_data)} chars)")
                     flash("Profilbild uppladdad och sparad permanent! 🎉", "success")
                 except Exception as base64_error:
-                    print(f"DEBUG: Base64 save failed, trying file fallback: {base64_error}")
                     # Fallback: spara som fil
                     fname = secure_filename(f"profile_{user.id}_{file.filename}")
                     path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
@@ -6994,7 +6978,6 @@ def update_profile():
                     print(f"Profile picture saved as file: {path}")
                     flash("Profilbild sparad (kommer att försvinna vid deployment). Fixa kolumnen för permanent lagring!", "warning")
                 except AttributeError:
-                    print("DEBUG: profile_picture_url column doesn't exist yet")
                     flash("Profilbild sparad, men kommer att visas efter databas-uppdatering.", "info")
             except Exception as e:
                 print(f"Error saving profile picture: {e}")
@@ -7680,17 +7663,13 @@ def admin_archive_leagues_from_finished(year: int):
 @app.route("/series/<int:series_id>")
 def series_page(series_id):
     """Simple series page that actually works"""
-    print(f"DEBUG: series_page called with series_id={series_id}")
     try:
         # Always rollback first
         db.session.rollback()
-        print(f"DEBUG: Database rollback completed")
         
         # Get series info
         series = Series.query.get(series_id)
-        print(f"DEBUG: Series query result: {series}")
         if not series:
-            print(f"DEBUG: No series found, redirecting to index")
             return redirect(url_for("index"))
         
         # Get competitions for this series (TBA/null dates last — SQLite-safe)
@@ -7703,7 +7682,6 @@ def series_page(series_id):
                 c.id or 0,
             )
         )
-        print(f"DEBUG: Found {len(competitions)} competitions for series {series_id}")
 
         # AMA tippa chain: show SX + MX + SMX schedules together (homepage AMA card)
         schedule_sections = None
@@ -8064,7 +8042,6 @@ def series_page(series_id):
             next_race_bg_url = "images/mxon/ernee_trackmap.jpg"
         
         # Simple template render with all required variables
-        print(f"DEBUG: About to render series_page.html for series {series_id}")
         return render_template("series_page.html", 
                              series=series, 
                              competitions=competitions,
@@ -8088,7 +8065,6 @@ def series_page(series_id):
                              user_logged_in="user_id" in session)
         
     except Exception as e:
-        print(f"DEBUG: Exception in series_page: {e}")
         db.session.rollback()
         return redirect(url_for("index"))
 
@@ -8835,10 +8811,6 @@ def save_season_team():
                         existing_penalty.total_points = (
                             existing_penalty.total_points or 0
                         ) - penalty_points
-                        print(
-                            f"DEBUG: Accumulated -{penalty_points} season-team penalty "
-                            f"(now {existing_penalty.race_points}) for user {uid}"
-                        )
                     else:
                         penalty_score = CompetitionScore(
                             user_id=uid,
@@ -8849,10 +8821,6 @@ def save_season_team():
                             wildcard_points=0,
                         )
                         db.session.add(penalty_score)
-                        print(
-                            f"DEBUG: Applied -{penalty_points} point penalty for "
-                            f"{riders_changed} rider changes to user {uid}"
-                        )
 
         for r in riders:
             db.session.add(SeasonTeamRider(season_team_id=team.id, rider_id=r.id))
@@ -11820,8 +11788,6 @@ def send_bulk_email():
         
         selected_emails = data.get('user_emails', [])  # Optional: list of specific emails to send to
         
-        print(f"DEBUG: Received user_emails: {selected_emails}")
-        print(f"DEBUG: user_emails type: {type(selected_emails)}, length: {len(selected_emails) if selected_emails else 0}")
         
         # IMPORTANT: Only send to selected users if user_emails is provided and not empty
         # If user_emails is explicitly provided (even if empty), don't send to all users
@@ -11834,41 +11800,32 @@ def send_bulk_email():
                 }), 400
             
             # Send to selected users only
-            print(f"DEBUG: Sending to SELECTED users only: {selected_emails}")
             users_to_send = []
             for email in selected_emails:
                 email_clean = email.strip() if email else ""
-                print(f"DEBUG: Looking up user with email: '{email_clean}'")
                 user = User.query.filter_by(email=email_clean).first()
                 if user:
-                    print(f"DEBUG: Found user: {user.username} ({user.email})")
                     if user.email and re.match(email_pattern, user.email.strip()):
                         users_to_send.append(user)
-                        print(f"DEBUG: Added user {user.username} to send list")
                     else:
-                        print(f"DEBUG: User {user.username} email '{user.email}' failed validation")
+                        pass
                 else:
-                    print(f"DEBUG: No user found with email: '{email_clean}'")
+                    pass
         elif selected_emails and len(selected_emails) > 0:
             # Send to selected users only
-            print(f"DEBUG: Sending to SELECTED users only: {selected_emails}")
             users_to_send = []
             for email in selected_emails:
                 email_clean = email.strip() if email else ""
-                print(f"DEBUG: Looking up user with email: '{email_clean}'")
                 user = User.query.filter_by(email=email_clean).first()
                 if user:
-                    print(f"DEBUG: Found user: {user.username} ({user.email})")
                     if user.email and re.match(email_pattern, user.email.strip()):
                         users_to_send.append(user)
-                        print(f"DEBUG: Added user {user.username} to send list")
                     else:
-                        print(f"DEBUG: User {user.username} email '{user.email}' failed validation")
+                        pass
                 else:
-                    print(f"DEBUG: No user found with email: '{email_clean}'")
+                    pass
         else:
             # Send to all users with valid email addresses
-            print(f"DEBUG: No selected emails provided, sending to ALL users with email addresses")
             all_users = User.query.all()
             users_to_send = []
             for user in all_users:
@@ -11889,17 +11846,14 @@ def send_bulk_email():
         sent = 0
         failed = 0
         failed_emails = []
-        print(f"DEBUG: Sending to {len(users_to_send)} users")
         
         # Keep response key name for backwards compatibility with frontend
         email_limit_detected_bulk = False
         
         for user in users_to_send:
             if _user_email_opted_out(user):
-                print(f"DEBUG: Skipping opted-out user {user.username} ({user.email})")
                 continue
             user_name = user.display_name or user.username
-            print(f"DEBUG: Attempting to send email to {user.email} ({user_name})")
             from email_utils import build_unsubscribe_url
             unsub_url = build_unsubscribe_url(base_url, user.id)
             success, error_msg = send_admin_announcement(
@@ -11912,7 +11866,6 @@ def send_bulk_email():
             )
             if success:
                 sent += 1
-                print(f"DEBUG: ✅ Successfully sent to {user.email}")
             else:
                 failed += 1
                 failed_emails.append(user.email)
@@ -11931,11 +11884,9 @@ def send_bulk_email():
                         or ("too many" in error_lower and "request" in error_lower)
                     ):
                         email_limit_detected_bulk = True
-                        print(f"DEBUG: ⚠️ Email limit/quota reached for {user.email}: {error_msg}")
                 else:
-                    print(f"DEBUG: ❌ Failed to send to {user.email}: {error_msg or 'Unknown error'}")
+                    pass
         
-        print(f"DEBUG: send_bulk_email - Email limit detected: {email_limit_detected_bulk}")
         
         return jsonify({
             "success": True,
@@ -12216,8 +12167,6 @@ def send_pick_reminders():
             audience = "missing_or_partial"
         dry_run = bool(data.get("dry_run"))
         
-        print(f"DEBUG: send_pick_reminders - Received user_emails: {selected_emails}")
-        print(f"DEBUG: send_pick_reminders - audience={audience} dry_run={dry_run}")
         
         # Nästa race inkl. WSX (snartaste start / öppna picks)
         next_comp = _next_competition_for_pick_reminders()
@@ -12230,14 +12179,12 @@ def send_pick_reminders():
         
         # Get users - either selected ones or all users with email addresses
         if selected_emails and len(selected_emails) > 0:
-            print(f"DEBUG: send_pick_reminders - Sending to SELECTED users: {selected_emails}")
             users = []
             for email in selected_emails:
                 user = User.query.filter_by(email=email.strip()).first()
                 if user and user.email:
                     users.append(user)
         else:
-            print(f"DEBUG: send_pick_reminders - No selected users, sending to ALL users with email")
             users = User.query.filter(User.email.isnot(None), User.email != '').all()
         
         sent = 0
@@ -12251,7 +12198,6 @@ def send_pick_reminders():
         would_send_users: list[str] = []
         sendgrid_limit_detected = False  # Initialize flag for SendGrid limit detection
         
-        print(f"DEBUG: send_pick_reminders - Processing {len(users)} users")
         
         def _format_pick_deadline_for_email(comp: Competition) -> str:
             """
@@ -12345,9 +12291,7 @@ def send_pick_reminders():
                 trackmap_url = f"{base_url}/static/{hero_rel.lstrip('/')}"
 
         for user in users:
-            print(f"DEBUG: Processing user: {user.username} ({user.email})")
             status = _user_picks_status_code(user.id, next_comp)
-            print(f"DEBUG: User {user.username} picks_status={status}")
 
             if status == "has_picks":
                 already_complete += 1
@@ -12370,7 +12314,6 @@ def send_pick_reminders():
 
             if _user_email_opted_out(user):
                 opted_out += 1
-                print(f"DEBUG: User {user.username} opted out of email reminders - skipping email")
                 # Still allow push if they have it (separate consent)
                 try:
                     import push_service as ps
@@ -12384,10 +12327,9 @@ def send_pick_reminders():
                     if push_result.get("ok"):
                         push_sent += 1
                 except Exception as push_ex:
-                    print(f"DEBUG: Pick reminder push failed for {user.username}: {push_ex}")
+                    pass
                 continue
 
-            print(f"DEBUG: User {user.username} needs reminder ({status}) - sending email")
             user_name = user.display_name or user.username
 
             try:
@@ -12401,9 +12343,8 @@ def send_pick_reminders():
                 )
                 if push_result.get("ok"):
                     push_sent += 1
-                    print(f"DEBUG: ✅ Pick reminder push to {user.username}")
             except Exception as push_ex:
-                print(f"DEBUG: Pick reminder push failed for {user.username}: {push_ex}")
+                pass
 
             try:
                 from email_utils import build_unsubscribe_url
@@ -12429,10 +12370,8 @@ def send_pick_reminders():
                 )
                 if success:
                     sent += 1
-                    print(f"DEBUG: ✅ Reminder sent to {user.username}")
                 else:
                     failed += 1
-                    print(f"DEBUG: Checking error_msg for SendGrid limit: {error_msg}")
                     if error_msg:
                         error_lower = str(error_msg).lower()
                         if (
@@ -12442,11 +12381,10 @@ def send_pick_reminders():
                             or "credits exceeded" in error_lower
                         ):
                             sendgrid_limit_detected = True
-                            print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}: {error_msg}")
                         else:
-                            print(f"DEBUG: ❌ Failed to send reminder to {user.username}: {error_msg}")
+                            pass
                     else:
-                        print(f"DEBUG: ❌ Failed to send reminder to {user.username}: (no error message)")
+                        pass
             except Exception as e:
                 failed += 1
                 error_msg = str(e)
@@ -12458,15 +12396,9 @@ def send_pick_reminders():
                     or "credits exceeded" in exception_str
                 ):
                     sendgrid_limit_detected = True
-                    print(f"DEBUG: ⚠️ SendGrid limit reached (exception) for {user.username}: {error_msg}")
                 else:
-                    print(f"DEBUG: ❌ Exception sending reminder to {user.username}: {error_msg}")
+                    pass
 
-        print(
-            f"DEBUG: send_pick_reminders - Final counts: sent={sent}, push_sent={push_sent}, "
-            f"failed={failed}, already_complete={already_complete}, skipped_audience={skipped_audience}, "
-            f"no_email={no_email}, opted_out={opted_out}, would_send={would_send}, dry_run={dry_run}"
-        )
 
         if dry_run:
             return jsonify({
@@ -12633,7 +12565,6 @@ def submit_results():
         return redirect(url_for("admin_page"))
 
     # Save 450cc/SX1 results
-    print(f"🔍 DEBUG: Processing 450cc/SX1 results. positions_450 length: {len(positions_450)}, riders_450 length: {len(riders_450)}")
     if len(positions_450) != len(riders_450):
         print(f"⚠️ WARNING: Mismatch! positions_450 has {len(positions_450)} elements but riders_450 has {len(riders_450)} elements")
         # Pad the shorter list with zeros
@@ -12644,13 +12575,11 @@ def submit_results():
     
     for i, (pos, rid) in enumerate(zip(positions_450, riders_450)):
         if rid:
-            print(f"🔍 DEBUG: Processing position {pos} with rider {rid}")
             rider_points = None
             if is_wsx and i < len(rider_points_450) and rider_points_450[i]:
                 rider_points = rider_points_450[i]
             
             if complement_mode:
-                print(f"🔍 DEBUG: Complement mode active for position {pos}, rider {rid}")
                 # In complement mode: update existing or add new
                 # Get the rider to check their class
                 rider = Rider.query.get(rid)
@@ -12695,7 +12624,6 @@ def submit_results():
                     else:
                         # No existing result at this position for this class - add new one
                         rider_name = rider.name if rider else "Unknown"
-                        print(f"🔍 DEBUG: No conflict found. Adding new result for {rider_name} at position {pos}")
                         new_result = CompetitionResult(
                             competition_id=comp_id, 
                             rider_id=rid, 
@@ -12858,9 +12786,7 @@ def submit_results():
     
     # Debug: Count results after commit and show details
     total_results = CompetitionResult.query.filter_by(competition_id=comp_id).count()
-    print(f"📊 DEBUG: Total results after commit for competition {comp_id}: {total_results}")
     if complement_mode:
-        print(f"📊 DEBUG: Complement mode was used - results should have been added/updated")
         # Show all results for this competition, grouped by class
         all_results = CompetitionResult.query.filter_by(competition_id=comp_id).order_by(CompetitionResult.position.asc()).all()
         sx1_results = []
@@ -12875,7 +12801,6 @@ def submit_results():
             elif rider_class in ('250cc', 'wsx_sx2'):
                 sx2_results.append(result_info)
             print(f"  - {result_info}")
-        print(f"📊 DEBUG: SX1/450cc results: {len(sx1_results)}, SX2/250cc results: {len(sx2_results)}")
     
     calculate_scores(comp_id)
 
@@ -12941,14 +12866,12 @@ def update_holeshot():
             if existing_hs_450:
                 existing_hs_450.rider_id = hs_450
                 existing_hs_450.class_name = hs_class_450
-                print(f"DEBUG: Updated {hs_class_450} holeshot to rider {hs_450}")
             else:
                 db.session.add(
                     HoleshotResult(
                         competition_id=comp_id, rider_id=hs_450, class_name=hs_class_450
                     )
                 )
-                print(f"DEBUG: Added {hs_class_450} holeshot for rider {hs_450}")
         else:
             HoleshotResult.query.filter(
                 HoleshotResult.competition_id == comp_id,
@@ -12964,14 +12887,12 @@ def update_holeshot():
             if existing_hs_250:
                 existing_hs_250.rider_id = hs_250
                 existing_hs_250.class_name = hs_class_250
-                print(f"DEBUG: Updated {hs_class_250} holeshot to rider {hs_250}")
             else:
                 db.session.add(
                     HoleshotResult(
                         competition_id=comp_id, rider_id=hs_250, class_name=hs_class_250
                     )
                 )
-                print(f"DEBUG: Added {hs_class_250} holeshot for rider {hs_250}")
         else:
             HoleshotResult.query.filter(
                 HoleshotResult.competition_id == comp_id,
@@ -13577,7 +13498,6 @@ def admin_simulate(competition_id):
             global_sim.scenario = 'race_in_3h'
         
         global_sim.active_race_id = competition_id
-        print(f"DEBUG: Set active race to {comp.name} (ID: {competition_id})")
         
         # Also activate the series for this competition
         if comp.series_id:
@@ -13588,11 +13508,9 @@ def admin_simulate(competition_id):
             competition_series = Series.query.get(comp.series_id)
             if competition_series:
                 competition_series.is_active = True
-                print(f"DEBUG: Activated series '{competition_series.name}' for competition '{comp.name}'")
         
         db.session.commit()
     except Exception as e:
-        print(f"DEBUG: Error setting active race: {e}")
         db.session.rollback()
 
     flash(f"Simulerade resultat och picks har lagts in för {comp.name}. Poäng uträknade! Race satt som aktivt.", "success")
@@ -14980,7 +14898,6 @@ def create_trackmaps_route():
     if "user_id" not in session:
         return _redirect_to_login()
     
-    print("DEBUG: Manual track map creation triggered")
     create_trackmap_images()
     return redirect(url_for("trackmaps_page"))
 
@@ -14990,11 +14907,9 @@ def reset_trackmaps_route():
     if "user_id" not in session:
         return _redirect_to_login()
     
-    print("DEBUG: Resetting all track map images")
     # Clear all existing CompetitionImage records
     CompetitionImage.query.delete()
     db.session.commit()
-    print("DEBUG: Cleared all CompetitionImage records")
     
     # Recreate them
     create_trackmap_images()
@@ -15008,16 +14923,13 @@ def list_trackmap_files():
     
     from pathlib import Path
     compressed_dir = Path("static/trackmaps/compressed")
-    print(f"DEBUG: Checking compressed directory: {compressed_dir}")
-    print(f"DEBUG: Directory exists: {compressed_dir.exists()}")
     
     if compressed_dir.exists():
         files = list(compressed_dir.glob("*.jpg"))
-        print(f"DEBUG: Found {len(files)} .jpg files:")
         for file in files:
             print(f"  - {file.name}")
     else:
-        print("DEBUG: Compressed directory does not exist!")
+        pass
     
     return redirect(url_for("trackmaps_page"))
 @app.get("/admin/get_out_status/<int:competition_id>")
@@ -15026,7 +14938,6 @@ def admin_get_out_status(competition_id):
         return jsonify({"error": "unauthorized"}), 403
 
     try:
-        print(f"DEBUG: admin_get_out_status called for competition {competition_id}")
 
         comp = Competition.query.get(competition_id)
         if not comp:
@@ -15053,7 +14964,6 @@ def admin_get_out_status(competition_id):
                 .order_by(Rider.class_name.desc(), Rider.rider_number.asc())
                 .all()
             )
-        print(f"DEBUG: Found {len(riders)} riders (wsx={is_wsx}, mxgp={is_mxgp})")
 
         # out set for this competition
         out_rows = (
@@ -15078,7 +14988,6 @@ def admin_get_out_status(competition_id):
                 tippa_id = by_name.get(key)
                 if tippa_id:
                     out_ids.add(tippa_id)
-        print(f"DEBUG: Found {len(out_ids)} OUT riders for competition {competition_id}")
 
         result = [
             {
@@ -15091,10 +15000,8 @@ def admin_get_out_status(competition_id):
             }
             for r in riders
         ]
-        print(f"DEBUG: Returning {len(result)} riders with OUT status")
         return jsonify(result), 200
     except Exception as e:
-        print(f"DEBUG: Error in admin_get_out_status: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": "internal_error"}), 500
@@ -15110,26 +15017,21 @@ def admin_set_out_status():
     rider_id = data.get("rider_id")
     status = (data.get("status") or "").upper()  # "OUT" eller "CLEAR"
 
-    print(f"DEBUG: admin_set_out_status called - comp_id: {comp_id}, rider_id: {rider_id}, status: {status}")
 
     try:
         comp_id = int(comp_id)
         rider_id = int(rider_id)
     except Exception as e:
-        print(f"DEBUG: Error parsing IDs: {e}")
         return jsonify({"error": "invalid_payload"}), 400
 
     # Validera att tävling och förare finns
     comp = Competition.query.get(comp_id)
     rider = Rider.query.get(rider_id)
     if not comp:
-        print(f"DEBUG: Competition {comp_id} not found")
         return jsonify({"error": "competition_not_found"}), 404
     if not rider:
-        print(f"DEBUG: Rider {rider_id} not found")
         return jsonify({"error": "rider_not_found"}), 404
 
-    print(f"DEBUG: Found competition: {comp.name}, rider: {rider.name}, series: {comp.series}")
 
     if status == "OUT":
         # Set OUT for this competition
@@ -15143,10 +15045,8 @@ def admin_set_out_status():
                 competition_id=comp_id, rider_id=rider_id, status="OUT"
             )
             db.session.add(row)
-            print(f"DEBUG: Created new OUT status for {rider.name} in {comp.name}")
         else:
             row.status = "OUT"
-            print(f"DEBUG: Updated existing OUT status for {rider.name} in {comp.name}")
         
         # IMPORTANT: Also set OUT for all FUTURE competitions in the same series
         # This way, once a rider is OUT, they stay OUT until manually cleared
@@ -15176,17 +15076,14 @@ def admin_set_out_status():
                     )
                     db.session.add(future_row)
                     added_count += 1
-                    print(f"DEBUG: Auto-set OUT for {rider.name} in future competition {future_comp.name}")
                 elif existing.status != "OUT":
                     existing.status = "OUT"
                     added_count += 1
-                    print(f"DEBUG: Updated existing status to OUT for {rider.name} in {future_comp.name}")
             
             if added_count > 0:
-                print(f"DEBUG: Auto-set OUT for {rider.name} in {added_count} future {comp.series} competitions")
+                pass
         
         db.session.commit()
-        print(f"DEBUG: Committed OUT status for {rider.name}")
         return jsonify({
             "ok": True,
             "message": f"Rider set OUT for this competition and all future {comp.series or 'competitions'} in the same series"
@@ -15215,7 +15112,6 @@ def admin_set_out_status():
         ).delete()
         
         db.session.commit()
-        print(f"DEBUG: Cleared OUT status for {rider.name} in {deleted_count} competitions (this + all future {comp.series})")
         return jsonify({
             "ok": True,
             "message": f"Cleared OUT status for {rider.name} in this competition and all future {comp.series} competitions",
@@ -15227,7 +15123,6 @@ def admin_set_out_status():
             competition_id=comp_id, rider_id=rider_id
         ).delete()
         db.session.commit()
-        print(f"DEBUG: Cleared OUT status for {rider.name} in competition {comp.name} only (deleted {deleted_count} rows)")
         return jsonify({
             "ok": True,
             "message": f"Cleared OUT status for {rider.name} in this competition only",
@@ -15305,10 +15200,6 @@ def clear_my_bonus_picks(competition_id: int):
 
     db.session.commit()
 
-    print(
-        f"DEBUG: clear_my_bonus_picks – user_id={uid}, competition_id={competition_id}, "
-        f"deleted holeshot={deleted_holo}, qualifying={deleted_qual}, wildcard_rider_cleared={bool(wc)}"
-    )
 
     return jsonify({
         "message": "Holeshot och bonusval rensade. Topp 6 behölls.",
@@ -16272,7 +16163,6 @@ def clear_my_picks_for_competition(competition_id):
         return jsonify({"error": "not_logged_in"}), 401
     
     uid = session["user_id"]
-    print(f"DEBUG: clear_my_picks_for_competition called for user {uid}, competition {competition_id}")
     
     # Delete picks for this user and competition
     deleted_picks = RacePick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
@@ -16281,7 +16171,6 @@ def clear_my_picks_for_competition(competition_id):
     
     db.session.commit()
     
-    print(f"DEBUG: Deleted {deleted_picks} picks, {deleted_holeshots} holeshots, {deleted_wildcards} wildcards for competition {competition_id}")
     
     return jsonify({
         "message": f"Cleared {deleted_picks} picks, {deleted_holeshots} holeshots, {deleted_wildcards} wildcards for competition {competition_id}",
@@ -16296,7 +16185,6 @@ def clear_admin_results():
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
-    print(f"DEBUG: clear_admin_results called")
     
     # Delete all admin results
     deleted_results = CompetitionResult.query.delete()
@@ -16306,7 +16194,6 @@ def clear_admin_results():
     
     db.session.commit()
     
-    print(f"DEBUG: Deleted {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses")
     
     return jsonify({
         "message": f"Cleared {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses",
@@ -16322,19 +16209,16 @@ def clear_competition_results(competition_id):
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
-    print(f"DEBUG: clear_competition_results called for competition {competition_id}")
     
     # Get competition name for debugging
     comp = Competition.query.get(competition_id)
     comp_name = comp.name if comp else f"Unknown (ID: {competition_id})"
-    print(f"DEBUG: Clearing results for competition: {comp_name}")
     
     # Check what exists before deletion
     existing_results = CompetitionResult.query.filter_by(competition_id=competition_id).count()
     existing_holeshots = HoleshotResult.query.filter_by(competition_id=competition_id).count()
     existing_scores = CompetitionScore.query.filter_by(competition_id=competition_id).count()
     existing_out_status = CompetitionRiderStatus.query.filter_by(competition_id=competition_id).count()
-    print(f"DEBUG: Before deletion - Results: {existing_results}, Holeshots: {existing_holeshots}, Scores: {existing_scores}, Out Status: {existing_out_status} (keeping OUT status)")
     
     # Delete results for this specific competition
     deleted_results = CompetitionResult.query.filter_by(competition_id=competition_id).delete()
@@ -16354,14 +16238,9 @@ def clear_competition_results(competition_id):
     all_season_teams = SeasonTeam.query.all()
     for team in all_season_teams:
         recalculate_season_team_total_points(team)
-        print(
-            f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) "
-            f"to {team.total_points} points based on eligible races"
-        )
     
     db.session.commit()
     
-    print(f"DEBUG: Deleted {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks for competition {competition_id} (kept OUT status)")
     
     return jsonify({
         "message": f"Cleared {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks for competition {competition_id} (kept OUT status)",
@@ -16429,7 +16308,6 @@ def clear_all_user_picks():
         holeshot_picks_count = HoleshotPick.query.count()
         wildcard_picks_count = WildcardPick.query.count()
         
-        print(f"DEBUG: Before clearing - Race picks: {race_picks_count}, Holeshot picks: {holeshot_picks_count}, Wildcard picks: {wildcard_picks_count}")
         
         # Clear all race picks
         RacePick.query.delete()
@@ -16442,11 +16320,9 @@ def clear_all_user_picks():
         
         db.session.commit()
         
-        print(f"DEBUG: After clearing - All picks deleted successfully")
         return jsonify({"message": f"All user picks cleared successfully. Deleted {race_picks_count} race picks, {holeshot_picks_count} holeshot picks, {wildcard_picks_count} wildcard picks."})
     except Exception as e:
         db.session.rollback()
-        print(f"DEBUG: Error clearing picks: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.get("/clear_all_riders")
@@ -16525,7 +16401,6 @@ def update_season_team_points():
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
-    print("DEBUG: update_season_team_points called - calculating based on rider results")
     
     all_season_teams = SeasonTeam.query.all()
     updated_teams = []
@@ -16541,10 +16416,6 @@ def update_season_team_points():
             "new_points": new_points,
             "rider_count": rider_count,
         })
-        print(
-            f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) "
-            f"from {old_points} to {new_points} points"
-        )
     
     db.session.commit()
     
@@ -16590,11 +16461,6 @@ def get_user_total_points():
     total_race_points += transfer_penalty
     total_points = total_race_points + total_holeshot_points + total_wildcard_points
 
-    print(
-        f"DEBUG: get_user_total_points for user {user_id}: race={total_race_points}, "
-        f"holeshot={total_holeshot_points}, wildcard={total_wildcard_points}, "
-        f"transfer_penalty={transfer_penalty}, total={total_points}"
-    )
 
     return jsonify({
         "total_points": total_points,
@@ -18161,7 +18027,6 @@ def add_profile_columns():
     if "user_id" not in session:
         return jsonify({"error": "login_required"}), 401
     
-    print("DEBUG: add_profile_columns called")
 
 @app.get("/backup_profiles")
 def backup_profiles():
@@ -18659,7 +18524,6 @@ def user_race_results(user_id):
         # Get the user to view
         target_user = User.query.get(user_id)
         if not target_user:
-            print(f"DEBUG: User with ID {user_id} not found")
             flash(f"Användaren med ID {user_id} hittades inte.", "error")
             return redirect(url_for("index"))
         
@@ -18862,7 +18726,7 @@ def view_user_profile(user_id):
                             elif rider.class_name == "250cc":
                                 current_picks_250.append(pick_data)
                 else:
-                    print(f"DEBUG: Picks not locked yet, hiding other user's picks for security")
+                    pass
         except Exception as e:
             print(f"Error getting user picks: {e}")
         
@@ -19150,7 +19014,6 @@ def force_create_data_route():
     
     # Don't create riders here - use rider management as master list
     # Riders should only be created/updated through rider management interface
-    print("DEBUG: Skipping rider creation in force_create_data - use rider management interface instead")
     riders_450 = [
         {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 3},
         {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 2},
@@ -19269,7 +19132,6 @@ def force_create_data_route():
     ]
     
     # Don't create riders here - use rider management as master list
-    print("DEBUG: No riders created in force_create_data - use rider management interface instead")
     
     db.session.commit()
     
@@ -19337,9 +19199,7 @@ def create_test_data():
     
     # Don't create riders here - use rider management as master list
     # Riders should only be created/updated through rider management interface
-    print("DEBUG: Skipping rider creation in create_test_data - use rider management interface instead")
     # Don't create riders here - use rider management as master list
-    print("DEBUG: No riders created in create_test_data - use rider management interface instead")
     
     db.session.commit()
 
@@ -19736,7 +19596,7 @@ def init_database():
 print("Starting database initialization...")
 init_success = init_database()
 if init_success:
-    print("✅ Database initialization completed successfully - pipeline minutes test")
+    print("Database initialization completed successfully")
     try:
         with app.app_context():
             _ensure_competition_result_moto_columns()
@@ -21848,7 +21708,6 @@ def set_simulated_time():
     try:
         scenario = request.args.get('scenario', 'race_in_3h')
         competition_id = request.args.get('competition_id')
-        print(f"DEBUG: set_simulated_time called with scenario: {scenario}, competition_id: {competition_id}")
         
         # Update global simulation state in database
         global_sim = GlobalSimulation.query.first()
@@ -21878,7 +21737,6 @@ def set_simulated_time():
             simulated_time = current_real_time
         
         global_sim.simulated_time = simulated_time.isoformat()
-        print(f"DEBUG: Set simulated_time to {simulated_time}, real_start_time to {current_real_time}")
         
         # If competition_id is provided, set it as active race
         if competition_id:
@@ -21887,7 +21745,6 @@ def set_simulated_time():
                 competition = Competition.query.get(competition_id)
                 if competition:
                     global_sim.active_race_id = competition_id
-                    print(f"DEBUG: Set active race to {competition.name} (ID: {competition_id})")
                     
                     # Also activate the series for this competition
                     if competition.series_id:
@@ -21898,11 +21755,10 @@ def set_simulated_time():
                         competition_series = Series.query.get(competition.series_id)
                         if competition_series:
                             competition_series.is_active = True
-                            print(f"DEBUG: Activated series '{competition_series.name}' for competition '{competition.name}'")
                 else:
-                    print(f"DEBUG: Competition with ID {competition_id} not found")
+                    pass
             except ValueError:
-                print(f"DEBUG: Invalid competition_id: {competition_id}")
+                pass
         
         db.session.commit()
         
@@ -21913,7 +21769,6 @@ def set_simulated_time():
         })
         
     except Exception as e:
-        print(f"DEBUG: Error in set_simulated_time: {e}")
         db.session.rollback()
         return jsonify({
             "error": f"Failed to set simulated time: {str(e)}"
@@ -21941,7 +21796,6 @@ def set_active_race():
             if not competition:
                 return jsonify({"error": "Competition not found"}), 404
             
-            print(f"DEBUG: Setting active race - Competition: {competition.name}, Series ID: {competition.series_id}, Date: {competition.event_date}")
             
             # Check if record exists
             existing = GlobalSimulation.query.filter_by(id=1).first()
@@ -21974,10 +21828,8 @@ def set_active_race():
                 competition_series = Series.query.get(competition.series_id)
                 if competition_series:
                     competition_series.is_active = True
-                    print(f"DEBUG: Activated series '{competition_series.name}' for competition '{competition.name}'")
             
             db.session.commit()
-            print(f"DEBUG: Set active race to competition ID: {competition_id}")
             
         except Exception as db_error:
             print(f"Database update failed: {db_error}")
@@ -22084,7 +21936,6 @@ def reset_simulation():
         try:
             db.session.execute(db.text("UPDATE global_simulation SET active = FALSE, active_race_id = NULL WHERE id = 1"))
             db.session.commit()
-            print("DEBUG: Reset simulation to real time")
         except Exception as db_error:
             print(f"Database reset failed: {db_error}")
             db.session.rollback()
@@ -22191,25 +22042,20 @@ def quick_simulation():
         
         # If no competitions found, try to fix by updating existing competitions
         if not competitions:
-            print(f"DEBUG: No competitions found for series_id {series_id}, trying to fix...")
             
             # Get the series name
             series = Series.query.get(series_id)
             if not series:
-                print(f"DEBUG: Series with ID {series_id} not found")
                 
                 # Check what series exist
                 all_series = Series.query.all()
-                print(f"DEBUG: Available series in database: {len(all_series)}")
                 for s in all_series:
-                    print(f"DEBUG: - Series ID {s.id}: {s.name}")
+                    pass
                 
                 # Try to find existing Supercross series (ID 10)
                 if series_id == 1:
-                    print(f"DEBUG: Looking for existing Supercross series...")
                     supercross_series = Series.query.filter_by(name="Supercross").first()
                     if supercross_series:
-                        print(f"DEBUG: Found existing Supercross series with ID {supercross_series.id}")
                         series = supercross_series
                         # Update the series_id to use the correct one
                         series_id = supercross_series.id
@@ -22218,13 +22064,11 @@ def quick_simulation():
                 else:
                     return jsonify({"error": f"Series with ID {series_id} not found and cannot be auto-created"}), 400
             
-            print(f"DEBUG: Found series: {series.name}")
             
             # Check if there are any competitions at all
             all_comps = Competition.query.all()
-            print(f"DEBUG: Total competitions in database: {len(all_comps)}")
             for comp in all_comps:
-                print(f"DEBUG: - {comp.name} (series_id: {comp.series_id})")
+                pass
             
             # Try to find competitions by series name or other criteria
             if series.name == "Supercross":
@@ -22243,25 +22087,20 @@ def quick_simulation():
                     Competition.name.like('%Salt Lake%')
                 ).all()
                 
-                print(f"DEBUG: Found {len(supercross_comps)} potential Supercross competitions")
                 
                 if not supercross_comps:
-                    print(f"DEBUG: No Supercross competitions found at all!")
                     return jsonify({"error": "No Supercross competitions found in database"}), 400
                 
                 # Update them with correct series_id
                 for comp in supercross_comps:
                     comp.series_id = series_id
                     comp.phase = "regular"
-                    print(f"DEBUG: Updated {comp.name} with series_id {series_id}")
                 
                 db.session.commit()
                 
                 # Try again
                 competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
-                print(f"DEBUG: After fix, found {len(competitions)} competitions")
             else:
-                print(f"DEBUG: Series {series.name} is not Supercross, cannot auto-fix")
                 return jsonify({"error": f"Cannot auto-fix series {series.name}"}), 400
         
         if not competitions:
@@ -22325,7 +22164,6 @@ def quick_simulation():
                     )
                     db.session.add(pick)
                     picks_created += 1
-                    print(f"DEBUG: Created pick for user {user.username}: rider {shuffled_riders[position-1].name} at position {position}")
             
             # Generate random results
             import random
@@ -22341,23 +22179,17 @@ def quick_simulation():
                 )
                 db.session.add(result)
                 results_created += 1
-                print(f"DEBUG: Created result: rider {shuffled_riders[position-1].name} at position {position}")
             
             # Commit picks and results before calculating scores
             db.session.commit()
-            print(f"DEBUG: Committed picks and results to database")
             
             # Calculate scores for this competition
-            print(f"DEBUG: About to calculate scores for {competition.name}")
-            print(f"DEBUG: Created {picks_created} picks and {results_created} results")
             calculate_scores(competition.id)
             
             # Debug: Check what scores were generated
             scores_after = CompetitionScore.query.filter_by(competition_id=competition.id).all()
-            print(f"DEBUG: After calculate_scores for {competition.name}:")
             for score in scores_after:
                 user = User.query.get(score.user_id)
-                print(f"DEBUG: - {user.username}: {score.total_points} total ({score.race_points} race + {score.holeshot_points} holeshot + {score.wildcard_points} wildcard)")
             
             results.append({
                 "competition": competition.name,
@@ -22393,7 +22225,6 @@ def generate_simulated_results():
         CompetitionResult.query.filter_by(competition_id=competition_id).delete()
         HoleshotResult.query.filter_by(competition_id=competition_id).delete()
         CompetitionScore.query.filter_by(competition_id=competition_id).delete()
-        print(f"DEBUG: Cleared existing results for competition {competition_id}")
         
         # Get all riders based on class and coast (same logic as race_picks_page)
         riders_450 = Rider.query.filter_by(class_name="450cc").all()
@@ -23165,7 +22996,6 @@ def get_wsx_leaders(year: int | None = None):
         ]
 
     if not wsx_competitions:
-        print(f"DEBUG: No WSX competitions found for year={year}")
         return leaders
 
     comp_ids = [c.id for c in wsx_competitions]
@@ -23230,7 +23060,6 @@ def is_season_active():
         # Check if there's an active race set
         result = db.session.execute(db.text("SELECT active_race_id FROM global_simulation WHERE id = 1")).fetchone()
         if result and result[0]:
-            print(f"DEBUG: is_season_active - Active race found: {result[0]}")
             return True
         
         # Check if there are any competitions with results (indicating season has started)
@@ -23240,14 +23069,11 @@ def is_season_active():
         """)).fetchone()
         
         if competitions_with_results and competitions_with_results[0] > 0:
-            print(f"DEBUG: is_season_active - Found {competitions_with_results[0]} competitions with results")
             return True
         
-        print(f"DEBUG: is_season_active - No active race or results found, season not active")
         return False
         
     except Exception as e:
-        print(f"DEBUG: Exception in is_season_active: {e}")
         return False
 
 # SUPER SIMPLE CSV PARSING - This WILL work!

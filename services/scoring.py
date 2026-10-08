@@ -154,10 +154,6 @@ def calculate_scores(comp_id: int):
     actual_results = CompetitionResult.query.filter_by(competition_id=comp_id).all()
     actual_holeshots = HoleshotResult.query.filter_by(competition_id=comp_id).all()
 
-    print(
-        f"DEBUG: Found {len(users)} users, {len(actual_results)} results, "
-        f"{len(actual_holeshots)} holeshots"
-    )
 
     # Check for duplicates and handle them (keep the one with highest result_id = most recent)
     seen_riders = {}
@@ -173,8 +169,8 @@ def calculate_scores(comp_id: int):
 
     if duplicate_count > 0:
         print(
-            f"⚠️ WARNING: Found {duplicate_count} duplicate results for competition "
-            f"{comp_id}. Using most recent entry for each rider."
+            f"WARNING: Found {duplicate_count} duplicate results for competition "
+            f"{comp_id}; using most recent entry per rider."
         )
 
     actual_results_dict = seen_riders
@@ -205,34 +201,15 @@ def calculate_scores(comp_id: int):
 
         if duplicate_picks:
             print(
-                f"⚠️ WARNING: Found {len(duplicate_picks)} duplicate RacePick entries for "
-                f"{user.username} in competition {comp_id}. Removing duplicates..."
+                f"WARNING: Removed {len(duplicate_picks)} duplicate RacePick rows for "
+                f"{user.username} in competition {comp_id}"
             )
             for dup in duplicate_picks:
-                print(
-                    f"  - Deleting duplicate pick_id={dup.pick_id} for "
-                    f"rider_id={dup.rider_id}, position={dup.predicted_position}"
-                )
                 db.session.delete(dup)
-            # Commit deletions immediately to avoid issues
             db.session.commit()
-            print(f"DEBUG: Kept {len(seen_picks)} unique picks for {user.username}")
 
         # Use only unique picks for scoring
         unique_picks = list(seen_picks.values())
-
-        if user.username == "Robban B":
-            print("DEBUG: ===== Robban B Score Calculation =====")
-            print(f"DEBUG: Found {len(picks)} total picks in database")
-            print(f"DEBUG: Found {len(duplicate_picks)} duplicate picks")
-            print(f"DEBUG: Kept {len(unique_picks)} unique picks after deduplication")
-            for pick in unique_picks:
-                rider = Rider.query.get(pick.rider_id)
-                rider_name = rider.name if rider else f"rider {pick.rider_id}"
-                print(
-                    f"  - Pick: {rider_name} at position {pick.predicted_position} "
-                    f"(pick_id={pick.pick_id})"
-                )
 
         for pick in unique_picks:
             actual_pos_for_pick = (
@@ -267,20 +244,12 @@ def calculate_scores(comp_id: int):
 
         if duplicate_holeshots:
             print(
-                f"⚠️ WARNING: Found {len(duplicate_holeshots)} duplicate HoleshotPick "
-                f"entries for {user.username} in competition {comp_id}. Removing duplicates..."
+                f"WARNING: Removed {len(duplicate_holeshots)} duplicate HoleshotPick rows for "
+                f"{user.username} in competition {comp_id}"
             )
             for dup in duplicate_holeshots:
-                print(
-                    f"  - Deleting duplicate holeshot id={dup.id} for "
-                    f"class={dup.class_name}, rider_id={dup.rider_id}"
-                )
                 db.session.delete(dup)
-            # Commit deletions immediately to avoid issues
             db.session.commit()
-            print(
-                f"DEBUG: Kept {len(seen_holeshots)} unique holeshot picks for {user.username}"
-            )
 
         # Use only unique holeshot picks for scoring
         unique_holeshot_picks = list(seen_holeshots.values())
@@ -361,32 +330,11 @@ def calculate_scores(comp_id: int):
         else:
             score_entry = CompetitionScore(user_id=user.id, competition_id=comp_id)
             db.session.add(score_entry)
-            print(f"DEBUG: Created new score entry for {user.username}")
 
         score_entry.total_points = total_points
         score_entry.race_points = race_points
         score_entry.holeshot_points = holeshot_points
         score_entry.wildcard_points = wildcard_points
-
-        if user.username == "Robban B":
-            print("DEBUG: Robban B FINAL SCORES:")
-            print(f"  - Race points: {race_points}")
-            print(f"  - Holeshot points: {holeshot_points}")
-            print(f"  - Wildcard points: {wildcard_points}")
-            print(f"  - TOTAL: {total_points}")
-            print("DEBUG: ===== End Robban B Calculation =====")
-
-        print(
-            f"DEBUG: {user.username} - Race: {race_points}, Holeshot: {holeshot_points}, "
-            f"Wildcard: {wildcard_points}, Total: {total_points}"
-        )
-
-        # Debug: Check if user has any picks at all
-        all_user_picks = RacePick.query.filter_by(user_id=user.id).all()
-        print(
-            f"DEBUG: {user.username} has {len(all_user_picks)} total picks "
-            f"across all competitions"
-        )
 
     db.session.commit()
 
@@ -406,10 +354,6 @@ def calculate_scores(comp_id: int):
     all_season_teams = SeasonTeam.query.all()
     for team in all_season_teams:
         recalculate_season_team_total_points(team)
-        print(
-            f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) "
-            f"to {team.total_points} points"
-        )
 
     db.session.commit()
     print(f"✅ Poängberäkning klar för tävling ID: {comp_id}")

@@ -128,7 +128,6 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
     bike_brands = {"Honda", "Yamaha", "Kawasaki", "Husqvarna", "GasGas", "KTM", "Suzuki", "Triumph"}
     lines = pasted_text.splitlines()
     results = []
-    print(f"🔍 DEBUG: Parsing {format_type} format with {len(lines)} lines")
     
     for i, raw in enumerate(lines):
         line = raw.strip()
@@ -140,7 +139,6 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
         if re.match(r"^(?:pos(?:ition)?|#|rider|hometown|motos|bike)\b", line, re.IGNORECASE):
             continue
         
-        print(f"🔍 DEBUG: Line {i+1}: '{line}'")
         
         # Handle Supercross format: "JOEY SAVATGY	14	7 (1)	Clermont, FL" or "FREDDIE NOREN	19	LCQ [1 6/6:23.932 (1) H1]	Lidköping, Sweden"
         if format_type == 'supercross':
@@ -150,13 +148,11 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
             if supercross_match:
                 rider_name = supercross_match.group(1).strip()
                 position = int(supercross_match.group(2))
-                print(f"🔍 DEBUG: Supercross match - Position: {position}, Name: '{rider_name}'")
                 # Convert "JOEY SAVATGY" to "Joey Savatgy"
                 rider_name = _title_case_name(rider_name)
                 rider_name = _dedupe_concatenated_name(rider_name)
                 if rider_name:
                     results.append({"position": position, "rider_name": rider_name})
-                    print(f"🔍 DEBUG: Added: {position}. {rider_name}")
                     continue
             
             # Handle LCQ format: "FREDDIE NOREN	19	LCQ [1 6/6:23.932 (1) H1]	Lidköping, Sweden"
@@ -164,16 +160,13 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
             if lcq_match:
                 rider_name = lcq_match.group(1).strip()
                 position = int(lcq_match.group(2))
-                print(f"🔍 DEBUG: LCQ match - Position: {position}, Name: '{rider_name}'")
                 # Convert "FREDDIE NOREN" to "Freddie Noren"
                 rider_name = _title_case_name(rider_name)
                 rider_name = _dedupe_concatenated_name(rider_name)
                 if rider_name:
                     results.append({"position": position, "rider_name": rider_name})
-                    print(f"🔍 DEBUG: Added: {position}. {rider_name}")
                     continue
             
-            print(f"🔍 DEBUG: No Supercross match for line: '{line}'")
             # Don't fall back to Motocross parser if format is Supercross
             continue
         
@@ -231,7 +224,6 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
                     entry["moto_1"] = moto_1
                     entry["moto_2"] = moto_2
                 results.append(entry)
-                print(f"🔍 DEBUG: Motocross/SMX/RacerX match - Position: {position}, Name: '{rider_name}'")
                 continue
 
         # RacerX MX overall with single spaces: "1 Seth Hammaker... 2 - 1 Kawasaki"
@@ -259,9 +251,7 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
                     entry["moto_1"] = moto_1
                     entry["moto_2"] = moto_2
                 results.append(entry)
-                print(f"🔍 DEBUG: MX moto-row match - Position: {position}, Name: '{rider_name}'")
 
-    print(f"🔍 DEBUG: Total parsed results: {len(results)}")
     return results
 
 
