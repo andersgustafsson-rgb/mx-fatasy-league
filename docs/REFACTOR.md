@@ -168,5 +168,14 @@ Din kväll one-shot kvar i `main` (lazy från race_recap ensure).
 
 `main.py` ~24.6k rader.
 
-**Nästa:** invite/share-routes; Alembic-parity audit (skiva 19+);
-ev. `race_picks_page` HTML.
+## Skiva 19 ✅
+
+Invite / Pit Pass:
+- Helpers → `services/invite_share.py`
+- `/start`, `/api/invite-card.png`, `/api/invite_share` → `app/routes/invite.py`
+- Bare endpoint-aliaser (`start_invite`, …) så `url_for` / share-URL:er oförändrade
+
+`main.py` ~24.4k rader.
+
+**Nästa:** Alembic-parity audit; ev. `race_picks_page` HTML;
+fler små route-kluster i main.

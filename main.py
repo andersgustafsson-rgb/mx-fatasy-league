@@ -601,6 +601,25 @@ try:
 except Exception as e:
     print(f"Race picks blueprint not loaded: {e}")
 
+try:
+    from app.routes.invite import bp as invite_bp  # type: ignore
+    app.register_blueprint(invite_bp)
+    # Bare endpoint names used by url_for / _absolute_url / templates
+    for _alias, _rule in (
+        ("start_invite", "/start"),
+        ("api_invite_card_png", "/api/invite-card.png"),
+        ("api_invite_share", "/api/invite_share"),
+    ):
+        bp_ep = f"invite.{_alias}"
+        if bp_ep in app.view_functions and _alias not in app.view_functions:
+            app.add_url_rule(
+                _rule,
+                endpoint=_alias,
+                view_func=app.view_functions[bp_ep],
+            )
+except Exception as e:
+    print(f"Invite blueprint not loaded: {e}")
+
 
 try:
     if 'admin.admin_page' in app.view_functions and 'admin_page' not in app.view_functions:
@@ -2039,251 +2058,16 @@ def admin_email_opt_out():
 
 
 
-def _invite_picks_target() -> tuple[str, str]:
-    """Return (race_name, next_url) for invite / Pit Pass flows."""
-    race = _current_picks_competition()
-    if race and not is_picks_locked(race):
-        if (getattr(race, "series", None) or "").upper() == "MXON":
-            return race.name, url_for("mxon_picks_page", competition_id=race.id)
-        return race.name, url_for("race_picks_page", competition_id=race.id)
-    return "MX Fantasy League", url_for("index")
 
-
-def _absolute_url(endpoint: str, **values) -> str:
-    """Build absolute URL using the canonical public host (mx-fantasy.se)."""
-    path = url_for(endpoint, _external=False, **values)
-    return f"{get_public_base_url()}{path}"
-
-
-def _build_invite_share_payload(
-    username: str,
-    *,
-    prefer_series: str | None = None,
-    competition: Competition | None = None,
-) -> dict:
-    """Share text + URL for 'Bjud in en kompis' (no league required)."""
-    uname = (username or "").strip()
-    race_name, next_url = _invite_picks_target()
-    invite_url = (
-        _absolute_url("start_invite", ref=uname)
-        if uname
-        else _absolute_url("start_invite")
-    )
-    invite_path = url_for("start_invite", ref=uname) if uname else url_for("start_invite")
-    card_ref = uname or None
-    prefer = (prefer_series or "").strip().upper() or None
-
-    if competition is not None:
-        race_name = competition.name or race_name
-        prefer = (getattr(competition, "series", None) or prefer or "").strip().upper() or prefer
-        try:
-            if (prefer or "").upper() == "MXON":
-                next_url = url_for("mxon_picks_page", competition_id=int(competition.id))
-            else:
-                next_url = url_for("race_picks_page", competition_id=int(competition.id))
-        except Exception:
-            pass
-
-    # Detect WSX for default payload when next open race is WSX.
-    is_wsx = prefer == "WSX"
-    if not is_wsx and competition is None:
-        try:
-            race = _current_picks_competition()
-            if race and (getattr(race, "series", None) or "").upper() == "WSX":
-                is_wsx = True
-                prefer = "WSX"
-                race_name = race.name or race_name
-        except Exception:
-            pass
-
-    card_kwargs: dict = {"ref": card_ref, "layout": "story"}
-    og_kwargs: dict = {"ref": card_ref, "layout": "og"}
-    if prefer == "WSX":
-        card_kwargs["series"] = "WSX"
-        og_kwargs["series"] = "WSX"
-    elif prefer and prefer not in ("SX", "MX", "SMX"):
-        # Tippa-only / secondary series: pin card to that series (or explicit competition)
-        card_kwargs["series"] = prefer
-        og_kwargs["series"] = prefer
-    if competition is not None:
-        card_kwargs["competition_id"] = int(competition.id)
-        og_kwargs["competition_id"] = int(competition.id)
-
-    card_image_url = _absolute_url("api_invite_card_png", **card_kwargs)
-    card_og_url = _absolute_url("api_invite_card_png", **og_kwargs)
-
-    if is_wsx and race_name and race_name != "MX Fantasy League":
-        share_body = (
-            f"🔥 WSX 2026 — {race_name}!\n"
-            "Tippa World Supercross gratis hos MX Fantasy.\n"
-            + (f"Jag kör som {uname}." if uname else "Topp 6 · holeshot · wildcard.")
-        )
-        share_title = f"WSX 2026 · {race_name} — MX Fantasy"
-    elif race_name and race_name != "MX Fantasy League":
-        share_body = (
-            f"🏁 {race_name} i helgen — har du satt picks?\n"
-            + (f"Jag är redo. Kör som {uname}." if uname else "Gratis fantasy motocross — klart på några minuter.")
-        )
-        share_title = f"{race_name} i helgen — MX Fantasy"
-    else:
-        share_body = (
-            f"🏁 MX Fantasy League — har du satt picks?\n"
-            + (f"Jag kör som {uname}." if uname else "Gratis fantasy motocross.")
-        )
-        share_title = "MX Fantasy League"
-
-    # Always include a dedicated WSX card URL for the hype button.
-    wsx_card_url = _absolute_url("api_invite_card_png", ref=card_ref, layout="story", series="WSX")
-    wsx_share_body = (
-        f"🔥 WSX 2026 startar — Canadian GP!\n"
-        "Tippa World Supercross gratis på mx-fantasy.se\n"
-        + (f"Jag kör som {uname}." if uname else "Sätt picks innan gate drop.")
-    )
-
-    share_text = f"{share_body}\n{invite_url}"
-    return {
-        "invite_url": invite_url,
-        "invite_path": invite_path,
-        "share_body": share_body,
-        "share_text": share_text,
-        "share_title": share_title,
-        "race_name": race_name,
-        "next_url": next_url,
-        "username": uname,
-        "card_image_url": card_image_url,
-        "card_og_url": card_og_url,
-        "is_wsx": is_wsx,
-        "series": prefer,
-        "competition_id": int(competition.id) if competition is not None else None,
-        "wsx_card_image_url": wsx_card_url,
-        "wsx_share_body": wsx_share_body,
-        "wsx_share_title": "WSX 2026 — tippa hos MX Fantasy",
-        "wsx_share_text": f"{wsx_share_body}\n{invite_url}",
-    }
-
-
-@app.get("/start")
-def start_invite():
-    """Invite landing: /start or /start?ref=username — register + picks, no league required."""
-    ref_raw = (request.args.get("ref") or "").strip()
-    inviter = None
-    if ref_raw:
-        inviter = User.query.filter(db.func.lower(User.username) == ref_raw.lower()).first()
-        if inviter:
-            session["invite_ref"] = inviter.username
-        else:
-            session.pop("invite_ref", None)
-    else:
-        session.pop("invite_ref", None)
-
-    race_name, next_url = _invite_picks_target()
-    is_logged_in = "user_id" in session and bool(session.get("user_id"))
-    if is_logged_in:
-        return redirect(next_url)
-
-    display_race = race_name if race_name != "MX Fantasy League" else "Nästa race"
-    og_title = (
-        f"{display_race} i helgen — slår du {inviter.username}?"
-        if inviter
-        else (
-            f"{display_race} i helgen — MX Fantasy"
-            if race_name != "MX Fantasy League"
-            else "MX Fantasy League — gratis fantasy motocross"
-        )
-    )
-    og_desc = (
-        f"{inviter.username} har satt picks inför {race_name}. Skapa konto på 20 sek och häng med."
-        if inviter and race_name != "MX Fantasy League"
-        else (
-            f"Utmanad av {inviter.username}. Skapa konto på 20 sek och sätt picks."
-            if inviter
-            else (
-                f"Tippa {race_name} — topp 6, holeshot & wildcard. Gratis, klart på några minuter."
-                if race_name != "MX Fantasy League"
-                else "Tippa topp 6, holeshot & wildcard. Gratis — klart på ett par minuter."
-            )
-        )
-    )
-    og_image = _absolute_url(
-        "api_invite_card_png",
-        ref=inviter.username if inviter else None,
-        layout="og",
-    )
-
-    return render_template(
-        "start.html",
-        inviter=inviter,
-        inviter_name=(inviter.display_name or inviter.username) if inviter else None,
-        inviter_username=inviter.username if inviter else None,
-        pit_pass_race_name=display_race,
-        pit_pass_next_url=next_url,
-        pit_pass_peek_key="mx_pit_pass_peek_start",
-        pit_pass_auto_show=True,
-        pit_pass_start_hidden=False,
-        pit_pass_guard_selectors=[],
-        is_logged_in=False,
-        race_name=race_name,
-        next_url=next_url,
-        og_title=og_title,
-        og_description=og_desc,
-        og_image=og_image,
-        og_url=_absolute_url("start_invite", ref=inviter.username) if inviter else _absolute_url("start_invite"),
-    )
-
-
-@app.get("/api/invite-card.png")
-def api_invite_card_png():
-    """Race-hype invite card PNG for Stories and og:image previews."""
-    from flask import Response
-
-    ref = (request.args.get("ref") or "").strip() or None
-    layout = (request.args.get("layout") or "story").lower()
-    if layout not in ("story", "og"):
-        layout = "story"
-    series = (request.args.get("series") or "").strip().upper() or None
-    competition_id = request.args.get("competition_id", type=int)
-    try:
-        from invite_card_service import build_invite_card_data, render_invite_card_png
-
-        data = build_invite_card_data(
-            ref, prefer_series=series, competition_id=competition_id
-        )
-        png_bytes = render_invite_card_png(data, layout=layout)
-        resp = Response(png_bytes, mimetype="image/png")
-        resp.headers["Cache-Control"] = "public, max-age=300"
-        return resp
-    except Exception as e:
-        print(f"invite_card_png failed: {e}")
-        return Response(status=500)
-
-
-@app.get("/api/invite_share")
-def api_invite_share():
-    """JSON share payload for logged-in users (Web Share / copy)."""
-    if "user_id" not in session or not session.get("user_id"):
-        return jsonify({"error": "Login required"}), 401
-    username = session.get("username") or ""
-    payload = _build_invite_share_payload(username)
-    # Optional trash-talk from query (rank/points from homepage leaderboard)
-    rank = request.args.get("rank", type=int)
-    points = request.args.get("points", type=float)
-    if rank or points is not None:
-        body = [
-            "🏁 Slår du mig i MX Fantasy?",
-            f"Jag kör som {username}.",
-        ]
-        if rank:
-            body.append(f"Just nu #{rank}" + (f" med {int(points)}p." if points is not None else "."))
-        elif points is not None:
-            body.append(f"Jag ligger på {int(points)}p.")
-        if payload.get("race_name") and payload["race_name"] != "MX Fantasy League":
-            body.append(f"Nästa race: {payload['race_name']} — sätt picks innan deadline.")
-        payload["share_body"] = "\n".join(body)
-        payload["share_text"] = payload["share_body"] + "\n" + payload["invite_url"]
-    return jsonify({"ok": True, **payload})
-
-
-
+# Invite / share helpers (skiva 19) — re-export for index/tippa pages
+from services.invite_share import (  # noqa: E402
+    _absolute_url,
+    _build_invite_share_payload,
+    _invite_picks_target,
+    absolute_url,
+    build_invite_share_payload,
+    invite_picks_target,
+)
 
 
 # Auth routes → app/routes/auth.py + auth_helpers.py (skiva 10)
