@@ -1014,16 +1014,63 @@
       background-color: #0f172a !important;
       min-height: 180px;
     }
-    /* MXSM — dark slate + subtle blue/yellow nod (Swedish), no photo yet */
+    /* MXSM — faded svensk flagga (ingen banbild ännu) */
     .bg-mxsm {
-      background-image:
-        linear-gradient(145deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 58, 95, 0.88) 55%, rgba(15, 23, 42, 0.95) 100%),
-        radial-gradient(ellipse at 80% 20%, rgba(254, 240, 138, 0.12), transparent 50%) !important;
-      background-size: cover !important;
-      background-position: center !important;
-      background-repeat: no-repeat !important;
-      background-color: #0f172a !important;
+      --mxsm-blue: #005293;
+      --mxsm-yellow: #fecc00;
+      background-color: #041526 !important;
+      background-image: none !important;
       min-height: 180px;
+      box-shadow: inset 0 0 0 1px rgba(254, 204, 0, 0.28);
+      isolation: isolate;
+    }
+    .bg-mxsm::before {
+      content: '';
+      position: absolute;
+      inset: -8%;
+      z-index: 0;
+      pointer-events: none;
+      /* Svensk flagga: gul kors på blått, lite sned + soft */
+      background:
+        linear-gradient(#fecc00, #fecc00) 34% 0 / 14% 100% no-repeat,
+        linear-gradient(#fecc00, #fecc00) 0 42% / 100% 18% no-repeat,
+        linear-gradient(160deg, #0a6bb8 0%, #005293 42%, #003a6b 100%);
+      opacity: 0.42;
+      filter: saturate(1.05) contrast(1.05);
+      transform: rotate(-7deg) scale(1.12);
+      transform-origin: 40% 50%;
+    }
+    .bg-mxsm::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 55% at 78% 18%, rgba(254, 204, 0, 0.22), transparent 55%),
+        radial-gradient(ellipse 80% 70% at 12% 88%, rgba(0, 82, 147, 0.55), transparent 60%),
+        linear-gradient(180deg, rgba(4, 21, 38, 0.15) 0%, rgba(4, 21, 38, 0.55) 55%, rgba(4, 21, 38, 0.82) 100%);
+    }
+    .bg-mxsm .home-series-card__scrim {
+      z-index: 1;
+      background: linear-gradient(
+        180deg,
+        rgba(4, 21, 38, 0.2) 0%,
+        rgba(4, 21, 38, 0.45) 48%,
+        rgba(4, 21, 38, 0.78) 100%
+      );
+    }
+    .home-series-card--clickable.bg-mxsm:hover .home-series-card__scrim {
+      background: linear-gradient(
+        180deg,
+        rgba(4, 21, 38, 0.12) 0%,
+        rgba(4, 21, 38, 0.38) 48%,
+        rgba(4, 21, 38, 0.7) 100%
+      );
+    }
+    .home-series-card--selected.bg-mxsm {
+      outline-color: rgba(254, 204, 0, 0.85);
+      box-shadow: 0 0 0 1px rgba(254, 204, 0, 0.25), 0 10px 28px rgba(0, 0, 0, 0.4);
     }
     .home-series-card.bg-mxon:hover,
     .home-series-card.bg-mxgp:hover,
@@ -7309,7 +7356,8 @@
           } else if (backgroundClass === 'bg-mxgp') {
             inlineBg = 'background-image: url("/static/images/mxgp_hero.jpg") !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; background-color: transparent !important;';
           } else if (backgroundClass === 'bg-mxsm') {
-            inlineBg = 'background-color: #0f172a !important; background-image: linear-gradient(145deg, rgba(15,23,42,0.92), rgba(30,58,95,0.88), rgba(15,23,42,0.95)) !important;';
+            /* Flaggan ligger i CSS ::before/::after — ingen inline override */
+            inlineBg = '';
           }
 
           const hintText = isSelected
