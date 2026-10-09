@@ -2,606 +2,371 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8">
-  <title>Liga Hantering - Admin Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ligor — Admin · MX Fantasy</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: 'Rajdhani', sans-serif;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+    :root {
+      --au-line: rgba(148, 163, 184, 0.16);
+      --au-text: #e2e8f0;
+      --au-muted: #94a3b8;
+      --au-accent: #22d3ee;
+      --au-panel: rgba(15, 23, 42, 0.72);
+    }
+    * { box-sizing: border-box; }
+    body.au {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Barlow", system-ui, sans-serif;
+      color: var(--au-text);
+      background:
+        radial-gradient(ellipse 70% 45% at 10% -10%, rgba(34, 211, 238, 0.12), transparent 55%),
+        radial-gradient(ellipse 50% 40% at 100% 0%, rgba(251, 191, 36, 0.07), transparent 50%),
+        linear-gradient(165deg, #020617 0%, #0f172a 50%, #020617 100%);
       background-attachment: fixed;
     }
-    
-    .cyberpunk-header {
-      font-family: 'Orbitron', monospace;
-      text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+    .au-wrap { max-width: 1280px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+    .au-back {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      color: var(--au-muted); text-decoration: none; font-size: 0.9rem; margin-bottom: 0.75rem;
     }
-    
-    .cyberpunk-card {
-      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-      border: 2px solid #22d3ee;
-      box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
-      transition: all 0.3s ease;
+    .au-back:hover { color: var(--au-accent); }
+    .au-top {
+      display: flex; flex-wrap: wrap; align-items: flex-end;
+      justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem;
     }
-    
-    .cyberpunk-card:hover {
-      box-shadow: 0 0 30px rgba(34, 211, 238, 0.5);
-      transform: translateY(-2px);
+    .au-eyebrow {
+      margin: 0 0 0.25rem; font-size: 0.75rem; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--au-muted);
     }
-    
-    .neon-text {
-      text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+    .au-title {
+      margin: 0; font-family: "Barlow Condensed", sans-serif; font-weight: 800;
+      font-size: clamp(1.75rem, 4vw, 2.35rem); letter-spacing: 0.02em; line-height: 1; color: #f8fafc;
     }
-    
-    .cyberpunk-button {
-      background: linear-gradient(45deg, #22d3ee, #06b6d4);
-      border: 1px solid #22d3ee;
-      box-shadow: 0 0 15px rgba(34, 211, 238, 0.4);
-      transition: all 0.3s ease;
+    .au-sub { margin: 0.4rem 0 0; color: var(--au-muted); font-size: 0.95rem; }
+    .au-stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.65rem; margin-bottom: 1rem;
     }
-    
-    .cyberpunk-button:hover {
-      box-shadow: 0 0 25px rgba(34, 211, 238, 0.6);
-      transform: translateY(-1px);
+    .au-stat {
+      border: 1px solid var(--au-line); border-radius: 0.75rem;
+      background: var(--au-panel); padding: 0.85rem 1rem;
     }
-    
-    .danger-button {
-      background: linear-gradient(45deg, #ef4444, #dc2626);
-      border: 1px solid #ef4444;
-      box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+    .au-stat__val {
+      font-family: "Barlow Condensed", sans-serif; font-size: 1.75rem; font-weight: 800;
+      line-height: 1; color: #f8fafc; letter-spacing: 0.02em;
     }
-    
-    .danger-button:hover {
-      box-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
+    .au-stat__lbl {
+      margin-top: 0.35rem; font-size: 0.75rem; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--au-muted);
     }
-    
-    .warning-button {
-      background: linear-gradient(45deg, #f59e0b, #d97706);
-      border: 1px solid #f59e0b;
-      box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    .au-stat--accent .au-stat__val { color: #a5f3fc; }
+    .au-toolbar {
+      display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center;
+      justify-content: space-between; margin-bottom: 0.85rem;
     }
-    
-    .warning-button:hover {
-      box-shadow: 0 0 25px rgba(245, 158, 11, 0.6);
+    .au-search {
+      flex: 1 1 220px; max-width: 320px; min-width: min(100%, 180px);
+      background: #020617; border: 1px solid var(--au-line); border-radius: 0.55rem;
+      color: #f1f5f9; padding: 0.5rem 0.75rem; font: inherit; font-size: 0.9rem;
     }
-    
-    .floating-animation {
-      animation: float 3s ease-in-out infinite;
+    .au-search:focus { outline: none; border-color: rgba(34, 211, 238, 0.55); }
+    .au-meta { color: var(--au-muted); font-size: 0.85rem; }
+    .au-panel {
+      border: 1px solid var(--au-line); border-radius: 0.85rem;
+      background: var(--au-panel); overflow: hidden;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
     }
-    
-    @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-10px); }
+    .au-table-wrap { overflow-x: auto; }
+    table.au-table {
+      width: 100%; border-collapse: collapse; min-width: 920px;
     }
-    
-    .pulse-glow {
-      animation: pulse-glow 2s ease-in-out infinite;
+    .au-table th {
+      position: sticky; top: 0; z-index: 1;
+      text-align: left; font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;
+      background: #0b1220; border-bottom: 1px solid var(--au-line);
+      padding: 0.75rem 0.85rem; white-space: nowrap;
     }
-    
-    @keyframes pulse-glow {
-      0%, 100% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.3); }
-      50% { box-shadow: 0 0 30px rgba(34, 211, 238, 0.6); }
+    .au-table th.au-sticky, .au-table td.au-sticky {
+      position: sticky; right: 0; z-index: 2;
+      box-shadow: -8px 0 12px -8px rgba(0, 0, 0, 0.45);
     }
-
-    @media (max-width: 768px) {
-      body {
-        background-attachment: scroll;
-      }
-      .floating-animation,
-      .pulse-glow {
-        animation: none !important;
-      }
+    .au-table th.au-sticky { background: #0b1220; z-index: 3; }
+    .au-table td {
+      padding: 0.7rem 0.85rem; border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+      font-size: 0.9rem; vertical-align: middle; background: transparent;
     }
+    .au-table td.au-sticky { background: #0f172a; }
+    .au-table tbody tr { transition: background 0.12s; }
+    .au-table tbody tr:hover { background: rgba(34, 211, 238, 0.04); }
+    .au-table tbody tr:hover td.au-sticky { background: #132033; }
+    .au-name { font-weight: 600; color: #f1f5f9; }
+    .au-muted { color: #94a3b8; }
+    .au-mono { font-variant-numeric: tabular-nums; color: #cbd5e1; }
+    .au-badge {
+      display: inline-flex; align-items: center; padding: 0.12rem 0.45rem;
+      border-radius: 999px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+    }
+    .au-badge--public { background: rgba(34, 197, 94, 0.14); color: #86efac; }
+    .au-badge--private { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
+    .au-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .au-btn {
+      appearance: none; border: 1px solid var(--au-line); background: transparent;
+      color: var(--au-text); border-radius: 0.45rem; padding: 0.3rem 0.55rem;
+      font: inherit; font-size: 0.75rem; font-weight: 600; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      text-decoration: none; display: inline-flex; align-items: center;
+    }
+    .au-btn:hover { border-color: rgba(34, 211, 238, 0.4); background: rgba(34, 211, 238, 0.08); }
+    .au-btn--primary {
+      color: #083344; background: linear-gradient(135deg, #22d3ee, #67e8f9);
+      border-color: transparent; font-weight: 700;
+    }
+    .au-btn--primary:hover { filter: brightness(1.05); }
+    .au-btn--warn { color: #fcd34d; border-color: rgba(251, 191, 36, 0.35); }
+    .au-btn--danger { color: #fca5a5; border-color: rgba(248, 113, 113, 0.35); }
+    .au-btn--danger:hover { background: rgba(127, 29, 29, 0.35); }
+    .au-empty { padding: 2.5rem 1rem; text-align: center; color: var(--au-muted); }
+    #toast {
+      position: fixed; right: 1rem; bottom: 1rem; z-index: 60;
+      max-width: min(420px, calc(100vw - 2rem));
+      padding: 0.85rem 1rem; border-radius: 0.65rem;
+      border: 1px solid var(--au-line); background: #0f172a;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35); font-size: 0.9rem;
+      transform: translateY(120%); transition: transform 0.25s ease; color: #e2e8f0;
+    }
+    #toast.is-visible { transform: translateY(0); }
+    #toast.is-ok { border-color: rgba(34, 197, 94, 0.4); color: #bbf7d0; }
+    #toast.is-err { border-color: rgba(248, 113, 113, 0.45); color: #fecaca; }
+    tr.au-hidden { display: none; }
   </style>
 </head>
-<body class="text-gray-100 min-h-screen">
-  <div class="container mx-auto p-3 sm:p-4 md:p-8">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 sm:mb-12 gap-6">
-      <header class="text-center sm:text-left">
-        <h1 class="cyberpunk-header text-4xl sm:text-5xl md:text-6xl font-bold text-cyan-400 mb-2">
-          🏆 LIGA HANTERING
-        </h1>
-        <div class="flex items-center justify-center sm:justify-start gap-2">
-          <div class="w-3 h-3 bg-cyan-400 rounded-full pulse-glow"></div>
-          <p class="text-lg sm:text-xl text-cyan-300 font-medium">Admin Panel</p>
-        </div>
-      </header>
-      <div class="flex gap-3">
-        <a href="{{ url_for('admin_page') }}"
-           class="cyberpunk-button text-white font-bold py-3 px-6 rounded-lg text-lg self-center floating-animation">
-           ⚡ Admin Panel
-        </a>
-        <a href="{{ url_for('index') }}"
-           class="cyberpunk-button text-white font-bold py-3 px-6 rounded-lg text-lg self-center floating-animation">
-           🏠 Huvudsidan
-        </a>
+<body class="au">
+  <div class="au-wrap">
+    <a class="au-back" href="/admin">← Admin</a>
+
+    <div class="au-top">
+      <div>
+        <p class="au-eyebrow">MX Fantasy · Admin</p>
+        <h1 class="au-title">Ligor</h1>
+        <p class="au-sub">Publik/privat, poäng och challenges per liga</p>
+      </div>
+      <div class="au-actions">
+        <button type="button" class="au-btn au-btn--primary" onclick="calculateAllLeaguePoints()">Räkna om alla</button>
+        <button type="button" class="au-btn au-btn--warn" onclick="resetAllLeaguePoints()">Nollställ alla poäng</button>
       </div>
     </div>
 
-    <!-- League Stats -->
-    <div class="cyberpunk-card p-6 sm:p-8 rounded-xl mb-8">
-      <div class="flex items-center gap-3 mb-6">
-        <div class="text-3xl">📊</div>
-        <h2 class="text-2xl sm:text-3xl font-bold text-cyan-400 neon-text">Liga Statistik</h2>
+    {% set public_n = leagues|selectattr('is_public')|list|length %}
+    {% set members_n = leagues|sum(attribute='member_count') %}
+    <div class="au-stats">
+      <div class="au-stat">
+        <div class="au-stat__val">{{ leagues|length }}</div>
+        <div class="au-stat__lbl">Ligor</div>
       </div>
-      
-      <!-- Calculate Points Buttons -->
-      <div class="mb-6 flex flex-wrap gap-3">
-        <button onclick="calculateAllLeaguePoints()"
-                class="cyberpunk-button text-white font-bold py-2 px-4 rounded text-sm">
-          🧮 Beräkna Alla Liga-Poäng
-        </button>
-        <button onclick="resetAllChallenges()"
-                class="warning-button text-white font-bold py-2 px-4 rounded text-sm"
-                title="Tillfällig testfunktion">
-          ⚔️ Reset Alla Utmaningar
-        </button>
-        <button onclick="reResolveSouthwickDuels()"
-                class="cyberpunk-button text-white font-bold py-2 px-4 rounded text-sm"
-                title="Avgör om Southwick-dueller (t.ex. Ida-duellen) och sätter shame-märken">
-          🏁 Omräkna Southwick-dueller
-        </button>
-        <button onclick="checkPushDiagnostics()"
-                class="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded text-sm">
-          🔔 Push-status
-        </button>
-        <button onclick="sendPushTest()"
-                class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-4 rounded text-sm">
-          📲 Testa push-notis
-        </button>
-        <button onclick="showScoringInfo()"
-                class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded text-sm transition-all">
-          ℹ️ Poäng-System Info
-        </button>
+      <div class="au-stat au-stat--accent">
+        <div class="au-stat__val">{{ public_n }}</div>
+        <div class="au-stat__lbl">Publika</div>
       </div>
-      <p class="text-xs text-amber-300/80 mb-4">⚠️ Reset utmaningar är en tillfällig testfunktion — raderar alla dueller, märken och utmaningsnotiser.</p>
-      <div class="grid grid-cols-1 sm:grid-cols-4 gap-6">
-        <div class="text-center">
-          <div class="text-3xl sm:text-4xl font-bold text-cyan-400 mb-2">{{ leagues|length }}</div>
-          <div class="text-cyan-300 font-medium">Totala Ligor</div>
-        </div>
-        <div class="text-center">
-          <div class="text-3xl sm:text-4xl font-bold text-green-400 mb-2">
-            {{ leagues|selectattr('is_public')|list|length }}
-          </div>
-          <div class="text-cyan-300 font-medium">Publika Ligor</div>
-        </div>
-        <div class="text-center">
-          <div class="text-3xl sm:text-4xl font-bold text-purple-400 mb-2">
-            {{ leagues|sum(attribute='member_count') }}
-          </div>
-          <div class="text-cyan-300 font-medium">Totala Medlemmar</div>
-        </div>
-        <div class="text-center">
-          <div class="text-3xl sm:text-4xl font-bold text-yellow-400 mb-2">
-            {{ leagues|sum(attribute='total_points') }}
-          </div>
-          <div class="text-cyan-300 font-medium">Totala Poäng</div>
-        </div>
+      <div class="au-stat">
+        <div class="au-stat__val">{{ members_n }}</div>
+        <div class="au-stat__lbl">Medlemmar</div>
+      </div>
+      <div class="au-stat">
+        <div class="au-stat__val">{{ leagues|sum(attribute='total_points') }}</div>
+        <div class="au-stat__lbl">Totala poäng</div>
       </div>
     </div>
 
-    <!-- Leagues Table -->
-    <div class="cyberpunk-card p-6 sm:p-8 rounded-xl">
-      <div class="flex items-center gap-3 mb-6">
-        <div class="text-3xl">🏆</div>
-        <h2 class="text-2xl sm:text-3xl font-bold text-cyan-400 neon-text">Alla Ligor</h2>
-      </div>
-      
-      {% if leagues %}
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-800/50">
-              <tr>
-                <th class="p-3 text-left text-cyan-300 font-semibold">Liga</th>
-                <th class="p-3 text-left text-cyan-300 font-semibold">Skapare</th>
-                <th class="p-3 text-center text-cyan-300 font-semibold">Medlemmar</th>
-                <th class="p-3 text-center text-cyan-300 font-semibold">Poäng</th>
-                <th class="p-3 text-center text-cyan-300 font-semibold">Status</th>
-                <th class="p-3 text-center text-cyan-300 font-semibold">Skapad</th>
-                <th class="p-3 text-center text-cyan-300 font-semibold">Åtgärder</th>
-              </tr>
-            </thead>
-            <tbody class="text-gray-200">
-              {% for league in leagues %}
-                <tr class="border-t border-gray-700 hover:bg-gray-800/30 transition-colors">
-                  <!-- League Name -->
-                  <td class="p-3">
-                    <div class="font-bold text-white">{{ league.name }}</div>
-                    {% if league.description %}
-                      <div class="text-xs text-gray-400 mt-1 line-clamp-1">{{ league.description }}</div>
-                    {% endif %}
-                  </td>
-                  
-                  <!-- Creator -->
-                  <td class="p-3">
-                    <span class="text-cyan-300 font-medium">{{ league.creator_username }}</span>
-                  </td>
-                  
-                  <!-- Members -->
-                  <td class="p-3 text-center">
-                    <span class="text-purple-400 font-bold">{{ league.member_count }}</span>
-                  </td>
-                  
-                  <!-- Points -->
-                  <td class="p-3 text-center">
-                    <span class="text-yellow-400 font-bold">{{ league.total_points }}</span>
-                  </td>
-                  
-                  <!-- Status -->
-                  <td class="p-3 text-center">
-                    {% if league.is_public %}
-                      <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-200">
-                        🌐 Publik
-                      </span>
-                    {% else %}
-                      <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-700/30 dark:text-red-200">
-                        🔒 Privat
-                      </span>
-                    {% endif %}
-                  </td>
-                  
-                  <!-- Created -->
-                  <td class="p-3 text-center text-gray-400 text-xs">
-                    {% if league.created_at %}
-                      {{ league.created_at[:10] }}
-                    {% else %}
-                      Okänt
-                    {% endif %}
-                  </td>
-                  
-                  <!-- Actions -->
-                  <td class="p-3 text-center">
-                    <div class="flex gap-1 justify-center">
-                      <!-- Toggle Public/Private -->
-                      <button onclick="togglePublic({{ league.id }}, '{{ league.name }}', {{ league.is_public|lower }})"
-                              class="px-2 py-1 rounded text-xs font-bold transition-all
-                                     {% if league.is_public %}
-                                       warning-button text-white
-                                     {% else %}
-                                       cyberpunk-button text-white
-                                     {% endif %}">
-                        {% if league.is_public %}
-                          🔒
-                        {% else %}
-                          🌐
-                        {% endif %}
-                      </button>
-                      
-                      <!-- Calculate Points -->
-                      <button onclick="calculateLeaguePoints({{ league.id }}, '{{ league.name }}')"
-                              class="px-2 py-1 rounded text-xs font-bold cyberpunk-button text-white transition-all">
-                        🧮
-                      </button>
-                      
-                      <!-- Reset Points -->
-                      <button onclick="resetPoints({{ league.id }}, '{{ league.name }}')"
-                              class="px-2 py-1 rounded text-xs font-bold warning-button text-white transition-all"
-                              title="Återställ poäng">
-                        🔄
-                      </button>
+    <div class="au-toolbar">
+      <input id="leagueSearch" class="au-search" type="search" placeholder="Sök liga eller skapare…" oninput="applyLeagueFilter()" autocomplete="off">
+      <span class="au-meta" id="leagueCount">{{ leagues|length }} ligor</span>
+    </div>
 
-                      <!-- Reset Challenges (test) -->
-                      <button onclick="resetChallenges({{ league.id }}, '{{ league.name }}')"
-                              class="px-2 py-1 rounded text-xs font-bold warning-button text-white transition-all"
-                              title="Reset utmaningar (test)">
-                        ⚔️
-                      </button>
-                      
-                      <!-- Delete -->
-                      <button onclick="deleteLeague({{ league.id }}, '{{ league.name }}')"
-                              class="px-2 py-1 rounded text-xs font-bold danger-button text-white transition-all">
-                        ❌
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <div class="text-center py-12">
-          <div class="text-6xl mb-4 floating-animation">🏆</div>
-          <h3 class="text-2xl font-bold text-cyan-400 mb-2">Inga ligor än</h3>
-          <p class="text-cyan-300">Inga ligor har skapats än.</p>
-        </div>
-      {% endif %}
+    <div class="au-panel">
+      <div class="au-table-wrap">
+        <table class="au-table">
+          <thead>
+            <tr>
+              <th>Liga</th>
+              <th>Skapare</th>
+              <th>Medlemmar</th>
+              <th>Poäng</th>
+              <th>Status</th>
+              <th>Skapad</th>
+              <th class="au-sticky">Åtgärder</th>
+            </tr>
+          </thead>
+          <tbody id="leagues-body">
+            {% for league in leagues %}
+            <tr
+              data-name="{{ league.name|lower }}"
+              data-creator="{{ (league.creator_username or '')|lower }}"
+            >
+              <td>
+                <span class="au-name">{{ league.name }}</span>
+                {% if league.description %}
+                  <div class="au-muted" style="font-size:0.8rem;max-width:16rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ league.description }}</div>
+                {% endif %}
+              </td>
+              <td class="au-muted">{{ league.creator_username }}</td>
+              <td class="au-mono">{{ league.member_count }}</td>
+              <td class="au-mono">{{ league.total_points }}</td>
+              <td>
+                {% if league.is_public %}
+                  <span class="au-badge au-badge--public">Publik</span>
+                {% else %}
+                  <span class="au-badge au-badge--private">Privat</span>
+                {% endif %}
+              </td>
+              <td class="au-mono">
+                {% if league.created_at %}{{ league.created_at[:10] }}{% else %}—{% endif %}
+              </td>
+              <td class="au-sticky">
+                <div class="au-actions">
+                  <button type="button" class="au-btn"
+                    onclick="runLeagueAction('toggle_public', {{ league.id }}, {{ league.name|tojson }}, {{ league.is_public|lower }})">
+                    {% if league.is_public %}Gör privat{% else %}Gör publik{% endif %}
+                  </button>
+                  <button type="button" class="au-btn"
+                    onclick="runLeagueAction('calculate_points', {{ league.id }}, {{ league.name|tojson }})">
+                    Räkna om
+                  </button>
+                  <button type="button" class="au-btn au-btn--warn"
+                    onclick="runLeagueAction('reset_points', {{ league.id }}, {{ league.name|tojson }})">
+                    Nollställ poäng
+                  </button>
+                  <button type="button" class="au-btn au-btn--warn"
+                    onclick="runLeagueAction('reset_challenges', {{ league.id }}, {{ league.name|tojson }})">
+                    Nollställ challenges
+                  </button>
+                  <button type="button" class="au-btn au-btn--danger"
+                    onclick="runLeagueAction('delete', {{ league.id }}, {{ league.name|tojson }})">
+                    Ta bort
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7"><div class="au-empty">Inga ligor.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
-  <!-- Confirmation Modal -->
-  <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-    <div class="cyberpunk-card p-6 rounded-xl max-w-md w-full">
-      <h3 class="text-xl font-bold text-cyan-400 mb-4" id="modalTitle">Bekräfta åtgärd</h3>
-      <p class="text-gray-300 mb-6" id="modalMessage">Är du säker på att du vill utföra denna åtgärd?</p>
-      
-      <div class="flex gap-3">
-        <button id="confirmButton"
-                class="flex-1 danger-button text-white font-bold py-2 px-4 rounded text-sm">
-          Bekräfta
-        </button>
-        <button onclick="closeModal()"
-                class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded text-sm transition-all">
-          Avbryt
-        </button>
-      </div>
-    </div>
-  </div>
+  <div id="toast"><span id="toast-message"></span></div>
 
   <script>
-    let currentAction = null;
-    let currentLeagueId = null;
-
-    function togglePublic(leagueId, leagueName, isPublic) {
-      currentLeagueId = leagueId;
-      currentAction = 'toggle_public';
-      
-      const action = isPublic ? 'göra privat' : 'göra publik';
-      document.getElementById('modalTitle').textContent = 'Ändra Liga Status';
-      document.getElementById('modalMessage').textContent = `Är du säker på att du vill ${action} ligan "${leagueName}"?`;
-      document.getElementById('confirmButton').textContent = 'Bekräfta';
-      document.getElementById('confirmButton').className = 'flex-1 cyberpunk-button text-white font-bold py-2 px-4 rounded text-sm';
-      
-      document.getElementById('confirmModal').classList.remove('hidden');
+    function showToast(msg, kind) {
+      const el = document.getElementById("toast");
+      const text = document.getElementById("toast-message");
+      if (!el || !text) return;
+      text.textContent = msg;
+      el.classList.remove("is-ok", "is-err", "is-visible");
+      el.classList.add(kind === "error" ? "is-err" : "is-ok", "is-visible");
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => el.classList.remove("is-visible"), 3200);
     }
 
-    function resetPoints(leagueId, leagueName) {
-      currentLeagueId = leagueId;
-      currentAction = 'reset_points';
-      
-      document.getElementById('modalTitle').textContent = 'Återställ Poäng';
-      document.getElementById('modalMessage').textContent = `Är du säker på att du vill återställa poängen för ligan "${leagueName}" till 0?`;
-      document.getElementById('confirmButton').textContent = 'Återställ';
-      document.getElementById('confirmButton').className = 'flex-1 warning-button text-white font-bold py-2 px-4 rounded text-sm';
-      
-      document.getElementById('confirmModal').classList.remove('hidden');
+    function applyLeagueFilter() {
+      const q = (document.getElementById("leagueSearch")?.value || "").trim().toLowerCase();
+      const rows = document.querySelectorAll("#leagues-body tr[data-name]");
+      let visible = 0;
+      rows.forEach((row) => {
+        const hay = `${row.dataset.name} ${row.dataset.creator}`;
+        const show = !q || hay.includes(q);
+        row.classList.toggle("au-hidden", !show);
+        if (show) visible += 1;
+      });
+      const countEl = document.getElementById("leagueCount");
+      if (countEl) countEl.textContent = `${visible} ligor`;
     }
 
-    function resetChallenges(leagueId, leagueName) {
-      currentLeagueId = leagueId;
-      currentAction = 'reset_challenges';
-      
-      document.getElementById('modalTitle').textContent = 'Reset Utmaningar (test)';
-      document.getElementById('modalMessage').textContent = `Radera alla dueller, märken och utmaningsnotiser i ligan "${leagueName}"?`;
-      document.getElementById('confirmButton').textContent = 'Reset utmaningar';
-      document.getElementById('confirmButton').className = 'flex-1 warning-button text-white font-bold py-2 px-4 rounded text-sm';
-      
-      document.getElementById('confirmModal').classList.remove('hidden');
+    async function postJson(url, body) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: body ? JSON.stringify(body) : undefined,
+        credentials: "same-origin",
+      });
+      const result = await response.json().catch(() => ({}));
+      return { response, result };
     }
 
-    async function resetAllChallenges() {
-      if (!confirm('Reset ALLA utmaningar i hela systemet? Detta raderar alla dueller, märken och utmaningsnotiser.')) {
-        return;
+    async function runLeagueAction(action, leagueId, leagueName, isPublic) {
+      let confirmMsg = "";
+      let url = "";
+      switch (action) {
+        case "toggle_public":
+          confirmMsg = `Vill du ${isPublic ? "göra privat" : "göra publik"} ligan "${leagueName}"?`;
+          url = `/admin/leagues/${leagueId}/toggle_public`;
+          break;
+        case "calculate_points":
+          confirmMsg = `Räkna om poäng för "${leagueName}"?`;
+          url = `/admin/leagues/${leagueId}/calculate_points`;
+          break;
+        case "reset_points":
+          confirmMsg = `Nollställ poäng för "${leagueName}"?`;
+          url = `/admin/leagues/${leagueId}/reset_points`;
+          break;
+        case "reset_challenges":
+          confirmMsg = `Radera dueller/märken/utmaningsnotiser i "${leagueName}"?`;
+          url = `/admin/leagues/${leagueId}/challenges/reset`;
+          break;
+        case "delete":
+          confirmMsg = `Ta bort ligan "${leagueName}" permanent? Detta kan inte ångras.`;
+          url = `/admin/leagues/${leagueId}/delete`;
+          break;
+        default:
+          return;
       }
+      if (!confirm(confirmMsg)) return;
       try {
-        const response = await fetch('/admin/leagues/challenges/reset', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        const result = await response.json();
+        const { response, result } = await postJson(url);
         if (response.ok) {
-          alert('✅ ' + result.message);
+          showToast(result.message || "Klart");
+          setTimeout(() => location.reload(), 500);
         } else {
-          alert('Fel: ' + (result.error || 'Okänt fel'));
+          showToast(result.error || "Ett fel uppstod", "error");
         }
-      } catch (error) {
-        alert('Fel vid reset av utmaningar: ' + error.message);
+      } catch (e) {
+        showToast(e.message || "Ett fel uppstod", "error");
       }
-    }
-
-    async function reResolveSouthwickDuels() {
-      if (!confirm('Omräkna dueller för Southwick National?\n\nFixar t.ex. Ida-duellen (Shimoda DNF) och sätter shame-märken.')) {
-        return;
-      }
-      try {
-        const response = await fetch('/admin/leagues/challenges/re-resolve', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: 'southwick' }),
-        });
-        const result = await response.json();
-        if (!response.ok) {
-          alert('Fel: ' + (result.error || 'Okänt fel'));
-          return;
-        }
-        let msg = '✅ ' + result.message;
-        if (result.duels && result.duels.length) {
-          msg += '\n\nDueller:';
-          for (const d of result.duels) {
-            const w = d.winner ? ` → ${d.winner} vann` : (d.status === 'tie' ? ' → oavgjort' : '');
-            msg += `\n• ${d.challenger} vs ${d.challenged}${w}`;
-            if (d.result_summary) msg += ` (${d.result_summary})`;
-          }
-        }
-        if (result.badges && result.badges.length) {
-          msg += '\n\nMärken:';
-          for (const b of result.badges) {
-            msg += `\n• ${b.emoji} ${b.user} (${b.kind}, ${b.wins}V/${b.losses}F)`;
-          }
-        }
-        alert(msg);
-      } catch (error) {
-        alert('Fel vid omräkning: ' + error.message);
-      }
-    }
-
-    async function checkPushDiagnostics() {
-      try {
-        const response = await fetch('/admin/leagues/push-diagnostics');
-        const result = await response.json();
-        if (!response.ok) {
-          alert('Fel: ' + (result.error || response.status));
-          return;
-        }
-        let msg = 'Push-status:\n';
-        msg += '• Konfigurerad: ' + (result.configured ? 'ja' : 'nej') + '\n';
-        msg += '• Privat nyckel: ' + (result.private_key_present ? 'ja' : 'nej') + '\n';
-        msg += '• Publik nyckel: ' + (result.public_key_preview || 'saknas') + '\n';
-        msg += '• Prenumerationer: ' + (result.subscriptions ? result.subscriptions.length : 0);
-        if (result.subscriptions && result.subscriptions.length) {
-          for (const s of result.subscriptions) {
-            msg += '\n  - …' + (s.endpoint_tail || '');
-          }
-        } else {
-          msg += '\n\n→ Slå på Pit Lane-notiser på mobilen (klockan) först!';
-        }
-        alert(msg);
-      } catch (error) {
-        alert('Fel: ' + error.message);
-      }
-    }
-
-    async function sendPushTest() {
-      try {
-        const response = await fetch('/admin/leagues/push-test', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        const result = await response.json();
-        if (response.ok) {
-          alert('✅ ' + (result.message || 'Test skickad') + '\nKolla mobilen!');
-          return;
-        }
-        let msg = 'Fel: ' + (result.error || 'okänt');
-        if (result.hint) msg += '\n\n' + result.hint;
-        if (result.result && result.result.errors) {
-          msg += '\n\n' + result.result.errors.join('\n');
-        }
-        alert(msg);
-      } catch (error) {
-        alert('Fel: ' + error.message);
-      }
-    }
-
-    function deleteLeague(leagueId, leagueName) {
-      currentLeagueId = leagueId;
-      currentAction = 'delete';
-      
-      document.getElementById('modalTitle').textContent = 'Ta bort Liga';
-      document.getElementById('modalMessage').textContent = `Är du säker på att du vill ta bort ligan "${leagueName}" permanent? Detta kan inte ångras!`;
-      document.getElementById('confirmButton').textContent = 'Ta bort';
-      document.getElementById('confirmButton').className = 'flex-1 danger-button text-white font-bold py-2 px-4 rounded text-sm';
-      
-      document.getElementById('confirmModal').classList.remove('hidden');
-    }
-
-    function calculateLeaguePoints(leagueId, leagueName) {
-      currentLeagueId = leagueId;
-      currentAction = 'calculate_points';
-      
-      document.getElementById('modalTitle').textContent = 'Beräkna Liga-Poäng';
-      document.getElementById('modalMessage').textContent = `Beräkna poäng för ligan "${leagueName}" baserat på medlemmarnas prestationer?`;
-      document.getElementById('confirmButton').textContent = 'Beräkna';
-      document.getElementById('confirmButton').className = 'flex-1 cyberpunk-button text-white font-bold py-2 px-4 rounded text-sm';
-      
-      document.getElementById('confirmModal').classList.remove('hidden');
     }
 
     async function calculateAllLeaguePoints() {
-      if (!confirm('Beräkna poäng för alla ligor? Detta kan ta en stund...')) {
-        return;
-      }
-      
+      if (!confirm("Räkna om poäng för alla ligor?")) return;
       try {
-        const response = await fetch('/admin/leagues/calculate_all_points', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        const result = await response.json();
-        
+        const { response, result } = await postJson("/admin/leagues/calculate_all_points");
         if (response.ok) {
-          alert(`✅ ${result.message}\nTotala poäng beräknade: ${result.total_points_calculated}`);
-          location.reload(); // Refresh the page
+          showToast(result.message || "Klart");
+          setTimeout(() => location.reload(), 600);
         } else {
-          alert('Fel: ' + (result.error || 'Okänt fel'));
+          showToast(result.error || "Ett fel uppstod", "error");
         }
-      } catch (error) {
-        alert('Fel vid beräkning av poäng: ' + error.message);
+      } catch (e) {
+        showToast(e.message || "Ett fel uppstod", "error");
       }
     }
 
-    function showScoringInfo() {
-      const info = `
-🏆 LIGA-POÄNGSYSTEM
-
-📊 Beräkningsmetoder:
-• Top Performers (40%): Bästa medlemmarna
-• Average Quality (30%): Genomsnittlig kvalitet
-• Percentile Ranking (20%): Relativ ranking
-• Participation Bonus (10%): Deltagande-bonus
-
-👥 Anpassning för liga-storlek:
-• 5+ medlemmar: Använder top 5, 2 poäng per medlem
-• 3-4 medlemmar: Använder top 3, 3 poäng per medlem  
-• 1-2 medlemmar: Använder alla, 5 poäng per medlem
-
-🎯 Resultat: Rättvist system där små ligor kan vinna!
-      `;
-      alert(info);
-    }
-
-    function closeModal() {
-      document.getElementById('confirmModal').classList.add('hidden');
-      currentAction = null;
-      currentLeagueId = null;
-    }
-
-    document.getElementById('confirmButton').addEventListener('click', async function() {
-      if (!currentAction || !currentLeagueId) return;
-      
-      let url = '';
-      switch(currentAction) {
-        case 'toggle_public':
-          url = `/admin/leagues/${currentLeagueId}/toggle_public`;
-          break;
-        case 'reset_points':
-          url = `/admin/leagues/${currentLeagueId}/reset_points`;
-          break;
-        case 'reset_challenges':
-          url = `/admin/leagues/${currentLeagueId}/challenges/reset`;
-          break;
-        case 'calculate_points':
-          url = `/admin/leagues/${currentLeagueId}/calculate_points`;
-          break;
-        case 'delete':
-          url = `/admin/leagues/${currentLeagueId}/delete`;
-          break;
-      }
-      
+    async function resetAllLeaguePoints() {
+      if (!confirm("Nollställ poäng på ALLA ligor?")) return;
       try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        const result = await response.json();
-        
+        const { response, result } = await postJson("/admin/leagues/reset_all_points");
         if (response.ok) {
-          alert(result.message);
-          location.reload(); // Refresh the page
+          showToast(result.message || "Klart");
+          setTimeout(() => location.reload(), 600);
         } else {
-          alert('Fel: ' + (result.error || 'Okänt fel'));
+          showToast(result.error || "Ett fel uppstod", "error");
         }
-      } catch (error) {
-        alert('Fel vid utförande av åtgärd: ' + error.message);
+      } catch (e) {
+        showToast(e.message || "Ett fel uppstod", "error");
       }
-      
-      closeModal();
-    });
-
-    // Close modal when clicking outside
-    document.getElementById('confirmModal').addEventListener('click', function(e) {
-      if (e.target === this) {
-        closeModal();
-      }
-    });
+    }
   </script>
 </body>
 </html>

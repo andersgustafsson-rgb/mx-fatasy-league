@@ -2131,6 +2131,22 @@
                             <button type="button" onclick="resetAllLeaguePoints()" class="ap-btn ap-btn--sm">Nollställ alla</button>
                         </div>
                     </article>
+
+                    <article class="ap-hub-card">
+                        <div>
+                            <p class="ap-hub-card__eyebrow">Utmaningar</p>
+                            <h3 class="ap-hub-card__title">Dueller &amp; challenges</h3>
+                        </div>
+                        <p class="ap-hub-card__desc">
+                            Omräkna dueller efter race (t.ex. Southwick) eller nollställ alla challenges i systemet.
+                            Per-liga reset finns på ligasidan.
+                        </p>
+                        <div class="ap-hub-card__actions">
+                            <button type="button" onclick="reResolveLeagueDuels()" class="ap-btn ap-btn--primary">Omräkna dueller</button>
+                            <button type="button" onclick="resetAllLeagueChallenges()" class="ap-btn ap-btn--sm">Nollställ alla challenges</button>
+                        </div>
+                        <p id="league-challenges-status" class="text-xs text-slate-400 mt-2"></p>
+                    </article>
                 </div>
             </div>
         </div>
@@ -2402,6 +2418,21 @@
                         <div class="ap-hub-card__actions">
                             <a href="/admin/power-ranking-poster" class="ap-btn ap-btn--primary">Öppna Power Ranking</a>
                         </div>
+                    </article>
+
+                    <article class="ap-hub-card">
+                        <div>
+                            <p class="ap-hub-card__eyebrow">App</p>
+                            <h3 class="ap-hub-card__title">App-notiser</h3>
+                        </div>
+                        <p class="ap-hub-card__desc">
+                            Kontrollera Web Push-status och skicka en testnotis till ditt eget konto (Pit Lane på mobilen).
+                        </p>
+                        <div class="ap-hub-card__actions">
+                            <button type="button" onclick="checkAdminPushDiagnostics()" class="ap-btn ap-btn--sm">Visa push-status</button>
+                            <button type="button" onclick="sendAdminPushTest()" class="ap-btn ap-btn--primary">Testa push till mig</button>
+                        </div>
+                        <pre id="admin-push-status" class="mt-3 text-xs text-slate-400 whitespace-pre-wrap break-words max-h-40 overflow-auto"></pre>
                     </article>
                 </div>
 
@@ -3255,6 +3286,109 @@
                 } catch (error) {
                     alert('❌ Error: ' + error.message);
                 }
+            }
+        }
+
+        async function reResolveLeagueDuels() {
+            const statusEl = document.getElementById('league-challenges-status');
+            const name = prompt('Tävlingsnamn att omräkna (t.ex. southwick):', 'southwick');
+            if (!name) return;
+            if (!confirm(`Omräkna dueller för "${name}"?`)) return;
+            try {
+                const response = await fetch('/admin/leagues/challenges/re-resolve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ name: name.trim() }),
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    alert('❌ ' + (result.error || 'Okänt fel'));
+                    return;
+                }
+                let msg = result.message || 'Klart';
+                if (result.duels && result.duels.length) {
+                    msg += '\n\nDueller: ' + result.duels.length;
+                }
+                if (statusEl) statusEl.textContent = msg.replace(/\n/g, ' · ');
+                alert('✅ ' + msg);
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        async function resetAllLeagueChallenges() {
+            if (!confirm('Nollställ ALLA challenges i hela systemet?\n\nRaderar dueller, märken och utmaningsnotiser.')) {
+                return;
+            }
+            try {
+                const response = await fetch('/admin/leagues/challenges/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                });
+                const result = await response.json();
+                const statusEl = document.getElementById('league-challenges-status');
+                if (response.ok) {
+                    if (statusEl) statusEl.textContent = result.message || 'Challenges nollställda';
+                    alert('✅ ' + (result.message || 'Klart'));
+                } else {
+                    alert('❌ ' + (result.error || 'Okänt fel'));
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        async function checkAdminPushDiagnostics() {
+            const statusEl = document.getElementById('admin-push-status');
+            if (statusEl) statusEl.textContent = 'Hämtar…';
+            try {
+                const response = await fetch('/admin/leagues/push-diagnostics', { credentials: 'same-origin' });
+                const result = await response.json();
+                if (!response.ok) {
+                    if (statusEl) statusEl.textContent = 'Fel: ' + (result.error || response.status);
+                    return;
+                }
+                let msg = 'Konfigurerad: ' + (result.configured ? 'ja' : 'nej') + '\n';
+                msg += 'Privat nyckel: ' + (result.private_key_present ? 'ja' : 'nej') + '\n';
+                msg += 'Publik nyckel: ' + (result.public_key_preview || 'saknas') + '\n';
+                msg += 'Prenumerationer: ' + (result.subscriptions ? result.subscriptions.length : 0);
+                if (result.subscriptions && result.subscriptions.length) {
+                    for (const s of result.subscriptions) {
+                        msg += '\n  · …' + (s.endpoint_tail || '');
+                    }
+                } else {
+                    msg += '\n\nSlå på Pit Lane-notiser på mobilen först.';
+                }
+                if (statusEl) statusEl.textContent = msg;
+            } catch (error) {
+                if (statusEl) statusEl.textContent = 'Fel: ' + error.message;
+            }
+        }
+
+        async function sendAdminPushTest() {
+            const statusEl = document.getElementById('admin-push-status');
+            try {
+                const response = await fetch('/admin/leagues/push-test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    const msg = (result.message || 'Test skickad') + ' — kolla mobilen.';
+                    if (statusEl) statusEl.textContent = msg;
+                    alert('✅ ' + msg);
+                    return;
+                }
+                let msg = result.error || 'okänt fel';
+                if (result.hint) msg += '\n' + result.hint;
+                if (statusEl) statusEl.textContent = msg;
+                alert('❌ ' + msg);
+            } catch (error) {
+                if (statusEl) statusEl.textContent = 'Fel: ' + error.message;
+                alert('❌ Error: ' + error.message);
             }
         }
 

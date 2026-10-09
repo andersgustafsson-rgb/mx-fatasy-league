@@ -8704,35 +8704,8 @@ def race_picks_page(competition_id):
 
 @app.get("/reset_database")
 def reset_database():
-    """Reset database - useful when database gets corrupted"""
-    if not _dev_bootstrap_allowed():
-        _reject_dev_bootstrap()
-    try:
-        # Drop all tables
-        db.drop_all()
-        # Recreate all tables
-        db.create_all()
-        # Create test data
-        create_test_data()
-        return """
-        <h1>Database Reset Successfully!</h1>
-        <p>All tables have been recreated and test data has been added.</p>
-        <p><a href="/">Go to Home</a></p>
-        """
-    except Exception as e:
-        return f"<h1>Database Reset Error</h1><p>{str(e)}</p>"
-
-# moved to app/routes/leagues.py: was L9068-9084
-
-
-# moved to app/routes/leagues.py: was L9087-9103
-
-
-# moved to app/routes/leagues.py: was L9106-9168
-
-# moved to app/routes/leagues.py: was L9170-9196
-
-
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.post("/save_season_team")
 def save_season_team():
@@ -8913,335 +8886,38 @@ def season_team_mx_promotions():
 # -------------------------------------------------
 @app.route("/save_leaderboard_snapshot")
 def save_leaderboard_snapshot():
-    """Manually save current leaderboard as a snapshot"""
-    if not is_admin_user():
-        return redirect(url_for("index"))
-    
-    try:
-        from sqlalchemy import func
-        
-        # Get current leaderboard
-        user_scores = (
-            db.session.query(
-                User.id,
-                User.username,
-                SeasonTeam.team_name,
-                func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
-            )
-            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
-            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
-            .group_by(User.id, User.username, SeasonTeam.team_name)
-            .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
-            .all()
-        )
-        
-        # Save current ranking
-        result = "Saved leaderboard snapshot:\n\n"
-        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
-            history_entry = LeaderboardHistory(
-                user_id=user_id,
-                ranking=i,
-                total_points=int(total_points)
-            )
-            db.session.add(history_entry)
-            result += f"{i}. {username}: {total_points} points\n"
-        
-        db.session.commit()
-        result += f"\nSnapshot saved successfully! Timestamp: {datetime.utcnow()}"
-        return f"<pre>{result}</pre>"
-        
-    except Exception as e:
-        db.session.rollback()
-        return f"Error saving snapshot: {str(e)}"
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.route("/create_initial_snapshot")
 def create_initial_snapshot():
-    """Create initial leaderboard snapshot for comparison"""
-    if not is_admin_user():
-        return redirect(url_for("index"))
-    
-    try:
-        # Clear existing history first
-        LeaderboardHistory.query.delete()
-        db.session.commit()
-        
-        from sqlalchemy import func
-        
-        # Get current leaderboard
-        user_scores = (
-            db.session.query(
-                User.id,
-                User.username,
-                SeasonTeam.team_name,
-                func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
-            )
-            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
-            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
-            .group_by(User.id, User.username, SeasonTeam.team_name)
-            .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
-            .all()
-        )
-        
-        # Save current ranking as initial snapshot
-        result = "Created initial leaderboard snapshot:\n\n"
-        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
-            history_entry = LeaderboardHistory(
-                user_id=user_id,
-                ranking=i,
-                total_points=int(total_points)
-            )
-            db.session.add(history_entry)
-            result += f"{i}. {username}: {total_points} points\n"
-        
-        db.session.commit()
-        result += f"\nInitial snapshot created! Timestamp: {datetime.utcnow()}"
-        result += f"\n\nNow when you run quick simulation, you should see ranking changes!"
-        return f"<pre>{result}</pre>"
-        
-    except Exception as e:
-        db.session.rollback()
-        return f"Error creating initial snapshot: {str(e)}"
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.route("/force_snapshot")
 def force_snapshot():
-    """Force create a snapshot even if no changes detected"""
-    if not is_admin_user():
-        return redirect(url_for("index"))
-    
-    try:
-        from sqlalchemy import func
-        
-        # Get current leaderboard
-        user_scores = (
-            db.session.query(
-                User.id,
-                User.username,
-                SeasonTeam.team_name,
-                func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
-            )
-            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
-            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
-            .group_by(User.id, User.username, SeasonTeam.team_name)
-            .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
-            .all()
-        )
-        
-        # Force save current ranking
-        result = "Forced leaderboard snapshot:\n\n"
-        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
-            history_entry = LeaderboardHistory(
-                user_id=user_id,
-                ranking=i,
-                total_points=int(total_points)
-            )
-            db.session.add(history_entry)
-            result += f"{i}. {username}: {total_points} points\n"
-        
-        db.session.commit()
-        result += f"\nForced snapshot created! Timestamp: {datetime.utcnow()}"
-        return f"<pre>{result}</pre>"
-        
-    except Exception as e:
-        db.session.rollback()
-        return f"Error creating forced snapshot: {str(e)}"
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.route("/create_baseline")
 def create_baseline():
-    """Create a baseline snapshot and disable auto-saving"""
-    if not is_admin_user():
-        return redirect(url_for("index"))
-    
-    try:
-        from sqlalchemy import func
-        
-        # Clear existing history
-        LeaderboardHistory.query.delete()
-        db.session.commit()
-        
-        # Get current leaderboard
-        user_scores = (
-            db.session.query(
-                User.id,
-                User.username,
-                SeasonTeam.team_name,
-                func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
-            )
-            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
-            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
-            .group_by(User.id, User.username, SeasonTeam.team_name)
-            .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
-            .all()
-        )
-        
-        # Create baseline snapshot
-        result = "Creating baseline snapshot:\n\n"
-        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
-            history_entry = LeaderboardHistory(
-                user_id=user_id,
-                ranking=i,
-                total_points=int(total_points)
-            )
-            db.session.add(history_entry)
-            result += f"{i}. {username}: {total_points} points\n"
-        
-        db.session.commit()
-        result += f"\nBaseline snapshot created at: {datetime.utcnow()}\n\n"
-        result += "Now run quick simulation and you should see ranking arrows!\n"
-        result += "The system will compare new rankings against this baseline."
-        
-        return f"<pre>{result}</pre>"
-        
-    except Exception as e:
-        db.session.rollback()
-        return f"Error creating baseline snapshot: {str(e)}"
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.route("/clear_history")
 def clear_history():
-    """Clear all leaderboard history"""
-    if not is_admin_user():
-        return redirect(url_for("index"))
-    
-    try:
-        count = LeaderboardHistory.query.count()
-        LeaderboardHistory.query.delete()
-        db.session.commit()
-        return f"<pre>Cleared {count} leaderboard history entries.</pre>"
-    except Exception as e:
-        db.session.rollback()
-        return f"Error clearing history: {str(e)}"
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.route("/set_baseline")
 def set_baseline():
-    """Set baseline ranking in session - SIMPLE VERSION"""
-    if not is_admin_user():
-        return redirect(url_for("index"))
-    
-    try:
-        from sqlalchemy import func
-        
-        # Get current leaderboard
-        user_scores = (
-            db.session.query(
-                User.id,
-                User.username,
-                SeasonTeam.team_name,
-                func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
-            )
-            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
-            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
-            .group_by(User.id, User.username, SeasonTeam.team_name)
-            .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
-            .all()
-        )
-        
-        # Set baseline in session
-        baseline = {}
-        result = "Setting baseline ranking in session:\n\n"
-        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
-            baseline[str(user_id)] = i
-            result += f"{i}. {username}: {total_points} points\n"
-        
-        session['previous_leaderboard_ranking'] = baseline
-        result += f"\nBaseline set! Now run quick simulation and you should see arrows!"
-        
-        return f"<pre>{result}</pre>"
-        
-    except Exception as e:
-        return f"Error setting baseline: {str(e)}"
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.route("/run_migration")
 def run_migration():
-    """Run database migration - temporary route"""
-    if not is_admin_user():
-        return redirect(url_for("index"))
-    
-    try:
-        # Add the missing column directly with SQL
-        db.session.execute(db.text("ALTER TABLE global_simulation ADD COLUMN IF NOT EXISTS active_race_id INTEGER"))
-        
-        # Add detailed points columns to competition_scores table
-        db.session.execute(db.text("ALTER TABLE competition_scores ADD COLUMN IF NOT EXISTS race_points INTEGER DEFAULT 0"))
-        db.session.execute(db.text("ALTER TABLE competition_scores ADD COLUMN IF NOT EXISTS holeshot_points INTEGER DEFAULT 0"))
-        db.session.execute(db.text("ALTER TABLE competition_scores ADD COLUMN IF NOT EXISTS wildcard_points INTEGER DEFAULT 0"))
-        
-        # Add rider_points column to competition_results table for WSX manual entry
-        db.session.execute(db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS rider_points INTEGER"))
-        db.session.execute(db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_1_position INTEGER"))
-        db.session.execute(db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_2_position INTEGER"))
-        
-        # Create leaderboard_history table
-        db.session.execute(db.text("""
-            CREATE TABLE IF NOT EXISTS leaderboard_history (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL REFERENCES users(id),
-                ranking INTEGER NOT NULL,
-                total_points INTEGER NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """))
-        
-        # Create index for better performance
-        db.session.execute(db.text("""
-            CREATE INDEX IF NOT EXISTS idx_leaderboard_history_user_created 
-            ON leaderboard_history (user_id, created_at)
-        """))
-        
-        # Update existing CompetitionScore records to have proper detailed points
-        # This will recalculate all existing scores with the new detailed breakdown
-        print("Updating existing competition scores with detailed points...")
-        competitions_with_scores = db.session.query(CompetitionScore.competition_id).distinct().all()
-        for (comp_id,) in competitions_with_scores:
-            print(f"Recalculating scores for competition {comp_id}")
-            # This will use the updated calculate_scores function
-            calculate_scores(comp_id)
-        
-        # Create initial leaderboard history entry so we have something to compare with
-        print("Creating initial leaderboard history...")
-        from sqlalchemy import func
-        
-        # Get current leaderboard
-        user_scores = (
-            db.session.query(
-                User.id,
-                User.username,
-                SeasonTeam.team_name,
-                func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
-            )
-            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
-            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
-            .group_by(User.id, User.username, SeasonTeam.team_name)
-            .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
-            .all()
-        )
-        
-        # Save initial ranking
-        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
-            history_entry = LeaderboardHistory(
-                user_id=user_id,
-                ranking=i,
-                total_points=int(total_points)
-            )
-            db.session.add(history_entry)
-            print(f"Saved initial ranking: {username} at position {i} with {total_points} points")
-        
-        db.session.commit()
-        return "Migration completed successfully! Added active_race_id, detailed points columns, leaderboard history table, recalculated existing scores, and created initial leaderboard history."
-    except Exception as e:
-        db.session.rollback()
-        return f"Migration failed: {str(e)}"
-
-## Moved to admin blueprint in app/routes/admin.py
-
-## Moved to admin blueprint in app/routes/admin.py
-
-## Moved to admin blueprint in app/routes/admin.py
-
-# API endpoints for rider management
-## Moved to api blueprint in app/routes/api.py
-
-## Moved to api blueprint in app/routes/api.py
-
-## Moved to api blueprint in app/routes/api.py
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 def _clean_bio_text(text: str) -> str:
     """Ta bort RacerX/MX Fantasy-brusrubriker innan visning."""
@@ -11307,64 +10983,6 @@ def create_finished_series_stats_table():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-
-@app.route("/admin_old")
-def admin_page_old():
-    if not is_admin_user():
-        return redirect(url_for("index"))
-    competitions = Competition.query.order_by(Competition.event_date).all()
-    riders_450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.rider_number).all()
-    
-    # For admin page, we need ALL 250cc riders (not filtered by coast)
-    # Coast filtering will be handled by JavaScript based on selected competition
-    riders_250 = Rider.query.filter_by(class_name="250cc").order_by(Rider.rider_number).all()
-
-    # Serialize riders data for JavaScript
-    def serialize_rider(r: Rider):
-        return {
-            "id": r.id,
-            "name": r.name,
-            "class_name": r.class_name,
-            "rider_number": r.rider_number,
-            "bike_brand": r.bike_brand,
-            "coast_250": r.coast_250,
-        }
-
-    riders_250_json = [serialize_rider(r) for r in riders_250]
-
-    # Create competition coast map for JavaScript
-    comp_coast_map = {}
-    for comp in competitions:
-        comp_coast_map[comp.id] = comp.coast_250
-
-    race_scores = []
-    last_scored = (
-        db.session.query(CompetitionScore.competition_id)
-        .join(Competition, Competition.id == CompetitionScore.competition_id)
-        .order_by(Competition.event_date.desc())
-        .first()
-    )
-    if last_scored:
-        last_comp_id = last_scored[0]
-        race_scores = (
-            db.session.query(User.username, CompetitionScore.total_points)
-            .join(User, User.id == CompetitionScore.user_id)
-            .filter(CompetitionScore.competition_id == last_comp_id)
-            .order_by(CompetitionScore.total_points.desc())
-            .all()
-        )
-
-    return render_template(
-        "admin_new.html",
-        competitions=competitions,
-        riders_450=riders_450,
-        riders_250=riders_250,
-        riders_250_json=riders_250_json,
-        comp_coast_map=comp_coast_map,
-        race_scores=race_scores,
-        today=get_today(),
-    )
-
 
 @app.get("/admin/get_results/<int:competition_id>")
 def admin_get_results(competition_id):
@@ -14928,44 +14546,19 @@ def trackmaps_competition_page(competition_id):
 
 @app.get("/create_trackmaps")
 def create_trackmaps_route():
-    """Manual route to create track map images"""
-    if "user_id" not in session:
-        return _redirect_to_login()
-    
-    create_trackmap_images()
-    return redirect(url_for("trackmaps_page"))
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.get("/reset_trackmaps")
 def reset_trackmaps_route():
-    """Reset and recreate all track map images"""
-    if "user_id" not in session:
-        return _redirect_to_login()
-    
-    # Clear all existing CompetitionImage records
-    CompetitionImage.query.delete()
-    db.session.commit()
-    
-    # Recreate them
-    create_trackmap_images()
-    return redirect(url_for("trackmaps_page"))
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.get("/list_trackmap_files")
 def list_trackmap_files():
-    """List all files in compressed trackmaps folder"""
-    if "user_id" not in session:
-        return _redirect_to_login()
-    
-    from pathlib import Path
-    compressed_dir = Path("static/trackmaps/compressed")
-    
-    if compressed_dir.exists():
-        files = list(compressed_dir.glob("*.jpg"))
-        for file in files:
-            print(f"  - {file.name}")
-    else:
-        pass
-    
-    return redirect(url_for("trackmaps_page"))
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
+
 @app.get("/admin/get_out_status/<int:competition_id>")
 def admin_get_out_status(competition_id):
     if not is_admin_user():
@@ -16292,171 +15885,28 @@ def clear_competition_results(competition_id):
 
 @app.get("/update_rider_numbers")
 def update_rider_numbers():
-    """Update rider numbers and coast assignments in database"""
-    if not is_admin_user():
-        return jsonify({"error": "admin_only"}), 403
-    
-    try:
-        # Update Ty Masterpool
-        ty_masterpool = Rider.query.filter_by(name='Ty Masterpool').first()
-        if ty_masterpool:
-            ty_masterpool.rider_number = 81
-            ty_masterpool.coast_250 = 'east'
-            print(f"Updated Ty Masterpool: rider_number=81, coast_250=east")
-        
-        # Update Jordon Smith
-        jordon_smith = Rider.query.filter_by(name='Jordon Smith').first()
-        if jordon_smith:
-            jordon_smith.rider_number = 58
-            jordon_smith.coast_250 = 'east'
-            print(f"Updated Jordon Smith: rider_number=58, coast_250=east")
-        
-        # Update Chance Hymas
-        chance_hymas = Rider.query.filter_by(name='Chance Hymas').first()
-        if chance_hymas:
-            chance_hymas.rider_number = 49
-            chance_hymas.coast_250 = 'west'
-            print(f"Updated Chance Hymas: rider_number=49, coast_250=west")
-        
-        # Update Seth Hammaker
-        seth_hammaker = Rider.query.filter_by(name='Seth Hammaker').first()
-        if seth_hammaker:
-            seth_hammaker.coast_250 = 'west'
-            print(f"Updated Seth Hammaker: coast_250=west")
-        
-        db.session.commit()
-        return jsonify({"message": "Rider numbers and coast assignments updated successfully"})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.get("/clear_all_user_picks")
 def clear_all_user_picks():
-    """Clear all picks for all users - admin only"""
-    if not is_admin_user():
-        return jsonify({"error": "admin_only"}), 403
-    
-    try:
-        # Count picks before deletion
-        race_picks_count = RacePick.query.count()
-        holeshot_picks_count = HoleshotPick.query.count()
-        wildcard_picks_count = WildcardPick.query.count()
-        
-        
-        # Clear all race picks
-        RacePick.query.delete()
-        
-        # Clear all holeshot picks
-        HoleshotPick.query.delete()
-        
-        # Clear all wildcard picks
-        WildcardPick.query.delete()
-        
-        db.session.commit()
-        
-        return jsonify({"message": f"All user picks cleared successfully. Deleted {race_picks_count} race picks, {holeshot_picks_count} holeshot picks, {wildcard_picks_count} wildcard picks."})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.get("/clear_all_riders")
 def clear_all_riders():
-    """Clear all riders from database - use rider management to recreate"""
-    if not is_admin_user():
-        return jsonify({"error": "admin_only"}), 403
-    
-    try:
-        # Clear all riders
-        Rider.query.delete()
-        db.session.commit()
-        return jsonify({"message": "All riders cleared. Use rider management to recreate them."})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.get("/remove_duplicate_riders")
 def remove_duplicate_riders():
-    """Remove duplicate riders - keep the one with highest ID"""
-    if not is_admin_user():
-        return jsonify({"error": "admin_only"}), 403
-    
-    try:
-        # Find duplicate riders by name
-        from sqlalchemy import func
-        duplicates = db.session.query(
-            Rider.name, 
-            func.count(Rider.id).label('count'),
-            func.array_agg(Rider.id).label('ids')
-        ).group_by(Rider.name).having(func.count(Rider.id) > 1).all()
-        
-        removed_count = 0
-        for name, count, ids in duplicates:
-            # Keep the rider with highest ID, remove others
-            ids_to_remove = sorted(ids)[:-1]  # All except the last (highest ID)
-            for rider_id in ids_to_remove:
-                # Check if rider is used in season_team_riders
-                season_team_usage = SeasonTeamRider.query.filter_by(rider_id=rider_id).count()
-                if season_team_usage > 0:
-                    print(f"Skipping rider {name} (ID: {rider_id}) - used in {season_team_usage} season teams")
-                    continue
-                
-                # Check if rider is used in race picks
-                race_pick_usage = RacePick.query.filter_by(rider_id=rider_id).count()
-                if race_pick_usage > 0:
-                    print(f"Skipping rider {name} (ID: {rider_id}) - used in {race_pick_usage} race picks")
-                    continue
-                
-                # Check if rider is used in holeshot picks
-                holeshot_usage = HoleshotPick.query.filter_by(rider_id=rider_id).count()
-                if holeshot_usage > 0:
-                    print(f"Skipping rider {name} (ID: {rider_id}) - used in {holeshot_usage} holeshot picks")
-                    continue
-                
-                # Check if rider is used in wildcard picks
-                wildcard_usage = WildcardPick.query.filter_by(rider_id=rider_id).count()
-                if wildcard_usage > 0:
-                    print(f"Skipping rider {name} (ID: {rider_id}) - used in {wildcard_usage} wildcard picks")
-                    continue
-                
-                # Safe to remove
-                Rider.query.filter_by(id=rider_id).delete()
-                removed_count += 1
-                print(f"Removed duplicate rider {name} (ID: {rider_id})")
-        
-        db.session.commit()
-        return jsonify({"message": f"Removed {removed_count} duplicate riders. Kept the ones with highest ID. Skipped riders that are still in use."})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.get("/update_season_team_points")
 def update_season_team_points():
-    """Update all season team points based on rider results"""
-    if not is_admin_user():
-        return jsonify({"error": "admin_only"}), 403
-    
-    
-    all_season_teams = SeasonTeam.query.all()
-    updated_teams = []
-    
-    for team in all_season_teams:
-        old_points = team.total_points
-        rider_count = SeasonTeamRider.query.filter_by(season_team_id=team.id).count()
-        new_points = recalculate_season_team_total_points(team)
-        updated_teams.append({
-            "team_name": team.team_name,
-            "user_id": team.user_id,
-            "old_points": old_points,
-            "new_points": new_points,
-            "rider_count": rider_count,
-        })
-    
-    db.session.commit()
-    
-    return jsonify({
-        "message": f"Updated {len(updated_teams)} season teams based on rider results",
-        "updated_teams": updated_teams
-    })
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.get("/get_user_total_points")
 def get_user_total_points():
@@ -16553,114 +16003,8 @@ def _wsx_competitions_for_year(year: int):
 
 @app.route("/restore_rider_images")
 def restore_rider_images():
-    """Restore rider images from static/riders/ directory (including subfolders like 250east, 250_east)."""
-    if not is_admin_user():
-        return jsonify({"error": "admin_only"}), 403
-    
-    try:
-        import os
-        import re
-        from pathlib import Path
-        
-        static_dir = Path(app.static_folder)
-        riders_dir = static_dir / "riders"
-        
-        if not riders_dir.exists():
-            return jsonify({
-                "success": False,
-                "error": "static/riders directory not found"
-            })
-        
-        # Collect image files from riders/ and all subfolders (e.g. riders/250east/, riders/250_east/)
-        image_ext = {'.jpg', '.jpeg', '.png', '.gif'}
-        image_files = []
-        for p in riders_dir.rglob("*"):
-            if p.is_file() and p.suffix.lower() in image_ext:
-                image_files.append(p)
-        
-        if not image_files:
-            return jsonify({
-                "success": False,
-                "error": "No image files found in static/riders/ (or in subfolders like 250east)"
-            })
-        
-        def norm(s: str) -> str:
-            s = (s or "").strip().lower()
-            s = s.replace(".", "")
-            s = re.sub(r"[\s_]+", " ", s)
-            return s
-        
-        riders = Rider.query.all()
-        by_number = {}
-        by_name = {}
-        by_number_and_coast = {}
-        for rider in riders:
-            if rider.rider_number:
-                num = int(rider.rider_number)
-                by_number[num] = rider
-                coast = (getattr(rider, 'coast_250', None) or "").lower()
-                if coast:
-                    by_number_and_coast[(num, coast)] = rider
-            by_name[norm(rider.name)] = rider
-        
-        updated = 0
-        skipped = 0
-        
-        for image_file in image_files:
-            try:
-                rel_path = str(image_file.relative_to(static_dir)).replace("\\", "/")
-            except ValueError:
-                rel_path = f"riders/{image_file.name}"
-            filename = image_file.stem
-            parent_name = (image_file.parent.name or "").lower()
-            is_east = "east" in parent_name and ("250" in parent_name or "east" == parent_name)
-            is_west = "west" in parent_name and ("250" in parent_name or "west" == parent_name)
-            
-            candidate = None
-            m = re.match(r"^(\d{1,3})[_\s-]", filename)
-            if m:
-                try:
-                    num = int(m.group(1))
-                    if is_east:
-                        candidate = by_number_and_coast.get((num, "east")) or by_number.get(num)
-                    elif is_west:
-                        candidate = by_number_and_coast.get((num, "west")) or by_number.get(num)
-                    else:
-                        candidate = by_number.get(num)
-                except Exception:
-                    candidate = None
-            
-            if not candidate:
-                tmp = re.sub(r"^\d{1,3}[_\s-]+", "", filename)
-                name = norm(tmp)
-                candidate = by_name.get(name)
-                if not candidate:
-                    name2 = norm(re.sub(r"[^a-z0-9\s]", "", tmp))
-                    candidate = by_name.get(name2)
-            
-            if not candidate:
-                print(f"[SKIP] No match for file: {rel_path}")
-                skipped += 1
-                continue
-            
-            candidate.image_url = rel_path
-            db.session.add(candidate)
-            updated += 1
-            print(f"[OK] {candidate.name} -> {rel_path}")
-        
-        db.session.commit()
-        
-        return jsonify({
-            "success": True,
-            "updated": updated,
-            "skipped": skipped,
-            "message": f"Restored images for {updated} riders"
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error in restore_rider_images: {e}")
-        return jsonify({"error": str(e)}), 500
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.get("/admin/get_competition_results/<int:competition_id>")
 def admin_get_competition_results(competition_id: int):
@@ -18363,190 +17707,8 @@ def update_rider_prices():
 
 @app.get("/import_all_2025_riders_fixed")
 def import_all_2025_riders_fixed():
-    """Import all riders from 2025 point standings with proper data"""
-    if not is_admin_user():
-        return jsonify({"error": "admin_only"}), 403
-    
-    try:
-        # Read point standings file
-        with open('point standings 2025.txt', 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        # Parse the data
-        riders_data = {
-            '450cc': {},
-            '250cc': {}
-        }
-        
-        sections = content.split('\n\n')
-        current_class = None
-        
-        for section in sections:
-            lines = section.strip().split('\n')
-            if not lines:
-                continue
-                
-            # Check if this is a class header (case-insensitive, flexible matching)
-            header_lower = lines[0].lower()
-            if '250' in header_lower and ('west' in header_lower or 'east' in header_lower):
-                current_class = '250cc'
-                continue
-            elif '450' in header_lower and ('point' in header_lower or 'standings' in header_lower):
-                current_class = '450cc'
-                continue
-            
-            # Parse rider data
-            if current_class and len(lines) > 1:
-                for line in lines[1:]:  # Skip header line
-                    if not line.strip():
-                        continue
-                        
-                    # Parse format: "1	Haiden DeeganHaiden Deegan	Temecula, CAUnited States	221"
-                    parts = line.split('\t')
-                    if len(parts) >= 4:
-                        try:
-                            position = int(parts[0])
-                            name_part = parts[1]
-                            points = int(parts[-1]) if parts[-1].isdigit() else 0
-                            
-                            # Clean up name (remove duplicates) - SUPER IMPROVED VERSION
-                            name = name_part.strip()
-                            
-                            # Method 1: Check for exact duplicate patterns like "Drew AdamsDrew Adams"
-                            if len(name) > 15:  # Likely has duplicate name
-                                # Find the middle point and look for capital letters
-                                mid = len(name) // 2
-                                for i in range(mid-3, mid+3):
-                                    if i < len(name) and name[i].isupper() and i > 0:
-                                        # Check if this looks like a duplicate
-                                        first_part = name[:i]
-                                        second_part = name[i:]
-                                        if first_part == second_part:
-                                            name = first_part
-                                            break
-                                        # Also check if second part starts with first part
-                                        elif second_part.startswith(first_part):
-                                            name = first_part
-                                            break
-                            
-                            # Method 2: Check for word-level duplicates
-                            words = name.split()
-                            if len(words) >= 4:  # At least 4 words suggests duplication
-                                mid = len(words) // 2
-                                first_half = words[:mid]
-                                second_half = words[mid:]
-                                if first_half == second_half:
-                                    name = ' '.join(first_half)
-                            
-                            # Method 3: Remove any remaining obvious duplicates
-                            if ' ' in name:
-                                parts = name.split(' ')
-                                if len(parts) >= 2:
-                                    # Check if first two words repeat
-                                    if len(parts) >= 4 and parts[0] == parts[2] and parts[1] == parts[3]:
-                                        name = f"{parts[0]} {parts[1]}"
-                                    # Check if the name is just repeated
-                                    elif len(parts) == 2 and parts[0] == parts[1]:
-                                        name = parts[0]
-                            
-                            riders_data[current_class][name] = {
-                                'position': position,
-                                'points': points
-                            }
-                        except (ValueError, IndexError):
-                            continue
-        
-        # Import riders into database with PROPER DATA
-        imported_riders = []
-        updated_riders = []
-        
-        for class_name, riders in riders_data.items():
-            for name, data in riders.items():
-                position = data['position']
-                points = data['points']
-                
-                # Calculate price based on position and points
-                if class_name == '450cc':
-                    # 450cc riders: $50k base + $10k per point + position bonus
-                    price = 50000 + (points * 1000) + max(0, (50 - position) * 5000)
-                else:
-                    # 250cc riders: $10k base + $500 per point + position bonus
-                    price = 10000 + (points * 500) + max(0, (30 - position) * 2000)
-                
-                # Check if rider already exists
-                existing_rider = Rider.query.filter_by(name=name, class_name=class_name).first()
-                
-                if existing_rider:
-                    # Update existing rider with better data
-                    old_price = existing_rider.price
-                    existing_rider.price = price
-                    
-                    # Update rider number and bike brand if they're still default values
-                    if existing_rider.rider_number is None or existing_rider.rider_number == 0:
-                        existing_rider.rider_number = min(position * 10, 999) if position <= 50 else 100 + position
-                    
-                    if existing_rider.bike_brand == 'Unknown':
-                        bike_brands = ['Yamaha', 'Honda', 'Kawasaki', 'KTM', 'Husqvarna', 'GasGas', 'Suzuki']
-                        existing_rider.bike_brand = bike_brands[position % len(bike_brands)]
-                    
-                    # Update coast for 250cc riders
-                    if class_name == '250cc':
-                        existing_rider.coast_250 = 'east' if position % 2 == 0 else 'west'
-                    
-                    updated_riders.append({
-                        'name': name,
-                        'class': class_name,
-                        'position': position,
-                        'points': points,
-                        'old_price': old_price,
-                        'new_price': price,
-                        'rider_number': existing_rider.rider_number,
-                        'bike_brand': existing_rider.bike_brand
-                    })
-                else:
-                    # Create new rider with realistic data
-                    # Generate rider number based on position (1-999)
-                    rider_number = min(position * 10, 999) if position <= 50 else 100 + position
-                    
-                    # Assign bike brand based on position (realistic distribution)
-                    bike_brands = ['Yamaha', 'Honda', 'Kawasaki', 'KTM', 'Husqvarna', 'GasGas', 'Suzuki']
-                    bike_brand = bike_brands[position % len(bike_brands)]
-                    
-                    # Set coast for 250cc riders
-                    coast_250 = 'east' if class_name == '250cc' and position % 2 == 0 else 'west' if class_name == '250cc' else None
-                    
-                    new_rider = Rider(
-                        name=name,
-                        class_name=class_name,
-                        price=price,
-                        rider_number=rider_number,
-                        bike_brand=bike_brand,
-                        coast_250=coast_250
-                    )
-                    db.session.add(new_rider)
-                    imported_riders.append({
-                        'name': name,
-                        'class': class_name,
-                        'position': position,
-                        'points': points,
-                        'price': price,
-                        'rider_number': rider_number,
-                        'bike_brand': bike_brand
-                    })
-        
-        db.session.commit()
-        
-        return jsonify({
-            "message": f"FIXED: Imported {len(imported_riders)} new riders and updated {len(updated_riders)} existing riders with proper data",
-            "imported_riders": imported_riders[:10],  # Show first 10
-            "updated_riders": updated_riders[:10],    # Show first 10
-            "total_450cc": len(riders_data['450cc']),
-            "total_250cc": len(riders_data['250cc'])
-        })
-        
-    except Exception as e:
-        print(f"Error importing 2025 riders: {e}")
-        return jsonify({"error": str(e)}), 500
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.route("/user_race_results/<int:user_id>")
 def user_race_results(user_id):
@@ -18938,6 +18100,8 @@ def health_check():
 @app.get("/check_data")
 def check_data_route():
     """Check what data exists in database"""
+    if not is_admin_user():
+        abort(404)
     users = User.query.all()
     competitions = Competition.query.all()
     riders = Rider.query.all()
@@ -18970,216 +18134,13 @@ def check_data_route():
 
 @app.get("/reset_database")
 def reset_database_route():
-    """Reset database - drop all tables and recreate"""
-    if not _dev_bootstrap_allowed():
-        _reject_dev_bootstrap()
-    try:
-        with app.app_context():
-            print("Dropping all tables...")
-            db.drop_all()
-            print("All tables dropped")
-            
-            print("Recreating database...")
-            db.create_all()
-            print("Database tables recreated")
-            
-            print("Creating test data...")
-            create_test_data()
-            print("Test data created")
-            
-            return f"""
-            <h1>Database Reset Complete!</h1>
-            <p>All tables have been dropped and recreated with fresh data.</p>
-            <p><a href="/">Go to Home</a></p>
-            <p><a href="/admin">Go to Admin</a></p>
-            """
-    except Exception as e:
-        return f"""
-        <h1>Database Reset Failed!</h1>
-        <p>Error: {e}</p>
-        <p><a href="/">Go to Home</a></p>
-        """
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.get("/force_create_data")
 def force_create_data_route():
-    """Force create all data"""
-    if not _dev_bootstrap_allowed():
-        _reject_dev_bootstrap()
-    # Clear existing data
-    Competition.query.delete()
-    # Don't delete riders - use rider management as master list
-    db.session.commit()
-    
-    # Create competitions
-    competitions = [
-        # Western Regional 250SX Championship
-        {'name': 'Anaheim 1', 'event_date': '2026-01-10', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Los_Angeles'},
-        {'name': 'San Diego', 'event_date': '2026-01-17', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Los_Angeles'},
-        {'name': 'Anaheim 2', 'event_date': '2026-01-24', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Los_Angeles'},
-        {'name': 'Houston', 'event_date': '2026-01-31', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True, 'timezone': 'America/Chicago'},
-        {'name': 'Glendale', 'event_date': '2026-02-07', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Phoenix'},
-        {'name': 'Seattle', 'event_date': '2026-02-14', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Los_Angeles'},
-        
-        # Eastern Regional 250SX Championship
-        {'name': 'Arlington', 'event_date': '2026-02-21', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True, 'timezone': 'America/Chicago'},
-        {'name': 'Daytona', 'event_date': '2026-02-28', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
-        {'name': 'Indianapolis', 'event_date': '2026-03-07', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
-        {'name': 'Birmingham', 'event_date': '2026-03-21', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True, 'timezone': 'America/Chicago'},
-        {'name': 'Detroit', 'event_date': '2026-03-28', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
-        {'name': 'St. Louis', 'event_date': '2026-04-04', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Chicago'},
-        {'name': 'Nashville', 'event_date': '2026-04-11', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Chicago'},
-        {'name': 'Cleveland', 'event_date': '2026-04-18', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
-        {'name': 'Philadelphia', 'event_date': '2026-04-25', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
-        {'name': 'Denver', 'event_date': '2026-05-02', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Denver'},
-        {'name': 'Salt Lake City', 'event_date': '2026-05-09', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.5, 'timezone': 'America/Denver'}
-    ]
-    
-    for comp_data in competitions:
-        comp = Competition(
-            name=comp_data['name'],
-            event_date=datetime.strptime(comp_data['event_date'], '%Y-%m-%d').date(),
-            coast_250=comp_data['coast_250'],
-            series=comp_data['series'],
-            point_multiplier=comp_data['point_multiplier'],
-            is_triple_crown=comp_data.get('is_triple_crown', False),
-            timezone=comp_data.get('timezone', 'America/New_York')
-        )
-        db.session.add(comp)
-    
-    # Don't create riders here - use rider management as master list
-    # Riders should only be created/updated through rider management interface
-    riders_450 = [
-        {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 3},
-        {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 2},
-        {'name': 'Chase Sexton', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 4},
-        {'name': 'Aaron Plessinger', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 7},
-        {'name': 'Kyle Chisholm', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 11},
-        {'name': 'Shane McElrath', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 12},
-        {'name': 'Dylan Ferrandis', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 14},
-        {'name': 'Dean Wilson', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 15},
-        {'name': 'Tom Vialle', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 16},
-        {'name': 'Joey Savatgy', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 17},
-        {'name': 'Max Vohland', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 20},
-        {'name': 'Jason Anderson', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 21},
-        {'name': 'RJ Hampshire', 'class_name': '450cc', 'bike_brand': 'Husqvarna', 'rider_number': 24},
-        {'name': 'Garrett Marchbanks', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 26},
-        {'name': 'Malcolm Stewart', 'class_name': '450cc', 'bike_brand': 'Husqvarna', 'rider_number': 27},
-        {'name': 'Christian Craig', 'class_name': '450cc', 'bike_brand': 'Husqvarna', 'rider_number': 28},
-        {'name': 'Cameron McAdoo', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 29},
-        {'name': 'Ty Masterpool', 'class_name': '450cc', 'bike_brand': 'GasGas', 'rider_number': 29},
-        {'name': 'Jo Shimoda', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 30},
-        {'name': 'Jordon Smith', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 31},
-        {'name': 'Justin Cooper', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 32},
-        {'name': 'Carson Mumford', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 34},
-        {'name': 'Michael Mosiman', 'class_name': '450cc', 'bike_brand': 'GasGas', 'rider_number': 36},
-        {'name': 'Max Anstie', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 37},
-        {'name': 'Haiden Deegan', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 38},
-        {'name': 'Pierce Brown', 'class_name': '450cc', 'bike_brand': 'GasGas', 'rider_number': 39},
-        {'name': 'Dilan Schwartz', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 40},
-        {'name': 'Derek Kelley', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 41},
-        {'name': 'Seth Hammaker', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 43},
-        {'name': 'Justin Hill', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 44},
-        {'name': 'Colt Nichols', 'class_name': '450cc', 'bike_brand': 'Beta', 'rider_number': 45},
-        {'name': 'Fredrik Noren', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 46},
-        {'name': 'Levi Kitchen', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 47},
-        {'name': 'Chance Hymas', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 48},
-        {'name': 'Enzo Lopes', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 50},
-        {'name': 'Justin Barcia', 'class_name': '450cc', 'bike_brand': 'GasGas', 'rider_number': 51},
-        {'name': 'Cullin Park', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 53},
-        {'name': 'Mitchell Oldenburg', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 54},
-        {'name': 'Nate Thrasher', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 57},
-        {'name': 'Daxton Bennick', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 59},
-        {'name': 'Robbie Wageman', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 59},
-        {'name': 'Benny Bloss', 'class_name': '450cc', 'bike_brand': 'Beta', 'rider_number': 60},
-        {'name': 'Justin Starling', 'class_name': '450cc', 'bike_brand': 'GasGas', 'rider_number': 60},
-        {'name': 'Austin Forkner', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 64},
-        {'name': 'Vince Friese', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 64},
-        {'name': 'Jerry Robin', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 67},
-        {'name': 'Stilez Robertson', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 67},
-        {'name': 'Joshua Cartwright', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 69},
-        {'name': 'Hardy Munoz', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 72},
-        {'name': 'Ryder DiFrancesco', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 75},
-        {'name': 'Mitchell Harrison', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 79},
-        {'name': 'Cade Clason', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 81},
-        {'name': 'Hunter Yoder', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 85},
-        {'name': 'Ken Roczen', 'class_name': '450cc', 'bike_brand': 'Suzuki', 'rider_number': 94},
-        {'name': 'Hunter Lawrence', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 96},
-        {'name': 'Anthony Rodriguez', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 100},
-        {'name': 'Grant Harlan', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 109},
-        {'name': 'Jett Reynolds', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 124},
-        {'name': 'Ryan Breece', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 200},
-        {'name': 'Nick Romano', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 511},
-        {'name': 'Julien Beaumer', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 929}
-    ]
-    
-    riders_250 = [
-        # West Coast 250cc riders
-        {'name': 'Max Vohland', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 20, 'coast_250': 'west'},
-        {'name': 'RJ Hampshire', 'class_name': '250cc', 'bike_brand': 'Husqvarna', 'rider_number': 24, 'coast_250': 'west'},
-        {'name': 'Garrett Marchbanks', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 26, 'coast_250': 'west'},
-        {'name': 'Cameron McAdoo', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 29, 'coast_250': 'west'},
-        {'name': 'Jo Shimoda', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 30, 'coast_250': 'west'},
-        {'name': 'Justin Cooper', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 32, 'coast_250': 'west'},
-        {'name': 'Carson Mumford', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 34, 'coast_250': 'west'},
-        {'name': 'Michael Mosiman', 'class_name': '250cc', 'bike_brand': 'GasGas', 'rider_number': 36, 'coast_250': 'west'},
-        {'name': 'Haiden Deegan', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 38, 'coast_250': 'west'},
-        {'name': 'Pierce Brown', 'class_name': '250cc', 'bike_brand': 'GasGas', 'rider_number': 39, 'coast_250': 'west'},
-        {'name': 'Dilan Schwartz', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 40, 'coast_250': 'west'},
-        {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 43, 'coast_250': 'west'},
-        {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 47, 'coast_250': 'west'},
-        {'name': 'Chance Hymas', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 49, 'coast_250': 'west'},
-        {'name': 'Enzo Lopes', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 50, 'coast_250': 'west'},
-        {'name': 'Cullin Park', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 53, 'coast_250': 'west'},
-        
-        # East Coast 250cc riders
-        {'name': 'Ty Masterpool', 'class_name': '250cc', 'bike_brand': 'GasGas', 'rider_number': 81, 'coast_250': 'east'},
-        {'name': 'Jordon Smith', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 58, 'coast_250': 'east'},
-        {'name': 'Max Anstie', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 37, 'coast_250': 'east'},
-        {'name': 'Derek Kelley', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 41, 'coast_250': 'east'},
-        {'name': 'Justin Hill', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 44, 'coast_250': 'east'},
-        {'name': 'Colt Nichols', 'class_name': '250cc', 'bike_brand': 'Beta', 'rider_number': 45, 'coast_250': 'east'},
-        {'name': 'Fredrik Noren', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 46, 'coast_250': 'east'},
-        {'name': 'Mitchell Oldenburg', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 54, 'coast_250': 'east'},
-        {'name': 'Nate Thrasher', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 57, 'coast_250': 'west'},
-        {'name': 'Daxton Bennick', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 59, 'coast_250': 'east'},
-        {'name': 'Robbie Wageman', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 59, 'coast_250': 'west'},
-        {'name': 'Benny Bloss', 'class_name': '250cc', 'bike_brand': 'Beta', 'rider_number': 60, 'coast_250': 'east'},
-        {'name': 'Justin Starling', 'class_name': '250cc', 'bike_brand': 'GasGas', 'rider_number': 60, 'coast_250': 'east'},
-        {'name': 'Austin Forkner', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 64, 'coast_250': 'east'},
-        {'name': 'Vince Friese', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 64, 'coast_250': 'east'},
-        {'name': 'Jerry Robin', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 67, 'coast_250': 'east'},
-        {'name': 'Stilez Robertson', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 67, 'coast_250': 'west'},
-        {'name': 'Joshua Cartwright', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 69, 'coast_250': 'east'},
-        {'name': 'Hardy Munoz', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 72, 'coast_250': 'west'},
-        {'name': 'Ryder DiFrancesco', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 75, 'coast_250': 'west'},
-        {'name': 'Mitchell Harrison', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 79, 'coast_250': 'east'},
-        {'name': 'Cade Clason', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 81, 'coast_250': 'east'},
-        {'name': 'Hunter Yoder', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 85, 'coast_250': 'east'},
-        {'name': 'Ken Roczen', 'class_name': '250cc', 'bike_brand': 'Suzuki', 'rider_number': 94, 'coast_250': 'east'},
-        {'name': 'Hunter Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 96, 'coast_250': 'east'},
-        {'name': 'Anthony Rodriguez', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 100, 'coast_250': 'east'},
-        {'name': 'Grant Harlan', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 109, 'coast_250': 'east'},
-        {'name': 'Jett Reynolds', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 124, 'coast_250': 'west'},
-        {'name': 'Ryan Breece', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 200, 'coast_250': 'east'},
-        {'name': 'Nick Romano', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 511, 'coast_250': 'west'},
-        {'name': 'Julien Beaumer', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 929, 'coast_250': 'west'}
-    ]
-    
-    # Don't create riders here - use rider management as master list
-    
-    db.session.commit()
-    
-    return f"""
-    <h1>Data Created!</h1>
-    <p>Created {len(competitions)} competitions and {len(all_riders)} riders</p>
-    <p><a href="/admin">Go to Admin</a></p>
-    <p><a href="/check_data">Check Data</a></p>
-    """
-
-# -------------------------------------------------
-# Main
-# -------------------------------------------------
-# CSV import function removed - use rider management as master list only
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 def create_test_data():
     """Create test data if it doesn't exist"""
@@ -20193,44 +19154,8 @@ def recalculate_buenos_aires_scores():
 
 @app.get("/clear_anaheim1")
 def clear_anaheim1():
-    """Clear all data for Anaheim 1 specifically - for debugging"""
-    if not is_admin_user():
-        return redirect(url_for("login"))
-    
-    try:
-        with app.app_context():
-            comp_id = 1  # Anaheim 1
-            
-            # Delete all data for Anaheim 1
-            deleted_results = CompetitionResult.query.filter_by(competition_id=comp_id).delete()
-            deleted_holeshot_results = HoleshotResult.query.filter_by(competition_id=comp_id).delete()
-            deleted_scores = CompetitionScore.query.filter_by(competition_id=comp_id).delete()
-            deleted_out_status = CompetitionRiderStatus.query.filter_by(competition_id=comp_id).delete()
-            deleted_race_picks = RacePick.query.filter_by(competition_id=comp_id).delete()
-            deleted_holeshot_picks = HoleshotPick.query.filter_by(competition_id=comp_id).delete()
-            deleted_wildcard_picks = WildcardPick.query.filter_by(competition_id=comp_id).delete()
-            
-            db.session.commit()
-            
-            return f"""
-            <h1>Anaheim 1 Cleared Successfully!</h1>
-            <p>Deleted:</p>
-            <ul>
-            <li>{deleted_results} race results</li>
-            <li>{deleted_holeshot_results} holeshot results</li>
-            <li>{deleted_scores} scores</li>
-            <li>{deleted_out_status} out statuses</li>
-            <li>{deleted_race_picks} race picks</li>
-            <li>{deleted_holeshot_picks} holeshot picks</li>
-            <li>{deleted_wildcard_picks} wildcard picks</li>
-            </ul>
-            <p><a href="/admin">Go to Admin</a></p>
-            <p><a href="/debug_database">Check Database</a></p>
-            """
-    except Exception as e:
-        return f"<h1>Error</h1><p>{e}</p>"
-
-
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.get("/trackmap_status")
 def trackmap_status():
@@ -20269,49 +19194,8 @@ def trackmap_status():
 
 @app.get("/force_create_all_trackmaps")
 def force_create_all_trackmaps():
-    """Force create all track map images - bypasses existing check"""
-    print("FORCE CREATING ALL TRACKMAPS...")
-    
-    # Clear all existing
-    CompetitionImage.query.delete()
-    db.session.commit()
-    print("Cleared all existing CompetitionImage records")
-    
-    # Create all 16 manually
-    COMP_TO_IMAGE = {
-        "Anaheim 1": "anaheim1.jpg",
-        "San Diego": "sandiego.jpg", 
-        "Anaheim 2": "anaheim2.jpg",
-        "Houston": "houston.jpg",
-        "Glendale": "glendale.jpg",
-        "Seattle": "seattle.jpg",
-        "Arlington": "arlington.jpg",
-        "Daytona": "daytona.png",
-        "Indianapolis": "indianapolis.jpg",
-        "Birmingham": "birmingham.jpg",
-        "Detroit": "detroit.jpg",
-        "St. Louis": "stlouis.jpg",
-        "Nashville": "nashville.jpg",
-        "Cleveland": "cleveland.jpg",
-        "Philadelphia": "philadelphia.jpg",
-        "Denver": "denver.jpg",
-        "Salt Lake City": "saltlakecity.jpg"
-    }
-    
-    competitions = Competition.query.all()
-    created = 0
-    for comp in competitions:
-        if comp.name in COMP_TO_IMAGE:
-            image_url = f"trackmaps/compressed/{COMP_TO_IMAGE[comp.name]}"
-            ci = CompetitionImage(competition_id=comp.id, image_url=image_url, sort_order=0)
-            db.session.add(ci)
-            created += 1
-            print(f"Created: {comp.name} -> {image_url}")
-    
-    db.session.commit()
-    print(f"FORCE CREATED {created} track map records")
-    
-    return f"Created {created} track map records. <a href='/trackmaps'>Go to Track Maps</a>"
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.route("/bulletin")
 def bulletin_board():
@@ -20530,65 +19414,13 @@ def add_bulletin_reaction(post_id):
 
 @app.route("/create_global_simulation_table")
 def create_global_simulation_table():
-    """Create global simulation table for cross-device sync"""
-    if not is_admin_user():
-        return jsonify({"error": "Unauthorized"}), 403
-    
-    try:
-        # Create global_simulation table
-        with db.engine.connect() as conn:
-            conn.execute(db.text("""
-                CREATE TABLE IF NOT EXISTS global_simulation (
-                    id INTEGER PRIMARY KEY DEFAULT 1,
-                    active BOOLEAN DEFAULT FALSE,
-                    simulated_time TEXT,
-                    start_time TEXT,
-                    initial_time TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """))
-            conn.commit()
-        return jsonify({"message": "Global simulation table created successfully"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.route("/create_admin")
 def create_admin():
-    """Create admin user - emergency route (dev bootstrap only)"""
-    if not _dev_bootstrap_allowed():
-        _reject_dev_bootstrap()
-    try:
-        # Check if test user exists
-        existing_user = User.query.filter_by(username='test').first()
-        
-        if existing_user:
-            return jsonify({
-                "message": "Admin user 'test' already exists",
-                "user_id": existing_user.id,
-                "username": existing_user.username
-            })
-        
-        # Create admin user
-        admin_user = User(
-            username='test',
-            password_hash=generate_password_hash('test123'),
-            display_name='Admin'
-        )
-        
-        db.session.add(admin_user)
-        db.session.commit()
-        
-        return jsonify({
-            "message": "Admin user created successfully!",
-            "username": "test",
-            "password": "test123",
-            "user_id": admin_user.id
-        })
-        
-    except Exception as e:
-        print(f"Error creating admin: {e}")
-        return jsonify({"error": str(e)}), 500
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.route("/migrate_admin_column")
 def migrate_admin_column():
@@ -20707,60 +19539,8 @@ def recalculate_all_scores():
 
 @app.route("/create_hampus_admin")
 def create_hampus_admin():
-    """Make Hampus an admin user (dev bootstrap only)"""
-    if not _dev_bootstrap_allowed():
-        _reject_dev_bootstrap()
-    try:
-        # First ensure is_admin column exists
-        try:
-            db.session.execute(db.text("SELECT is_admin FROM users LIMIT 1"))
-        except Exception:
-            # Column doesn't exist, add it
-            db.session.execute(db.text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
-            db.session.commit()
-        
-        # Check if Hampus user exists
-        existing_user = User.query.filter_by(username='Hampus').first()
-        
-        if existing_user:
-            # Update existing user to be admin
-            existing_user.is_admin = True
-            db.session.commit()
-            
-            return jsonify({
-                "message": "Hampus user updated to admin successfully!",
-                "username": "Hampus",
-                "password": "Use your existing password",
-                "user_id": existing_user.id,
-                "display_name": existing_user.display_name or "Hampus",
-                "is_admin": True
-            })
-        
-        # Create new Hampus admin user
-        hampus_user = User(
-            username='Hampus',
-            password_hash=generate_password_hash('hampus123'),
-            display_name='Hampus',
-            is_admin=True
-        )
-        
-        db.session.add(hampus_user)
-        db.session.commit()
-        
-        return jsonify({
-            "message": "Hampus admin user created successfully!",
-            "username": "Hampus",
-            "password": "hampus123",
-            "user_id": hampus_user.id,
-            "display_name": "Hampus",
-            "is_admin": True
-        })
-        
-    except Exception as e:
-        print(f"Error creating Hampus admin: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 def _render_legal_page(template: str, *, active: str, title: str, eyebrow: str, heading: str, description: str):
     return render_template(
@@ -21164,40 +19944,8 @@ def admin_reset_season_team(user_id: int):
 
 @app.route("/cleanup_duplicate_users")
 def cleanup_duplicate_users():
-    """Remove duplicate test users - keep only the first one"""
-    if session.get('username') != 'test':
-        return jsonify({"error": "admin_only"}), 403
-    
-    try:
-        # Find all test users
-        test_users = User.query.filter_by(username='test').all()
-        
-        if len(test_users) <= 1:
-            return jsonify({
-                "message": "No duplicate test users found",
-                "count": len(test_users)
-            })
-        
-        # Keep the first one (oldest), delete the rest
-        first_user = test_users[0]
-        duplicates = test_users[1:]
-        
-        deleted_count = 0
-        for user in duplicates:
-            db.session.delete(user)
-            deleted_count += 1
-        
-        db.session.commit()
-        
-        return jsonify({
-            "message": f"Cleaned up {deleted_count} duplicate test users",
-            "kept_user_id": first_user.id,
-            "deleted_count": deleted_count
-        })
-        
-    except Exception as e:
-        print(f"Error cleaning up duplicate users: {e}")
-        return jsonify({"error": str(e)}), 500
+    """Removed — obsolete one-shot (admin cleanup 2026)."""
+    abort(404)
 
 @app.route("/api/races")
 def api_races():
@@ -21786,6 +20534,8 @@ def api_wsx_leaders():
 @app.route("/set_simulated_time")
 def set_simulated_time():
     """Set simulated time for testing scenarios"""
+    if not is_admin_user():
+        abort(404)
     try:
         scenario = request.args.get('scenario', 'race_in_3h')
         competition_id = request.args.get('competition_id')
@@ -21858,6 +20608,8 @@ def set_simulated_time():
 @app.get("/set_active_race")
 def set_active_race():
     """Set which race should be active for testing - simple approach"""
+    if not is_admin_user():
+        abort(404)
     try:
         competition_id = request.args.get('competition_id')
         
@@ -21930,6 +20682,8 @@ def set_active_race():
 @app.get("/set_active_race_next")
 def set_active_race_next():
     """Convenience: set active race to next upcoming competition."""
+    if not is_admin_user():
+        abort(404)
     try:
         today = get_today()
         comp = (
@@ -21951,6 +20705,8 @@ def set_active_race_next():
 @app.get("/set_active_race_only")
 def set_active_race_only():
     """Set active_race_id for real mode (no simulated time). Keeps 'active' False so countdown uses real time."""
+    if not is_admin_user():
+        abort(404)
     try:
         competition_id = request.args.get('competition_id')
         if not competition_id:
@@ -22012,6 +20768,8 @@ def race_picks_active():
 @app.route("/reset_simulation")
 def reset_simulation():
     """Reset simulation to real time"""
+    if not is_admin_user():
+        abort(404)
     try:
         # Clear database simulation
         try:
@@ -22030,6 +20788,8 @@ def reset_simulation():
 @app.route("/generate_auto_picks")
 def generate_auto_picks():
     """Generate automatic picks for all users for testing"""
+    if not is_admin_user():
+        abort(404)
     try:
         competition_id = request.args.get('competition_id')
         
@@ -22110,6 +20870,8 @@ def generate_auto_picks():
 @app.route("/quick_simulation")
 def quick_simulation():
     """Quick simulation - run through multiple races with auto-picks and results"""
+    if not is_admin_user():
+        abort(404)
     try:
         series_id = request.args.get('series_id')
         num_races = int(request.args.get('num_races', 3))
@@ -22291,6 +21053,8 @@ def quick_simulation():
 @app.route("/generate_simulated_results")
 def generate_simulated_results():
     """Generate simulated results for a specific competition"""
+    if not is_admin_user():
+        abort(404)
     try:
         competition_id = request.args.get('competition_id')
         

@@ -3872,24 +3872,29 @@
               <div class="bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg" id="settings-pwa-card">
                 <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-2"><span class="mx-heading-icon">{{ mx_icon('smartphone') }}<span>App &amp; notiser</span></span></h2>
                 <h3 class="text-sm font-bold text-cyan-300 mb-1">1. Lägg till spelet som app</h3>
-                <p id="settings-pwa-text" class="text-sm text-slate-300 mb-4">
-                  Lägg MX Fantasy på hemskärmen. Då öppnas spelet som en vanlig app — du behöver inte hämta något från App Store eller Google Play.
+                <p id="settings-pwa-text" class="text-sm text-slate-300 mb-4 leading-relaxed">
+                  Lägg MX Fantasy på hemskärmen. Då öppnas spelet som en vanlig app — du behöver
+                  <strong class="text-slate-100">inte</strong> hämta något från App Store eller Google Play.
+                  Tryck på knappen nedan, eller öppna stegen om du är osäker.
                 </p>
                 <div class="rp-btn-stack">
                   <button type="button" id="settings-pwa-install-btn" class="rp-btn rp-btn--block rp-btn--accent hidden">Installera / Lägg till</button>
-                  <button type="button" id="settings-pwa-how-btn" class="rp-btn rp-btn--block rp-btn--secondary">Visa hur man gör</button>
+                  <button type="button" id="settings-pwa-how-btn" class="rp-btn rp-btn--block rp-btn--secondary">Visa steg för steg</button>
                 </div>
-                <div id="settings-pwa-steps" class="hidden mt-4 rounded-lg border border-slate-600/50 bg-slate-900/50 p-3 text-sm text-slate-300 space-y-2">
-                  <p id="settings-pwa-steps-body"></p>
+                <div id="settings-pwa-steps" class="hidden mt-4 rounded-lg border border-slate-600/50 bg-slate-900/50 p-3.5 text-sm text-slate-300 leading-relaxed">
+                  <div id="settings-pwa-steps-body" class="space-y-3"></div>
                 </div>
                 {% if is_logged_in %}
                 <div class="mt-5 pt-5 border-t border-slate-700/80">
                   <h3 class="text-sm font-bold text-cyan-300 mb-1">2. Slå på notiser</h3>
-                  <p id="settings-push-copy" class="text-sm text-slate-300 mb-3">Få bara relevanta notiser om exempelvis ofullständiga picks, nya meddelanden och Race Control.</p>
+                  <p id="settings-push-copy" class="text-sm text-slate-300 mb-3 leading-relaxed">
+                    När spelet ligger på hemskärmen kan du få notiser om t.ex. ofullständiga picks,
+                    nya meddelanden och Race Control. Du väljer själv om du vill ha dem.
+                  </p>
                   <div class="rp-btn-stack">
-                    <button type="button" id="settings-push-enable-btn" class="rp-btn rp-btn--block rp-btn--accent hidden">🔔 Slå på notiser på denna enhet</button>
+                    <button type="button" id="settings-push-enable-btn" class="rp-btn rp-btn--block rp-btn--accent hidden">Slå på notiser på denna enhet</button>
                     <button type="button" id="settings-push-disable-btn" class="rp-btn rp-btn--block rp-btn--secondary hidden">Stäng av notiser på denna enhet</button>
-                    <button type="button" id="settings-push-test-btn" class="rp-btn rp-btn--block rp-btn--secondary hidden">📲 Skicka testnotis</button>
+                    <button type="button" id="settings-push-test-btn" class="rp-btn rp-btn--block rp-btn--secondary hidden">Skicka testnotis</button>
                   </div>
                   <p id="settings-push-status" class="hidden mt-3 text-sm font-semibold"></p>
                   <p id="settings-push-help" class="mt-2 text-xs leading-relaxed text-slate-400"></p>
@@ -8496,22 +8501,62 @@
         } catch (_) {}
       };
 
-      const howText = () => {
-        if (isIOS) {
-          return 'iPhone/iPad:\n1. Öppna mx-fantasy.se i Safari. Använder du Chrome och ser “Lägg till på hemskärmen” i Dela-menyn går det också bra.\n2. Tryck Dela (rutan med pilen)\n3. Välj “Lägg till på hemskärmen”\n4. Kontrollera att den öppnas som webbapp och tryck Lägg till\n5. Öppna sedan MX Fantasy från hemskärmen — där kan du slå på notiser';
-        }
-        if (isAndroid) {
-          return 'Android (Chrome):\n1. Tryck “Installera / Lägg till” här ovan (eller menyn ⋮)\n2. Välj “Installera app” / “Lägg till på startskärmen”\n3. Bekräfta';
-        }
-        return 'Dator: använd Chrome/Edge-menyn → “Installera MX Fantasy…” om den syns.\nMobil: öppna sajten i Safari (iPhone) eller Chrome (Android).';
+      const howHtml = () => {
+        const iosBlock = `
+          <div>
+            <p class="font-bold text-cyan-200 mb-1.5">iPhone / iPad (Safari)</p>
+            <ol class="list-decimal pl-5 space-y-1.5 text-slate-300">
+              <li>Öppna <strong class="text-slate-100">mx-fantasy.se</strong> i <strong class="text-slate-100">Safari</strong> (den blå kompassen). Inte i Instagram/Facebook-webbläsaren.</li>
+              <li>Tryck på <strong class="text-slate-100">Dela</strong> längst ner (rutan med pilen uppåt).</li>
+              <li>Scrolla i listan och tryck <strong class="text-slate-100">Lägg till på hemskärmen</strong>.</li>
+              <li>Tryck <strong class="text-slate-100">Lägg till</strong> uppe till höger.</li>
+              <li>Öppna MX Fantasy från hemskärmen (som en vanlig app). Där kan du sedan slå på notiser i steg 2.</li>
+            </ol>
+            <p class="mt-2 text-xs text-slate-400">Tips: Om du är i Chrome på iPhone — öppna samma adress i Safari i stället. Det är enklast.</p>
+          </div>`;
+        const androidBlock = `
+          <div>
+            <p class="font-bold text-cyan-200 mb-1.5">Android (Chrome)</p>
+            <ol class="list-decimal pl-5 space-y-1.5 text-slate-300">
+              <li>Öppna <strong class="text-slate-100">mx-fantasy.se</strong> i <strong class="text-slate-100">Chrome</strong>.</li>
+              <li>Tryck <strong class="text-slate-100">Installera / Lägg till</strong> här ovan — eller menyn <strong class="text-slate-100">⋮</strong> uppe till höger.</li>
+              <li>Välj <strong class="text-slate-100">Installera app</strong> eller <strong class="text-slate-100">Lägg till på startskärmen</strong>.</li>
+              <li>Bekräfta. Hitta sedan MX Fantasy-ikonen på startskärmen eller i applådan.</li>
+            </ol>
+          </div>`;
+        const desktopBlock = `
+          <div>
+            <p class="font-bold text-cyan-200 mb-1.5">Dator (Chrome eller Edge)</p>
+            <ol class="list-decimal pl-5 space-y-1.5 text-slate-300">
+              <li>Öppna <strong class="text-slate-100">mx-fantasy.se</strong> i Chrome eller Edge.</li>
+              <li>Tryck <strong class="text-slate-100">Installera / Lägg till</strong> här ovan om knappen syns.</li>
+              <li>Annars: klicka på menyn <strong class="text-slate-100">⋮</strong> (tre prickar) uppe till höger → <strong class="text-slate-100">Installera MX Fantasy…</strong> / <strong class="text-slate-100">Appar → Installera den här webbplatsen som en app</strong>.</li>
+              <li>Bekräfta. Spelet öppnas i ett eget fönster utan vanlig webbadressrad.</li>
+            </ol>
+          </div>`;
+
+        if (isIOS) return iosBlock + '<div class="pt-2 border-t border-slate-700/70">' + androidBlock + desktopBlock + '</div>';
+        if (isAndroid) return androidBlock + '<div class="pt-2 border-t border-slate-700/70">' + iosBlock + desktopBlock + '</div>';
+        return (
+          '<p class="text-slate-200 mb-2">Välj hur <em>du</em> använder spelet — stegen skiljer sig lite:</p>' +
+          desktopBlock +
+          '<div class="pt-2 border-t border-slate-700/70 space-y-3">' + androidBlock + iosBlock + '</div>'
+        );
+      };
+
+      const fillHowSteps = () => {
+        if (settingsStepsBody) settingsStepsBody.innerHTML = howHtml();
       };
 
       const syncSettingsUi = () => {
         if (settingsText) {
           if (isStandalone) {
-            settingsText.textContent = 'Appen körs redan från hemskärmen på den här enheten.';
+            settingsText.textContent = 'Bra! Spelet körs redan som app från hemskärmen på den här enheten. Fortsätt till steg 2 om du vill ha notiser.';
           } else {
-            settingsText.textContent = 'Lägg MX Fantasy på hemskärmen så den öppnas som en app. Funkar även om genvägen försvunnit.';
+            settingsText.innerHTML =
+              'Lägg MX Fantasy på hemskärmen. Då öppnas spelet som en vanlig app — du behöver ' +
+              '<strong class="text-slate-100">inte</strong> hämta något från App Store eller Google Play. ' +
+              'Tryck på knappen nedan, eller öppna stegen om du är osäker.';
           }
         }
         if (settingsBtn) {
@@ -8528,10 +8573,10 @@
             settingsBtn.disabled = false;
           } else {
             settingsBtn.classList.remove('hidden');
-            settingsBtn.textContent = 'Visa hur man gör';
+            settingsBtn.textContent = 'Visa steg för steg';
           }
         }
-        if (settingsStepsBody) settingsStepsBody.textContent = howText();
+        fillHowSteps();
       };
 
       const runInstall = async (sourceBtn) => {
@@ -8563,7 +8608,8 @@
             document.getElementById('settings')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           } catch (_) {}
         }
-        toast(isIOS ? 'Följ stegen för iPhone nedan.' : 'Följ stegen nedan (eller webbläsarmenyn ⋮).', 'warn');
+        toast(isIOS ? 'Följ iPhone-stegen nedan.' : 'Följ stegen nedan — eller öppna menyn ⋮ i webbläsaren.', 'warn');
+        if (settingsHow) settingsHow.textContent = 'Dölj stegen';
       };
 
       if (closeBtn) {
@@ -8582,8 +8628,17 @@
       if (settingsHow) {
         settingsHow.addEventListener('click', () => {
           if (settingsSteps) {
+            const opening = settingsSteps.classList.contains('hidden');
             settingsSteps.classList.toggle('hidden');
-            if (settingsStepsBody) settingsStepsBody.textContent = howText();
+            fillHowSteps();
+            if (opening) {
+              settingsHow.textContent = 'Dölj stegen';
+              try {
+                settingsSteps.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              } catch (_) {}
+            } else {
+              settingsHow.textContent = 'Visa steg för steg';
+            }
           }
         });
       }
@@ -8647,13 +8702,16 @@
 
         const state = window.MXPushNotify.getState();
         if (state === 'ios_install') {
-          setStatus('Installera appen först', 'warn');
-          helpEl.textContent = 'På iPhone krävs Safari → Dela → Lägg till på hemskärmen. Öppna sedan appen från hemskärmen för att slå på notiser.';
+          setStatus('Gör klart steg 1 först', 'warn');
+          helpEl.textContent =
+            'På iPhone funkar notiser först när spelet öppnas från hemskärmen. ' +
+            'Gör steg 1 ovan (Safari → Dela → Lägg till på hemskärmen), öppna ikonen därifrån, och kom tillbaka hit.';
           return;
         }
         if (state !== 'ready') {
-          setStatus('Notiser stöds inte här', 'warn');
-          helpEl.textContent = 'Prova Chrome på Android eller den installerade MX Fantasy-appen på iPhone.';
+          setStatus('Notiser stöds inte i den här webbläsaren', 'warn');
+          helpEl.textContent =
+            'Prova Chrome på Android, eller den installerade MX Fantasy-appen från hemskärmen på iPhone (Safari).';
           return;
         }
 
@@ -8674,28 +8732,33 @@
             'warn'
           );
           helpEl.textContent = isLocalServer
-            ? 'Utseendet går bra att testa här. Riktiga push-notiser kräver serverns VAPID-nycklar och testas därför på mx-fantasy.se.'
-            : 'Försök igen lite senare.';
+            ? 'Det här är din lokala testserver — utseendet går att kolla här, men riktiga push-notiser testas på mx-fantasy.se (där nycklarna finns).'
+            : 'Försök igen om en stund. Om det fortsätter: öppna spelet från hemskärmen och ladda om.';
           return;
         }
 
         const permission = window.Notification ? window.Notification.permission : 'default';
         if (permission === 'denied') {
           setStatus('Notiser är blockerade i telefonens inställningar.', 'warn');
-          helpEl.textContent = 'Öppna appinfo för MX Fantasy (eller Chrome) på telefonen och tillåt notiser. Slå sedan på dem här igen.';
+          helpEl.textContent =
+            'Gå till telefonens Inställningar → hitta MX Fantasy (eller Chrome) → Notiser → tillåt. ' +
+            'Kom sedan tillbaka hit och tryck “Slå på notiser” igen.';
           if (status.subscribed) disableBtn.classList.remove('hidden');
           return;
         }
         if (status.subscribed) {
-          setStatus('✅ Notiser är på för dina anslutna enheter.', 'ok');
-          helpEl.textContent = 'Testnotisen skickas till de enheter där du har slagit på notiser.';
+          setStatus('Notiser är på för dina anslutna enheter.', 'ok');
+          helpEl.textContent =
+            'Du kan skicka en testnotis nedan. Den ska dyka upp på den här enheten om notiser är tillåtna.';
           disableBtn.classList.remove('hidden');
           testBtn.classList.remove('hidden');
           return;
         }
 
         setStatus('Notiser är av på den här enheten.', 'warn');
-        helpEl.textContent = 'Du bestämmer själv. Vi använder dem för relevanta saker som ofullständiga picks, meddelanden och Race Control.';
+        helpEl.textContent =
+          'Tryck “Slå på notiser” och godkänn när telefonen frågar. ' +
+          'Du kan stänga av dem när som helst. Vi skickar bara relevanta saker (picks, meddelanden, Race Control).';
         enableBtn.classList.remove('hidden');
       }
 
@@ -8706,7 +8769,7 @@
           await window.MXPushNotify.enable(enableBtn, statusEl);
         } finally {
           enableBtn.disabled = false;
-          enableBtn.textContent = '🔔 Slå på notiser på denna enhet';
+          enableBtn.textContent = 'Slå på notiser på denna enhet';
           await syncPushSettings();
         }
       });
