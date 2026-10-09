@@ -93,6 +93,37 @@ def api_push_unsubscribe():
     return jsonify({"success": True, "deleted": deleted})
 
 
+@bp.post("/api/push/test")
+def api_push_test():
+    """Send a harmless test notification to the current user's own devices."""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+
+    import push_service as ps
+
+    user_id = int(session["user_id"])
+    if not ps.push_configured():
+        return jsonify({"error": "push_not_configured"}), 503
+    if not ps.user_has_push(user_id):
+        return jsonify(
+            {
+                "error": "subscribe_first",
+                "hint": "Slå på notiser på den här enheten först.",
+            }
+        ), 400
+
+    result = ps.send_push_sync(
+        user_id,
+        "🔔 Test från MX Fantasy",
+        "Notiser fungerar på den här enheten.",
+        "/pit-lane",
+        tag="player-push-test",
+    )
+    if result.get("ok"):
+        return jsonify({"success": True, "message": "Testnotis skickad"})
+    return jsonify({"error": result.get("error", "send_failed")}), 500
+
+
 @bp.get("/admin/push/diagnostics")
 def admin_push_diagnostics():
     """Push-status för felsökning (admin)."""

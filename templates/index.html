@@ -2929,6 +2929,15 @@
                 </span>
                 <span class="home-sidebar-nav__notif-label">Notiser</span>
               </div>
+              <button
+                type="button"
+                class="home-sidebar-nav__link tab-btn"
+                data-tab="settings"
+                onclick="setTimeout(function(){ document.getElementById('settings-pwa-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 0);"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2"/><path d="M10 18.5h4"/></svg>
+                App &amp; notiser
+              </button>
             </nav>
 
             <div class="home-sidebar-foot" aria-label="Sidor">
@@ -3861,9 +3870,10 @@
               </div>
 
               <div class="bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg" id="settings-pwa-card">
-                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-2"><span class="mx-heading-icon">{{ mx_icon('smartphone') }}<span>App på mobilen</span></span></h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-2"><span class="mx-heading-icon">{{ mx_icon('smartphone') }}<span>App &amp; notiser</span></span></h2>
+                <h3 class="text-sm font-bold text-cyan-300 mb-1">1. Lägg till spelet som app</h3>
                 <p id="settings-pwa-text" class="text-sm text-slate-300 mb-4">
-                  Lägg MX Fantasy på hemskärmen så den öppnas som en app. Funkar även om genvägen försvunnit.
+                  Lägg MX Fantasy på hemskärmen. Då öppnas spelet som en vanlig app — du behöver inte hämta något från App Store eller Google Play.
                 </p>
                 <div class="rp-btn-stack">
                   <button type="button" id="settings-pwa-install-btn" class="rp-btn rp-btn--block rp-btn--accent hidden">Installera / Lägg till</button>
@@ -3872,6 +3882,19 @@
                 <div id="settings-pwa-steps" class="hidden mt-4 rounded-lg border border-slate-600/50 bg-slate-900/50 p-3 text-sm text-slate-300 space-y-2">
                   <p id="settings-pwa-steps-body"></p>
                 </div>
+                {% if is_logged_in %}
+                <div class="mt-5 pt-5 border-t border-slate-700/80">
+                  <h3 class="text-sm font-bold text-cyan-300 mb-1">2. Slå på notiser</h3>
+                  <p id="settings-push-copy" class="text-sm text-slate-300 mb-3">Få bara relevanta notiser om exempelvis ofullständiga picks, nya meddelanden och Race Control.</p>
+                  <div class="rp-btn-stack">
+                    <button type="button" id="settings-push-enable-btn" class="rp-btn rp-btn--block rp-btn--accent hidden">🔔 Slå på notiser på denna enhet</button>
+                    <button type="button" id="settings-push-disable-btn" class="rp-btn rp-btn--block rp-btn--secondary hidden">Stäng av notiser på denna enhet</button>
+                    <button type="button" id="settings-push-test-btn" class="rp-btn rp-btn--block rp-btn--secondary hidden">📲 Skicka testnotis</button>
+                  </div>
+                  <p id="settings-push-status" class="hidden mt-3 text-sm font-semibold"></p>
+                  <p id="settings-push-help" class="mt-2 text-xs leading-relaxed text-slate-400"></p>
+                </div>
+                {% endif %}
               </div>
               
 
@@ -8475,7 +8498,7 @@
 
       const howText = () => {
         if (isIOS) {
-          return 'iPhone/iPad (Safari):\n1. Öppna mx-fantasy.se i Safari\n2. Tryck Dela (rutan med pilen)\n3. Välj “Lägg till på hemskärmen”\n4. Bekräfta — ikonen dyker upp på hemskärmen';
+          return 'iPhone/iPad:\n1. Öppna mx-fantasy.se i Safari. Använder du Chrome och ser “Lägg till på hemskärmen” i Dela-menyn går det också bra.\n2. Tryck Dela (rutan med pilen)\n3. Välj “Lägg till på hemskärmen”\n4. Kontrollera att den öppnas som webbapp och tryck Lägg till\n5. Öppna sedan MX Fantasy från hemskärmen — där kan du slå på notiser';
         }
         if (isAndroid) {
           return 'Android (Chrome):\n1. Tryck “Installera / Lägg till” här ovan (eller menyn ⋮)\n2. Välj “Installera app” / “Lägg till på startskärmen”\n3. Bekräfta';
@@ -8589,6 +8612,130 @@
       }
 
       syncSettingsUi();
+    })();
+
+    // Push status and test: keep the setup where players actually look for it.
+    (function () {
+      const enableBtn = document.getElementById('settings-push-enable-btn');
+      const disableBtn = document.getElementById('settings-push-disable-btn');
+      const testBtn = document.getElementById('settings-push-test-btn');
+      const statusEl = document.getElementById('settings-push-status');
+      const helpEl = document.getElementById('settings-push-help');
+      const copyEl = document.getElementById('settings-push-copy');
+      if (!enableBtn || !disableBtn || !testBtn || !statusEl || !helpEl) return;
+
+      function setStatus(text, tone) {
+        statusEl.textContent = text;
+        statusEl.className = 'mt-3 text-sm font-semibold ' + (
+          tone === 'ok' ? 'text-emerald-300' : tone === 'warn' ? 'text-amber-300' : 'text-rose-300'
+        );
+      }
+
+      function hideActions() {
+        enableBtn.classList.add('hidden');
+        disableBtn.classList.add('hidden');
+        testBtn.classList.add('hidden');
+      }
+
+      async function syncPushSettings() {
+        hideActions();
+        if (!window.MXPushNotify || !window.MXPushNotify.getStatus) {
+          setStatus('Notisinställningar kunde inte laddas.', 'warn');
+          helpEl.textContent = 'Ladda om sidan och försök igen.';
+          return;
+        }
+
+        const state = window.MXPushNotify.getState();
+        if (state === 'ios_install') {
+          setStatus('Installera appen först', 'warn');
+          helpEl.textContent = 'På iPhone krävs Safari → Dela → Lägg till på hemskärmen. Öppna sedan appen från hemskärmen för att slå på notiser.';
+          return;
+        }
+        if (state !== 'ready') {
+          setStatus('Notiser stöds inte här', 'warn');
+          helpEl.textContent = 'Prova Chrome på Android eller den installerade MX Fantasy-appen på iPhone.';
+          return;
+        }
+
+        let status;
+        try {
+          status = await window.MXPushNotify.getStatus();
+        } catch (_) {
+          setStatus('Kunde inte läsa notisstatus.', 'warn');
+          helpEl.textContent = 'Kontrollera anslutningen och försök igen.';
+          return;
+        }
+        if (!status.configured) {
+          const isLocalServer = ['localhost', '127.0.0.1'].indexOf(window.location.hostname) !== -1;
+          setStatus(
+            isLocalServer
+              ? 'Push-notiser är inte konfigurerade på din lokala testserver.'
+              : 'Notiser är tillfälligt inte tillgängliga.',
+            'warn'
+          );
+          helpEl.textContent = isLocalServer
+            ? 'Utseendet går bra att testa här. Riktiga push-notiser kräver serverns VAPID-nycklar och testas därför på mx-fantasy.se.'
+            : 'Försök igen lite senare.';
+          return;
+        }
+
+        const permission = window.Notification ? window.Notification.permission : 'default';
+        if (permission === 'denied') {
+          setStatus('Notiser är blockerade i telefonens inställningar.', 'warn');
+          helpEl.textContent = 'Öppna appinfo för MX Fantasy (eller Chrome) på telefonen och tillåt notiser. Slå sedan på dem här igen.';
+          if (status.subscribed) disableBtn.classList.remove('hidden');
+          return;
+        }
+        if (status.subscribed) {
+          setStatus('✅ Notiser är på för dina anslutna enheter.', 'ok');
+          helpEl.textContent = 'Testnotisen skickas till de enheter där du har slagit på notiser.';
+          disableBtn.classList.remove('hidden');
+          testBtn.classList.remove('hidden');
+          return;
+        }
+
+        setStatus('Notiser är av på den här enheten.', 'warn');
+        helpEl.textContent = 'Du bestämmer själv. Vi använder dem för relevanta saker som ofullständiga picks, meddelanden och Race Control.';
+        enableBtn.classList.remove('hidden');
+      }
+
+      enableBtn.addEventListener('click', async function () {
+        enableBtn.disabled = true;
+        enableBtn.textContent = 'Aktiverar…';
+        try {
+          await window.MXPushNotify.enable(enableBtn, statusEl);
+        } finally {
+          enableBtn.disabled = false;
+          enableBtn.textContent = '🔔 Slå på notiser på denna enhet';
+          await syncPushSettings();
+        }
+      });
+
+      disableBtn.addEventListener('click', async function () {
+        if (!window.confirm('Stäng av notiser på den här enheten?')) return;
+        await window.MXPushNotify.disable(statusEl);
+        await syncPushSettings();
+      });
+
+      testBtn.addEventListener('click', async function () {
+        testBtn.disabled = true;
+        testBtn.textContent = 'Skickar…';
+        try {
+          await window.MXPushNotify.test();
+          setStatus('✅ Testnotis skickad — kontrollera mobilen.', 'ok');
+        } catch (error) {
+          setStatus('Kunde inte skicka testnotisen.', 'warn');
+          helpEl.textContent = error && error.message ? error.message : 'Försök igen.';
+        } finally {
+          testBtn.disabled = false;
+          testBtn.textContent = '📲 Skicka testnotis';
+        }
+      });
+
+      if (copyEl) {
+        copyEl.textContent = 'Få bara relevanta notiser om exempelvis ofullständiga picks, nya meddelanden och Race Control.';
+      }
+      syncPushSettings();
     })();
 
     // iOS PWA splash overlay control (display is CSS-controlled for instant show)

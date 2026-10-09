@@ -2,6 +2,7 @@
   var API_STATUS = '/api/push/status';
   var API_SUBSCRIBE = '/api/push/subscribe';
   var API_UNSUBSCRIBE = '/api/push/unsubscribe';
+  var API_TEST = '/api/push/test';
   var DISMISS_KEY = 'mx_push_dismiss_until';
   var DISMISS_FOREVER_KEY = 'mx_push_dismiss_forever';
   var LOGIN_FLAG_KEY = 'mx_push_prompt_login';
@@ -224,6 +225,21 @@
     }
   }
 
+  async function sendTestPush() {
+    var res = await fetch(API_TEST, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    var data = {};
+    try {
+      data = await res.json();
+    } catch (e) {}
+    if (!res.ok) {
+      throw new Error(data.hint || data.error || 'Kunde inte skicka testnotisen.');
+    }
+    return data;
+  }
+
   function isBellContext(wrap) {
     return !!(wrap && wrap.closest && wrap.closest('#pit-lane-dropdown'));
   }
@@ -371,6 +387,9 @@
   window.MXPushNotify = {
     init: initBlock,
     enable: enablePush,
+    disable: disablePush,
+    getStatus: fetchStatus,
+    test: sendTestPush,
     getState: getPushState,
     isIOS: isIOS,
     isStandalone: isStandalone,
