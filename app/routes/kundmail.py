@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import os
 
-from flask import Blueprint, jsonify, redirect, render_template, request, session
+from flask import Blueprint, jsonify, render_template, request, session
 
+from auth_helpers import require_ops_tools_api, require_ops_tools_page
 from models import User
 
 bp = Blueprint("kundmail", __name__)
@@ -12,8 +13,9 @@ bp = Blueprint("kundmail", __name__)
 
 @bp.get("/kundmail")
 def kundmail_page():
-    if "user_id" not in session:
-        return redirect("/login")
+    denied = require_ops_tools_page()
+    if denied:
+        return denied
     return render_template(
         "kundmail.html",
         username=session.get("username") or "",
@@ -23,8 +25,9 @@ def kundmail_page():
 
 @bp.post("/api/kundmail/translate")
 def kundmail_translate():
-    if "user_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
+    denied = require_ops_tools_api()
+    if denied:
+        return denied
 
     data = request.get_json(silent=True) or {}
     subject = (data.get("subject") or "").strip()
@@ -50,8 +53,9 @@ def kundmail_translate():
 
 @bp.get("/api/kundmail/checklist")
 def kundmail_checklist_list():
-    if "user_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
+    denied = require_ops_tools_api()
+    if denied:
+        return denied
     import checklist_service as cs
 
     return jsonify({"success": True, "items": cs.list_items(int(session["user_id"]))})
@@ -59,8 +63,9 @@ def kundmail_checklist_list():
 
 @bp.post("/api/kundmail/checklist")
 def kundmail_checklist_create():
-    if "user_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
+    denied = require_ops_tools_api()
+    if denied:
+        return denied
     import checklist_service as cs
 
     data = request.get_json(silent=True) or {}
@@ -72,8 +77,9 @@ def kundmail_checklist_create():
 
 @bp.patch("/api/kundmail/checklist/<int:item_id>")
 def kundmail_checklist_update(item_id: int):
-    if "user_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
+    denied = require_ops_tools_api()
+    if denied:
+        return denied
     import checklist_service as cs
 
     data = request.get_json(silent=True) or {}
@@ -89,8 +95,9 @@ def kundmail_checklist_update(item_id: int):
 
 @bp.delete("/api/kundmail/checklist/<int:item_id>")
 def kundmail_checklist_delete(item_id: int):
-    if "user_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
+    denied = require_ops_tools_api()
+    if denied:
+        return denied
     import checklist_service as cs
 
     if not cs.delete_item(int(session["user_id"]), item_id):
@@ -100,8 +107,9 @@ def kundmail_checklist_delete(item_id: int):
 
 @bp.post("/api/kundmail/checklist/clear-done")
 def kundmail_checklist_clear_done():
-    if "user_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
+    denied = require_ops_tools_api()
+    if denied:
+        return denied
     import checklist_service as cs
 
     removed = cs.clear_done(int(session["user_id"]))
@@ -110,8 +118,9 @@ def kundmail_checklist_clear_done():
 
 @bp.get("/api/kundmail/zendesk_status")
 def kundmail_zendesk_status():
-    if "user_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
+    denied = require_ops_tools_api()
+    if denied:
+        return denied
     from zendesk_service import resolve_assignee, zendesk_configured
 
     username = (session.get("username") or "").strip()
@@ -137,8 +146,9 @@ def kundmail_zendesk_status():
 @bp.post("/api/kundmail/zendesk_ticket")
 def kundmail_zendesk_ticket():
     """Create a new Zendesk ticket from kundmail (subject/body/requester)."""
-    if "user_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
+    denied = require_ops_tools_api()
+    if denied:
+        return denied
 
     data = request.get_json(silent=True) or {}
     subject = (data.get("subject") or "").strip()

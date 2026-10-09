@@ -58,6 +58,34 @@ def _ensure_email_opt_out_column() -> None:
         print(f"Warning: email_opt_out migration skipped: {col_err}")
         db.session.rollback()
 
+
+def _ensure_ops_tools_column() -> None:
+    """users.ops_tools — access to kundmail / BarnIVA tools (not fantasy admin)."""
+    try:
+        if "postgresql" in str(db.engine.url):
+            result = db.session.execute(
+                db.text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'users' AND column_name = 'ops_tools'"
+                )
+            )
+            if not result.fetchone():
+                db.session.execute(
+                    db.text(
+                        "ALTER TABLE users ADD COLUMN ops_tools BOOLEAN "
+                        "NOT NULL DEFAULT FALSE"
+                    )
+                )
+                print("Added missing column users.ops_tools")
+            db.session.commit()
+        else:
+            _sqlite_add_column_if_missing(
+                "users", "ops_tools", "ops_tools BOOLEAN DEFAULT 0 NOT NULL"
+            )
+    except Exception as col_err:
+        print(f"Warning: ops_tools migration skipped: {col_err}")
+        db.session.rollback()
+
 def _ensure_racerx_bio_skip_column() -> None:
     """racerx_bio_skip — batch hoppar över namn som saknas på RacerX."""
     try:

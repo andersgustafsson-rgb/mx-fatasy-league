@@ -211,6 +211,7 @@ from services.schema_patches import (  # noqa: E402
     _ensure_competition_result_moto_columns,
     _ensure_email_opt_out_column,
     _ensure_league_membership_unique,
+    _ensure_ops_tools_column,
     _ensure_race_recap_table,
     _ensure_racerx_bio_skip_column,
     _ensure_rider_bio_sv_columns,
@@ -19390,6 +19391,10 @@ def init_database():
                 except Exception as opt_col_err:
                     print(f"Warning: email_opt_out migration skipped: {opt_col_err}")
                 try:
+                    _ensure_ops_tools_column()
+                except Exception as ops_col_err:
+                    print(f"Warning: ops_tools migration skipped: {ops_col_err}")
+                try:
                     _ensure_google_oauth_columns()
                 except Exception as g_col_err:
                     print(f"Warning: google_sub migration skipped: {g_col_err}")
@@ -20817,6 +20822,11 @@ def admin_users():
     try:
         from datetime import datetime, timedelta
 
+        try:
+            _ensure_ops_tools_column()
+        except Exception:
+            pass
+
         users = User.query.order_by(User.id.desc()).all()
         user_list = []
         now = datetime.utcnow()
@@ -20845,6 +20855,7 @@ def admin_users():
                 'display_name': getattr(user, 'display_name', None),
                 'email': getattr(user, 'email', None),
                 'email_opt_out': bool(getattr(user, 'email_opt_out', False)),
+                'ops_tools': bool(getattr(user, 'ops_tools', False)),
                 'created_at': created_at.isoformat() if created_at else None,
                 'is_admin': is_admin,
                 'is_recent': is_recent,
@@ -21005,6 +21016,36 @@ def toggle_email_opt_out(user_id):
     except Exception as e:
         db.session.rollback()
         print(f"Error toggling email_opt_out: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/admin/toggle_ops_tools/<int:user_id>", methods=["POST"])
+def toggle_ops_tools(user_id):
+    """Toggle kundmail/BarnIVA access (separate from fantasy is_admin)."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    try:
+        _ensure_ops_tools_column()
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        user.ops_tools = not bool(getattr(user, "ops_tools", False))
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "ops_tools": bool(user.ops_tools),
+            "username": user.username,
+            "message": (
+                f"{user.username} har access till kundmail/BarnIVA"
+                if user.ops_tools
+                else f"{user.username} saknar access till kundmail/BarnIVA"
+            ),
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error toggling ops_tools: {e}")
         return jsonify({"error": str(e)}), 500
 
 

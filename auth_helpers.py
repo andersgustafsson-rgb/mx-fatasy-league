@@ -9,7 +9,7 @@ import re
 from datetime import datetime, timedelta
 from functools import wraps
 
-from flask import abort, flash, redirect, request, session, url_for
+from flask import abort, flash, jsonify, redirect, request, session, url_for
 from models import User, db
 
 
@@ -29,8 +29,8 @@ def _reject_dev_bootstrap():
     abort(404)
 
 
-def is_admin_user() -> bool:
-    """Check if current user is admin via DB flag only (no username hardcodes)."""
+def _session_user() -> User | None:
+    """Resolve current User from session (username or user_id)."""
     username = session.get("username")
     user_id = session.get("user_id")
     try:
@@ -42,22 +42,55 @@ def is_admin_user() -> bool:
                 user = User.query.get(int(user_id))
             except Exception:
                 user = None
-        if user and getattr(user, "is_admin", False):
-            if user.username and not username:
-                session["username"] = user.username
-            return True
-        if username or user_id:
-            print(
-                f"is_admin_user miss: username={username!r} user_id={user_id!r} "
-                f"found={bool(user)} is_admin={getattr(user, 'is_admin', None) if user else None}"
-            )
+        if user and user.username and not username:
+            session["username"] = user.username
+        return user
     except Exception as e:
-        print(f"Error checking is_admin flag: {e}")
+        print(f"Error resolving session user: {e}")
         try:
             db.session.rollback()
         except Exception:
             pass
+        return None
+
+
+def is_admin_user() -> bool:
+    """Check if current user is admin via DB flag only (no username hardcodes)."""
+    user = _session_user()
+    if user and getattr(user, "is_admin", False):
+        return True
+    username = session.get("username")
+    user_id = session.get("user_id")
+    if username or user_id:
+        print(
+            f"is_admin_user miss: username={username!r} user_id={user_id!r} "
+            f"found={bool(user)} is_admin={getattr(user, 'is_admin', None) if user else None}"
+        )
     return False
+
+
+def can_access_ops_tools() -> bool:
+    """Kundmail / BarnIVA (tidrapport, schema) — separate from fantasy is_admin."""
+    user = _session_user()
+    return bool(user and getattr(user, "ops_tools", False))
+
+
+def require_ops_tools_page():
+    """Redirect login or 404 — do not reveal ops tools exist to outsiders."""
+    if "user_id" not in session:
+        return redirect("/login")
+    if not can_access_ops_tools():
+        abort(404)
+    return None
+
+
+def require_ops_tools_api():
+    """JSON gate for ops-tool APIs."""
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    if not can_access_ops_tools():
+        return jsonify({"error": "Forbidden"}), 403
+    return None
 
 
 def check_session_timeout() -> bool:

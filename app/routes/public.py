@@ -19,13 +19,9 @@ from flask import (
 	url_for,
 )
 
+from auth_helpers import require_ops_tools_api, require_ops_tools_page
+
 bp = Blueprint('public', __name__)
-
-
-def _require_login_redirect():
-	if "user_id" not in session:
-		return redirect("/login")
-	return None
 
 
 def _schema_dist_dir() -> Path:
@@ -43,7 +39,7 @@ def health():
 @bp.get("/verktyg")
 def barniva_hub():
 	"""Hub for BarnIVA tools: tidrapport + schemaanalys."""
-	denied = _require_login_redirect()
+	denied = require_ops_tools_page()
 	if denied:
 		return denied
 	return render_template("barniva_hub.html", username=session.get("username") or "")
@@ -51,8 +47,8 @@ def barniva_hub():
 
 @bp.get("/tidrapport")
 def tidrapport_page():
-	# Endast för inloggad användare (du sa att det bara är du som använder den).
-	denied = _require_login_redirect()
+	# Ops-verktyg (ops_tools), inte spelet — egen flagga från is_admin.
+	denied = require_ops_tools_page()
 	if denied:
 		return denied
 
@@ -64,7 +60,7 @@ def tidrapport_page():
 @bp.get("/schema/")
 def schema_app_index():
 	"""Serve BarnIVA schema SPA (built into static/schema)."""
-	denied = _require_login_redirect()
+	denied = require_ops_tools_page()
 	if denied:
 		return denied
 	dist = _schema_dist_dir()
@@ -104,7 +100,7 @@ def schema_app_index():
 @bp.get("/schema/<path:asset_path>")
 def schema_app_asset(asset_path: str):
 	"""Assets for the schema SPA under /schema/…"""
-	denied = _require_login_redirect()
+	denied = require_ops_tools_page()
 	if denied:
 		return denied
 	dist = _schema_dist_dir()
@@ -239,12 +235,6 @@ def trojtryck_export():
 	)
 
 
-def _require_login():
-	if "user_id" not in session:
-		return None
-	return int(session["user_id"])
-
-
 def _cron_authorized() -> bool:
 	secret = (os.getenv("CRON_SECRET") or os.getenv("REMINDER_CRON_SECRET") or "").strip()
 	if not secret:
@@ -259,9 +249,10 @@ def _cron_authorized() -> bool:
 
 @bp.get("/api/reminders")
 def api_reminders_list():
-	uid = _require_login()
-	if uid is None:
-		return jsonify({"error": "Unauthorized"}), 401
+	denied = require_ops_tools_api()
+	if denied:
+		return denied
+	uid = int(session["user_id"])
 	import reminder_service as rs
 
 	return jsonify({"success": True, "reminders": rs.list_reminders(uid)})
@@ -269,9 +260,10 @@ def api_reminders_list():
 
 @bp.post("/api/reminders")
 def api_reminders_create():
-	uid = _require_login()
-	if uid is None:
-		return jsonify({"error": "Unauthorized"}), 401
+	denied = require_ops_tools_api()
+	if denied:
+		return denied
+	uid = int(session["user_id"])
 	import reminder_service as rs
 
 	data = request.get_json(silent=True) or {}
@@ -283,9 +275,10 @@ def api_reminders_create():
 
 @bp.patch("/api/reminders/<int:reminder_id>")
 def api_reminders_update(reminder_id: int):
-	uid = _require_login()
-	if uid is None:
-		return jsonify({"error": "Unauthorized"}), 401
+	denied = require_ops_tools_api()
+	if denied:
+		return denied
+	uid = int(session["user_id"])
 	import reminder_service as rs
 
 	data = request.get_json(silent=True) or {}
@@ -299,9 +292,10 @@ def api_reminders_update(reminder_id: int):
 
 @bp.delete("/api/reminders/<int:reminder_id>")
 def api_reminders_delete(reminder_id: int):
-	uid = _require_login()
-	if uid is None:
-		return jsonify({"error": "Unauthorized"}), 401
+	denied = require_ops_tools_api()
+	if denied:
+		return denied
+	uid = int(session["user_id"])
 	import reminder_service as rs
 
 	if not rs.delete_reminder(uid, reminder_id):
@@ -311,9 +305,10 @@ def api_reminders_delete(reminder_id: int):
 
 @bp.post("/api/reminders/<int:reminder_id>/test")
 def api_reminders_test(reminder_id: int):
-	uid = _require_login()
-	if uid is None:
-		return jsonify({"error": "Unauthorized"}), 401
+	denied = require_ops_tools_api()
+	if denied:
+		return denied
+	uid = int(session["user_id"])
 	import reminder_service as rs
 
 	result = rs.send_reminder_test(uid, reminder_id)
@@ -488,9 +483,10 @@ def _snapshot_workspace_row(
 
 @bp.get("/api/barniva/session")
 def api_barniva_session():
-	uid = _require_login()
-	if uid is None:
-		return jsonify({"error": "Unauthorized"}), 401
+	denied = require_ops_tools_api()
+	if denied:
+		return denied
+	uid = int(session["user_id"])
 	_uid, label = _barniva_actor()
 	return jsonify({
 		"success": True,
@@ -502,9 +498,10 @@ def api_barniva_session():
 
 @bp.get("/api/barniva/workspace/<kind>")
 def api_barniva_workspace_get(kind: str):
-	uid = _require_login()
-	if uid is None:
-		return jsonify({"error": "Unauthorized"}), 401
+	denied = require_ops_tools_api()
+	if denied:
+		return denied
+	uid = int(session["user_id"])
 	kind_u = (kind or "").strip().upper()
 	if kind_u not in ("SSK", "USK"):
 		return jsonify({"error": "Invalid kind"}), 400
@@ -520,9 +517,10 @@ def api_barniva_workspace_get(kind: str):
 @bp.get("/api/barniva/workspace/<kind>/summary")
 def api_barniva_workspace_summary(kind: str):
 	"""Lightweight health check: weeks + edit-log counts without full payload."""
-	uid = _require_login()
-	if uid is None:
-		return jsonify({"error": "Unauthorized"}), 401
+	denied = require_ops_tools_api()
+	if denied:
+		return denied
+	uid = int(session["user_id"])
 	kind_u = (kind or "").strip().upper()
 	if kind_u not in ("SSK", "USK"):
 		return jsonify({"error": "Invalid kind"}), 400
@@ -557,9 +555,10 @@ def api_barniva_workspace_summary(kind: str):
 
 @bp.get("/api/barniva/workspace/<kind>/versions")
 def api_barniva_workspace_versions(kind: str):
-	uid = _require_login()
-	if uid is None:
-		return jsonify({"error": "Unauthorized"}), 401
+	denied = require_ops_tools_api()
+	if denied:
+		return denied
+	uid = int(session["user_id"])
 	kind_u = (kind or "").strip().upper()
 	if kind_u not in ("SSK", "USK"):
 		return jsonify({"error": "Invalid kind"}), 400
@@ -613,9 +612,10 @@ def api_barniva_workspace_versions(kind: str):
 
 @bp.post("/api/barniva/workspace/<kind>/restore/<int:version_id>")
 def api_barniva_workspace_restore(kind: str, version_id: int):
-	uid = _require_login()
-	if uid is None:
-		return jsonify({"error": "Unauthorized"}), 401
+	denied = require_ops_tools_api()
+	if denied:
+		return denied
+	uid = int(session["user_id"])
 	kind_u = (kind or "").strip().upper()
 	if kind_u not in ("SSK", "USK"):
 		return jsonify({"error": "Invalid kind"}), 400
@@ -660,9 +660,10 @@ def api_barniva_workspace_restore(kind: str, version_id: int):
 
 @bp.put("/api/barniva/workspace/<kind>")
 def api_barniva_workspace_put(kind: str):
-	uid = _require_login()
-	if uid is None:
-		return jsonify({"error": "Unauthorized"}), 401
+	denied = require_ops_tools_api()
+	if denied:
+		return denied
+	uid = int(session["user_id"])
 	kind_u = (kind or "").strip().upper()
 	if kind_u not in ("SSK", "USK"):
 		return jsonify({"error": "Invalid kind"}), 400

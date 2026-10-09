@@ -1287,11 +1287,13 @@ def admin_dashboard_stats():
 		from main import (
 			_ensure_email_opt_out_column,
 			_ensure_google_oauth_columns,
+			_ensure_ops_tools_column,
 			_sqlite_add_column_if_missing,
 		)
 
 		_ensure_google_oauth_columns()
 		_ensure_email_opt_out_column()
+		_ensure_ops_tools_column()
 		_sqlite_add_column_if_missing(
 			"competitions", "is_cancelled", "is_cancelled BOOLEAN DEFAULT 0"
 		)
