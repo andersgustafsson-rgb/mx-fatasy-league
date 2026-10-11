@@ -11,8 +11,13 @@ from flask import session
 from models import Competition, Series, db
 
 
-# Picks open this many calendar days before Series.start_date (roster/numbers usually known by then).
+# Default: picks open this many calendar days before Series.start_date.
 PICKS_OPEN_DAYS_BEFORE_SERIES = 30
+# SX opens earlier so registered users have something to tip (Anaheim etc.).
+# Picks store rider_id — number tweaks are free; class/coast changes: edit until race deadline.
+PICKS_OPEN_DAYS_BEFORE_SERIES_BY_CODE = {
+    "SX": 100,  # Anaheim 1 2027-01-09 → open from ~2026-10-01
+}
 
 _SV_MONTHS = (
     "",
@@ -283,10 +288,45 @@ def _series_start_date_for_competition(competition_obj) -> "date | None":
     return None
 
 
+def _series_code_for_competition(competition_obj) -> str:
+    """Best-effort series code (SX/MX/SMX/…) for open-window lookup."""
+    code = (getattr(competition_obj, "series", None) or "").strip().upper()
+    if code:
+        return code
+    sid = getattr(competition_obj, "series_id", None)
+    if not sid:
+        return ""
+    try:
+        series_row = Series.query.get(sid)
+        sc = (getattr(series_row, "series_code", None) or "").strip().upper()
+        if sc:
+            return sc
+        name = (getattr(series_row, "name", None) or "").strip().lower()
+        if "supercross" in name:
+            return "SX"
+        if "motocross" in name and "super" not in name:
+            return "MX"
+        if "supermoto" in name or name.startswith("smx"):
+            return "SMX"
+    except Exception:
+        db.session.rollback()
+    return ""
+
+
+def picks_open_days_before_series(competition=None) -> int:
+    """How many days before series start tippa opens (SX earlier than MX/SMX)."""
+    if competition is None:
+        return PICKS_OPEN_DAYS_BEFORE_SERIES
+    if isinstance(competition, int):
+        competition = Competition.query.get(competition)
+        if not competition:
+            return PICKS_OPEN_DAYS_BEFORE_SERIES
+    code = _series_code_for_competition(competition)
+    return int(PICKS_OPEN_DAYS_BEFORE_SERIES_BY_CODE.get(code, PICKS_OPEN_DAYS_BEFORE_SERIES))
+
+
 def picks_preseason_opens_on(competition) -> "date | None":
     """First calendar day picks may be submitted for this competition's series."""
-    from datetime import date as date_type
-
     if isinstance(competition, int):
         competition = Competition.query.get(competition)
         if not competition:
@@ -294,7 +334,8 @@ def picks_preseason_opens_on(competition) -> "date | None":
     start = _series_start_date_for_competition(competition)
     if not start:
         return None
-    return start - timedelta(days=PICKS_OPEN_DAYS_BEFORE_SERIES)
+    days = picks_open_days_before_series(competition)
+    return start - timedelta(days=days)
 
 
 def is_picks_preseason_locked(competition) -> bool:

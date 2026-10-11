@@ -237,6 +237,9 @@
           <p class="text-[11px] text-slate-500 mt-2">
             Tips: kopiera från Excel eller Google Sheets — tabb-separerat brukar fungera direkt. Vissa beslutslistor klistras en kolumn i taget (rubriker under varandra); då ska blocket börja exakt med «Namn» på första raden. Välj månad/år så klipps långa datumintervall till rätt månad. «Omf» i listan är frånvarons omfattning per dag — för dagdel används heltids veckoarvode (t.ex. 36,33 h) delat på arbetsdagar; personlig tjänstgöringsgrad finns oftast inte i exporten (justera vid behov mot Visma).
           </p>
+          <p class="text-[11px] text-emerald-400/90 mt-1.5">
+            Utkast sparas lokalt i webbläsaren (inklistrad data, filter, sammanslagningskö). Stänger du fliken finns allt kvar när du öppnar sidan igen — tills du tömmer rutan / kön.
+          </p>
 
           <details class="mt-3 rounded-xl border border-teal-900/50 bg-teal-950/20">
             <summary class="cursor-pointer list-none px-4 py-3 rounded-xl hover:bg-teal-950/40 marker:content-none [&::-webkit-details-marker]:hidden flex items-center justify-between gap-3">
@@ -804,7 +807,7 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=chart-bg-light-contrast-1"></script>
+  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=draft-autosave-v3"></script>
 </body>
 </html>
 

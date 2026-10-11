@@ -263,8 +263,205 @@ const els = {
   btnSickManualPasteClear: document.getElementById("btnSickManualPasteClear"),
 };
 
-/** Råtext per del för sammanslagen period (jan–mars m.m.), endast i minnet */
+/** Råtext per del för sammanslagen period (jan–mars m.m.) — sparas även i utkast (localStorage) */
 const mergeQueue = [];
+
+/** Utkast i webbläsaren (som schemaläggaren) — överlever stängt fönster / omladdning */
+const DRAFT_LS_KEY = "mx_tidrapport_draft_v3";
+let __draftSaveTimer = null;
+let __draftReady = false;
+let __draftRestoring = false;
+
+function collectDraftSnapshot() {
+  const st = window.__tidrapport_state;
+  return {
+    savedAt: Date.now(),
+    paste: els.pasteInput?.value || "",
+    month: els.monthSelect?.value || "",
+    year: els.yearInput?.value || "",
+    title: els.titleInput?.value || "",
+    omfMode: els.omfModeSelect?.value || "",
+    chartMeasure: els.chartMeasureSelect?.value || "",
+    chartGroup: els.chartGroupSelect?.value || "",
+    fullTimeWeekHours: els.fullTimeWeekHoursInput?.value || "",
+    workdaysPerWeek: els.workdaysPerWeekInput?.value || "",
+    orientation: els.orientationSelect?.value || "",
+    verticalNames: els.verticalNamesSelect?.value || "",
+    layout: els.layoutSelect?.value || "",
+    namesPerSlide: els.namesPerSlideSelect?.value || "",
+    analysisMode: els.analysisModeSelect?.value || "",
+    forecastThroughDay: els.forecastThroughDay?.value || "",
+    chartBg: els.chartBgSelect?.value || "",
+    employee: els.employeeInput?.value || "",
+    mergeQueue: mergeQueue.map((q) => ({
+      label: String(q?.label || ""),
+      text: String(q?.text || ""),
+    })),
+    selectedStatuses: st?.selectedStatuses instanceof Set ? [...st.selectedStatuses] : [],
+    chartNameFilterEnabled: !!st?.chartNameFilterEnabled,
+    chartNameFilter: st?.chartNameFilter instanceof Set ? [...st.chartNameFilter] : [],
+  };
+}
+
+function saveDraftNow() {
+  if (!__draftReady || __draftRestoring) return;
+  try {
+    const snap = collectDraftSnapshot();
+    const hasWork =
+      String(snap.paste || "").trim() ||
+      (Array.isArray(snap.mergeQueue) && snap.mergeQueue.length > 0) ||
+      String(snap.title || "").trim() ||
+      String(snap.employee || "").trim();
+    if (!hasWork) {
+      localStorage.removeItem(DRAFT_LS_KEY);
+      return;
+    }
+    localStorage.setItem(DRAFT_LS_KEY, JSON.stringify(snap));
+  } catch (e) {
+    console.warn("tidrapport draft save failed", e);
+  }
+}
+
+function scheduleDraftSave() {
+  if (!__draftReady || __draftRestoring) return;
+  if (__draftSaveTimer) clearTimeout(__draftSaveTimer);
+  __draftSaveTimer = setTimeout(() => {
+    __draftSaveTimer = null;
+    saveDraftNow();
+  }, 400);
+}
+
+function clearDraftStorage() {
+  if (__draftSaveTimer) {
+    clearTimeout(__draftSaveTimer);
+    __draftSaveTimer = null;
+  }
+  try {
+    localStorage.removeItem(DRAFT_LS_KEY);
+  } catch (e) {
+    console.warn("tidrapport draft clear failed", e);
+  }
+}
+
+function loadDraftSnapshot() {
+  try {
+    const raw = localStorage.getItem(DRAFT_LS_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== "object") return null;
+    return data;
+  } catch (e) {
+    console.warn("tidrapport draft load failed", e);
+    return null;
+  }
+}
+
+function formatDraftSavedAt(ts) {
+  const n = Number(ts);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  try {
+    return new Date(n).toLocaleString("sv-SE", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
+function applyDraftSnapshot(draft) {
+  if (!draft || typeof draft !== "object") return false;
+  __draftRestoring = true;
+  try {
+    const setVal = (el, v) => {
+      if (!el || v == null || v === "") return;
+      el.value = String(v);
+    };
+    setVal(els.monthSelect, draft.month);
+    setVal(els.yearInput, draft.year);
+    setVal(els.titleInput, draft.title);
+    setVal(els.omfModeSelect, draft.omfMode);
+    setVal(els.chartMeasureSelect, draft.chartMeasure);
+    setVal(els.chartGroupSelect, draft.chartGroup);
+    setVal(els.fullTimeWeekHoursInput, draft.fullTimeWeekHours);
+    setVal(els.workdaysPerWeekInput, draft.workdaysPerWeek);
+    setVal(els.orientationSelect, draft.orientation);
+    setVal(els.verticalNamesSelect, draft.verticalNames);
+    setVal(els.layoutSelect, draft.layout);
+    setVal(els.namesPerSlideSelect, draft.namesPerSlide);
+    setVal(els.analysisModeSelect, draft.analysisMode);
+    setVal(els.forecastThroughDay, draft.forecastThroughDay);
+    setVal(els.chartBgSelect, draft.chartBg);
+    setVal(els.employeeInput, draft.employee);
+    if (els.pasteInput) els.pasteInput.value = String(draft.paste || "");
+
+    mergeQueue.length = 0;
+    if (Array.isArray(draft.mergeQueue)) {
+      for (const q of draft.mergeQueue) {
+        if (!q || typeof q !== "object") continue;
+        const text = String(q.text || "");
+        if (!text.trim()) continue;
+        mergeQueue.push({
+          label: cleanStr(q.label) || `Del ${mergeQueue.length + 1}`,
+          text,
+        });
+      }
+    }
+    renderMergeQueueList();
+
+    updateNominalDayHoursHint();
+    updateForecastMonthInfo();
+    updateAnalysisPanels();
+    if (els.layoutSelect) applyLayoutMode(cleanStr(els.layoutSelect.value) || "side");
+
+    const paste = String(draft.paste || "");
+    const selected = Array.isArray(draft.selectedStatuses)
+      ? draft.selectedStatuses.map((s) => String(s)).filter(Boolean)
+      : null;
+    if (paste.trim()) {
+      regenerateFromText(paste, selected && selected.length ? selected : null);
+      if (window.__tidrapport_state) {
+        if (draft.chartNameFilterEnabled && Array.isArray(draft.chartNameFilter)) {
+          window.__tidrapport_state.chartNameFilterEnabled = true;
+          window.__tidrapport_state.chartNameFilter = new Set(
+            draft.chartNameFilter.map((n) => String(n)).filter(Boolean)
+          );
+        }
+        const emp = cleanStr(els.employeeInput?.value);
+        window.__tidrapport_state.employeeName = emp || null;
+        if (els.orientationSelect) {
+          window.__tidrapport_state.orientation =
+            cleanStr(els.orientationSelect.value) || "horizontal";
+        }
+        if (els.verticalNamesSelect) {
+          window.__tidrapport_state.verticalNames =
+            cleanStr(els.verticalNamesSelect.value) || "20";
+        }
+        if (els.layoutSelect) {
+          window.__tidrapport_state.layout = cleanStr(els.layoutSelect.value) || "side";
+        }
+        safeRenderAll(window.__tidrapport_state);
+      }
+    }
+
+    const when = formatDraftSavedAt(draft.savedAt);
+    const parts = [];
+    if (paste.trim()) parts.push("data i rutan");
+    if (mergeQueue.length) parts.push(`${mergeQueue.length} del(ar) i kö`);
+    const what = parts.length ? parts.join(" + ") : "inställningar";
+    if (els.statusText) {
+      els.statusText.textContent = when
+        ? `Återställde utkast (${what}) från ${when}.`
+        : `Återställde utkast (${what}).`;
+    }
+    return true;
+  } finally {
+    __draftRestoring = false;
+  }
+}
 
 let __mergeFeedbackTimer = null;
 /** Meddelande direkt under sammanslagningsknapparna (användaren ser sällan statusraden längre ner). */
@@ -2415,6 +2612,7 @@ function renderMergeQueueList() {
     btn.addEventListener("click", () => {
       mergeQueue.splice(idx, 1);
       renderMergeQueueList();
+      scheduleDraftSave();
     });
     li.appendChild(span);
     li.appendChild(btn);
@@ -2449,6 +2647,7 @@ function buildStatusFilters(statuses, selected) {
       if (cb.checked) selected.add(st);
       else selected.delete(st);
       safeRenderAll(window.__tidrapport_state);
+      scheduleDraftSave();
     });
     const sw = document.createElement("span");
     sw.className = "inline-block w-3 h-3 rounded-sm border border-slate-900";
@@ -3755,6 +3954,7 @@ function renderTable(sortedPeople) {
       if (cb.checked) st.chartNameFilter.add(r.name);
       else st.chartNameFilter.delete(r.name);
       safeRenderAll(st);
+      scheduleDraftSave();
     });
     const nm = document.createElement("span");
     nm.textContent = r.name;
@@ -4046,6 +4246,7 @@ function renderForecastAll(state) {
       if (cb.checked) state.chartNameFilter.add(r.name);
       else state.chartNameFilter.delete(r.name);
       safeRenderAll(state);
+      scheduleDraftSave();
     });
     const nm = document.createElement("span");
     nm.textContent = r.name;
@@ -4517,6 +4718,14 @@ function regenerateFromText(text, selectedOverride) {
 els.btnGenerate.addEventListener("click", () => {
   const text = els.pasteInput.value || "";
   regenerateFromText(text, null);
+  saveDraftNow();
+});
+
+els.pasteInput?.addEventListener("input", () => {
+  scheduleDraftSave();
+});
+els.pasteInput?.addEventListener("paste", () => {
+  setTimeout(() => scheduleDraftSave(), 0);
 });
 
 function regenerateCurrentTextPreservingSelection() {
@@ -4537,11 +4746,20 @@ function regenerateCurrentTextPreservingSelection() {
     window.__tidrapport_state.chartNameFilter = chartNameFilter;
     safeRenderAll(window.__tidrapport_state);
   }
+  scheduleDraftSave();
 }
 
 function clearPasteAndChart() {
   els.pasteInput.value = "";
   regenerateFromText("", null);
+  // Behåll merge-kö + inställningar; spara om (eller rensa utkast om allt är tomt)
+  saveDraftNow();
+  if (els.statusText) {
+    const kept = mergeQueue.length
+      ? ` Kön (${mergeQueue.length} delar) finns kvar.`
+      : " Lokalt utkast uppdaterat.";
+    els.statusText.textContent = `Rutan tömd.${kept}`;
+  }
 }
 
 els.btnClear.addEventListener("click", clearPasteAndChart);
@@ -4553,6 +4771,7 @@ els.btnAll.addEventListener("click", () => {
   st.selectedStatuses = new Set(fs);
   buildStatusFilters(fs, st.selectedStatuses);
   safeRenderAll(st);
+  scheduleDraftSave();
 });
 
 els.btnNone.addEventListener("click", () => {
@@ -4560,6 +4779,7 @@ els.btnNone.addEventListener("click", () => {
   st.selectedStatuses = new Set();
   buildStatusFilters(filterStatusesForUi(st), st.selectedStatuses);
   safeRenderAll(st);
+  scheduleDraftSave();
 });
 
 els.btnClearEmployee?.addEventListener("click", () => {
@@ -4568,6 +4788,7 @@ els.btnClearEmployee?.addEventListener("click", () => {
     window.__tidrapport_state.employeeName = null;
     safeRenderAll(window.__tidrapport_state);
   }
+  scheduleDraftSave();
 });
 
 els.employeeInput?.addEventListener("input", () => {
@@ -4575,6 +4796,7 @@ els.employeeInput?.addEventListener("input", () => {
   const nm = getSelectedEmployeeName(window.__tidrapport_state.totals);
   window.__tidrapport_state.employeeName = nm;
   safeRenderAll(window.__tidrapport_state);
+  scheduleDraftSave();
 });
 
 els.omfModeSelect?.addEventListener("change", () => {
@@ -4583,10 +4805,12 @@ els.omfModeSelect?.addEventListener("change", () => {
 
 els.chartMeasureSelect?.addEventListener("change", () => {
   if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
+  scheduleDraftSave();
 });
 
 els.chartGroupSelect?.addEventListener("change", () => {
   if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
+  scheduleDraftSave();
 });
 
 // Tabs
@@ -4721,6 +4945,7 @@ for (const el of [els.monthSelect, els.yearInput]) {
 
 els.titleInput?.addEventListener("input", () => {
   if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
+  scheduleDraftSave();
 });
 
 els.analysisModeSelect?.addEventListener("change", () => {
@@ -4731,6 +4956,7 @@ els.analysisModeSelect?.addEventListener("change", () => {
   if (!window.__tidrapport_state) return;
   if (m === "forecast") {
     safeRenderAll(window.__tidrapport_state);
+    scheduleDraftSave();
     return;
   }
   buildStatusFilters(
@@ -4738,22 +4964,26 @@ els.analysisModeSelect?.addEventListener("change", () => {
     window.__tidrapport_state.selectedStatuses
   );
   safeRenderAll(window.__tidrapport_state);
+  scheduleDraftSave();
 });
 
 els.forecastThroughDay?.addEventListener("input", () => {
   if (getAnalysisMode() === "forecast" && window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
+  scheduleDraftSave();
 });
 
 els.orientationSelect?.addEventListener("change", () => {
   if (!window.__tidrapport_state) return;
   window.__tidrapport_state.orientation = cleanStr(els.orientationSelect.value) || "horizontal";
   safeRenderAll(window.__tidrapport_state);
+  scheduleDraftSave();
 });
 
 els.verticalNamesSelect?.addEventListener("change", () => {
   if (!window.__tidrapport_state) return;
   window.__tidrapport_state.verticalNames = cleanStr(els.verticalNamesSelect.value) || "20";
   safeRenderAll(window.__tidrapport_state);
+  scheduleDraftSave();
 });
 
 function applyLayoutMode(mode) {
@@ -4768,6 +4998,7 @@ els.layoutSelect?.addEventListener("change", () => {
   window.__tidrapport_state.layout = cleanStr(els.layoutSelect.value) || "side";
   applyLayoutMode(window.__tidrapport_state.layout);
   safeRenderAll(window.__tidrapport_state);
+  scheduleDraftSave();
 });
 
 els.btnAddToMerge?.addEventListener("click", () => {
@@ -4801,6 +5032,7 @@ els.btnAddToMerge?.addEventListener("click", () => {
   const ok = `Tillagt «${label}» — ${mergeQueue.length} del${mergeQueue.length === 1 ? "" : "ar"} i kön.`;
   els.statusText.textContent = ok;
   setMergeFeedback(ok, "ok");
+  saveDraftNow();
 });
 
 els.btnMergePickFiles?.addEventListener("click", () => {
@@ -4844,6 +5076,7 @@ els.mergeFileInput?.addEventListener("change", async (e) => {
     const ok = `Tillagde ${added} fil(er). Kö: ${mergeQueue.length} delar.`;
     els.statusText.textContent = ok;
     setMergeFeedback(ok, "ok");
+    saveDraftNow();
   }
 });
 
@@ -4853,6 +5086,7 @@ els.btnClearMergeQueue?.addEventListener("click", () => {
   const m = "Kön är tömd.";
   els.statusText.textContent = m;
   setMergeFeedback(m, "ok");
+  saveDraftNow();
 });
 
 els.btnApplyMerge?.addEventListener("click", () => {
@@ -4891,6 +5125,7 @@ els.btnApplyMerge?.addEventListener("click", () => {
   const ok = `Klart: samlat diagram — ${mergeQueue.length} delar, ${rows.length} rader, ${agg.totals.size} personer. (Kolla diagrammet nedan.)`;
   els.statusText.textContent = ok;
   setMergeFeedback(ok, "ok");
+  saveDraftNow();
 });
 
 els.btnDownload.addEventListener("click", async () => {
@@ -4915,14 +5150,17 @@ els.btnExportExcel?.addEventListener("click", () => {
 
 els.chartBgSelect?.addEventListener("change", () => {
   applyChartBackgroundUi();
+  scheduleDraftSave();
 });
 els.overtimeChartBgSelect?.addEventListener("change", () => {
   if (els.chartBgSelect) els.chartBgSelect.value = els.overtimeChartBgSelect.value;
   applyChartBackgroundUi();
+  scheduleDraftSave();
 });
 els.sickManualChartBgSelect?.addEventListener("change", () => {
   if (els.chartBgSelect) els.chartBgSelect.value = els.sickManualChartBgSelect.value;
   applyChartBackgroundUi();
+  scheduleDraftSave();
 });
 
 try {
@@ -4954,6 +5192,7 @@ els.namesPerSlideSelect?.addEventListener("change", () => {
   if (!st) return;
   st.chartSlideIndex = 0;
   safeRenderAll(st);
+  scheduleDraftSave();
 });
 
 els.btnDownloadAllSlides?.addEventListener("click", async () => {
@@ -4978,7 +5217,7 @@ els.btnDownloadAllSlides?.addEventListener("click", async () => {
   }
 });
 
-// Boot: rensa gamla sparade månader (localStorage) och visa tomt läge
+// Boot: rensa gamla nycklar, ladda utkast (localStorage), visa diagram igen
 (() => {
   try {
     localStorage.removeItem("mx_tidrapport_v1");
@@ -5026,6 +5265,20 @@ els.btnDownloadAllSlides?.addEventListener("click", async () => {
     mergeSourceOrder: null,
   };
   ensureChart();
-  els.statusText.textContent = "Klistra in data och klicka på «Skapa / uppdatera diagram».";
+
+  const draft = loadDraftSnapshot();
+  const restored = draft ? applyDraftSnapshot(draft) : false;
+  __draftReady = true;
+  if (!restored) {
+    els.statusText.textContent =
+      "Klistra in data och klicka på «Skapa / uppdatera diagram». Utkast sparas lokalt i webbläsaren.";
+  }
+
+  window.addEventListener("beforeunload", () => {
+    saveDraftNow();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") saveDraftNow();
+  });
 })();
 
