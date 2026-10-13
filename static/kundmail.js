@@ -63,6 +63,23 @@ const TEMPLATE_DEFS = [
     ],
   },
   {
+    id: "mivv",
+    fields: [
+      {
+        id: "leadWeeks",
+        type: "select",
+        options: [
+          { value: "4" },
+          { value: "5" },
+          { value: "6" },
+          { value: "7" },
+          { value: "8" },
+        ],
+        default: "5",
+      },
+    ],
+  },
+  {
     id: "delager",
     fields: [
       { id: "stockQty", type: "text", required: true },
@@ -137,6 +154,7 @@ const REPLY_DEFAULTS = {
   utgatt: false,
   forsening: false,
   usa_forsening: false,
+  mivv: false,
   delager: false,
   alternativ: false,
   avbokad: false,
@@ -217,6 +235,23 @@ const UI = {
         newDeliveryDate: { label: "Beräknat skickdatum (valfritt)" },
         alternativeProduct: { label: "Alternativ produkt (valfritt)" },
         productLink: { label: "Länk till alternativ (valfritt)" },
+      },
+    },
+    mivv: {
+      label: "MIVV — tillverkas på beställning",
+      description:
+        "Avgassystem från MIVV. Välj beräknad ledtid (veckor). Kunden godkänner väntan innan order läggs — annars makulering efter 10 arbetsdagar.",
+      fields: {
+        leadWeeks: {
+          label: "Beräknad ledtid",
+          options: {
+            4: "ca 4 veckor",
+            5: "ca 5 veckor",
+            6: "ca 6 veckor",
+            7: "ca 7 veckor",
+            8: "ca 8 veckor",
+          },
+        },
       },
     },
     delager: {
@@ -329,6 +364,7 @@ const MAIL_I18N = {
       utgatt: "Produkt utgått",
       forsening: "Produkt försenad",
       usa_forsening: "Leverans från USA",
+      mivv: "MIVV på beställning",
       delager: "Begränsat lager",
       alternativ: "Alternativ produkt",
       avbokad: "Order avbruten",
@@ -368,6 +404,7 @@ const MAIL_I18N = {
       utgatt: "Produkt udgået",
       forsening: "Produkt forsinket",
       usa_forsening: "Levering fra USA",
+      mivv: "MIVV på bestilling",
       delager: "Begrænset lager",
       alternativ: "Alternativt produkt",
       avbokad: "Ordre annulleret",
@@ -407,6 +444,7 @@ const MAIL_I18N = {
       utgatt: "Product discontinued",
       forsening: "Delivery delayed",
       usa_forsening: "USA shipping delay",
+      mivv: "MIVV made to order",
       delager: "Limited stock",
       alternativ: "Alternative product",
       avbokad: "Order cancelled",
@@ -966,7 +1004,16 @@ function subjectCompanyPrefix(raw) {
 
 function buildSubject(ctx) {
   const pack = MAIL_I18N[ctx.lang] || MAIL_I18N.sv;
-  const status = pack.subjectStatus[ctx.templateId] || pack.subjectStatus.default;
+  let status = pack.subjectStatus[ctx.templateId] || pack.subjectStatus.default;
+  if (ctx.templateId === "mivv") {
+    const weeks = cleanStr(ctx.extras?.leadWeeks) || "5";
+    const byLang = {
+      sv: `MIVV ca ${weeks} veckor`,
+      da: `MIVV ca ${weeks} uger`,
+      en: `MIVV approx. ${weeks} weeks`,
+    };
+    status = byLang[ctx.lang] || byLang.sv;
+  }
   const company = subjectCompanyPrefix(ctx.settings?.companyName);
   const order = cleanStr(ctx.orderNumber);
   const parts = [];
@@ -1122,6 +1169,19 @@ Skulle du vilja titta på ett liknande alternativ finns ${alt}.`;
         body += ` Hör av dig om du hellre vill byta — annars skickar vi originalordern som planerat.`;
       }
       body += `
+
+${outro}`;
+      break;
+    }
+    case "mivv": {
+      const weeks = cleanStr(extras.leadWeeks) || "5";
+      body = `${intro}Tack för din beställning av ${prod}.
+
+MIVV tillverkar avgassystem efter beställning (inget färdigt lager). På hemsidan står ofta 22–30 dagar; i praktiken blir det ofta lite längre, och vid hög belastning kan det tyvärr dröja några veckor extra.
+
+Vi räknar med ca ${weeks} veckor innan vi kan skicka till dig.
+
+Är det okej att vänta? Svara ja eller nej (eller om du vill avbryta/byta) innan vi lägger ordern hos MIVV. Om vi inte hört från dig inom 10 arbetsdagar makuleras beställningen.
 
 ${outro}`;
       break;
@@ -1422,6 +1482,19 @@ Hvis du hellere vil kigge på et lignende alternativ, findes ${alt}.`;
 ${outro}`;
       break;
     }
+    case "mivv": {
+      const weeks = cleanStr(extras.leadWeeks) || "5";
+      body = `${intro}Tak for din bestilling af ${prod}.
+
+MIVV fremstiller udstødningssystemer efter bestilling (intet færdigt lager). På hjemmesiden står der ofte 22–30 dage; i praksis bliver det ofte lidt længere, og ved høj belastning kan det desværre tage et par uger ekstra.
+
+Vi regner med ca ${weeks} uger, før vi kan sende til dig.
+
+Er det okay at vente? Svar ja eller nej (eller om du vil annullere/skifte), før vi afgiver ordren hos MIVV. Hvis vi ikke har hørt fra dig inden for 10 arbejdsdage, annulleres bestillingen.
+
+${outro}`;
+      break;
+    }
     case "delager": {
       const stock = cleanStr(extras.stockQty) || "X";
       const ordered = cleanStr(extras.orderedQty);
@@ -1714,6 +1787,19 @@ If you would rather look at a similar option, we have ${alt}.`;
         body += ` Just reply if you would prefer to switch — otherwise we will ship the original order as planned.`;
       }
       body += `
+
+${outro}`;
+      break;
+    }
+    case "mivv": {
+      const weeks = cleanStr(extras.leadWeeks) || "5";
+      body = `${intro}Thank you for your order of ${prod}.
+
+MIVV manufactures exhaust systems to order (not from stock). Their website often states 22–30 days; in practice it is usually a little longer, and during busy periods it may unfortunately take a few extra weeks.
+
+We currently expect around ${weeks} weeks before we can ship to you.
+
+Is it OK to wait? Please reply yes or no (or if you would like to cancel or change the item) before we place the order with MIVV. If we have not heard from you within 10 business days, the order will be cancelled.
 
 ${outro}`;
       break;
