@@ -2066,6 +2066,7 @@ function renderExtraFields() {
           input.appendChild(o);
         }
         if (field.default) input.value = field.default;
+        row.appendChild(input);
       } else if (field.type === "date") {
         const dateWrap = document.createElement("div");
         dateWrap.className = "kundmail-date-wrap";
