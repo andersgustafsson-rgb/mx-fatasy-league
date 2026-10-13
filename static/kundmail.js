@@ -1181,7 +1181,7 @@ MIVV tillverkar avgassystem efter beställning (inget färdigt lager). På hemsi
 
 Vi räknar med ca ${weeks} veckor innan vi kan skicka till dig.
 
-Är det okej att vänta? Svara ja eller nej (eller om du vill avbryta/byta) innan vi lägger ordern hos MIVV. Om vi inte hört från dig inom 10 arbetsdagar makuleras beställningen.
+Är det okej att vänta? Bekräfta gärna innan vi lägger ordern hos MIVV. Om vi inte hört från dig inom 10 arbetsdagar makuleras beställningen.
 
 ${outro}`;
       break;
@@ -1490,7 +1490,7 @@ MIVV fremstiller udstødningssystemer efter bestilling (intet færdigt lager). P
 
 Vi regner med ca ${weeks} uger, før vi kan sende til dig.
 
-Er det okay at vente? Svar ja eller nej (eller om du vil annullere/skifte), før vi afgiver ordren hos MIVV. Hvis vi ikke har hørt fra dig inden for 10 arbejdsdage, annulleres bestillingen.
+Er det okay at vente? Bekræft venligst, før vi afgiver ordren hos MIVV. Hvis vi ikke har hørt fra dig inden for 10 arbejdsdage, annulleres bestillingen.
 
 ${outro}`;
       break;
@@ -1799,7 +1799,7 @@ MIVV manufactures exhaust systems to order (not from stock). Their website often
 
 We currently expect around ${weeks} weeks before we can ship to you.
 
-Is it OK to wait? Please reply yes or no (or if you would like to cancel or change the item) before we place the order with MIVV. If we have not heard from you within 10 business days, the order will be cancelled.
+Is it OK to wait? Please confirm before we place the order with MIVV. If we have not heard from you within 10 business days, the order will be cancelled.
 
 ${outro}`;
       break;
