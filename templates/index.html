@@ -3449,14 +3449,33 @@
                     {% include 'partials/mxon_picks_summary_board.html' %}
                     <script type="application/json" id="home-mxon-picks-bootstrap">{{ {"picks": mxon_nations, "class_picks": mxon_classes, "complete": is_complete}|tojson }}</script>
                     {% else %}
-                    {% set class_450_label = 'SX1' if upcoming_race.series == 'WSX' else '450cc' %}
-                    {% set class_250_label = 'SX2' if upcoming_race.series == 'WSX' else '250cc' %}
+                    {% set _ser = (upcoming_race.series or '')|upper %}
+                    {% if upcoming_race.series == 'WSX' %}
+                      {% set class_450_label = 'SX1' %}
+                      {% set class_250_label = 'SX2' %}
+                    {% elif _ser == 'MXGP' %}
+                      {% set class_450_label = 'MXGP' %}
+                      {% set class_250_label = 'MX2' %}
+                    {% elif _ser == 'MXSM' %}
+                      {% set class_450_label = 'MX1' %}
+                      {% set class_250_label = 'MX2' %}
+                    {% else %}
+                      {% set class_450_label = '450cc' %}
+                      {% set class_250_label = '250cc' %}
+                    {% endif %}
+                    {% set class_u17_label = 'U17' %}
                     {% set picks_450 = current_picks_450 %}
                     {% set picks_250 = current_picks_250 %}
+                    {% set picks_u17 = current_picks_u17 | default([]) %}
                     {% set holeshot_450 = current_holeshot_450 %}
                     {% set holeshot_250 = current_holeshot_250 %}
+                    {% set holeshot_u17 = current_holeshot_u17 | default(none) %}
                     {% set wildcard = current_wildcard %}
                     {% set is_wsx = upcoming_race.series == 'WSX' %}
+                    {% set is_mxgp = _ser == 'MXGP' %}
+                    {% set is_mxsm = _ser == 'MXSM' %}
+                    {% set has_u17 = (picks_u17|length > 0) or (holeshot_u17 is not none) %}
+                    {% set skips_wildcard = is_wsx or is_mxgp or is_mxsm %}
                     {% include 'partials/picks_summary_board.html' %}
                     {% if home_pick_portraits %}
                     <script>window.HOME_PICK_PORTRAITS = {{ home_pick_portraits | tojson }};</script>
@@ -4529,6 +4548,13 @@
           sub: '2027',
           empty: isEn ? 'No MXGP points yet.' : 'Inga MXGP-poäng ännu.',
           load: () => _fetchLeaderboardRows('/get_mxgp_leaderboard?year=2027', { wrapKey: 'leaderboard' }),
+        },
+        {
+          id: 'mxsm',
+          title: 'MXSM Fantasy',
+          sub: '2026',
+          empty: isEn ? 'No MXSM points yet.' : 'Inga MXSM-poäng ännu.',
+          load: () => _fetchLeaderboardRows('/get_mxsm_leaderboard?year=2026', { wrapKey: 'leaderboard' }),
         },
       ];
     }
@@ -6129,21 +6155,21 @@
       </section>`;
     }
 
-    function renderHomePicksBoard(myPicks, { picksStatus, openHref, isWSX, isMXGP }) {
+    function renderHomePicksBoard(myPicks, { picksStatus, openHref, isWSX, isMXGP, isMXSM }) {
       const panel = document.getElementById('home-sidebar-picks-status');
       if (!panel) return;
 
       const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
       const top6Lbl = isEn ? 'top 6' : 'topp 6';
-      const label450 = isWSX ? 'SX1' : (isMXGP ? 'MXGP' : '450cc');
-      const label250 = isWSX ? 'SX2' : (isMXGP ? 'MX2' : '250cc');
+      const label450 = isWSX ? 'SX1' : (isMXGP ? 'MXGP' : (isMXSM ? 'MX1' : '450cc'));
+      const label250 = isWSX ? 'SX2' : (isMXGP ? 'MX2' : (isMXSM ? 'MX2' : '250cc'));
       const top6 = myPicks?.top6_picks || [];
-      const picks450 = top6.filter((p) => ['450cc', 'wsx_sx1', 'mxgp'].includes(p.class));
-      const picks250 = top6.filter((p) => ['250cc', 'wsx_sx2', 'mx2'].includes(p.class));
+      const picks450 = top6.filter((p) => ['450cc', 'wsx_sx1', 'mxgp', 'mxsm_mx1'].includes(p.class));
+      const picks250 = top6.filter((p) => ['250cc', 'wsx_sx2', 'mx2', 'mxsm_mx2'].includes(p.class));
       const byPos = (arr, pos) => arr.find((p) => Number(p.predicted_position) === pos) || null;
       const hs450 = myPicks?.holeshot_450 || null;
       const hs250 = myPicks?.holeshot_250 || null;
-      const skipsWildcard = isWSX || isMXGP;
+      const skipsWildcard = isWSX || isMXGP || isMXSM;
       const wildcard = (!skipsWildcard && myPicks?.wildcard) ? myPicks.wildcard : null;
       const qm = myPicks?.qualifying_picks || {};
       const qualMxgp = isMXGP ? (myPicks?.qualifying_mxgp || null) : null;
@@ -6279,6 +6305,7 @@
       const seriesHint = String(data?.series || data?.next_race?.series || homeSelectedSeries || '').toUpperCase();
       const isMXON = seriesHint === 'MXON';
       const isMXGP = seriesHint === 'MXGP';
+      const isMXSM = seriesHint === 'MXSM';
       const openHref =
         (compId ? (isMXON ? `/mxon_picks/${compId}` : `/race_picks/${compId}`) : null) ||
         document.getElementById('real-picks-open-status')?.getAttribute('href') ||
@@ -6289,7 +6316,7 @@
       if (!compId || !window.__MX_LOGGED_IN__) {
         // Keep SSR content for guests; for logged-in without race just show empty prompt
         if (window.__MX_LOGGED_IN__) {
-          renderHomePicksBoard(null, { picksStatus: 'no_picks', openHref, isWSX: isWSX || isMXON, isMXGP });
+          renderHomePicksBoard(null, { picksStatus: 'no_picks', openHref, isWSX: isWSX || isMXON, isMXGP, isMXSM });
         }
         return;
       }
@@ -6323,7 +6350,7 @@
           renderHomeMxonPicksBoard(payload, { picksStatus: status, openHref });
           return;
         }
-        renderHomePicksBoard(myPicks, { picksStatus, openHref, isWSX, isMXGP });
+        renderHomePicksBoard(myPicks, { picksStatus, openHref, isWSX, isMXGP, isMXSM });
       } catch (e) {
         console.warn('refreshHomePicksBoard:', e);
         // Keep SSR MXoN board if present — don't wipe with a banner-only fallback on iOS fetch blips

@@ -2,11 +2,20 @@
 {% from 'includes/mx_icon.html' import mx_icon %}
 {% set _p450 = picks_450 | default([]) %}
 {% set _p250 = picks_250 | default([]) %}
+{% set _p_u17 = picks_u17 | default([]) %}
 {% set _l450 = class_450_label | default('450cc') %}
 {% set _l250 = class_250_label | default('250cc') %}
+{% set _l_u17 = class_u17_label | default('U17') %}
 {% set _is_wsx = is_wsx | default(false) %}
+{% set _is_mxgp = is_mxgp | default(false) %}
+{% set _is_mxsm = is_mxsm | default(false) %}
+{% set _has_u17 = (has_u17 | default(false)) and (_p_u17|length > 0 or _is_mxsm) %}
+{% set _show_mx1 = not _is_mxsm or (_p450|length > 0) or (has_mx1 | default(true)) %}
+{% set _show_mx2 = not _is_mxsm or (_p250|length > 0) or (has_mx2 | default(true)) %}
+{% set _skip_wc = _is_wsx or _is_mxgp or _is_mxsm or (skips_wildcard | default(false)) %}
 {% set _complete = is_complete | default(false) %}
 {% set _partial = is_partial | default(false) %}
+{% set _col_count = (1 if _show_mx1 else 0) + (1 if _show_mx2 else 0) + (1 if _has_u17 else 0) %}
 
 <div class="wizard-picks-summary{% if _complete %} is-complete{% endif %} picks-summary--on-home">
   <div class="wizard-summary-banner{% if not _complete %} is-pending{% endif %}">
@@ -19,7 +28,8 @@
     {% endif %}
   </div>
   <div class="wizard-summary-body">
-    <div class="wizard-summary-grid">
+    <div class="wizard-summary-grid{% if _col_count >= 3 %} wizard-summary-grid--3{% endif %}">
+      {% if _show_mx1 %}
       <div class="wizard-summary-col wizard-summary-col--450">
         <h4 class="wizard-summary-col__title">{{ _l450 }} topp 6</h4>
         <ol class="wizard-summary-list">
@@ -41,6 +51,8 @@
           {% endfor %}
         </ol>
       </div>
+      {% endif %}
+      {% if _show_mx2 %}
       <div class="wizard-summary-col wizard-summary-col--250">
         <h4 class="wizard-summary-col__title">{{ _l250 }} topp 6</h4>
         <ol class="wizard-summary-list">
@@ -62,9 +74,34 @@
           {% endfor %}
         </ol>
       </div>
+      {% endif %}
+      {% if _has_u17 %}
+      <div class="wizard-summary-col wizard-summary-col--u17">
+        <h4 class="wizard-summary-col__title">{{ _l_u17 }} topp 6</h4>
+        <ol class="wizard-summary-list">
+          {% for i in range(1, 7) %}
+          {% set pick = _p_u17 | selectattr('position', 'equalto', i) | first %}
+          <li class="wizard-summary-slot{% if pick and i <= 3 %} wizard-summary-slot--p{{ i }}{% endif %}{% if not pick %} wizard-summary-slot--empty{% endif %}">
+            <span class="wizard-summary-pos">{{ i }}</span>
+            {% if pick %}
+            <img class="wizard-summary-portrait" alt="" loading="eager" decoding="async" data-rider-id="{{ pick.rider_id }}">
+            <div class="wizard-summary-rider">
+              <span class="wizard-summary-num">#{{ pick.rider_number }}</span>
+              <span class="wizard-summary-name">{{ pick.rider_name }}</span>
+            </div>
+            {% else %}
+            <div class="wizard-summary-portrait"></div>
+            <span class="wizard-summary-empty">—</span>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+      {% endif %}
     </div>
 
     <div class="wizard-summary-extras">
+      {% if _show_mx1 %}
       <div class="wizard-summary-extra wizard-summary-extra--holeshot{% if not holeshot_450 %} wizard-summary-extra--empty{% endif %}">
         <span class="wizard-summary-extra__icon">{{ mx_icon('zap') }}</span>
         {% if holeshot_450 %}
@@ -77,6 +114,8 @@
           <div class="wizard-summary-extra__name">{% if holeshot_450 %}#{{ holeshot_450.rider_number }} {{ holeshot_450.rider_name }}{% else %}Ej vald{% endif %}</div>
         </div>
       </div>
+      {% endif %}
+      {% if _show_mx2 %}
       <div class="wizard-summary-extra wizard-summary-extra--holeshot{% if not holeshot_250 %} wizard-summary-extra--empty{% endif %}">
         <span class="wizard-summary-extra__icon">{{ mx_icon('zap') }}</span>
         {% if holeshot_250 %}
@@ -89,7 +128,22 @@
           <div class="wizard-summary-extra__name">{% if holeshot_250 %}#{{ holeshot_250.rider_number }} {{ holeshot_250.rider_name }}{% else %}Ej vald{% endif %}</div>
         </div>
       </div>
-      {% if not _is_wsx %}
+      {% endif %}
+      {% if _has_u17 %}
+      <div class="wizard-summary-extra wizard-summary-extra--holeshot{% if not holeshot_u17 %} wizard-summary-extra--empty{% endif %}">
+        <span class="wizard-summary-extra__icon">{{ mx_icon('zap') }}</span>
+        {% if holeshot_u17 %}
+        <img class="wizard-summary-portrait" alt="" loading="eager" decoding="async" data-rider-id="{{ holeshot_u17.rider_id }}">
+        {% else %}
+        <div class="wizard-summary-portrait"></div>
+        {% endif %}
+        <div class="wizard-summary-extra__body">
+          <div class="wizard-summary-extra__label">Holeshot {{ _l_u17 }}</div>
+          <div class="wizard-summary-extra__name">{% if holeshot_u17 %}#{{ holeshot_u17.rider_number }} {{ holeshot_u17.rider_name }}{% else %}Ej vald{% endif %}</div>
+        </div>
+      </div>
+      {% endif %}
+      {% if not _skip_wc %}
       <div class="wizard-summary-extra wizard-summary-extra--wildcard{% if not wildcard %} wizard-summary-extra--empty{% endif %}">
         <span class="wizard-summary-extra__icon">{{ mx_icon('target') }}</span>
         <span class="wizard-summary-wc-pos">{% if wildcard and wildcard.position %}{{ wildcard.position }}{% else %}?{% endif %}</span>
@@ -110,7 +164,7 @@
 
 {% if team_riders and team_riders|length > 0 %}
 {% set _st_series = ((upcoming_race.series if upcoming_race is defined and upcoming_race else '') or '')|upper %}
-{% if _st_series not in ('WSX', 'MXON', 'MXGP') %}
+{% if _st_series not in ('WSX', 'MXON', 'MXGP', 'MXSM') %}
 {% set season_team_riders = team_riders %}
 {% set season_team_meta = {'team_name': my_team.team_name if my_team else none, 'total_points': my_team.total_points if my_team else 0} %}
 {% set compact = true %}
@@ -118,7 +172,7 @@
 {% endif %}
 {% elif is_logged_in is defined and is_logged_in %}
 {% set _st_series = ((upcoming_race.series if upcoming_race is defined and upcoming_race else '') or '')|upper %}
-{% if _st_series not in ('WSX', 'MXON', 'MXGP') %}
+{% if _st_series not in ('WSX', 'MXON', 'MXGP', 'MXSM') %}
 {% set compact = true %}
 {% set show_missing_cta = true %}
 {% include 'partials/season_team_under_picks.html' %}

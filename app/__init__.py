@@ -26,8 +26,11 @@ def create_app() -> Flask:
 		if os.getenv('RENDER'):
 			app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
 		else:
-			# Default to local SQLite file
-			app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fantasy_mx.db'
+			db_url = (os.getenv('DATABASE_URL') or '').strip()
+			if db_url.startswith('sqlite:'):
+				app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+			else:
+				app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fantasy_mx.db'
 
 	app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 

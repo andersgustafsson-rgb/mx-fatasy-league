@@ -8,6 +8,8 @@ per class. No wildcard. No season team.
 """
 from __future__ import annotations
 
+import os
+import re
 from datetime import date, timedelta
 from typing import Any
 
@@ -328,3 +330,58 @@ def ensure_mxgp_scaffold() -> dict[str, Any]:
         f"roster+={roster['created']}"
     )
     return info
+
+
+def mxgp_portrait_slug(name: str | None) -> str:
+    """Filnamn utan mellanslag — samma som tools/download_mxgp_rider_portraits.py."""
+    s = (name or "").lower().strip().replace(".", "")
+    for a, b in (
+        ("ã", "a"),
+        ("á", "a"),
+        ("ä", "a"),
+        ("ç", "c"),
+        ("é", "e"),
+        ("è", "e"),
+        ("í", "i"),
+        ("ó", "o"),
+        ("ö", "o"),
+        ("ú", "u"),
+        ("ü", "u"),
+        ("ñ", "n"),
+    ):
+        s = s.replace(a, b)
+    return re.sub(r"[^a-z0-9]", "", s)
+
+
+def mxgp_static_portrait_rel_for_name(name: str | None, mxgp_dir: str) -> str | None:
+    """Relativ static-sökväg riders/mxgp/... om filen finns."""
+    slug = mxgp_portrait_slug(name)
+    if not slug:
+        return None
+    for fname in (f"{slug}.jpg", f"{slug}.png", f"{slug}.webp"):
+        path = os.path.join(mxgp_dir, fname)
+        if os.path.isfile(path):
+            return f"riders/mxgp/{fname}"
+    return None
+
+
+def sync_mxgp_portrait_image_urls(static_root: str, commit: bool = True) -> int:
+    """
+    Sätt image_url på MXGP-roster från befintliga filer under static/riders/mxgp/.
+    Returnerar antal rader som fick ny eller uppdaterad image_url.
+    """
+    mxgp_dir = os.path.join(static_root, "riders", "mxgp")
+    updated = 0
+    for r in mxgp_roster_query().all():
+        rel = mxgp_static_portrait_rel_for_name(r.name, mxgp_dir)
+        if not rel:
+            continue
+        if (r.image_url or "").strip() == rel:
+            continue
+        r.image_url = rel
+        if getattr(r, "rider_image_data", None):
+            r.rider_image_data = None
+        updated += 1
+    if commit and updated:
+        db.session.commit()
+    return updated

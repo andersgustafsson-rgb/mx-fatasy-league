@@ -1660,6 +1660,42 @@ def admin_racerx_bio_sync_twins():
 		return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
 
 
+@bp.get("/admin/tools/mxgp_bio/status")
+@login_required
+def admin_mxgp_bio_status():
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		from mxgp_rider_bio import iter_mxgp_riders_needing_bio
+
+		remaining = len(iter_mxgp_riders_needing_bio(limit=None))
+		return jsonify({"ok": True, "remaining_without_bio": remaining})
+	except Exception as e:
+		return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@bp.post("/admin/tools/mxgp_bio/bulk")
+@login_required
+def admin_mxgp_bio_bulk():
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		import time
+
+		t0 = time.monotonic()
+		from mxgp_rider_bio import bulk_fetch_mxgp_bios
+
+		data = request.get_json(silent=True) or {}
+		limit = int(data.get("limit") or 20)
+		limit = max(1, min(limit, 32))
+		stats = bulk_fetch_mxgp_bios(limit=limit, pause_sec=0.35)
+		stats["elapsed_seconds"] = round(time.monotonic() - t0, 1)
+		return jsonify(stats)
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
+
+
 @bp.post("/admin/tools/racerx_bio/bulk")
 @login_required
 def admin_racerx_bio_bulk():
@@ -1813,12 +1849,46 @@ def rider_management():
 		riders_wsx = base.filter(
 			Rider.class_name.in_(['wsx_sx1', 'wsx_sx2'])
 		).order_by(Rider.class_name, Rider.rider_number).all()
-		
-		return render_template('rider_management.html',
-							riders_smx=riders_smx,
-							riders_wsx=riders_wsx)
+
+		riders_mxgp = base.filter(
+			Rider.series_participation == "mxgp",
+			Rider.class_name.in_(["mxgp", "mx2"]),
+		).order_by(Rider.class_name, Rider.rider_number).all()
+
+		riders_mxsm = base.filter(
+			Rider.series_participation == "mxsm",
+			Rider.class_name.in_(["mxsm_mx1", "mxsm_mx2", "mxsm_u17"]),
+		).order_by(Rider.class_name, Rider.rider_number).all()
+
 	except Exception as e:
 		return f"<h1>Database Error</h1><p>{e}</p>"
+
+	return render_template(
+		'rider_management.html',
+		riders_smx=riders_smx,
+		riders_wsx=riders_wsx,
+		riders_mxgp=riders_mxgp,
+		riders_mxsm=riders_mxsm,
+	)
+
+
+@bp.route("/rider_management/sync_mxgp_portraits", methods=["POST"])
+@login_required
+def sync_mxgp_portraits_from_static():
+	"""Sätt image_url på MXGP-roster från static/riders/mxgp/*.jpg."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	try:
+		from mxgp_fantasy import ensure_mxgp_2026_roster, sync_mxgp_portrait_image_urls
+
+		ensure_mxgp_2026_roster()
+		db.session.commit()
+		static_root = os.path.join(current_app.root_path, "static")
+		updated = sync_mxgp_portrait_image_urls(static_root, commit=True)
+		return redirect(url_for("admin.rider_management", _anchor="mxgp", synced=updated))
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({"error": str(e)}), 500
 
 
 @bp.route('/rider_management/bulk_update_numbers', methods=['POST'])

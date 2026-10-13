@@ -404,7 +404,7 @@ def save_picks():
     # --- VALIDERA ALLT FÖRST (inga raderingar) så att vi inte tömmer användarens picks vid valideringsfel ---
     wc_pick = data.get("wildcard_pick")
     wc_pos = data.get("wildcard_pos")
-    skips_wildcard = series_u in ("WSX", "MXGP")
+    skips_wildcard = series_u in ("WSX", "MXGP", "MXSM")
     if skips_wildcard:
         wc_pick = None
         wc_pos = None
@@ -423,6 +423,24 @@ def save_picks():
             mxgp_allowed_ids = mxgp_official_roster_ids()
         except Exception:
             mxgp_allowed_ids = set()
+    mxsm_allowed_ids: set[int] = set()
+    mxsm_has_u17 = False
+    tippa_cls: tuple = ()
+    if series_u == "MXSM":
+        try:
+            from mxsm_fantasy import (
+                competition_has_u17,
+                get_mxsm_tippa_classes,
+                mxsm_official_roster_ids,
+            )
+
+            mxsm_has_u17 = competition_has_u17(comp)
+            tippa_cls = get_mxsm_tippa_classes(comp)
+            mxsm_allowed_ids = mxsm_official_roster_ids(classes=tippa_cls)
+        except Exception:
+            mxsm_allowed_ids = set()
+            mxsm_has_u17 = False
+            tippa_cls = ()
     smx_allowed_ids: set[int] = set()
     if series_u == "SMX":
         try:
@@ -467,6 +485,19 @@ def save_picks():
             return jsonify({
                 "error": f"{rider.name} är inte med i MXGP-rostern — välj om dina picks"
             }), 400
+        if series_u == "MXSM" and mxsm_allowed_ids and int(rider.id) not in mxsm_allowed_ids:
+            return jsonify({
+                "error": f"{rider.name} är inte med i MXSM-rostern — välj om dina picks"
+            }), 400
+        if series_u == "MXSM":
+            allowed_cls = set(tippa_cls) if tippa_cls else {"mxsm_mx1", "mxsm_mx2"}
+            if mxsm_has_u17:
+                allowed_cls.add("mxsm_u17")
+            pick_cls = (p.get("class") or rider.class_name or "").strip().lower()
+            if pick_cls not in allowed_cls and (rider.class_name or "") not in allowed_cls:
+                return jsonify({
+                    "error": f"{rider.name} har ogiltig klass för MXSM-tippa"
+                }), 400
 
         # Rider-id-unikitet redan kontrollerad ovan (set-jämförelse).
         # rider_number-check hoppas över — samma nummer kan finnas i SX1 och SX2.
@@ -474,10 +505,11 @@ def save_picks():
         if rider.class_name == "250cc" and comp.coast_250 in ("east", "west"):
             if rider.coast_250 not in (comp.coast_250, "both"):
                 return jsonify({"error": "250-förare matchar inte denna coast"}), 400
-        if rider.class_name in ("450cc", "wsx_sx1", "mxgp") or p.get("class") in (
+        if rider.class_name in ("450cc", "wsx_sx1", "mxgp", "mxsm_mx1") or p.get("class") in (
             "450cc",
             "wsx_sx1",
             "mxgp",
+            "mxsm_mx1",
         ):
             riders_450_ids.append(rid)
 
@@ -494,8 +526,14 @@ def save_picks():
         except Exception:
             return jsonify({"error": "Ogiltig wildcard-val"}), 400
 
-    hs_label_450 = "MXGP" if series_u == "MXGP" else ("SX1" if series_u == "WSX" else "450cc")
-    hs_label_250 = "MX2" if series_u == "MXGP" else ("SX2" if series_u == "WSX" else "250cc")
+    if series_u == "MXSM":
+        hs_label_450, hs_label_250 = "MX1", "MX2"
+    elif series_u == "MXGP":
+        hs_label_450, hs_label_250 = "MXGP", "MX2"
+    elif series_u == "WSX":
+        hs_label_450, hs_label_250 = "SX1", "SX2"
+    else:
+        hs_label_450, hs_label_250 = "450cc", "250cc"
 
     hs450 = data.get("holeshot_450")
     if not hs450:
@@ -510,6 +548,8 @@ def save_picks():
             return jsonify({"error": "Holeshot SX1 måste vara en 2026-rosterförare"}), 400
         if series_u == "MXGP" and mxgp_allowed_ids and rid not in mxgp_allowed_ids:
             return jsonify({"error": "Holeshot MXGP måste vara en rosterförare"}), 400
+        if series_u == "MXSM" and mxsm_allowed_ids and rid not in mxsm_allowed_ids:
+            return jsonify({"error": "Holeshot MX1 måste vara en rosterförare"}), 400
     except Exception:
         return jsonify({"error": f"Ogiltig holeshot-förare för {hs_label_450}"}), 400
 
@@ -525,11 +565,41 @@ def save_picks():
             return jsonify({"error": "Holeshot SX2 måste vara en 2026-rosterförare"}), 400
         if series_u == "MXGP" and mxgp_allowed_ids and rid not in mxgp_allowed_ids:
             return jsonify({"error": "Holeshot MX2 måste vara en rosterförare"}), 400
+        if series_u == "MXSM" and mxsm_allowed_ids and rid not in mxsm_allowed_ids:
+            return jsonify({"error": "Holeshot MX2 måste vara en rosterförare"}), 400
         if rider and comp.coast_250 in ("east", "west"):
             if rider.coast_250 not in (comp.coast_250, "both"):
                 return jsonify({"error": "250-holeshot matchar inte denna coast"}), 400
     except Exception:
         return jsonify({"error": f"Ogiltig holeshot-förare för {hs_label_250}"}), 400
+
+    hs_u17 = data.get("holeshot_u17")
+    if series_u == "MXSM" and mxsm_has_u17:
+        n_u17 = 0
+        for p in picks:
+            try:
+                rid_u = int(p.get("rider_id"))
+            except Exception:
+                continue
+            r_u = Rider.query.get(rid_u)
+            pick_cls = (p.get("class") or (r_u.class_name if r_u else "") or "").strip().lower()
+            if pick_cls == "mxsm_u17" or (r_u and r_u.class_name == "mxsm_u17"):
+                n_u17 += 1
+        if n_u17 != 6:
+            return jsonify({"error": "Du måste välja exakt 6 förare för U17 (Top 6)."}), 400
+        if not hs_u17:
+            return jsonify({"error": "Du måste välja en holeshot-förare för U17"}), 400
+        try:
+            rid_u17 = int(hs_u17)
+            if rid_u17 in out_ids:
+                hs_r = Rider.query.get(rid_u17)
+                return jsonify({
+                    "error": f"{(hs_r.name if hs_r else 'Holeshot-föraren')} är OUT — välj om"
+                }), 400
+            if mxsm_allowed_ids and rid_u17 not in mxsm_allowed_ids:
+                return jsonify({"error": "Holeshot U17 måste vara en rosterförare"}), 400
+        except Exception:
+            return jsonify({"error": "Ogiltig holeshot-förare för U17"}), 400
 
     if not skips_wildcard:
         if not wc_pick:
@@ -587,6 +657,8 @@ def save_picks():
         hs_class_450, hs_class_250 = "wsx_sx1", "wsx_sx2"
     elif series_u == "MXGP":
         hs_class_450, hs_class_250 = "mxgp", "mx2"
+    elif series_u == "MXSM":
+        hs_class_450, hs_class_250 = "mxsm_mx1", "mxsm_mx2"
     else:
         hs_class_450, hs_class_250 = "450cc", "250cc"
     rid = int(hs450)
@@ -607,6 +679,15 @@ def save_picks():
             class_name=hs_class_250,
         )
     )
+    if series_u == "MXSM" and mxsm_has_u17 and hs_u17:
+        db.session.add(
+            HoleshotPick(
+                user_id=uid,
+                competition_id=comp_id,
+                rider_id=int(hs_u17),
+                class_name="mxsm_u17",
+            )
+        )
 
     if not skips_wildcard and wc_pick and wc_pos:
         wc_pick_i = int(wc_pick)

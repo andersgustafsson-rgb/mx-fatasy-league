@@ -582,7 +582,7 @@ Private Function GetOrCreateSheet(wb As Workbook, ByVal sheetName As String) As 
     Set GetOrCreateSheet = ws
 End Function
 
-Private Sub RecreateChartSheet(wb As Workbook, wsD As Worksheet, ByVal hdrRow As Long, ByVal lastRow As Long, ByVal sumCol As Long, ByVal monthLabel As String)
+Private Sub RecreateChartSheet(wb As Workbook, wsD As Worksheet, ByVal hdrRow As Long, ByValimage.png lastRow As Long, ByVal sumCol As Long, ByVal monthLabel As String)
     Dim ch As Chart
     Dim rng As Range
 

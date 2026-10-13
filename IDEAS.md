@@ -1,6 +1,23 @@
 # Idéer & backlog — MX Fantasy
 
-Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
+Lista att bolla och inte glömma. **Bockas inte av automatiskt när kod mergas** — uppdatera den här filen (eller säg “uppdatera idélistan” i chat) när något är klart i prod eller beslutat.
+
+**Sanity efter säsongsslut (prod):** Fantasy-arkiv 2026 har poäng · live AMA-highscore tom för 2026 · tippa pekar på **2027** (SX öppnar ~100 dagar före Anaheim 1) · säsongsteam byggs om inför 2027.
+
+---
+
+## Läge okt 2026 (AMA 2027-försäsong)
+
+| Område | Status |
+|--------|--------|
+| **AMA 2026 tippa** | Avslutad i spelet — arkiv via admin **Säsongsslut** (`POST /admin/archive_ama_season_and_reset`). Kördes okt 2026 (om något ser fel: kolla finished-sidor + att 2026 `CompetitionScore` är borta). |
+| **AMA 2027 kalender** | Seedas vid app-start (`run_ama_smx_boot_seeds` → `ensure_ama_2027_calendar`). SX/MX/SMX 2027 i DB; 2026-serier kan markeras inaktiva. |
+| **Öppna picks** | `services/picks_lock.py`: SX **100 dagar** före series start → Anaheim 1 (9 jan 2027) ≈ öppet från ~okt 2026. |
+| **Säsongsteam** | Promo **på** (`SEASON_TEAM_PROMO_LIVE`). Combined **av** (`SEASON_TEAM_COMBINED_LIVE=False`) — highscore = tippa tills ni flippar. Copy pekar på 2027-lag. |
+| **2027 priser / nummer** | Admin-knappar klara (`apply_prices_2027`, `apply_ama_2027_numbers`) — bekräfta att du kört dem på prod om siffror ska synas överallt. |
+| **Refactor** | **Skiva 1–23 ✅** — se `docs/REFACTOR.md` (`main.py` ~23k rader, blueprints/services). |
+| **MXSM** | UC 2027 + flagga på prod. **Publik tippa av** (`MXSM_PUBLIC_PLAY=False`). Boot kör `ensure_mxsm_scaffold()` (2026 sandbox + admin test i DB) — deploy-gate **ej** implementerad. |
+| **MXGP / MXON / WSX** | Egna serier; AMA-arkiv rör inte WSX/MXGP/MXON live-poäng. |
 
 ---
 
@@ -8,18 +25,18 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 
 | # | Idé | Status | Kommentar |
 |---|-----|--------|-----------|
-| 1 | **Light/dark mode-toggle** | Force-dark ✅ | Appen är mörk by design. OS light mode läckte vita tabeller (`darkMode:media`). Sitewide `force_dark` (html.dark + Tailwind `class` + `mx_force_dark.css`). Light-toggle kvar uppskjutet. |
-| 2 | **Första-laddning error → refresh funkar** | Åtgärdat (keep-alive) | Syns mer efter `mx-fantasy.se` (kall worker/DB efter idle). Keep-alive: GitHub Action var 10 min + valfri Render Cron `scripts/cron_keepalive.py`. Health svarar alltid 200. |
-| 3 | **PWA-banner bara på mobil** | Inte beslutat | Syns på desktop via Chrome “Installera”. Frågat om begränsa till mobil — ej svarat. |
-| 4 | **SEO / “citerbara” tippa-sidor** | Gjort (v4) | `/om`, `/manual`, `/tippa-supercross`, `/tippa-motocross`, `/tippa-smx`, `/tippa-wsx`, **`/tippa-mxgp`**, **`/tippa-mxon`** + sitemap/llms.txt. |
-| 5 | **WSX trackmaps** | ⏳ Före race | Kartorna har **inte kommit ut än**. När de släpps: ladda ner, lägg i `static/trackmaps/`. **WSX story-hype-kort** för Stories finns (Dela WSX-hype). |
-| 6 | **SMX 1×/2×/3× på *spelar*-poäng** | ⏸️ Efter SMX-final (~26 sep) | **Beslut 30 aug:** tippa vidare på **1×** hela 2026 — byter inte regler mitt i säsongen. Förarna har redan 1×/2×/3× i SMX World Championship. Efter finalen: överväg samma multiplikator på tipp (race+HS+WC) till nästa år. |
-| 6b | **Säsongsteam: se över förarpriser** | ✅ Klart att ladda | Ark `season_team_prices_2027.py` (topp 500–600k, Coenen 500k). Admin **Säsongsslut** → «Ladda priser» (`POST /admin/season_teams/apply_prices_2027`). Bollades/godkänt 25 sep 2026. |
-| 6c | **Säsongsteam → Combined highscore + promo** | 🛠️ Klart att flippa | **Beslut 25 sep:** Total = Tippa + Säsongsteam (variant A). −50 vid byte stannar på tippa. **Flagor** `SEASON_TEAM_PROMO_LIVE` / `SEASON_TEAM_COMBINED_LIVE`. Promo live nu (räknas ej ännu). **Efter SMX Finals 2026:** `POST /admin/archive_ama_season_and_reset` — fryser Totalställning (SX+MX+SMX) i Fantasy-arkivet, arkiverar tippa per serie, nollställer AMA CompetitionScore, arkiverar+nollställer säsongsteam. Combined flippa inför SMX 2027. Ligor = tippa-only. |
-| 6d | **AMA 2027 national numbers** | ✅ Klart att ladda | Racer X [2027-listan](https://racerxonline.com/2026/09/29/ama-releases-2027-ama-supercross-motocross-and-supermotocross-national-numbers) (29 sep). Modul `ama_2027_national_numbers.py` + admin **Säsongsslut → Ladda nummer** (`POST /admin/riders/apply_ama_2027_numbers`) + `scripts/apply_ama_2027_national_numbers.py`. ~75 byten (Davies `#5`, DiFrancesco `#10`, Prado `#61`, Coenen `#64`/`#79`…). Skapar saknade: Chisholm `#11`, Clout `#78`, Larwood `#89`. `#1`-plattor = säsongstitlar (skrivs ej). Applicerat lokalt 5 okt; kör samma på prod vid deploy.
-| 7 | **SMX trackmaps / venues** | Delvis gjort | Kartor + posters från playoffs-sidan i `static/trackmaps/smx/` (Columbus, Carson, Ridgedale). Kopplade via `trackmap_utils`. |
-| 8 | **Städa / strukturera kodbasen** | 🚧 Pågår | Plan: `docs/REFACTOR.md`. **Skiva 1–7 ✅**. Nästa: CSV-upload/entry eller auth-blueprint. |
-| 9 | **Social login (Google först)** | ✅ Live | OAuth + knappar fanns. **29 sep 2026:** OAuth-client i Google Cloud (MX Fantasy) + `GOOGLE_CLIENT_ID`/`SECRET` på Render — consent-skärm testad OK. |
+| 1 | **Light/dark mode-toggle** | Force-dark ✅ | Appen är mörk by design. Light-toggle uppskjutet. |
+| 2 | **Första-laddning error → refresh** | ✅ Keep-alive | GitHub Action + `scripts/cron_keepalive.py`; health 200. |
+| 3 | **PWA-banner bara på mobil** | Inte beslutat | Syns på desktop via Chrome “Installera”. |
+| 4 | **SEO / tippa-sidor** | ✅ | `/om`, `/manual`, `/tippa-*` (inkl. mxgp, mxon) + sitemap/llms. |
+| 5 | **WSX trackmaps** | ⏳ | Dedikerade WSX-filer saknas ofta — AMA/SMX/MXGP 2027-kartor finns under `static/trackmaps/`. WSX story-hype finns. |
+| 6 | **SMX 1×/2×/3× på *spelar*-poäng** | ⏸️ 2027? | **Beslut 2026:** tippa på **1×** hela säsongen (inga spelar-multiplikatorer). SMX-race har fortfarande **tävlings-**multiplikator i kalendern. Inför 2027: produktbeslut, ej implementerat. |
+| 6b | **Säsongsteam: 2027-priser** | ✅ Verktyg | `season_team_prices_2027.py` + admin Säsongsslut. |
+| 6c | **Säsongsteam Combined + promo** | 🛠️ Delvis | Promo live. **Combined av** — flippa `SEASON_TEAM_COMBINED_LIVE` när ni vill att total highscore = tippa + lag. AMA-arkiv + team-wipe: **körd okt 2026** (se sanity ovan). Ligor i arkiv = tippa-only poäng. |
+| 6d | **AMA 2027 national numbers** | ✅ Verktyg | `ama_2027_national_numbers.py` + admin. Kör på prod om inte redan gjort. |
+| 7 | **SMX trackmaps / venues** | ✅ Playoffs | `static/trackmaps/smx/` (Columbus, Carson, Ridgedale) + posters. |
+| 8 | **Städa / strukturera kodbasen** | ✅ Skiva 1–23 | **`docs/REFACTOR.md`** — scoring, picks_lock, results_import, kundmail, public SEO, auth, CSV, debug_tools, league_challenges, race_picks-routes, m.m. Fortsatt: digest-helpers, Alembic-parity (se REFACTOR “Nästa”). |
+| 9 | **Social login (Google)** | ✅ Live | Render + OAuth testat sep 2026. |
 
 ---
 
@@ -27,123 +44,105 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 
 | # | Idé | Status | Kommentar |
 |---|-----|--------|-----------|
-| 1 | **MXGP (FIM Motocross World Championship)** | 🚧 Scaffold (admin) | Tippa-only: UC-kort, 2027 provisional kalender (20 GP), trackmaps i `static/trackmaps/MXGP/`, admin test-GP, MXGP+MX2 topp 6 + HS Race 1 + kval (ingen WC). Publik tippa låst tills `MXGP_PUBLIC_PLAY`. Se launch-lista nedan. |
-| 2 | **MXSM (Motocross SM)** | 🚧 UC-kort 2027 | Seriekort “Kommer 2027”, `mxsm_fantasy.py` (`MXSM_PUBLIC_PLAY=False`), ingen tippa/kalender/roster än. Se roadmap nedan. Bollades 8 okt 2026. |
+| 1 | **MXGP** | 🚧 Scaffold | 2027-kalender, trackmaps (många), admin-test. `MXGP_PUBLIC_PLAY=False`. Launch-lista nedan. |
+| 2 | **MXSM** | 🛠️ Sandbox live i DB | UC 2027 på prod. Full tippa/Orbits/scoring testas via **Admin Test** (seed på boot). Publik tippa av tills `MXSM_PUBLIC_PLAY`. Roadmap nedan. |
 
 ---
 
-## MXSM roadmap (2027) — glöm inte
+## MXSM roadmap (2027)
 
-**Läge nu:** homepage UC-kort + Series 2027. Väntar på kalender / klasser / förare innan mer kod.
+**Läge okt 2026:**
+- **Prod:** UC-seriekort 2027 + flagga. **Ingen publik tippa.** `ensure_mxsm_scaffold()` på Render skapar/uppdaterar 2026-kalender, roster och **Admin Test**-race (medvetet/inte gated än).
+- **Kod:** samma flöde lokalt — wizard, Orbits, HS, LB, mina poäng.
 
-**Riktning (skiss, ej låst i kod):**
+**Riktning (oförändrad V1):**
 
-| Del | V1-förslag |
-|-----|------------|
-| Tippa | Topp 5 MX1 + topp 5 MX2 (+ holeshot ×2). Skippa wildcard först. |
-| Säsongsteam | Ja, men **mini-team** (t.ex. 3 förare) — eller soft launch tippa-only → team från race 2–3. |
-| Poäng | Egen MXSM-ställning (som MXoN/MXGP), inte blandat med AMA. |
-| Publikt | Låst tills `MXSM_PUBLIC_PLAY` flippas. |
+| Del | V1 |
+|-----|-----|
+| Tippa | Topp 6 MX1 + 6 MX2 (+ HS), U17 när `tippa_classes` inkluderar U17. Ingen wildcard. |
+| Klasser per race | `Competition.tippa_classes` |
+| Heats | Påverkar inte tipppoäng (platsdiff). |
+| Säsongsteam | Senare; tippa-only först. |
+| Publikt | `MXSM_PUBLIC_PLAY=True` när redo. |
 
-**Feature-roadmap:**
+**Klart (kod):**
 
-- [x] **UC-seriekort 2027** — `mxsm_fantasy.ensure_mxsm_scaffold`, series_status, tippa-gate.
-- [ ] **Kalender + banor + tider** — när officiell/preliminär lista finns → seed competitions + countdown/schema.
-- [ ] **Klasser + roster / entry** — MX1/MX2 (eller vad SM kallar dem) + nummer.
-- [ ] **Tippa v1** — topp 5+5 + HS; scoring + LB; flippa `MXSM_PUBLIC_PLAY`.
-- [ ] **Mini-säsongsteam** — lättare än AMA (färre slots / lägre budget).
-- [ ] **Derby-race (extra)** — ett utsett race/säsong med tippa-multiplikator (t.ex. ×1,5) + ev. “Derby-kung”-mini-LB. Nästan gratis att bygga.
-- [ ] **Underdog-chip (senare)** — 1×/säsong: markera en tippad underdog → dubbla poäng om hen överpresterar; chip bränns annars.
-- [ ] **Hemmabaneboost (senare)** — per bana: favorit-/hemmakung-lista; bonus om tippad hemmakung levererar. Kräver admin-lista `track → riders`.
-- [ ] **Klubbligor (senare)** — privata ligor scoped till MXSM-poäng (klubb/kompis-paddock), ev. klubbpokal.
-- [ ] **Copy / manual / SEO** — spelmanual + ev. `/tippa-mxsm` när tippa närmar sig.
-- [ ] **Hero-bild till seriekort** — byt gradient mot riktig SM-paddock/bana när ni har foto.
+- [x] UC-seriekort 2027 + flagga (prod okt 2026)
+- [x] 2026 kalender + roster + tippa_classes + wizard + scoring + Orbits + admin HS/OUT
+- [x] Mina poäng + LB
 
-**Medvetet senare / low prio:** live moto2-omlås, väder-mudder-bonus, distrikts-“lokalhjälte”-slot.
+**Kvar innan publik launch:**
 
----
-
-## MXGP launch — fila mer (checklist)
-
-Scaffold + admin-test är i mål. **Inte live för alla** förrän listan är ok och `MXGP_PUBLIC_PLAY` flippas.
-
-**Klart (referens):** tippa (admin), scoring, AMA-isolering, 2027-kalender, trackmaps (de flesta), seriekort (UC + Uddevalla-BG), countdown, power rankings, fantasy-LB, mina poäng/seriesida, admin seed/holeshot/kval/OUT/manuella resultat, race-results-filter MXGP.
-
-**Kvar att fila innan launch:**
-
-- [ ] **Publik tippa** — flippa `MXGP_PUBLIC_PLAY` (i `mxgp_fantasy.py`) när UI + kalender + roster känns redo; admin kan testa redan nu.
-- [ ] **Kalender final** — 2027 är provisional (FIM/Infront). När officiell kalender landar: uppdatera venues/datum, re-seed.
-- [ ] **Trackmaps för TBA/nya banor** — saknas/TBA: Spain, Portugal, St Jean d’Angély, Ziyang (China?), Switzerland (+ ev. andra när venue byts). Lägg filer i `static/trackmaps/MXGP/` + tokens i `trackmap_utils.MXGP_TRACKMAP_TOKENS`.
-- [ ] **Officiell resultatimport** — ingen MXGP-API ännu; idag manuell admin. Hitta källa (mxgp-result.com / FIM / Infront) eller CSV-flöde innan säsong.
-- [ ] **Entry list / roster per GP** — så tippa-fältet följer gate (som WSX/SMX), inte bara säsongsroster.
-- [x] **SEO tippa-sida** — `/tippa-mxgp` + `/tippa-mxon` (+ sitemap/llms + Om-sidan). 24 sep 2026.
-- [ ] **Copy & UX** — UC-text, spelmanual-avsnitt MXGP-regler (topp 6 + HS Race 1 + kval, ingen WC), i18n-strängar.
-- [ ] **Reminders / mail** — pick-reminder copy för MXGP (ämne + body).
-- [ ] **Soft launch-check** — tippa → sätta HS/kval → manuella resultat → räkna om poäng → LB stämmer (gärna mot `scripts/test_mxgp_scoring_lab.py`-tankesätt).
-
-**Medvetet senare / lågt prio för tippa-only:**
-
-- [ ] Weekly fun / rider championship-leaders (AMA-stil) — behövs knappt för tippa.
-- [ ] Auto-import när officiell feed finns.
+- [ ] **Deploy-gate (önskat)** — kör **inte** `ensure_mxsm_admin_test_race` / full 2026-sandbox på Render; bara UC 2027 (+ ev. 2027 roster senare). *Idag: hela scaffold körs.*
+- [ ] **Publik tippa** — `MXSM_PUBLIC_PLAY`
+- [ ] **Soft launch-check** — tippa → resultat → räkna om → LB + mina poäng
+- [ ] **Roster-brands** — luckor i CSV/DB
+- [ ] **Copy / manual / SEO** — ev. `/tippa-mxsm`
+- [ ] **Hero-foto** — ersätt flagga när foto finns
+- [ ] **Senare:** mini-säsongsteam, derby-race, underdog-chip, hemmabaneboost, klubbligor
 
 ---
 
-## Plan: kodstruktur efter SMX (låst beslut)
+## MXGP launch — checklist
 
-**Varför vänta:** `main.py` (~29k rader) är för stor, men mid-season-refaktor kan paja scoring/picks/deadlines. Små bugfixar + SMX-features OK; stor städning = efter finalen.
+Scaffold + admin-test klart. **Inte live** förrän `MXGP_PUBLIC_PLAY`.
 
-**Mål:** tunnare `main.py`, logik i `services/`, routes i `app/routes/` — utan att skriva om allt på en gång.
+**Klart:** tippa (admin), scoring, 2027-kalender, många trackmaps, seriekort, LB, mina poäng, admin resultat/HS/kval, `/tippa-mxgp` SEO.
 
-**Första skivorna (i ungefär den ordningen):**
-1. **Scoring** → `services/scoring.py` (`calculate_scores`, SMX-multiplikatorer, helpers)
-2. **Deadlines / countdown** → egen modul
-3. **Results-import** (WSX sync, CSV, entry lists)
-4. **Kundmail / Zendesk**
-5. **SEO tippa-sidor** → `public`
-6. Sen: titta på `social_recap_service.py`, städa dubbel `app.py`/`main.py`-entry
+**Kvar:**
 
-**Regel under tiden (redan nu):** ny större feature helst *inte* växa `main.py` mer — lägg i service/blueprint när det är naturligt. Akut race-fix = gör på plats, städa senare.
-
-**Kickoff:** efter SMX Final (Ridgedale ~26 sep 2026). **Skiva 1 pågår** — se `docs/REFACTOR.md`.
+- [ ] Publik tippa (`MXGP_PUBLIC_PLAY`)
+- [ ] Kalender final (FIM 2027)
+- [ ] Trackmaps TBA-banor
+- [ ] Resultatimport / entry per GP
+- [ ] Copy, manual, reminders
+- [ ] Soft launch-check
 
 ---
 
-## Mindre / valfritt (när det råkar bli läge)
+## Kodstruktur (refactor)
 
-- [ ] **Sticky race-strip på mobil** — tunn sticky rad högst upp: `WSX Canadian GP · om 4 dagar · Picks →` som följer med tills man scrollat till race-hero. Bollades som alternativ B när hero flyttades upp (A gjordes). Coolt om man vill behålla mer av profil/nav ovanför men ändå alltid se race-läget.
-- [ ] **`www.mx-fantasy.se` Certificate Pending** — apex (`mx-fantasy.se`) funkar; www redirectar dit. Certet kan få bli Issued i bakgrunden; kolla i Render om det fastnar.
-- [ ] **Search Console: extra verifieringsmetod** — Google tipsade om DNS/andra metoder så du inte tappar ägarskap om HTML-filen tas bort.
-- [ ] **Skydda fler domäner** (`.com` / `.eu`) — skippades medvetet vid köp; bara om du vill skydda namnet.
-- [x] **Keep-alive** — GitHub Action `keepalive.yml` + `scripts/cron_keepalive.py` (Render Cron i `render.yaml`).
-- [ ] **Tidrapport: spara på server** — idag mest webbläsare/PNG; tidigare bollades serverlagring + historik (större grej, bara om du behöver det).
-- [x] **Admin raceday-flöde (AMA/WSX)** — import + holeshot i centrum, manuell/OUT under Avancerat. 18 aug 2026.
-- [x] **Admin mobilanpassad** — sticky flikar, touch-knappar, hub-kort, svep-hint på tabeller; även Competition/Rider Manager. 23 sep 2026.
-- [x] **SMX Combined efter Ironman** — officiell overlay synkad till supermotocross.com (820/638 …); topp 20 seed + 21–30 LCQ. Nästa säsong: live sum utan manuell lista. 30 aug 2026.
+**Status:** kickoff efter SMX 2026 — **pågår och i stort sett genomförd enligt plan.** Detaljer och “nästa bit” → **`docs/REFACTOR.md`** (skiva 23 ✅, ~23k rader kvar i `main.py`).
+
+**Regel:** ny större feature → `services/` / blueprint, inte mer monolit i `main.py` om det går.
+
+---
+
+## Jobbverktyg (Motoaction)
+
+| Grej | Status |
+|------|--------|
+| **Kundmail MIVV** | Mall med veckoväljare 4–8, 10 arbetsdagar makulering, bekräftelse-text (pushat). Lokalt ej pushat: utan sympathy-rad i MIVV-avslut. |
+
+---
+
+## Mindre / valfritt
+
+- [ ] Sticky race-strip mobil
+- [ ] `www` cert / Search Console backup-verifiering
+- [ ] Tidrapport serverlagring
+- [x] Keep-alive, admin raceday, admin mobil, SMX Combined overlay 2026
 
 ---
 
 ## Klart i den här perioden (referens)
 
-- [x] Domän `mx-fantasy.se` + DNS + SSL (apex)
-- [x] Redirect från gamla `*.onrender.com`
-- [x] Delningslänkar / `PUBLIC_BASE_URL` → `mx-fantasy.se`
-- [x] Search Console: verifiera + sitemap
-- [x] Spelmanual: färg + djuplänkar
-- [x] Snabba åtgärder + Veckans prestationer: accenter
-- [x] Större logo i sidokolumnen
-- [x] Kundmail: engelska (mall + översätt)
-- [x] Ikon-modernisering (SVG), race-picks knapprensning, slate-knappar (tidigare i samma spår)
+- [x] Domän, SSL, redirect Render → `mx-fantasy.se`
+- [x] Search Console + sitemap
+- [x] Spelmanual, UI-polish, Kundmail flerspråk
+- [x] Google OAuth live
+- [x] AMA säsongsslut-flöde + 2027-kalender + SX picks öppna i försäsong (okt 2026)
+- [x] Refactor skiva 1–23 (`docs/REFACTOR.md`)
+- [x] Kundmail: MIVV på beställning (mall)
 
 ---
 
-## Anteckningar / fakta vi landat i
+## Anteckningar / fakta
 
-- Gemini “blockerad för AI-botar”: **nej** — `robots.txt` tillåter crawl. Skillnad mot fantasy.mxsm.se ≈ känt **MXSM**-varumärke + mer indexerat innehåll.
-- Cursor Agents-chatten har delvis eget tema (följer inte alltid editor-temat).
-- Jobbets DNS kan cacha NXDOMAIN länge — testa med mobildata vid domänbyten.
-- **SMX Combined 2026:** overlay mot [supermotocross.com 450](https://www.supermotocross.com/results/standings/smx/450/) / [250](https://www.supermotocross.com/results/standings/smx/250/) i `official_smx_2026.py` (topp 20 seed, 21–30 LCQ). Synkad efter Ironman 30 aug. **Nästa säsong:** ingen manuell lista — fixa import/dockade poäng så live SX+MX räcker.
-- **SMX 2026 playoffs** ([playoffs](https://www.supermotocross.com/playoffs/)): Playoff 1 Columbus 12 sep · Playoff 2 Carson 19 sep · Final Ridgedale 26 sep.
+- **SMX 2026 playoffs:** Columbus 12 sep · Carson 19 sep · Ridgedale 26 sep.
+- **SMX overlay 2026:** `official_smx_2026.py` — nästa AMA-säsong: mindre manuell lista om SX+MX-import räcker.
+- **IDEAS.md** uppdaterades **13 okt 2026** mot kodbasen (inte live DB).
 
 ---
 
-*Säg “lägg till i idélistan: …” så uppdaterar jag. (Behöver inte pushas till GitHub — lokal fil räcker.)*
+*Säg “lägg till i idélistan: …” eller “uppdatera idélistan” så håller vi den i sync. Behöver inte pushas till GitHub.*

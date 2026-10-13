@@ -127,6 +127,14 @@
         }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        .rm-rider-thumb {
+            width: 44px; height: 44px; object-fit: cover; object-position: top center;
+            border-radius: 0.45rem; border: 1px solid rgba(34, 211, 238, 0.35);
+            background: #0f172a; display: block;
+        }
+        .rm-rider-thumb--missing { opacity: 0.35; }
+        .rm-rider-thumb-link { display: inline-block; line-height: 0; }
+        .rm-rider-thumb-link:hover .rm-rider-thumb { border-color: #22d3ee; box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.2); }
         .rm-list {
             border: 1px solid var(--rm-line); border-radius: 0.85rem;
             background: rgba(15, 23, 42, 0.72); overflow: hidden;
@@ -289,13 +297,20 @@
     </style>
 </head>
 <body class="rm">
+{% macro rider_thumb_cell(rider) %}
+<td class="px-2 py-2">
+    <a href="{{ url_for('rider_portrait', rider_id=rider.id) }}" target="_blank" rel="noopener" class="rm-rider-thumb-link" title="Öppna bild i ny flik">
+        <img class="rm-rider-thumb" src="{{ url_for('rider_portrait', rider_id=rider.id) }}" alt="" loading="lazy" onerror="this.classList.add('rm-rider-thumb--missing')">
+    </a>
+</td>
+{% endmacro %}
     <div class="rm-wrap">
         <a class="rm-back" href="/admin">← Admin</a>
         <div class="rm-top">
             <div>
                 <p class="rm-eyebrow">MX Fantasy · Admin</p>
                 <h1 class="rm-title">Förare</h1>
-                <p class="rm-sub">Entry list, bilder, bio, klassbyte och roster för 250 · 450 · WSX</p>
+                <p class="rm-sub">Entry list, bilder, bio och roster — AMA 250/450, WSX, MXGP, MXSM</p>
             </div>
             <div class="rm-actions">
                 <a href="/" class="rm-btn rm-btn--ghost" style="text-decoration:none;">Startsida</a>
@@ -500,6 +515,24 @@
             </div>
             <div id="racerxBioStatus" class="text-sm hidden mb-2"></div>
             <ul id="racerxBioResults" class="text-xs text-gray-600 dark:text-gray-400 space-y-1 max-h-48 overflow-y-auto"></ul>
+        </div>
+
+        <div class="rm-panel">
+            <h3 class="text-lg font-semibold text-emerald-400 mb-2">MXGP-bio (batch)</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Hämtar fakta, titlar och resultat från
+                <a href="https://www.mxgp.com/riders/jeffrey-herlings" target="_blank" rel="noopener" class="text-cyan-400 hover:underline">mxgp.com/riders/…</a>
+                för MXGP/MX2-roster som saknar bio. Samma sparande som RacerX (bio + meriter; svenska vid besök på förarsidan).
+            </p>
+            <div class="flex flex-wrap gap-2 mb-3">
+                <button type="button" id="mxgpBioBulkBtn"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-colors font-semibold">
+                    Hämta MXGP-bio (20 st)
+                </button>
+                <span id="mxgpBioRemaining" class="text-sm text-gray-500 self-center"></span>
+            </div>
+            <div id="mxgpBioStatus" class="text-sm hidden mb-2"></div>
+            <ul id="mxgpBioResults" class="text-xs text-gray-600 dark:text-gray-400 space-y-1 max-h-48 overflow-y-auto"></ul>
         </div>
 
         <!-- Bulk Update Rider Numbers -->
@@ -821,6 +854,8 @@
             <button type="button" class="tab-button active" data-tab="250">250cc</button>
             <button type="button" class="tab-button" data-tab="450">450cc</button>
             <button type="button" class="tab-button" data-tab="wsx">WSX</button>
+            <button type="button" class="tab-button" data-tab="mxgp">MXGP</button>
+            <button type="button" class="tab-button" data-tab="mxsm">MXSM</button>
         </div>
 
         <!-- 250cc Tab -->
@@ -886,6 +921,7 @@
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="bg-gray-800 border-b border-cyan-400">
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Bild</th>
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Nummer</th>
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Namn</th>
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Coast</th>
@@ -898,6 +934,7 @@
                                 {% for rider in riders_smx %}
                                 {% if rider.class_name == '250cc' %}
                                 <tr class="rider-item border-b border-gray-700 hover:bg-gray-800">
+                                    {{ rider_thumb_cell(rider) }}
                                     <td class="rider-number px-4 py-3 text-white">{{ rider.rider_number }}</td>
                                     <td class="rider-name px-4 py-3 text-white">{{ rider.name }}</td>
                                     <td class="px-4 py-3">
@@ -987,6 +1024,7 @@
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="bg-gray-800 border-b border-cyan-400">
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Bild</th>
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Nummer</th>
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Namn</th>
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Märke</th>
@@ -998,6 +1036,7 @@
                                 {% for rider in riders_smx %}
                                 {% if rider.class_name == '450cc' %}
                                 <tr class="rider-item border-b border-gray-700 hover:bg-gray-800">
+                                    {{ rider_thumb_cell(rider) }}
                                     <td class="rider-number px-4 py-3 text-white">{{ rider.rider_number }}</td>
                                     <td class="rider-name px-4 py-3 text-white">{{ rider.name }}</td>
                                     <td class="rider-bike px-4 py-3 text-white">{{ rider.bike_brand }}</td>
@@ -1063,6 +1102,7 @@
                     <table class="min-w-full text-sm text-gray-200">
                         <thead class="text-gray-400">
                             <tr>
+                                <th class="px-2 py-1">Bild</th>
                                 <th class="px-2 py-1">Nr</th>
                                 <th class="px-2 py-1">Namn</th>
                                 <th class="px-2 py-1">Klass</th>
@@ -1075,6 +1115,7 @@
                             {% for rider in riders_wsx %}
                             {% if rider.class_name == 'wsx_sx1' %}
                             <tr class="rider-item border-t border-gray-700/60">
+                                {{ rider_thumb_cell(rider) }}
                                 <td class="rider-number px-2 py-1">{{ rider.rider_number }}</td>
                                 <td class="rider-name px-2 py-1">{{ rider.name }}</td>
                                 <td class="px-2 py-1">wsx_sx1</td>
@@ -1087,6 +1128,7 @@
                             </tr>
                             {% elif rider.class_name == 'wsx_sx2' %}
                             <tr class="rider-item border-t border-gray-700/60">
+                                {{ rider_thumb_cell(rider) }}
                                 <td class="rider-number px-2 py-1">{{ rider.rider_number }}</td>
                                 <td class="rider-name px-2 py-1">{{ rider.name }}</td>
                                 <td class="px-2 py-1">wsx_sx2</td>
@@ -1125,6 +1167,86 @@
             }
         }
         </script>
+                </div>
+            </div>
+        </div>
+
+        <div id="mxgp" class="tab-content">
+            <div class="rm-list">
+                <div class="rm-list-head"><h2>MXGP / MX2</h2></div>
+                <div class="rm-list-body">
+                    <div class="rm-table-wrap">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-800 border-b border-cyan-400">
+                                    <th class="px-2 py-3 text-left text-cyan-400 font-semibold">Bild</th>
+                                    <th class="px-2 py-3 text-left text-cyan-400 font-semibold">Nr</th>
+                                    <th class="px-2 py-3 text-left text-cyan-400 font-semibold">Namn</th>
+                                    <th class="px-2 py-3 text-left text-cyan-400 font-semibold">Klass</th>
+                                    <th class="px-2 py-3 text-left text-cyan-400 font-semibold">Team</th>
+                                    <th class="px-2 py-3 text-left text-cyan-400 font-semibold">Märke</th>
+                                    <th class="px-2 py-3 text-center text-cyan-400 font-semibold">Åtgärder</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rider in riders_mxgp %}
+                                <tr class="rider-item border-b border-gray-700 hover:bg-gray-800">
+                                    {{ rider_thumb_cell(rider) }}
+                                    <td class="rider-number px-2 py-2 text-white">{{ rider.rider_number or '—' }}</td>
+                                    <td class="rider-name px-2 py-2 text-white">{{ rider.name }}</td>
+                                    <td class="px-2 py-2 text-gray-300">{{ rider.class_name }}</td>
+                                    <td class="rider-team px-2 py-2 text-gray-300 text-xs">{{ rider.team or '—' }}</td>
+                                    <td class="rider-bike px-2 py-2 text-white">{{ rider.bike_brand or '—' }}</td>
+                                    <td class="px-2 py-2 text-center">
+                                        <button type="button" onclick="editRider({{ rider.id }}, '{{ rider.name|e }}', {{ rider.rider_number or 0 }}, '{{ rider.bike_brand|e }}', '{{ rider.class_name }}', '', {{ rider.price or 1 }})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs mr-2">Redigera</button>
+                                        <button type="button" onclick="deleteRider({{ rider.id }}, '{{ rider.name|e }}')" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs">Ta bort</button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="7" class="px-4 py-6 text-gray-400">Inga MXGP-förare i databasen.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="mxsm" class="tab-content">
+            <div class="rm-list">
+                <div class="rm-list-head"><h2>MXSM</h2></div>
+                <div class="rm-list-body">
+                    <div class="rm-table-wrap">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-800 border-b border-cyan-400">
+                                    <th class="px-2 py-3 text-left text-cyan-400 font-semibold">Bild</th>
+                                    <th class="px-2 py-3 text-left text-cyan-400 font-semibold">Nr</th>
+                                    <th class="px-2 py-3 text-left text-cyan-400 font-semibold">Namn</th>
+                                    <th class="px-2 py-3 text-left text-cyan-400 font-semibold">Klass</th>
+                                    <th class="px-2 py-3 text-left text-cyan-400 font-semibold">Märke</th>
+                                    <th class="px-2 py-3 text-center text-cyan-400 font-semibold">Åtgärder</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rider in riders_mxsm %}
+                                <tr class="rider-item border-b border-gray-700 hover:bg-gray-800">
+                                    {{ rider_thumb_cell(rider) }}
+                                    <td class="rider-number px-2 py-2 text-white">{{ rider.rider_number or '—' }}</td>
+                                    <td class="rider-name px-2 py-2 text-white">{{ rider.name }}</td>
+                                    <td class="px-2 py-2 text-gray-300">{{ rider.class_name }}</td>
+                                    <td class="rider-bike px-2 py-2 text-white">{{ rider.bike_brand or '—' }}</td>
+                                    <td class="px-2 py-2 text-center">
+                                        <button type="button" onclick="editRider({{ rider.id }}, '{{ rider.name|e }}', {{ rider.rider_number or 0 }}, '{{ rider.bike_brand|e }}', '{{ rider.class_name }}', '', {{ rider.price or 1 }})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs mr-2">Redigera</button>
+                                        <button type="button" onclick="deleteRider({{ rider.id }}, '{{ rider.name|e }}')" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs">Ta bort</button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="6" class="px-4 py-6 text-gray-400">Inga MXSM-förare i databasen.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1351,7 +1473,13 @@
                         riderId: riderId,
                         className: className,
                         coast: coast,
-                        tabLabel: pane?.id === '450' ? '450cc' : pane?.id === 'wsx' ? 'WSX' : '250cc',
+                        tabLabel: ({
+                            '250': '250cc',
+                            '450': '450cc',
+                            'wsx': 'WSX',
+                            'mxgp': 'MXGP',
+                            'mxsm': 'MXSM',
+                        })[pane?.id] || '250cc',
                     });
                 }
             });
@@ -1834,7 +1962,13 @@
             } else {
                 coastSection.style.display = 'none';
             }
-            
+
+            const preview = document.getElementById('edit-image-preview');
+            if (preview) {
+                preview.src = `/rider_portrait/${id}?t=${Date.now()}`;
+                preview.style.display = 'block';
+            }
+
             document.getElementById('edit-modal').classList.remove('hidden');
         }
 
@@ -2495,6 +2629,70 @@
             }
         }
         refreshRacerxBioRemaining();
+
+        function showMxgpBioStatus(msg, isError) {
+            const el = document.getElementById('mxgpBioStatus');
+            if (!el) return;
+            el.classList.remove('hidden');
+            el.className = 'text-sm mb-2 ' + (isError ? 'text-red-400' : 'text-emerald-400');
+            el.textContent = msg;
+        }
+
+        async function refreshMxgpBioRemaining() {
+            const el = document.getElementById('mxgpBioRemaining');
+            if (!el) return;
+            try {
+                const res = await fetch('/admin/tools/mxgp_bio/status');
+                const data = await res.json();
+                if (data.ok && data.remaining_without_bio != null) {
+                    el.textContent = `${data.remaining_without_bio} MXGP-förare saknar bio`;
+                }
+            } catch (_) {
+                el.textContent = '';
+            }
+        }
+        refreshMxgpBioRemaining();
+
+        document.getElementById('mxgpBioBulkBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('mxgpBioBulkBtn');
+            const list = document.getElementById('mxgpBioResults');
+            if (!btn || !list) return;
+            if (!confirm('Hämta MXGP-bio för upp till 20 förare?\n\n~30 sek per batch. Låt fliken vara öppen.')) return;
+            btn.disabled = true;
+            showMxgpBioStatus('Hämtar från mxgp.com…', false);
+            list.innerHTML = '';
+            try {
+                const res = await fetch('/admin/tools/mxgp_bio/bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ limit: 20 }),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showMxgpBioStatus(data.error || 'Batch misslyckades', true);
+                    return;
+                }
+                list.innerHTML = (data.results || []).map((r) => {
+                    const mark = r.ok ? '✓' : '✗';
+                    const label = `${mark} ${r.name || ''}`;
+                    if (r.ok && r.rider_id) {
+                        return `<li><a href="/rider/${r.rider_id}" target="_blank" rel="noopener" class="text-emerald-400 hover:underline">${escapeHtml(label)}</a></li>`;
+                    }
+                    const err = r.error ? ` — ${r.error}` : '';
+                    return `<li class="text-red-400">${escapeHtml(label + err)}</li>`;
+                }).join('');
+                const elapsed = data.elapsed_seconds != null ? ` Tog ${data.elapsed_seconds}s.` : '';
+                showMxgpBioStatus(
+                    `Klart: ${data.fetched_ok || 0} importerade, ${data.failed || 0} misslyckades.${elapsed} ${data.remaining_without_bio ?? ''} kvar utan bio.`,
+                    false
+                );
+                refreshMxgpBioRemaining();
+            } catch (e) {
+                showMxgpBioStatus('Nätverksfel: ' + e.message, true);
+            } finally {
+                btn.disabled = false;
+            }
+        });
 
         document.getElementById('racerxBioSyncTwinsBtn')?.addEventListener('click', async () => {
             const btn = document.getElementById('racerxBioSyncTwinsBtn');

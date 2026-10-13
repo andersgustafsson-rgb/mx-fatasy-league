@@ -24,7 +24,7 @@ from models import (
 )
 
 # Keep in sync with main.TIPPA_ONLY_SERIES (skiva 2: duplicate on purpose).
-TIPPA_ONLY_SERIES = frozenset({"WSX", "MXON", "MXGP"})
+TIPPA_ONLY_SERIES = frozenset({"WSX", "MXON", "MXGP", "MXSM"})
 
 
 def calculate_rider_points_for_position(position) -> int:
@@ -174,7 +174,11 @@ def calculate_scores(comp_id: int):
         )
 
     actual_results_dict = seen_riders
-    actual_holeshots_dict = holeshot_results_by_bucket(actual_holeshots)
+    series_u_early = (series_name or "").strip().upper()
+    # MXSM uses exact class_name on HS rows — skip 450/250 bucket warnings.
+    actual_holeshots_dict = (
+        {} if series_u_early == "MXSM" else holeshot_results_by_bucket(actual_holeshots)
+    )
 
     for user in users:
         race_points = 0
@@ -254,25 +258,51 @@ def calculate_scores(comp_id: int):
         # Use only unique holeshot picks for scoring
         unique_holeshot_picks = list(seen_holeshots.values())
 
-        holeshot_450_correct = False
-        holeshot_250_correct = False
-        for hp in unique_holeshot_picks:
-            bucket = holeshot_pick_class_for_result(hp.class_name)
-            actual_hs = actual_holeshots_dict.get(bucket)
-            if actual_hs and actual_hs.rider_id == hp.rider_id:
-                if bucket == "450cc":
-                    holeshot_450_correct = True
-                    holeshot_points += 10
-                elif bucket == "250cc":
-                    holeshot_250_correct = True
-                    holeshot_points += 10
-
-        # Bonus: Om båda holeshots är rätt, ge 25 poäng totalt istället för 20
-        if holeshot_450_correct and holeshot_250_correct:
-            holeshot_points = 25
-
         series_u = (series_name or "").strip().upper()
-        # Wildcard: AMA/SMX only. WSX/MXGP tippa-only har ingen wildcard.
+
+        if series_u == "MXSM":
+            # Exact class_name match (mxsm_mx1 / mxsm_mx2 / mxsm_u17) — no 450/250 buckets.
+            try:
+                from mxsm_fantasy import get_mxsm_tippa_classes
+
+                tippa_hs = set(get_mxsm_tippa_classes(comp))
+            except Exception:
+                tippa_hs = {"mxsm_mx1", "mxsm_mx2"}
+            actual_by_cls = {
+                (getattr(hs, "class_name", None) or "").strip().lower(): hs
+                for hs in actual_holeshots
+            }
+            correct_classes: set[str] = set()
+            for hp in unique_holeshot_picks:
+                cls = (hp.class_name or "").strip().lower()
+                if cls not in tippa_hs:
+                    continue
+                actual_hs = actual_by_cls.get(cls)
+                if actual_hs and actual_hs.rider_id == hp.rider_id:
+                    correct_classes.add(cls)
+                    holeshot_points += 10
+            # All tippa HS correct (and at least 2 classes): +5 bonus → 2→25, 3→35
+            if tippa_hs and correct_classes >= tippa_hs and len(tippa_hs) >= 2:
+                holeshot_points = 10 * len(tippa_hs) + 5
+        else:
+            holeshot_450_correct = False
+            holeshot_250_correct = False
+            for hp in unique_holeshot_picks:
+                bucket = holeshot_pick_class_for_result(hp.class_name)
+                actual_hs = actual_holeshots_dict.get(bucket)
+                if actual_hs and actual_hs.rider_id == hp.rider_id:
+                    if bucket == "450cc":
+                        holeshot_450_correct = True
+                        holeshot_points += 10
+                    elif bucket == "250cc":
+                        holeshot_250_correct = True
+                        holeshot_points += 10
+
+            # Bonus: Om båda holeshots är rätt, ge 25 poäng totalt istället för 20
+            if holeshot_450_correct and holeshot_250_correct:
+                holeshot_points = 25
+
+        # Wildcard: AMA/SMX only. Tippa-only (WSX/MXGP/MXSM/…) har ingen wildcard.
         if series_u not in TIPPA_ONLY_SERIES:
             wc_pick = WildcardPick.query.filter_by(
                 user_id=user.id, competition_id=comp_id

@@ -62,6 +62,8 @@ class Competition(db.Model):
     timezone = db.Column(db.String(50), nullable=True)
     series_id = db.Column(db.Integer, db.ForeignKey('series.id'), nullable=True)
     phase = db.Column(db.String(20), nullable=True)
+    # MXSM (etc): CSV of tippable classes for this race, e.g. "mxsm_mx1,mxsm_mx2,mxsm_u17"
+    tippa_classes = db.Column(db.String(64), nullable=True)
     is_qualifying = db.Column(db.Boolean, default=False)
     # Soft-cancel (t.ex. inställt GP) — döljs från upcoming/picks utan att radera data
     is_cancelled = db.Column(db.Boolean, default=False, nullable=False)

@@ -1,6 +1,8 @@
 """Admin routes for bulk / WSX results import (skiva 7)."""
 from __future__ import annotations
 
+import os
+
 from flask import Blueprint, jsonify, request
 
 from auth_helpers import is_admin_user
@@ -1428,7 +1430,7 @@ def get_competitions_for_import():
         series_filter = None
         if series_raw == "AMA":
             series_filter = "AMA"
-        elif series_raw in ("WSX", "SX", "MX", "SMX", "MXGP"):
+        elif series_raw in ("WSX", "SX", "MX", "SMX", "MXGP", "MXSM"):
             series_filter = series_raw
 
         year_raw = (request.args.get("year") or "").strip().lower()
@@ -1904,5 +1906,123 @@ def import_race_results_complete():
     except Exception as e:
         db.session.rollback()
         print(f"Error in import_race_results_complete: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------
+# MXSM MyLaps Orbits PDF import
+# ---------------------------------------------
+
+@bp.post("/preview_mxsm_orbits")
+def preview_mxsm_orbits():
+    """Parse Orbits PDF or pasted text → preview rows (no DB write)."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        from services.mxsm_orbits_import import (
+            parse_orbits_pdf_bytes,
+            parse_orbits_total_for_dagen,
+            preview_orbits_rows,
+        )
+
+        class_override = None
+        if request.files.get("file"):
+            data = request.files["file"].read()
+            parsed = parse_orbits_pdf_bytes(data)
+            class_override = (request.form.get("class_name") or "").strip() or None
+        else:
+            payload = request.get_json(force=True, silent=True) or {}
+            text = payload.get("pasted_text") or ""
+            if not text.strip():
+                return jsonify({"error": "Ladda upp PDF eller klistra in Orbits-text"}), 400
+            parsed = parse_orbits_total_for_dagen(text)
+            class_override = (payload.get("class_name") or "").strip() or None
+
+        preview = preview_orbits_rows(parsed, class_name=class_override)
+        return jsonify({"success": True, **preview, "parsed": {
+            "class_name": parsed.get("class_name"),
+            "row_count": parsed.get("row_count"),
+            "warnings": parsed.get("warnings"),
+        }})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.post("/import_mxsm_orbits")
+def import_mxsm_orbits():
+    """Import Orbits Total För Dagen into CompetitionResult + optional score calc."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    _main()._ensure_competition_result_moto_columns()
+    try:
+        from services.mxsm_orbits_import import (
+            apply_orbits_results,
+            parse_orbits_pdf_bytes,
+            parse_orbits_total_for_dagen,
+        )
+        from services.scoring import calculate_scores
+
+        calculate = True
+        replace_class = True
+        if request.files.get("file"):
+            competition_id = int(request.form.get("competition_id") or 0)
+            class_override = (request.form.get("class_name") or "").strip() or None
+            calculate = str(request.form.get("calculate", "1")).lower() not in ("0", "false", "no")
+            replace_class = str(request.form.get("replace_class", "1")).lower() not in (
+                "0",
+                "false",
+                "no",
+            )
+            parsed = parse_orbits_pdf_bytes(request.files["file"].read())
+        else:
+            payload = request.get_json(force=True, silent=True) or {}
+            competition_id = int(payload.get("competition_id") or 0)
+            class_override = (payload.get("class_name") or "").strip() or None
+            calculate = bool(payload.get("calculate", True))
+            replace_class = bool(payload.get("replace_class", True))
+            if payload.get("file_b64"):
+                import base64
+
+                parsed = parse_orbits_pdf_bytes(base64.b64decode(payload["file_b64"]))
+            else:
+                text = payload.get("pasted_text") or ""
+                if not text.strip():
+                    return jsonify({"error": "Ladda upp PDF eller klistra in Orbits-text"}), 400
+                parsed = parse_orbits_total_for_dagen(text)
+
+        if not competition_id:
+            return jsonify({"error": "competition_id required"}), 400
+        comp = Competition.query.get(competition_id)
+        if not comp:
+            return jsonify({"error": "Competition not found"}), 404
+
+        class_name = class_override or parsed.get("class_name")
+        if not class_name:
+            return jsonify({"error": "Kunde inte avgöra klass — ange class_name"}), 400
+
+        result = apply_orbits_results(
+            competition_id=competition_id,
+            class_name=class_name,
+            rows=parsed.get("rows") or [],
+            replace_class=replace_class,
+        )
+        score_ok = None
+        if calculate:
+            try:
+                calculate_scores(int(competition_id))
+                score_ok = True
+            except Exception as score_err:
+                score_ok = False
+                result["score_error"] = str(score_err)
+
+        return jsonify({
+            "success": True,
+            "competition_id": competition_id,
+            "scores_calculated": score_ok,
+            **result,
+            "skipped_names": [s.get("rider_name") for s in result.get("skipped") or []],
+        })
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 

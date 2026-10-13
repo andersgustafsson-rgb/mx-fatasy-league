@@ -48,6 +48,7 @@ from services.picks_lock import (
     is_picks_deadline_passed,
     is_picks_locked,
     is_picks_preseason_locked,
+    picks_open_days_before_series,
     picks_preseason_opens_on,
     PICKS_OPEN_DAYS_BEFORE_SERIES,
 )
@@ -1092,7 +1093,7 @@ def _home_primary_competition(*, require_open: bool = False) -> Competition | No
 
 
 # Tippa-only series (no season team; excluded from AMA fantasy totals)
-TIPPA_ONLY_SERIES = frozenset({"WSX", "MXON", "MXGP"})
+TIPPA_ONLY_SERIES = frozenset({"WSX", "MXON", "MXGP", "MXSM"})
 
 
 def is_tippa_only_series(series: str | None) -> bool:
@@ -2427,8 +2428,10 @@ def _index_impl():
     user_profile_picture = None
     current_picks_450 = []
     current_picks_250 = []
+    current_picks_u17 = []
     current_holeshot_450 = None
     current_holeshot_250 = None
+    current_holeshot_u17 = None
     current_wildcard = None
     current_mxon_nations: list[dict] = []
     current_mxon_classes: dict[str, dict] = {}
@@ -2582,15 +2585,24 @@ def _index_impl():
 
                     current_holeshot_450 = None
                     current_holeshot_250 = None
+                    current_holeshot_u17 = None
                     current_wildcard = None
+                    current_picks_u17 = []
 
-                    # Check if picks are complete (all required picks must be filled)
-                    is_wsx = upcoming_race.series == "WSX"
+                    series_u = (upcoming_race.series or "").strip().upper()
+                    is_wsx = series_u == "WSX"
+                    is_mxgp = series_u == "MXGP"
+                    is_mxsm = series_u == "MXSM"
+                    skips_wc = is_wsx or is_mxgp or is_mxsm
 
                     # Always show user's own picks (they can see their own choices)
                     seen_rider_ids_450 = set()
                     seen_rider_ids_250 = set()
+                    seen_rider_ids_u17 = set()
                     home_wc_names = _wsx_wildcard_names_for_competition(upcoming_race)
+                    _cls_450 = ("450cc", "wsx_sx1", "mxgp", "mxsm_mx1")
+                    _cls_250 = ("250cc", "wsx_sx2", "mx2", "mxsm_mx2")
+                    _cls_u17 = ("mxsm_u17",)
 
                     # Sort picks by predicted_position to ensure correct order
                     sorted_race_picks = sorted(race_picks, key=lambda p: p.predicted_position)
@@ -2611,62 +2623,81 @@ def _index_impl():
                                 "is_wildcard": (rider.name or "") in home_wc_names,
                             }
 
-                            # Separate by class (map WSX classes to display classes)
-                            if rider.class_name in ("450cc", "wsx_sx1"):
+                            # Separate by class (map WSX/MXGP/MXSM classes to display buckets)
+                            if rider.class_name in _cls_450:
                                 if pick.rider_id not in seen_rider_ids_450:
                                     current_picks_450.append(pick_data)
                                     seen_rider_ids_450.add(pick.rider_id)
-                            elif rider.class_name in ("250cc", "wsx_sx2"):
+                            elif rider.class_name in _cls_250:
                                 if pick.rider_id not in seen_rider_ids_250:
                                     current_picks_250.append(pick_data)
                                     seen_rider_ids_250.add(pick.rider_id)
+                            elif rider.class_name in _cls_u17:
+                                if pick.rider_id not in seen_rider_ids_u17:
+                                    current_picks_u17.append(pick_data)
+                                    seen_rider_ids_u17.add(pick.rider_id)
 
                     # Sort the lists by position after populating
                     current_picks_450.sort(key=lambda x: x["position"])
                     current_picks_250.sort(key=lambda x: x["position"])
+                    current_picks_u17.sort(key=lambda x: x["position"])
 
                     # Count race picks by class (after populating lists and removing duplicates)
                     race_picks_450_count = len(current_picks_450)
                     race_picks_250_count = len(current_picks_250)
+                    race_picks_u17_count = len(current_picks_u17)
 
                     # Count holeshot picks by class
                     holeshot_450 = False
                     holeshot_250 = False
+                    holeshot_u17 = False
                     for holeshot in holeshot_picks:
                         rider = riders_by_id.get(holeshot.rider_id)
                         if rider:
-                            if rider.class_name in ("450cc", "wsx_sx1"):
+                            if rider.class_name in _cls_450:
                                 holeshot_450 = True
-                            elif rider.class_name in ("250cc", "wsx_sx2"):
+                            elif rider.class_name in _cls_250:
                                 holeshot_250 = True
+                            elif rider.class_name in _cls_u17:
+                                holeshot_u17 = True
 
-                    # Check if wildcard is complete (only for non-WSX series)
-                    if is_wsx:
-                        wildcard_complete = True  # Not required for WSX
+                    # Prefer shared status helper for MXSM/MXGP (tippa_classes / kval)
+                    if is_mxsm or is_mxgp:
+                        try:
+                            from services.race_picks import user_picks_status_code
+
+                            picks_status = user_picks_status_code(uid, upcoming_race)
+                        except Exception:
+                            picks_status = "no_picks"
                     else:
-                        wildcard_complete = (
-                            wildcard_pick
-                            and wildcard_pick.rider_id
-                            and wildcard_pick.position is not None
+                        if is_wsx:
+                            wildcard_complete = True
+                        else:
+                            wildcard_complete = (
+                                wildcard_pick
+                                and wildcard_pick.rider_id
+                                and wildcard_pick.position is not None
+                            )
+
+                        race_picks_complete = (
+                            race_picks_450_count == 6 and race_picks_250_count == 6
                         )
+                        holeshot_complete = holeshot_450 and holeshot_250
 
-                    # Required: 6+6 race picks, 2 holeshots, 1 wildcard (if not WSX)
-                    race_picks_complete = race_picks_450_count == 6 and race_picks_250_count == 6
-                    holeshot_complete = holeshot_450 and holeshot_250
-
-                    # Only mark as "has_picks" if ALL required picks are complete
-                    if race_picks_complete and holeshot_complete and wildcard_complete:
-                        picks_status = "has_picks"
-                    elif (
-                        race_picks_450_count > 0
-                        or race_picks_250_count > 0
-                        or holeshot_450
-                        or holeshot_250
-                        or (wildcard_pick and wildcard_pick.rider_id)
-                    ):
-                        picks_status = "partial_picks"
-                    else:
-                        picks_status = "no_picks"
+                        if race_picks_complete and holeshot_complete and wildcard_complete:
+                            picks_status = "has_picks"
+                        elif (
+                            race_picks_450_count > 0
+                            or race_picks_250_count > 0
+                            or race_picks_u17_count > 0
+                            or holeshot_450
+                            or holeshot_250
+                            or holeshot_u17
+                            or (wildcard_pick and wildcard_pick.rider_id)
+                        ):
+                            picks_status = "partial_picks"
+                        else:
+                            picks_status = "no_picks"
 
                     # Process holeshot picks for display
                     for holeshot in holeshot_picks:
@@ -2683,16 +2714,18 @@ def _index_impl():
                                 "racerx_portrait_url": portraits["racerx_portrait_url"],
                                 "bike_brand": portraits["bike_brand"],
                             }
-                            if rider.class_name in ("450cc", "wsx_sx1"):
+                            if rider.class_name in _cls_450:
                                 current_holeshot_450 = hs_data
-                            elif rider.class_name in ("250cc", "wsx_sx2"):
+                            elif rider.class_name in _cls_250:
                                 current_holeshot_250 = hs_data
+                            elif rider.class_name in _cls_u17:
+                                current_holeshot_u17 = hs_data
 
                     if (
                         wildcard_pick
                         and wildcard_pick.rider_id
                         and upcoming_race
-                        and upcoming_race.series != "WSX"
+                        and not skips_wc
                     ):
                         rider = riders_by_id.get(wildcard_pick.rider_id)
                         if rider:
@@ -2713,6 +2746,7 @@ def _index_impl():
                 print(f"Error getting current picks: {e}")
                 current_picks_450 = []
                 current_picks_250 = []
+                current_picks_u17 = []
 
     # Check for new bulletin posts (last 24 hours)
     new_bulletin_posts = 0
@@ -2905,8 +2939,10 @@ def _index_impl():
         season_team_count=SeasonTeam.query.count(),
         current_picks_450=current_picks_450 if is_logged_in else None,
         current_picks_250=current_picks_250 if is_logged_in else None,
+        current_picks_u17=current_picks_u17 if is_logged_in else None,
         current_holeshot_450=current_holeshot_450 if is_logged_in and 'current_holeshot_450' in locals() else None,
         current_holeshot_250=current_holeshot_250 if is_logged_in and 'current_holeshot_250' in locals() else None,
+        current_holeshot_u17=current_holeshot_u17 if is_logged_in and 'current_holeshot_u17' in locals() else None,
         current_wildcard=current_wildcard if is_logged_in and 'current_wildcard' in locals() else None,
         current_mxon_nations=current_mxon_nations if is_logged_in else None,
         current_mxon_classes=current_mxon_classes if is_logged_in else None,
@@ -3418,6 +3454,134 @@ def get_mxgp_leaderboard():
         return jsonify({"series": "MXGP", "year": year, "leaderboard": rows})
     except Exception as e:
         print(f"ERROR in get_mxgp_leaderboard: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e), "leaderboard": []}), 500
+
+
+def _mxsm_competitions_for_year(year: int):
+    """MXSM competitions for a season year (via series_id when possible)."""
+    mxsm_series = Series.query.filter_by(name="MXSM", year=int(year)).first()
+    q = Competition.query.filter(Competition.series == "MXSM")
+    if mxsm_series:
+        q = q.filter(
+            db.or_(
+                Competition.series_id == mxsm_series.id,
+                db.and_(
+                    Competition.series_id.is_(None),
+                    Competition.event_date.isnot(None),
+                    db.extract("year", Competition.event_date) == int(year),
+                ),
+            )
+        )
+    else:
+        q = q.filter(
+            Competition.event_date.isnot(None),
+            db.extract("year", Competition.event_date) == int(year),
+        )
+    comps = q.all()
+    comps.sort(key=lambda c: (c.event_date is None, c.event_date or date.max, int(c.id)))
+    return comps
+
+
+def fantasy_mxsm_leaderboard_for_year(year: int = 2026) -> list:
+    """Fantasy tippa-highscore for one MXSM season only (never mixes with AMA)."""
+    from datetime import datetime, timedelta
+
+    today_utc = datetime.utcnow().date()
+    since = (datetime.utcnow() - timedelta(days=120)).date()
+    comps = _mxsm_competitions_for_year(int(year))
+    season_ids = [int(c.id) for c in comps]
+    if not season_ids:
+        return []
+
+    window_ids = [
+        int(c.id)
+        for c in comps
+        if c.event_date and since <= c.event_date <= today_utc
+    ]
+    recent_with_results: set[int] = set()
+    if window_ids:
+        recent_with_results = {
+            int(row[0])
+            for row in db.session.query(CompetitionResult.competition_id)
+            .filter(CompetitionResult.competition_id.in_(window_ids))
+            .distinct()
+            .all()
+        }
+
+    totals = _wsx_score_agg_for_comps(season_ids)
+    if not totals:
+        return []
+    recent = {int(x) for x in recent_with_results if int(x) in set(season_ids)}
+    recent_pts = _wsx_score_agg_for_comps(list(recent)) if recent else {}
+
+    rows = []
+    for uid, pts in totals.items():
+        recent_week = int(recent_pts.get(uid, 0))
+        baseline = max(0, int(pts) - recent_week)
+        rows.append(
+            {
+                "id": int(uid),
+                "total_points": int(pts),
+                "baseline_total": baseline,
+                "recent_week_points": recent_week,
+            }
+        )
+
+    uids = [r["id"] for r in rows]
+    users = User.query.filter(User.id.in_(uids)).all()
+    uid_map = {u.id: u for u in users}
+    teams = {
+        int(t.user_id): t.team_name
+        for t in SeasonTeam.query.filter(SeasonTeam.user_id.in_(uids)).all()
+    }
+    current = sorted(rows, key=lambda x: _leaderboard_sort_key(x, "total_points"))
+    use_baseline = bool(recent) and any(int(r.get("baseline_total") or 0) > 0 for r in rows)
+    baseline_ranking = (
+        _build_rank_map(rows, "baseline_total") if use_baseline else {}
+    )
+    out = []
+    for i, row in enumerate(current, 1):
+        uid = int(row["id"])
+        u = uid_map.get(uid)
+        dn = getattr(u, "display_name", None) or (u.username if u else "?")
+        baseline_rank = baseline_ranking.get(str(uid))
+        if use_baseline and baseline_rank is not None and baseline_rank > 0:
+            delta = i - int(baseline_rank)
+        else:
+            delta = 0
+        out.append(
+            {
+                "user_id": uid,
+                "username": u.username if u else "?",
+                "display_name": dn,
+                "team_name": teams.get(uid),
+                "rank": i,
+                "delta": delta,
+                "total_points": int(row["total_points"]),
+            }
+        )
+    return out
+
+
+@app.get("/get_mxsm_leaderboard")
+def get_mxsm_leaderboard():
+    """Standalone MXSM fantasy leaderboard (default: active year, else 2026 sandbox)."""
+    try:
+        year_raw = request.args.get("year")
+        if year_raw:
+            year = int(year_raw)
+        else:
+            mxsm = (
+                Series.query.filter_by(name="MXSM", is_active=True)
+                .order_by(Series.year.desc())
+                .first()
+            )
+            year = int(mxsm.year) if mxsm and mxsm.year else 2026
+        rows = fantasy_mxsm_leaderboard_for_year(year)
+        return jsonify({"series": "MXSM", "year": year, "leaderboard": rows})
+    except Exception as e:
+        print(f"ERROR in get_mxsm_leaderboard: {e}")
         db.session.rollback()
         return jsonify({"error": str(e), "leaderboard": []}), 500
 
@@ -3990,7 +4154,7 @@ def _pick_points_map_from_detail(detail: dict) -> dict[str, dict]:
     """Rider name -> pick row from race results detail."""
     out: dict[str, dict] = {}
     sections = (detail or {}).get("sections") or {}
-    for key in ("picks_450", "picks_250"):
+    for key in ("picks_450", "picks_250", "picks_u17"):
         for row in sections.get(key) or []:
             if row.get("kind") == "pick" and row.get("rider_name"):
                 out[str(row["rider_name"])] = row
@@ -4177,7 +4341,7 @@ def _league_last_race_digest(league_id: int, user_id: int, summary: dict) -> dic
             secs = (detail or {}).get("sections") or {}
             perfects = [
                 r["rider_name"]
-                for r in (secs.get("picks_450") or []) + (secs.get("picks_250") or [])
+                for r in (secs.get("picks_450") or []) + (secs.get("picks_250") or []) + (secs.get("picks_u17") or [])
                 if r.get("status") == "perfect"
             ]
             if perfects:
@@ -4533,6 +4697,14 @@ def _wsx_portrait_name_candidates(name: str | None) -> list[str]:
     return out
 
 
+def _mxgp_static_portrait_rel(name: str | None) -> str | None:
+    """Relativ static-sökväg till MXGP-porträtt (static/riders/mxgp/<slug>.jpg)."""
+    from mxgp_fantasy import mxgp_static_portrait_rel_for_name
+
+    root = os.path.join(app.root_path, "static", "riders", "mxgp")
+    return mxgp_static_portrait_rel_for_name(name, root)
+
+
 def _wsx_static_portrait_rel(name: str | None) -> str | None:
     """Relativ static-sökväg till WSX-porträtt om filen finns (utan mellanslag i URL)."""
     root = os.path.join(app.root_path, "static", "riders", "wsx")
@@ -4642,6 +4814,11 @@ def _rider_portrait_url(r: Rider) -> str | None:
         wsx_rel = _wsx_static_portrait_rel(getattr(r, "name", None))
         if wsx_rel:
             return wsx_rel
+
+    if sp == "mxgp" or cls in ("mxgp", "mx2"):
+        mxgp_rel = _mxgp_static_portrait_rel(getattr(r, "name", None))
+        if mxgp_rel:
+            return mxgp_rel
 
     # 3) AMA/SMX-tvilling
     twin = _rider_ama_twin_avatar_rel(r)
@@ -4979,6 +5156,12 @@ def rider_portrait(rider_id: int):
     except Exception:
         pass
 
+    mxgp_rel = _mxgp_static_portrait_rel(getattr(rider, "name", None))
+    if mxgp_rel:
+        static_u = _static_rider_file_url(mxgp_rel)
+        if static_u:
+            return redirect(static_u, code=302)
+
     for pid in dict.fromkeys((int(portrait_id), int(rider_id))):
         img_u = db.session.query(Rider.image_url).filter_by(id=pid).scalar()
         static_u = _static_rider_file_url(str(img_u or "").strip() or None)
@@ -5077,6 +5260,11 @@ def _resolve_rider_headshot_for_display(rider: Rider) -> str | None:
         wsx_rel = _wsx_static_portrait_rel(getattr(rider, "name", None))
         if wsx_rel:
             return wsx_rel
+
+    if sp == "mxgp" or cls in ("mxgp", "mx2"):
+        mxgp_rel = _mxgp_static_portrait_rel(getattr(rider, "name", None))
+        if mxgp_rel:
+            return mxgp_rel
 
     coast = (getattr(rider, "coast_250", None) or "").strip().lower()
     if cls == "250cc" and rider.rider_number is not None and rider.name and coast in (
@@ -7187,7 +7375,7 @@ def create_season_team():
 def _parse_my_scores_series_scope() -> tuple[str, int | None]:
     """Series scope for Mina poäng. WSX defaults to active season year (not all years)."""
     series_filter = (request.args.get("series") or "").strip().upper()
-    if series_filter not in ("WSX", "MXON", "MXGP", "SX", "MX", "SMX", "AMA"):
+    if series_filter not in ("WSX", "MXON", "MXGP", "MXSM", "SX", "MX", "SMX", "AMA"):
         series_filter = ""
     wsx_year: int | None = None
     if series_filter == "WSX":
@@ -8099,10 +8287,13 @@ def _build_pick_suggestions_for_user(
     series = (getattr(comp, "series", None) or "").strip()
     is_wsx = series == "WSX"
     is_mxgp = series.upper() == "MXGP"
+    is_mxsm = series.upper() == "MXSM"
     if is_wsx:
         class_450, class_250 = "wsx_sx1", "wsx_sx2"
     elif is_mxgp:
         class_450, class_250 = "mxgp", "mx2"
+    elif is_mxsm:
+        class_450, class_250 = "mxsm_mx1", "mxsm_mx2"
     else:
         class_450, class_250 = "450cc", "250cc"
     blocked = set(int(x) for x in (out_ids or []))
@@ -8113,6 +8304,13 @@ def _build_pick_suggestions_for_user(
             from mxgp_fantasy import mxgp_official_roster_ids
 
             allowed_ids = mxgp_official_roster_ids()
+        except Exception:
+            allowed_ids = None
+    if is_mxsm:
+        try:
+            from mxsm_fantasy import get_mxsm_tippa_classes, mxsm_official_roster_ids
+
+            allowed_ids = mxsm_official_roster_ids(classes=get_mxsm_tippa_classes(comp))
         except Exception:
             allowed_ids = None
 
@@ -8172,7 +8370,7 @@ def _build_pick_suggestions_for_user(
         for rid in rider_ids:
             rider = riders_by_id.get(rid)
             if rider and rider.class_name == class_name:
-                if allowed_ids is not None and (rider.name or "") not in (
+                if is_wsx and (rider.name or "") not in (
                     _WSX_2026_ROSTER_NAMES_BY_CLASS.get(class_name, set())
                 ):
                     continue
@@ -8217,7 +8415,7 @@ def _build_pick_suggestions_for_user(
             rider = riders_by_id.get(rid)
             if not rider or rider.class_name != class_name:
                 continue
-            if allowed_ids is not None and (rider.name or "") not in (
+            if is_wsx and (rider.name or "") not in (
                 _WSX_2026_ROSTER_NAMES_BY_CLASS.get(class_name, set())
             ):
                 continue
@@ -8228,10 +8426,24 @@ def _build_pick_suggestions_for_user(
     freq_450 = _frequent_for_class(class_450)
     last_250 = _last_race_for_class(class_250)
     freq_250 = _frequent_for_class(class_250)
+    class_u17 = None
+    last_u17: list[dict] = []
+    freq_u17: list[dict] = []
+    if is_mxsm:
+        try:
+            from mxsm_fantasy import get_mxsm_tippa_classes
+
+            tippa = get_mxsm_tippa_classes(comp)
+            if "mxsm_u17" in tippa:
+                class_u17 = "mxsm_u17"
+                last_u17 = _last_race_for_class(class_u17)
+                freq_u17 = _frequent_for_class(class_u17)
+        except Exception:
+            class_u17 = None
     all_chip_ids = list(
         {
             int(c["id"])
-            for c in (last_450 + freq_450 + last_250 + freq_250)
+            for c in (last_450 + freq_450 + last_250 + freq_250 + last_u17 + freq_u17)
         }
     )
     portrait_riders = (
@@ -8254,7 +8466,7 @@ def _build_pick_suggestions_for_user(
             chip["racerx_portrait_url"] = payload["racerx_portrait_url"]
         return chips
 
-    return {
+    out = {
         "class_450": class_450,
         "class_250": class_250,
         "450": {
@@ -8266,6 +8478,13 @@ def _build_pick_suggestions_for_user(
             "frequent": _enrich_chips_with_portraits(freq_250),
         },
     }
+    if class_u17:
+        out["class_u17"] = class_u17
+        out["u17"] = {
+            "last_race": _enrich_chips_with_portraits(last_u17),
+            "frequent": _enrich_chips_with_portraits(freq_u17),
+        }
+    return out
 
 
 # MXoN picks routes → app/routes/mxon_picks.py (skiva 21)
@@ -8329,7 +8548,7 @@ def race_picks_page(competition_id):
             picks_locked=True,
             preseason_locked=preseason_locked,
             picks_opens_on=opens_on,
-            picks_open_days_before=PICKS_OPEN_DAYS_BEFORE_SERIES,
+            picks_open_days_before=picks_open_days_before_series(comp),
         )
 
     # 1) Hämta OUT-förare för detta race
@@ -8342,6 +8561,10 @@ def race_picks_page(competition_id):
     # 2) Bygg listor per serie
     is_wsx = (getattr(comp, 'series', None) == 'WSX')
     is_mxgp = (getattr(comp, 'series', None) or '').upper() == 'MXGP'
+    is_mxsm = (getattr(comp, 'series', None) or '').upper() == 'MXSM'
+    has_u17 = False
+    riders_u17: list = []
+    mxsm_tippa_classes: tuple = ()
 
     if is_wsx:
         # WSX använder egna klasser och separata förare
@@ -8385,6 +8608,37 @@ def race_picks_page(competition_id):
             .order_by(Rider.rider_number)
             .all()
         )
+    elif is_mxsm:
+        from mxsm_fantasy import (
+            CLASS_MX1,
+            CLASS_MX2,
+            CLASS_U17,
+            competition_has_u17,
+            get_mxsm_tippa_classes,
+            mxsm_roster_query,
+        )
+
+        mxsm_tippa_classes = get_mxsm_tippa_classes(comp)
+        has_u17 = competition_has_u17(comp)
+        tippa_q = mxsm_roster_query(classes=mxsm_tippa_classes)
+        riders_450 = (
+            tippa_q.filter(Rider.class_name == CLASS_MX1)
+            .order_by(Rider.rider_number)
+            .all()
+        )
+        riders_250 = (
+            mxsm_roster_query(classes=mxsm_tippa_classes)
+            .filter(Rider.class_name == CLASS_MX2)
+            .order_by(Rider.rider_number)
+            .all()
+        )
+        if has_u17:
+            riders_u17 = (
+                mxsm_roster_query(classes=mxsm_tippa_classes)
+                .filter(Rider.class_name == CLASS_U17)
+                .order_by(Rider.rider_number)
+                .all()
+            )
     else:
         # SX/MX/SMX – befintlig logik
         riders_450 = (
@@ -8421,7 +8675,11 @@ def race_picks_page(competition_id):
                 riders_250, "250", competition=comp
             )
 
-    pick_rider_ids = [r.id for r in riders_450] + [r.id for r in riders_250]
+    pick_rider_ids = (
+        [r.id for r in riders_450]
+        + [r.id for r in riders_250]
+        + [r.id for r in riders_u17]
+    )
     ids_with_db_portrait: frozenset[int] = frozenset()
     if pick_rider_ids:
         ids_with_db_portrait = frozenset(
@@ -8438,7 +8696,7 @@ def race_picks_page(competition_id):
 
     from racerx_rider_bio import build_riders_by_name_map
 
-    all_pick_riders = riders_450 + riders_250
+    all_pick_riders = riders_450 + riders_250 + riders_u17
     riders_by_name = build_riders_by_name_map(all_pick_riders)
 
     # 3) Serialisering för JS (inkl is_out + image_url)
@@ -8492,15 +8750,25 @@ def race_picks_page(competition_id):
 
     riders_450_json = [serialize_rider(r) for r in riders_450]
     riders_250_json = [serialize_rider(r) for r in riders_250]
+    riders_u17_json = [serialize_rider(r) for r in riders_u17]
 
-    _by_json_id = {r["id"]: r for r in riders_450_json + riders_250_json}
+    _by_json_id = {
+        r["id"]: r for r in riders_450_json + riders_250_json + riders_u17_json
+    }
 
     # Only OUT riders in this series' classes (hide WSX twins on SMX/SX/MX etc.)
-    allowed_out_classes = (
-        ("wsx_sx1", "wsx_sx2")
-        if is_wsx
-        else (("mxgp", "mx2") if is_mxgp else ("450cc", "250cc"))
-    )
+    if is_wsx:
+        allowed_out_classes = ("wsx_sx1", "wsx_sx2")
+    elif is_mxgp:
+        allowed_out_classes = ("mxgp", "mx2")
+    elif is_mxsm:
+        allowed_out_classes = tuple(mxsm_tippa_classes) or (
+            "mxsm_mx1",
+            "mxsm_mx2",
+            "mxsm_u17",
+        )
+    else:
+        allowed_out_classes = ("450cc", "250cc")
     if out_ids:
         class_by_id = {
             int(rid): (cls or "")
@@ -8534,12 +8802,15 @@ def race_picks_page(competition_id):
             }
         )
 
-    _out_top = ("wsx_sx1", "450cc", "mxgp")
-    _out_bot = ("wsx_sx2", "250cc", "mx2")
+    _out_top = ("wsx_sx1", "450cc", "mxgp", "mxsm_mx1")
+    _out_bot = ("wsx_sx2", "250cc", "mx2", "mxsm_mx2")
+    _out_u17 = ("mxsm_u17",)
     out_riders_450 = [r for r in out_riders_mini if (r.get("class") or "") in _out_top]
     out_riders_250 = [r for r in out_riders_mini if (r.get("class") or "") in _out_bot]
+    out_riders_u17 = [r for r in out_riders_mini if (r.get("class") or "") in _out_u17]
     out_riders_450.sort(key=lambda r: (r.get("rider_number") is None, r.get("rider_number") or 0, r.get("name") or ""))
     out_riders_250.sort(key=lambda r: (r.get("rider_number") is None, r.get("rider_number") or 0, r.get("name") or ""))
+    out_riders_u17.sort(key=lambda r: (r.get("rider_number") is None, r.get("rider_number") or 0, r.get("name") or ""))
 
     # JS OUT_IDS: series-scoped — blockerar kvarvarande val i tippa-klasserna
     out_ids = list(out_ids)
@@ -8611,20 +8882,36 @@ def race_picks_page(competition_id):
                 initial_my_picks,
                 is_wsx=is_wsx,
                 is_mxgp=is_mxgp,
+                is_mxsm=is_mxsm,
+                has_u17=has_u17,
+                tippa_classes=mxsm_tippa_classes,
                 picks_locked=picks_locked,
             )
             initial_wizard_step = _initial_wizard_step(
-                initial_my_picks, is_wsx=is_wsx, is_mxgp=is_mxgp
+                initial_my_picks,
+                is_wsx=is_wsx,
+                is_mxgp=is_mxgp,
+                is_mxsm=is_mxsm,
+                has_u17=has_u17,
+                tippa_classes=mxsm_tippa_classes,
             )
         except Exception:
             app.logger.exception(
                 "race_picks initial_my_picks failed for competition_id=%s", competition_id
             )
     else:
+        if is_mxsm:
+            guest_msg = "Registrera dig på ~20 sek — sedan topp 6 & holeshot"
+        elif is_mxgp:
+            guest_msg = "Registrera dig på ~20 sek — sedan topp 6, holeshot & kval"
+        elif is_wsx:
+            guest_msg = "Registrera dig på ~20 sek — sedan topp 6 & holeshot"
+        else:
+            guest_msg = "Registrera dig på ~20 sek — sedan topp 6, holeshot & wildcard"
         initial_picks_status = {
             "icon": "🎫",
             "title": "Skapa konto för att sätta picks",
-            "message": "Registrera dig på ~20 sek — sedan topp 6, holeshot & wildcard",
+            "message": guest_msg,
             "container_class": "mb-4 p-4 rounded-lg border-2 border-dashed border-amber-500/60 bg-amber-950/20",
         }
 
@@ -8651,9 +8938,11 @@ def race_picks_page(competition_id):
         competition=comp,
         riders_450_json=riders_450_json,
         riders_250_json=riders_250_json,
+        riders_u17_json=riders_u17_json,
         out_riders_mini=out_riders_mini,
         out_riders_450=out_riders_450,
         out_riders_250=out_riders_250,
+        out_riders_u17=out_riders_u17,
         actual_results=actual_results,
         holeshot_results=holeshot_results,
         out_ids=list(out_ids),
@@ -8662,6 +8951,9 @@ def race_picks_page(competition_id):
         picks_good_to_know=picks_good_to_know,
         picks_weather=picks_weather,
         is_mx_race=is_mx_race,
+        is_mxsm=is_mxsm,
+        has_u17=has_u17,
+        mxsm_tippa_classes=list(mxsm_tippa_classes) if mxsm_tippa_classes else [],
         race_prep_venue=_race_prep_venue_label(comp),
         race_prep_start_label=_race_prep_start_label(comp),
         race_prep_wildcard_names=sorted(_wsx_wildcard_names_for_competition(comp)),
@@ -10269,6 +10561,12 @@ def _rider_directory_series_label(rider: Rider) -> str:
         if coast == "both":
             return "250"
         return "250?"
+    if cls == "mxgp":
+        return "MXGP"
+    if cls == "mx2":
+        return "MX2"
+    if cls.startswith("mxsm"):
+        return cls.replace("mxsm_", "MXSM ").upper()
     return cls.upper() or "?"
 
 
@@ -10286,11 +10584,20 @@ def _group_riders_for_directory(riders: list[Rider] | None = None) -> dict[str, 
     riders_250_unassigned: list[Rider] = []
     riders_wsx_sx1: list[Rider] = []
     riders_wsx_sx2: list[Rider] = []
+    riders_mxgp: list[Rider] = []
+    riders_mx2: list[Rider] = []
     seen_east: set[int] = set()
     seen_west: set[int] = set()
 
     for rider in riders:
         cls = (rider.class_name or "").strip().lower()
+        sp = (getattr(rider, "series_participation", None) or "").strip().lower()
+        if sp == "mxgp" and cls == "mxgp":
+            riders_mxgp.append(rider)
+            continue
+        if sp == "mxgp" and cls == "mx2":
+            riders_mx2.append(rider)
+            continue
         if cls == "wsx_sx1":
             riders_wsx_sx1.append(rider)
             continue
@@ -10320,6 +10627,8 @@ def _group_riders_for_directory(riders: list[Rider] | None = None) -> dict[str, 
         riders_250_unassigned,
         riders_wsx_sx1,
         riders_wsx_sx2,
+        riders_mxgp,
+        riders_mx2,
     ):
         bucket.sort(key=key)
     return {
@@ -10329,6 +10638,8 @@ def _group_riders_for_directory(riders: list[Rider] | None = None) -> dict[str, 
         "riders_250_unassigned": riders_250_unassigned,
         "riders_wsx_sx1": riders_wsx_sx1,
         "riders_wsx_sx2": riders_wsx_sx2,
+        "riders_mxgp": riders_mxgp,
+        "riders_mx2": riders_mx2,
     }
 
 
@@ -12472,7 +12783,7 @@ def submit_results():
 
 @app.post("/admin/update_holeshot")
 def update_holeshot():
-    """Update only holeshot results for a competition (AMA 450/250 or WSX SX1/SX2)."""
+    """Update only holeshot results for a competition (AMA/WSX/MXGP/MXSM)."""
     if not is_admin_user():
         return redirect(url_for("login"))
     
@@ -12483,6 +12794,8 @@ def update_holeshot():
         redirect_url = url_for("admin_page", section="wsx-results")
     elif next_section == "mxgp-scaffold":
         redirect_url = url_for("admin_page", section="mxgp-scaffold")
+    elif next_section == "mxsm-scaffold":
+        redirect_url = url_for("admin_page", section="mxsm-scaffold")
 
     if not comp_id:
         flash("Du måste välja tävling.", "error")
@@ -12490,66 +12803,57 @@ def update_holeshot():
     
     hs_450 = request.form.get("holeshot_450", type=int)
     hs_250 = request.form.get("holeshot_250", type=int)
+    hs_u17 = request.form.get("holeshot_u17", type=int)
 
     competition = Competition.query.get(comp_id)
     series_u = (getattr(competition, "series", None) or "").strip().upper() if competition else ""
     is_wsx = series_u == "WSX"
     is_mxgp = series_u == "MXGP"
-    if is_wsx:
-        hs_class_450, hs_class_250 = "wsx_sx1", "wsx_sx2"
-        hs_aliases_450 = ["450cc", "wsx_sx1"]
-        hs_aliases_250 = ["250cc", "wsx_sx2"]
-    elif is_mxgp:
-        hs_class_450, hs_class_250 = "mxgp", "mx2"
-        hs_aliases_450 = ["450cc", "mxgp", "wsx_sx1"]
-        hs_aliases_250 = ["250cc", "mx2", "wsx_sx2"]
-    else:
-        hs_class_450, hs_class_250 = "450cc", "250cc"
-        hs_aliases_450 = ["450cc", "wsx_sx1"]
-        hs_aliases_250 = ["250cc", "wsx_sx2"]
-    
+    is_mxsm = series_u == "MXSM"
+
+    def _upsert_hs(rider_id: int | None, class_name: str, aliases: list[str]) -> None:
+        if rider_id:
+            existing = HoleshotResult.query.filter(
+                HoleshotResult.competition_id == comp_id,
+                HoleshotResult.class_name.in_(aliases),
+            ).first()
+            if existing:
+                existing.rider_id = rider_id
+                existing.class_name = class_name
+            else:
+                db.session.add(
+                    HoleshotResult(
+                        competition_id=comp_id, rider_id=rider_id, class_name=class_name
+                    )
+                )
+        else:
+            HoleshotResult.query.filter(
+                HoleshotResult.competition_id == comp_id,
+                HoleshotResult.class_name.in_(aliases),
+            ).delete(synchronize_session=False)
+
     try:
-        # Update or add primary-class holeshot (450cc / SX1 / MXGP)
-        if hs_450:
-            existing_hs_450 = HoleshotResult.query.filter(
-                HoleshotResult.competition_id == comp_id,
-                HoleshotResult.class_name.in_(hs_aliases_450),
-            ).first()
-            if existing_hs_450:
-                existing_hs_450.rider_id = hs_450
-                existing_hs_450.class_name = hs_class_450
-            else:
-                db.session.add(
-                    HoleshotResult(
-                        competition_id=comp_id, rider_id=hs_450, class_name=hs_class_450
-                    )
-                )
+        if is_mxsm:
+            # Exact class_name on HS rows (same as tippa / scoring).
+            _upsert_hs(hs_450, "mxsm_mx1", ["mxsm_mx1", "450cc"])
+            _upsert_hs(hs_250, "mxsm_mx2", ["mxsm_mx2", "250cc"])
+            _upsert_hs(hs_u17, "mxsm_u17", ["mxsm_u17", "u17"])
         else:
-            HoleshotResult.query.filter(
-                HoleshotResult.competition_id == comp_id,
-                HoleshotResult.class_name.in_(hs_aliases_450),
-            ).delete(synchronize_session=False)
-        
-        # Update or add secondary-class holeshot (250cc / SX2)
-        if hs_250:
-            existing_hs_250 = HoleshotResult.query.filter(
-                HoleshotResult.competition_id == comp_id,
-                HoleshotResult.class_name.in_(hs_aliases_250),
-            ).first()
-            if existing_hs_250:
-                existing_hs_250.rider_id = hs_250
-                existing_hs_250.class_name = hs_class_250
+            if is_wsx:
+                hs_class_450, hs_class_250 = "wsx_sx1", "wsx_sx2"
+                hs_aliases_450 = ["450cc", "wsx_sx1"]
+                hs_aliases_250 = ["250cc", "wsx_sx2"]
+            elif is_mxgp:
+                hs_class_450, hs_class_250 = "mxgp", "mx2"
+                hs_aliases_450 = ["450cc", "mxgp", "wsx_sx1"]
+                hs_aliases_250 = ["250cc", "mx2", "wsx_sx2"]
             else:
-                db.session.add(
-                    HoleshotResult(
-                        competition_id=comp_id, rider_id=hs_250, class_name=hs_class_250
-                    )
-                )
-        else:
-            HoleshotResult.query.filter(
-                HoleshotResult.competition_id == comp_id,
-                HoleshotResult.class_name.in_(hs_aliases_250),
-            ).delete(synchronize_session=False)
+                hs_class_450, hs_class_250 = "450cc", "250cc"
+                hs_aliases_450 = ["450cc", "wsx_sx1"]
+                hs_aliases_250 = ["250cc", "wsx_sx2"]
+
+            _upsert_hs(hs_450, hs_class_450, hs_aliases_450)
+            _upsert_hs(hs_250, hs_class_250, hs_aliases_250)
         
         db.session.commit()
         
@@ -14572,6 +14876,7 @@ def admin_get_out_status(competition_id):
 
         is_wsx = (comp.series or "") == "WSX"
         is_mxgp = (comp.series or "").upper() == "MXGP"
+        is_mxsm = (comp.series or "").upper() == "MXSM"
         if is_wsx:
             # Same tippa roster as race picks — no orphan/wrong-class duplicates
             riders = (
@@ -14584,6 +14889,14 @@ def admin_get_out_status(competition_id):
             riders = mxgp_roster_query().order_by(
                 Rider.class_name.asc(), Rider.rider_number.asc()
             ).all()
+        elif is_mxsm:
+            from mxsm_fantasy import get_mxsm_tippa_classes, mxsm_roster_query
+
+            riders = (
+                mxsm_roster_query(classes=get_mxsm_tippa_classes(comp))
+                .order_by(Rider.class_name.asc(), Rider.rider_number.asc())
+                .all()
+            )
         else:
             riders = (
                 db.session.query(Rider)
@@ -14604,7 +14917,7 @@ def admin_get_out_status(competition_id):
         out_ids = {rid for (rid,) in out_rows}
 
         # Map orphan OUT rows (wrong rider_id) onto tippa roster by name
-        if (is_wsx or is_mxgp) and out_ids:
+        if (is_wsx or is_mxgp or is_mxsm) and out_ids:
             by_name = {(r.name or "").strip().lower(): r.id for r in riders}
             orphan_ids = out_ids - {r.id for r in riders}
             for oid in orphan_ids:
@@ -14898,20 +15211,24 @@ def _build_race_results_detail(
 
     picks_450: list[dict] = []
     picks_250: list[dict] = []
+    picks_u17: list[dict] = []
     other_lines: list[dict] = []
     race_points = 0
     series_u = (getattr(comp, "series", None) or "").upper() if comp else ""
     is_wsx = series_u == "WSX"
     is_mxgp = series_u == "MXGP"
+    is_mxsm = series_u == "MXSM"
+    tippa_only = series_u in TIPPA_ONLY_SERIES
 
     for p in picks:
         rider = Rider.query.get(p.rider_id)
         rider_name = rider.name if rider else f"Förare #{p.rider_id}"
         cls = (rider.class_name if rider else "") or ""
+        pick_cls = (getattr(p, "class_name", None) or "").strip()
         # Prefer result row class for WSX (wsx_sx1/wsx_sx2) when rider row is stale
         act = actual_by_rider.get(p.rider_id)
         result_cls = (getattr(act, "class_name", None) or "").strip() if act else ""
-        bucket_cls = result_cls or cls
+        bucket_cls = (result_cls or pick_cls or cls).strip().lower()
         if not act:
             other_lines.append(
                 {
@@ -14947,15 +15264,18 @@ def _build_race_results_detail(
             "diff": int(diff),
             "hint": hint,
         }
-        if bucket_cls in ("450cc", "wsx_sx1", "sx1", "mxgp"):
+        if bucket_cls in ("450cc", "wsx_sx1", "sx1", "mxgp", "mxsm_mx1"):
             picks_450.append(row)
-        elif bucket_cls in ("250cc", "wsx_sx2", "sx2", "mx2"):
+        elif bucket_cls in ("250cc", "wsx_sx2", "sx2", "mx2", "mxsm_mx2"):
             picks_250.append(row)
+        elif bucket_cls in ("mxsm_u17", "u17"):
+            picks_u17.append(row)
         else:
             other_lines.append(row)
 
     picks_450.sort(key=lambda x: x.get("predicted", 99))
     picks_250.sort(key=lambda x: x.get("predicted", 99))
+    picks_u17.sort(key=lambda x: x.get("predicted", 99))
 
     all_holopicks = HoleshotPick.query.filter_by(user_id=user_id, competition_id=competition_id).all()
     if dedupe_picks:
@@ -14969,105 +15289,202 @@ def _build_race_results_detail(
         holopicks = all_holopicks
 
     holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
-    holo_by_class = holeshot_results_by_bucket(holos)
     holeshot_rows: list[dict] = []
-    holeshot_450_correct = False
-    holeshot_250_correct = False
-    holeshot_450_name = ""
-    holeshot_250_name = ""
     holeshot_points = 0
 
-    for hp in holopicks:
-        bucket = holeshot_pick_class_for_result(hp.class_name)
-        act = holo_by_class.get(bucket)
-        rider = Rider.query.get(hp.rider_id)
-        rider_name = rider.name if rider else f"Förare #{hp.rider_id}"
-        if is_wsx:
-            label = "SX1" if bucket == "450cc" else "SX2" if bucket == "250cc" else (hp.class_name or "Holeshot")
-        elif is_mxgp:
-            label = "MXGP" if bucket == "450cc" else "MX2" if bucket == "250cc" else (hp.class_name or "Holeshot")
-        else:
-            label = "450cc" if bucket == "450cc" else "250cc" if bucket == "250cc" else (hp.class_name or "Holeshot")
+    if is_mxsm:
+        try:
+            from mxsm_fantasy import get_mxsm_tippa_classes, mxsm_class_label
 
-        actual_rider_name = None
-        if act and act.rider_id:
-            actual_rider = Rider.query.get(act.rider_id)
-            actual_rider_name = (
-                actual_rider.name if actual_rider else f"Förare #{act.rider_id}"
+            tippa_hs = set(get_mxsm_tippa_classes(comp) if comp else [])
+        except Exception:
+            tippa_hs = {"mxsm_mx1", "mxsm_mx2"}
+
+            def mxsm_class_label(c):  # type: ignore[misc]
+                return {
+                    "mxsm_mx1": "MX1",
+                    "mxsm_mx2": "MX2",
+                    "mxsm_u17": "U17",
+                }.get(c, c or "Holeshot")
+
+        actual_by_cls = {
+            (getattr(hs, "class_name", None) or "").strip().lower(): hs for hs in holos
+        }
+        correct_classes: set[str] = set()
+        correct_names: dict[str, str] = {}
+        for hp in holopicks:
+            cls = (hp.class_name or "").strip().lower()
+            if tippa_hs and cls not in tippa_hs:
+                continue
+            act = actual_by_cls.get(cls)
+            rider = Rider.query.get(hp.rider_id)
+            rider_name = rider.name if rider else f"Förare #{hp.rider_id}"
+            label = mxsm_class_label(cls)
+            actual_rider_name = None
+            if act and act.rider_id:
+                actual_rider = Rider.query.get(act.rider_id)
+                actual_rider_name = (
+                    actual_rider.name if actual_rider else f"Förare #{act.rider_id}"
+                )
+            if act and act.rider_id == hp.rider_id:
+                correct_classes.add(cls)
+                correct_names[cls] = rider_name
+                holeshot_rows.append(
+                    {
+                        "kind": "holeshot",
+                        "status": "correct",
+                        "label": label,
+                        "rider_name": rider_name,
+                        "picked_name": rider_name,
+                        "actual_name": actual_rider_name or rider_name,
+                        "points": 10,
+                        "hint": "Rätt holeshot → +10p",
+                    }
+                )
+            else:
+                if actual_rider_name:
+                    hint = f"Gissade {rider_name} — holeshot: {actual_rider_name}"
+                else:
+                    hint = f"Gissade {rider_name} — inget holeshot-resultat registrerat"
+                holeshot_rows.append(
+                    {
+                        "kind": "holeshot",
+                        "status": "wrong",
+                        "label": label,
+                        "rider_name": rider_name,
+                        "picked_name": rider_name,
+                        "actual_name": actual_rider_name,
+                        "points": 0,
+                        "hint": hint,
+                    }
+                )
+        if tippa_hs and correct_classes >= tippa_hs and len(tippa_hs) >= 2:
+            holeshot_points = 10 * len(tippa_hs) + 5
+            bonus_rows = []
+            for cls in sorted(tippa_hs):
+                lbl = mxsm_class_label(cls)
+                bonus_rows.append(
+                    {
+                        "kind": "holeshot",
+                        "status": "correct",
+                        "label": lbl,
+                        "rider_name": correct_names.get(cls) or "—",
+                        "points": 10,
+                        "hint": f"Rätt holeshot {lbl}",
+                    }
+                )
+            bonus_rows.append(
+                {
+                    "kind": "bonus",
+                    "status": "bonus",
+                    "text": f"Alla {len(tippa_hs)} holeshots rätt — +5 bonus",
+                    "points": 5,
+                    "hint": f"{holeshot_points}p totalt för holeshot",
+                }
             )
+            holeshot_rows = bonus_rows
+        else:
+            holeshot_points = sum(
+                int(r.get("points") or 0) for r in holeshot_rows if r.get("kind") == "holeshot"
+            )
+    else:
+        holo_by_class = holeshot_results_by_bucket(holos)
+        holeshot_450_correct = False
+        holeshot_250_correct = False
+        holeshot_450_name = ""
+        holeshot_250_name = ""
 
-        if act and act.rider_id == hp.rider_id:
-            if bucket == "450cc":
-                holeshot_450_correct = True
-                holeshot_450_name = rider_name
-            elif bucket == "250cc":
-                holeshot_250_correct = True
-                holeshot_250_name = rider_name
-            holeshot_rows.append(
+        for hp in holopicks:
+            bucket = holeshot_pick_class_for_result(hp.class_name)
+            act = holo_by_class.get(bucket)
+            rider = Rider.query.get(hp.rider_id)
+            rider_name = rider.name if rider else f"Förare #{hp.rider_id}"
+            if is_wsx:
+                label = "SX1" if bucket == "450cc" else "SX2" if bucket == "250cc" else (hp.class_name or "Holeshot")
+            elif is_mxgp:
+                label = "MXGP" if bucket == "450cc" else "MX2" if bucket == "250cc" else (hp.class_name or "Holeshot")
+            else:
+                label = "450cc" if bucket == "450cc" else "250cc" if bucket == "250cc" else (hp.class_name or "Holeshot")
+
+            actual_rider_name = None
+            if act and act.rider_id:
+                actual_rider = Rider.query.get(act.rider_id)
+                actual_rider_name = (
+                    actual_rider.name if actual_rider else f"Förare #{act.rider_id}"
+                )
+
+            if act and act.rider_id == hp.rider_id:
+                if bucket == "450cc":
+                    holeshot_450_correct = True
+                    holeshot_450_name = rider_name
+                elif bucket == "250cc":
+                    holeshot_250_correct = True
+                    holeshot_250_name = rider_name
+                holeshot_rows.append(
+                    {
+                        "kind": "holeshot",
+                        "status": "correct",
+                        "label": label,
+                        "rider_name": rider_name,
+                        "picked_name": rider_name,
+                        "actual_name": actual_rider_name or rider_name,
+                        "points": 10,
+                        "hint": "Rätt holeshot → +10p",
+                    }
+                )
+            else:
+                if actual_rider_name:
+                    hint = f"Gissade {rider_name} — holeshot: {actual_rider_name}"
+                else:
+                    hint = f"Gissade {rider_name} — inget holeshot-resultat registrerat"
+                holeshot_rows.append(
+                    {
+                        "kind": "holeshot",
+                        "status": "wrong",
+                        "label": label,
+                        "rider_name": rider_name,
+                        "picked_name": rider_name,
+                        "actual_name": actual_rider_name,
+                        "points": 0,
+                        "hint": hint,
+                    }
+                )
+
+        if holeshot_450_correct and holeshot_250_correct:
+            holeshot_points = 25
+            label_450 = "SX1" if is_wsx else ("MXGP" if is_mxgp else "450cc")
+            label_250 = "SX2" if is_wsx else ("MX2" if is_mxgp else "250cc")
+            holeshot_rows = [
                 {
                     "kind": "holeshot",
                     "status": "correct",
-                    "label": label,
-                    "rider_name": rider_name,
-                    "picked_name": rider_name,
-                    "actual_name": actual_rider_name or rider_name,
+                    "label": label_450,
+                    "rider_name": holeshot_450_name or "—",
                     "points": 10,
-                    "hint": "Rätt holeshot → +10p",
-                }
-            )
-        else:
-            if actual_rider_name:
-                hint = f"Gissade {rider_name} — holeshot: {actual_rider_name}"
-            else:
-                hint = f"Gissade {rider_name} — inget holeshot-resultat registrerat"
-            holeshot_rows.append(
+                    "hint": f"Rätt holeshot {label_450}",
+                },
                 {
                     "kind": "holeshot",
-                    "status": "wrong",
-                    "label": label,
-                    "rider_name": rider_name,
-                    "picked_name": rider_name,
-                    "actual_name": actual_rider_name,
-                    "points": 0,
-                    "hint": hint,
-                }
-            )
-
-    if holeshot_450_correct and holeshot_250_correct:
-        holeshot_points = 25
-        label_450 = "SX1" if is_wsx else "450cc"
-        label_250 = "SX2" if is_wsx else "250cc"
-        holeshot_rows = [
-            {
-                "kind": "holeshot",
-                "status": "correct",
-                "label": label_450,
-                "rider_name": holeshot_450_name or "—",
-                "points": 10,
-                "hint": f"Rätt holeshot {label_450}",
-            },
-            {
-                "kind": "holeshot",
-                "status": "correct",
-                "label": label_250,
-                "rider_name": holeshot_250_name or "—",
-                "points": 10,
-                "hint": f"Rätt holeshot {label_250}",
-            },
-            {
-                "kind": "bonus",
-                "status": "bonus",
-                "text": "Båda holeshots rätt — +5 bonus",
-                "points": 5,
-                "hint": "25p totalt för holeshot",
-            },
-        ]
-    else:
-        holeshot_points = sum(int(r.get("points") or 0) for r in holeshot_rows if r.get("kind") == "holeshot")
+                    "status": "correct",
+                    "label": label_250,
+                    "rider_name": holeshot_250_name or "—",
+                    "points": 10,
+                    "hint": f"Rätt holeshot {label_250}",
+                },
+                {
+                    "kind": "bonus",
+                    "status": "bonus",
+                    "text": "Båda holeshots rätt — +5 bonus",
+                    "points": 5,
+                    "hint": "25p totalt för holeshot",
+                },
+            ]
+        else:
+            holeshot_points = sum(int(r.get("points") or 0) for r in holeshot_rows if r.get("kind") == "holeshot")
 
     wildcard_rows: list[dict] = []
     wildcard_points = 0
-    wc = None if is_wsx else WildcardPick.query.filter_by(user_id=user_id, competition_id=competition_id).first()
+    wc = None if tippa_only else WildcardPick.query.filter_by(user_id=user_id, competition_id=competition_id).first()
     if wc:
         actual_450cc = []
         for r in actual:
@@ -15127,7 +15544,7 @@ def _build_race_results_detail(
 
     # Legacy pipe-delimited lines for any old clients
     breakdown: list[str] = []
-    for bucket in (picks_450, picks_250):
+    for bucket in (picks_450, picks_250, picks_u17):
         for row in bucket:
             if row["status"] == "perfect":
                 breakdown.append(
@@ -15141,6 +15558,15 @@ def _build_race_results_detail(
                 breakdown.append(
                     f"❌|MISS|{row['rider_name']}|{row['predicted']}|{row['actual']}|0"
                 )
+
+    if is_wsx:
+        label_primary, label_secondary = "SX1", "SX2"
+    elif is_mxgp:
+        label_primary, label_secondary = "MXGP", "MX2"
+    elif is_mxsm:
+        label_primary, label_secondary = "MX1", "MX2"
+    else:
+        label_primary, label_secondary = "450cc", "250cc"
 
     return {
         "ok": True,
@@ -15159,13 +15585,16 @@ def _build_race_results_detail(
         "sections": {
             "picks_450": picks_450,
             "picks_250": picks_250,
+            "picks_u17": picks_u17,
             "holeshot": holeshot_rows,
             "wildcard": wildcard_rows,
             "other": other_lines,
         },
         "labels": {
-            "primary": "SX1" if is_wsx else "450cc",
-            "secondary": "SX2" if is_wsx else "250cc",
+            "primary": label_primary,
+            "secondary": label_secondary,
+            "tertiary": "U17" if is_mxsm else None,
+            "hide_wildcard": tippa_only,
         },
         "breakdown": breakdown,
     }
@@ -15269,7 +15698,7 @@ def _personal_race_recap_highlights(user_id: int, competition_id: int) -> list[d
 
     perfects = [
         r
-        for r in (secs.get("picks_450") or []) + (secs.get("picks_250") or [])
+        for r in (secs.get("picks_450") or []) + (secs.get("picks_250") or []) + (secs.get("picks_u17") or [])
         if r.get("status") == "perfect"
     ]
     if perfects:
@@ -15300,7 +15729,7 @@ def _personal_race_recap_highlights(user_id: int, competition_id: int) -> list[d
     if not highlights:
         close = [
             r
-            for r in (secs.get("picks_450") or []) + (secs.get("picks_250") or [])
+            for r in (secs.get("picks_450") or []) + (secs.get("picks_250") or []) + (secs.get("picks_u17") or [])
             if r.get("status") == "close" and int(r.get("points") or 0) >= 13
         ]
         if close:

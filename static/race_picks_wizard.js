@@ -9,9 +9,9 @@
   let cfg = {};
   let currentStep = 1;
   let totalSteps = 3;
-  /** Step 3: true = full summary overview, false = focus holeshot/wildcard forms. */
+  /** Bonus/overview step: true = full summary overview, false = focus holeshot/wildcard forms. */
   let step3ShowingSummary = true;
-  /** True after "Redigera mina val" — walk 450 → 250 → holeshot/wildcard, then save. */
+  /** True after "Redigera mina val" — walk classes → holeshot/wildcard, then save. */
   let isEditWalkback = false;
 
   function $(id) {
@@ -30,16 +30,62 @@
     return svFallback;
   }
 
+  /** Ordered top6 class steps for this race (+ bonus is last). */
+  function topClassPlan() {
+    const plan = [];
+    if (cfg.hasMx1 !== false) {
+      plan.push({
+        key: '450',
+        className: cfg.class450,
+        label: cfg.label450,
+        quickId: 'wizard-quick-450',
+      });
+    }
+    if (cfg.hasMx2 !== false) {
+      plan.push({
+        key: '250',
+        className: cfg.class250,
+        label: cfg.label250,
+        quickId: 'wizard-quick-250',
+      });
+    }
+    if (cfg.hasU17) {
+      plan.push({
+        key: 'u17',
+        className: cfg.classU17 || 'mxsm_u17',
+        label: cfg.labelU17 || 'U17',
+        quickId: 'wizard-quick-u17',
+      });
+    }
+    return plan;
+  }
+
+  /** Last wizard step (holeshot + overview). */
+  function bonusStep() {
+    return topClassPlan().length + 1;
+  }
+
+  function isBonusStep(step) {
+    return Number(step) === bonusStep();
+  }
+
+  function bonusStepEl() {
+    return document.querySelector(`.wizard-step[data-step="${bonusStep()}"]`);
+  }
+
+  function planEntryForStep(step) {
+    const plan = topClassPlan();
+    const idx = Number(step) - 1;
+    if (idx < 0 || idx >= plan.length) return null;
+    return plan[idx];
+  }
+
   function riderClassForStep(step) {
-    if (step === 1) return cfg.class450;
-    if (step === 2) return cfg.class250;
-    return null;
+    return planEntryForStep(step)?.className || null;
   }
 
   function classKeyForStep(step) {
-    if (step === 1) return '450';
-    if (step === 2) return '250';
-    return null;
+    return planEntryForStep(step)?.key || null;
   }
 
   function countFilledSlots(riderClass) {
@@ -110,8 +156,17 @@
       if (!u || u.includes('/brand_logos/') || u.startsWith('/rider_portrait/')) continue;
       return u;
     }
-    const brand = String(chip.bike_brand || 'honda').toLowerCase();
-    return `/static/brand_logos/${brand}.png`;
+    const brand = String(chip.bike_brand || '').toLowerCase().trim();
+    if (!brand || brand === '-' || brand === 'unknown') {
+      return '/static/brand_logos/unknown.png';
+    }
+    const known = {
+      honda: 'honda', ktm: 'ktm', yamaha: 'yamaha', kawasaki: 'kawasaki',
+      suzuki: 'suzuki', husqvarna: 'husqvarna', gasgas: 'gasgas',
+      beta: 'beta', triumph: 'triumph', ducati: 'ducati', fantic: 'unknown',
+    };
+    const logo = known[brand] || brand;
+    return `/static/brand_logos/${logo}.png`;
   }
 
   function renderQuickPicks(containerId, classKey, riderClass) {
@@ -243,8 +298,8 @@
   }
 
   function refreshQuickPicksForStep(step) {
-    if (step === 1) renderQuickPicks('wizard-quick-450', '450', cfg.class450);
-    if (step === 2) renderQuickPicks('wizard-quick-250', '250', cfg.class250);
+    const entry = planEntryForStep(step);
+    if (entry) renderQuickPicks(entry.quickId, entry.key, entry.className);
   }
 
   function updateProgress() {
@@ -259,28 +314,25 @@
   }
 
   function validateStep(step) {
-    if (step === 1) {
-      const n = countFilledSlots(cfg.class450);
+    const entry = planEntryForStep(step);
+    if (entry) {
+      const n = countFilledSlots(entry.className);
       if (n < 6) {
-        alert(`Välj alla 6 förare för ${cfg.label450} innan du går vidare. (${n}/6)`);
+        alert(`Välj alla 6 förare för ${entry.label} innan du går vidare. (${n}/6)`);
         return false;
       }
+      return true;
     }
-    if (step === 2) {
-      const n = countFilledSlots(cfg.class250);
-      if (n < 6) {
-        alert(`Välj alla 6 förare för ${cfg.label250} innan du går vidare. (${n}/6)`);
+    if (isBonusStep(step)) {
+      const missingHs = [];
+      if (cfg.hasMx1 !== false && !getHoleshotRider('450')) missingHs.push(cfg.label450);
+      if (cfg.hasMx2 !== false && !getHoleshotRider('250')) missingHs.push(cfg.label250);
+      if (cfg.hasU17 && !getHoleshotRider('u17')) missingHs.push(cfg.labelU17 || 'U17');
+      if (missingHs.length) {
+        alert(`Välj holeshot för ${missingHs.join(' och ')} innan du går vidare.`);
         return false;
       }
-    }
-    if (step === 3) {
-      if (!getHoleshotRider('450') || !getHoleshotRider('250')) {
-        alert(
-          `Välj holeshot för ${cfg.label450} och ${cfg.label250} innan du går vidare.`
-        );
-        return false;
-      }
-      if (!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP)) {
+      if (!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP || cfg.isMXSM)) {
         const pos = String($('wildcard-position')?.value || '').trim();
         if (!pos) {
           alert('Slumpa wildcard-plats (10–20) innan du går vidare.');
@@ -305,7 +357,7 @@
     isEditWalkback = false;
     window._wizardInEditMode = false;
     step3ShowingSummary = true;
-    showStep(3, { skipSave: true });
+    showStep(bonusStep(), { skipSave: true });
     if (typeof window.updateSaveButtonVisibility === 'function') {
       window.updateSaveButtonVisibility();
     }
@@ -330,30 +382,25 @@
     if (showOverviewNext) {
       text = navNextLabel('Nästa: Översikt →', 'Next: Overview →', 'Översikt →', 'Overview →');
       aria = isEn() ? 'Next: overview' : 'Nästa: översikt';
-    } else if (s === 1) {
-      text = navNextLabel(
-        `Nästa: ${cfg.label250} →`,
-        `Next: ${cfg.label250} →`,
-        `${cfg.label250} →`,
-        `${cfg.label250} →`
-      );
-      aria = isEn() ? `Next: ${cfg.label250}` : `Nästa: ${cfg.label250}`;
-    } else if (s === 2) {
-      text = navNextLabel(
-        'Nästa: Holeshot →',
-        'Next: Holeshot →',
-        'Holeshot →',
-        'Holeshot →'
-      );
-      aria = isEn() ? 'Next: holeshot' : 'Nästa: holeshot';
     } else {
-      text = navNextLabel(
-        'Nästa: Holeshot →',
-        'Next: Holeshot →',
-        'Holeshot →',
-        'Holeshot →'
-      );
-      aria = isEn() ? 'Next: holeshot' : 'Nästa: holeshot';
+      const nextEntry = planEntryForStep(s + 1);
+      if (nextEntry) {
+        text = navNextLabel(
+          `Nästa: ${nextEntry.label} →`,
+          `Next: ${nextEntry.label} →`,
+          `${nextEntry.label} →`,
+          `${nextEntry.label} →`
+        );
+        aria = isEn() ? `Next: ${nextEntry.label}` : `Nästa: ${nextEntry.label}`;
+      } else {
+        text = navNextLabel(
+          'Nästa: Holeshot →',
+          'Next: Holeshot →',
+          'Holeshot →',
+          'Holeshot →'
+        );
+        aria = isEn() ? 'Next: holeshot' : 'Nästa: holeshot';
+      }
     }
 
     next.textContent = text;
@@ -367,7 +414,7 @@
     const complete = isPicksFullyComplete() || !!cfg.picksComplete;
 
     const onCompleteOverview =
-      currentStep === 3 && complete && step3ShowingSummary;
+      isBonusStep(currentStep) && complete && step3ShowingSummary;
 
     if (onCompleteOverview) {
       if (back) {
@@ -396,16 +443,17 @@
 
     if (label) {
       if (isEditWalkback) {
-        if (currentStep === 3) {
+        if (isBonusStep(currentStep)) {
           label.textContent = cfg.isMXGP
             ? (isEn() ? 'Edit holeshot & qualifying' : 'Redigera holeshot & kval')
             : cfg.isWSX || cfg.skipsWildcard
             ? (isEn() ? 'Edit holeshot' : 'Redigera holeshot')
             : (isEn() ? 'Edit holeshot & wildcard' : 'Redigera holeshot & wildcard');
-        } else if (currentStep === 2) {
-          label.textContent = `Redigera ${cfg.label250}`;
         } else {
-          label.textContent = `Redigera ${cfg.label450}`;
+          const entry = planEntryForStep(currentStep);
+          label.textContent = entry
+            ? `Redigera ${entry.label}`
+            : `Steg ${currentStep} av ${totalSteps}`;
         }
       } else {
         label.textContent = `Steg ${currentStep} av ${totalSteps}`;
@@ -431,14 +479,21 @@
       sel.dataset.selectedRiderId = rid;
       const rider = riderById(Number(rid));
       if (span) {
-        span.textContent = rider
-          ? `${riderNumLabel(rider.rider_number)} ${rider.name} (${rider.bike_brand || ''})`.trim()
-          : `#${rid}`;
+        if (rider && typeof window.riderOptionLabel === 'function') {
+          span.textContent = window.riderOptionLabel(rider);
+        } else if (rider) {
+          const brand = String(rider.bike_brand || '').trim();
+          const base = `${riderNumLabel(rider.rider_number)} ${rider.name}`.trim();
+          span.textContent = brand ? `${base} (${brand})` : base;
+        } else {
+          span.textContent = `#${rid}`;
+        }
         span.removeAttribute('data-i18n');
       }
     };
-    mapOne('holeshot-450', 'holeshot-450');
-    mapOne('holeshot-250', 'holeshot-250');
+    if (cfg.hasMx1 !== false) mapOne('holeshot-450', 'holeshot-450');
+    if (cfg.hasMx2 !== false) mapOne('holeshot-250', 'holeshot-250');
+    if (cfg.hasU17) mapOne('holeshot-u17', 'holeshot-u17');
     if (!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP)) {
       mapOne('wildcard-pick', 'wildcard-pick');
     }
@@ -480,7 +535,7 @@
     }
     isEditWalkback = true;
     step3ShowingSummary = false;
-    showStep(3, { skipSave: true });
+    showStep(bonusStep(), { skipSave: true });
     syncBonusSelectorsFromHidden();
     const forms = $('wizard-step-3-forms');
     forms?.classList.remove('is-collapsed');
@@ -496,7 +551,7 @@
 
   function showStep(step, opts = {}) {
     const s = Math.max(1, Math.min(totalSteps, step));
-    if (s < 3 && typeof window.ensureWizardDropdownsReady === 'function') {
+    if (s < bonusStep() && typeof window.ensureWizardDropdownsReady === 'function') {
       window.ensureWizardDropdownsReady();
     }
     currentStep = s;
@@ -510,9 +565,11 @@
     const next = $('wizard-btn-next');
 
     if (next) {
+      // Also during "Redigera mina val": last step needs a way back to overview
+      // (save is disabled when nothing changed).
       const showOverviewNext =
-        s === 3 && isPicksFullyComplete() && !step3ShowingSummary && !isEditWalkback;
-      if (s >= totalSteps && (!showOverviewNext || (isEditWalkback && isPicksFullyComplete()))) {
+        isBonusStep(s) && isPicksFullyComplete() && !step3ShowingSummary;
+      if (s >= totalSteps && !showOverviewNext) {
         next.style.display = 'none';
       } else {
         next.style.display = '';
@@ -522,7 +579,7 @@
 
     const saveWrap = $('wizard-step-save');
     if (saveWrap) {
-      // Vid redigering: spara-knappen syns först på steg 3 (holeshot/wildcard)
+      // Vid redigering: spara-knappen syns först på sista steget (holeshot/wildcard)
       const showSave = isEditWalkback ? s >= totalSteps : s >= totalSteps;
       saveWrap.style.display = showSave ? '' : 'none';
     }
@@ -533,7 +590,7 @@
     const rc = riderClassForStep(s);
     if (rc) highlightNextSlot(rc);
 
-    if (s === 3) renderPicksSummary();
+    if (isBonusStep(s)) renderPicksSummary();
 
     updateNavButtons();
 
@@ -567,9 +624,11 @@
   }
 
   function inferStepFromPicks() {
-    if (countFilledSlots(cfg.class450) < 6) return 1;
-    if (countFilledSlots(cfg.class250) < 6) return 2;
-    return 3;
+    const plan = topClassPlan();
+    for (let i = 0; i < plan.length; i++) {
+      if (countFilledSlots(plan[i].className) < 6) return i + 1;
+    }
+    return bonusStep();
   }
 
   function syncWildcardRollLockedState() {
@@ -666,11 +725,11 @@
         isEditWalkback = false;
         window._wizardInEditMode = false;
         step3ShowingSummary = true;
-        showStep(3, { skipSave: true });
+        showStep(bonusStep(), { skipSave: true });
         return;
       }
       if (currentStep <= 1) return;
-      if (currentStep === 3) {
+      if (isBonusStep(currentStep)) {
         step3ShowingSummary = false;
       }
       showStep(currentStep - 1);
@@ -682,15 +741,11 @@
 
     $('wizard-btn-next')?.addEventListener('click', () => {
       if (!validateStep(currentStep)) return;
-      if (currentStep === 3 && isPicksFullyComplete() && !step3ShowingSummary) {
-        if (isEditWalkback) {
-          $('save-picks-btn')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          return;
-        }
+      if (isBonusStep(currentStep) && isPicksFullyComplete() && !step3ShowingSummary) {
         showStep3Overview();
         return;
       }
-      if (currentStep === 2 && !isEditWalkback) {
+      if (currentStep === bonusStep() - 1 && !isEditWalkback) {
         step3ShowingSummary = false;
       }
       showStep(currentStep + 1);
@@ -703,7 +758,9 @@
       const onNavResize = () => {
         updateNavButtons();
         const showOverviewNext =
-          currentStep === 3 && isPicksFullyComplete() && !step3ShowingSummary && !isEditWalkback;
+          isBonusStep(currentStep) &&
+          isPicksFullyComplete() &&
+          !step3ShowingSummary;
         updateNextButtonLabel(currentStep, showOverviewNext);
       };
       if (mq.addEventListener) mq.addEventListener('change', onNavResize);
@@ -887,10 +944,13 @@
   }
 
   function isPicksFullyComplete() {
-    if (countFilledSlots(cfg.class450) < 6) return false;
-    if (countFilledSlots(cfg.class250) < 6) return false;
-    if (!getHoleshotRider('450') || !getHoleshotRider('250')) return false;
-    if (!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP)) {
+    for (const entry of topClassPlan()) {
+      if (countFilledSlots(entry.className) < 6) return false;
+    }
+    if (cfg.hasMx1 !== false && !getHoleshotRider('450')) return false;
+    if (cfg.hasMx2 !== false && !getHoleshotRider('250')) return false;
+    if (cfg.hasU17 && !getHoleshotRider('u17')) return false;
+    if (!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP || cfg.isMXSM)) {
       const pos = $('wildcard-position')?.value;
       if (!pos) return false;
       if (!getWildcardRider()) return false;
@@ -937,12 +997,13 @@
   }
 
   function updateStep3Hero() {
-    const step3 = $('wizard-step-3');
-    if (!step3) return;
-    const h2 = step3.querySelector('.wizard-step-hero h2');
-    const heroP = step3.querySelector('.wizard-step-hero p');
+    const stepEl = bonusStepEl();
+    if (!stepEl) return;
+    const h2 = stepEl.querySelector('.wizard-step-hero h2');
+    const heroP = stepEl.querySelector('.wizard-step-hero p');
     const complete = isPicksFullyComplete() || !!cfg.picksComplete;
     const onOverview = complete && step3ShowingSummary && !isEditWalkback;
+    const stepLabel = bonusStep();
 
     if (h2) {
       if (onOverview) {
@@ -955,8 +1016,8 @@
           : (isEn() ? 'Edit holeshot & wildcard' : 'Redigera holeshot & wildcard');
       } else {
         h2.innerHTML =
-          '<span data-i18n="picks.step3">Steg 3</span> — Holeshot' +
-          (cfg.isMXGP ? ' & Kvalvinnare' : ((cfg.skipsWildcard || cfg.isWSX) ? '' : ' & Wildcard'));
+          `<span data-i18n="picks.step${stepLabel}">Steg ${stepLabel}</span> — Holeshot` +
+          (cfg.isMXGP ? ' & Kvalvinnare' : ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXSM) ? '' : ' & Wildcard'));
       }
     }
 
@@ -978,19 +1039,32 @@
           );
         }
       } else if (isEditWalkback) {
-        if (currentStep === 1) {
+        const nextEntry = planEntryForStep(currentStep + 1);
+        if (!isBonusStep(currentStep) && nextEntry) {
           heroP.textContent = isEn()
-            ? 'Change your top 6, then continue to the next class.'
-            : 'Ändra din topp 6, fortsätt sedan till nästa klass.';
-        } else if (currentStep === 2) {
+            ? `Adjust your top 6, then continue to ${nextEntry.label}.`
+            : `Justera din topp 6, fortsätt sedan till ${nextEntry.label}.`;
+        } else if (!isBonusStep(currentStep)) {
           heroP.textContent = isEn()
-            ? 'Adjust your top 6, then continue to holeshot' + (cfg.isMXGP ? ' & qualifying.' : ((cfg.skipsWildcard || cfg.isWSX) ? '.' : ' & wildcard.'))
-            : 'Justera din topp 6, fortsätt sedan till holeshot' + (cfg.isMXGP ? ' & kval.' : ((cfg.skipsWildcard || cfg.isWSX) ? '.' : ' & wildcard.'));
+            ? 'Adjust your top 6, then continue to holeshot.'
+            : 'Justera din topp 6, fortsätt sedan till holeshot.';
         } else {
           heroP.textContent = isEn()
-            ? 'Adjust holeshot' + (cfg.isMXGP ? ' & qualifying, then save.' : ((cfg.skipsWildcard || cfg.isWSX) ? ', then save.' : ' & wildcard, then save.'))
-            : 'Justera holeshot' + (cfg.isMXGP ? ' & kval, spara sedan.' : ((cfg.skipsWildcard || cfg.isWSX) ? ', spara sedan.' : ' & wildcard, spara sedan.'));
+            ? 'Adjust holeshot' + (cfg.isMXGP ? ' & qualifying, then save.' : ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXSM) ? ', then save.' : ' & wildcard, then save.'))
+            : 'Justera holeshot' + (cfg.isMXGP ? ' & kval, spara sedan.' : ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXSM) ? ', spara sedan.' : ' & wildcard, spara sedan.'));
         }
+      } else if (cfg.isMXSM) {
+        const hsLabels = [];
+        if (cfg.hasMx1 !== false) hsLabels.push(cfg.label450 || 'MX1');
+        if (cfg.hasMx2 !== false) hsLabels.push(cfg.label250 || 'MX2');
+        if (cfg.hasU17) hsLabels.push(cfg.labelU17 || 'U17');
+        const joined =
+          hsLabels.length <= 1
+            ? hsLabels[0] || 'U17'
+            : hsLabels.slice(0, -1).join(', ') + ' och ' + hsLabels[hsLabels.length - 1];
+        heroP.textContent = isEn()
+          ? `Who takes the first turn in ${joined}?`
+          : `Vem tar första kurvan i ${joined}?`;
       } else {
         heroP.textContent = cfg.isMXGP
           ? (isEn()
@@ -1008,7 +1082,7 @@
 
   function renderPicksSummary() {
     const el = $('wizard-picks-summary');
-    const step3 = $('wizard-step-3');
+    const step3 = bonusStepEl();
     const forms = $('wizard-step-3-forms');
     if (!el) return;
 
@@ -1020,15 +1094,17 @@
           ? ('Your lineup so far — fill in holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? '' : ' & wildcard') + ' below')
           : ('Din lineup hittills — fyll i holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? '' : ' & wildcard') + ' nedan'));
 
-    let extras = extraHoleshotHtml('450', cfg.label450);
-    extras += extraHoleshotHtml('250', cfg.label250);
+    let extras = '';
+    if (cfg.hasMx1 !== false) extras += extraHoleshotHtml('450', cfg.label450);
+    if (cfg.hasMx2 !== false) extras += extraHoleshotHtml('250', cfg.label250);
+    if (cfg.hasU17) extras += extraHoleshotHtml('u17', cfg.labelU17 || 'U17');
 
     if (cfg.isMXGP) {
       extras += extraQualifyingHtml('mxgp', 'MXGP');
       extras += extraQualifyingHtml('mx2', 'MX2');
     }
 
-    if (!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP)) {
+    if (!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP || cfg.isMXSM)) {
       const wcRider = getWildcardRider();
       const wcPos = $('wildcard-position')?.value || '';
       extras += `<div class="wizard-summary-extra wizard-summary-extra--wildcard${!wcRider && !wcPos ? ' wizard-summary-extra--empty' : ''}">
@@ -1065,6 +1141,10 @@
         submitted && !dirty
           ? 'rp-btn rp-btn--secondary wizard-btn-submitted'
           : 'rp-btn rp-btn--primary';
+      const cols = topClassPlan()
+        .map((e) => columnHtml(e.key, e.className, e.label, e.key))
+        .join('');
+      const colCount = topClassPlan().length;
       el.innerHTML = `
       <div class="wizard-overview-toolbar">
         <button type="button" class="rp-btn wizard-btn-edit-picks" data-wizard-overview-edit>${mxIcon('edit')} ${editLabel}</button>
@@ -1072,18 +1152,17 @@
       </div>
       <div class="${bannerCls}">${bannerText}</div>
       <div class="wizard-summary-body">
-        <div class="wizard-summary-grid">
-          ${columnHtml('450', cfg.class450, cfg.label450, '450')}
-          ${columnHtml('250', cfg.class250, cfg.label250, '250')}
+        <div class="wizard-summary-grid${colCount >= 3 ? ' wizard-summary-grid--3' : ''}">
+          ${cols}
         </div>
         <div class="wizard-summary-extras">${extras}</div>
       </div>`;
       bindOverviewToolbarActions(el);
       hydrateSummaryPortraits(el);
-    } else if (isEditWalkback && currentStep === 3) {
+    } else if (isEditWalkback && isBonusStep(currentStep)) {
       const hint = isEn()
-        ? 'Almost done — save your picks when holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? ' looks right.' : ' & wildcard look right.')
-        : 'Nästan klart — spara dina val när holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP) ? ' stämmer.' : ' & wildcard stämmer.');
+        ? 'Almost done — save your picks when holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP || cfg.isMXSM) ? ' looks right.' : ' & wildcard look right.')
+        : 'Nästan klart — spara dina val när holeshot' + ((cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP || cfg.isMXSM) ? ' stämmer.' : ' & wildcard stämmer.');
       el.innerHTML = `<div class="wizard-edit-hint">${mxIcon('edit')} ${hint}</div>`;
     } else if (isEditWalkback) {
       el.innerHTML = '';
@@ -1145,7 +1224,7 @@
   }
 
   function resolveStartStep() {
-    if (cfg.picksComplete || isPicksFullyComplete()) return 3;
+    if (cfg.picksComplete || isPicksFullyComplete()) return bonusStep();
 
     // Server says incomplete → always enter at step 1 (forward flow).
     // Stale localStorage drafts used to fill top6 and jump straight to holeshot/wildcard;
@@ -1156,13 +1235,7 @@
     }
 
     const inferred = inferStepFromPicks();
-    if (inferred >= 3) return 3;
-
-    const filled450 = countFilledSlots(cfg.class450);
-    const filled250 = countFilledSlots(cfg.class250);
-
-    if (filled450 < 6) return 1;
-    if (filled250 < 6) return 2;
+    if (inferred >= bonusStep()) return bonusStep();
     return inferred;
   }
 
@@ -1170,7 +1243,7 @@
     refreshQuickPicksForStep(currentStep);
     const rc = riderClassForStep(currentStep);
     if (rc) highlightNextSlot(rc);
-    if (currentStep === 3) renderPicksSummary();
+    if (isBonusStep(currentStep)) renderPicksSummary();
   }
 
   function init(options) {
@@ -1184,13 +1257,21 @@
       cfg.class450 === 'mxgp' ||
       String(cfg.label450 || '').toUpperCase() === 'MXGP'
     );
+    cfg.isMXSM = !!(
+      cfg.isMXSM ||
+      cfg.class450 === 'mxsm_mx1' ||
+      String(cfg.label450 || '').toUpperCase() === 'MX1'
+    );
     cfg.isWSX = !!(
       cfg.isWSX ||
       cfg.class450 === 'wsx_sx1' ||
       String(cfg.label450 || '').toUpperCase() === 'SX1'
     );
-    cfg.skipsWildcard = !!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP);
-    totalSteps = 3;
+    cfg.hasU17 = !!(cfg.hasU17 || cfg.classU17 === 'mxsm_u17');
+    if (typeof cfg.hasMx1 === 'undefined') cfg.hasMx1 = true;
+    if (typeof cfg.hasMx2 === 'undefined') cfg.hasMx2 = true;
+    cfg.skipsWildcard = !!(cfg.skipsWildcard || cfg.isWSX || cfg.isMXGP || cfg.isMXSM);
+    totalSteps = bonusStep();
 
     bindNav();
     setupWildcardWheel();
@@ -1199,7 +1280,11 @@
     // Incomplete picks → steg 1. Klara picks → översikt med redigera-knapp ovanför sammanfattningen.
     if (cfg.picksComplete || isPicksFullyComplete()) {
       step3ShowingSummary = true;
-      showStep(3, { skipSave: true });
+      if (typeof window.ensureWizardDropdownsReady === 'function') {
+        window.ensureWizardDropdownsReady();
+      }
+      showStep(bonusStep(), { skipSave: true });
+      renderPicksSummary();
     } else {
       step3ShowingSummary = false;
       showStep(1, { skipSave: true });
@@ -1223,7 +1308,11 @@
       // must not skip the user to holeshot on a fresh "Gör dina picks" visit.
       if (cfg.picksComplete) {
         step3ShowingSummary = true;
-        showStep(3, { skipSave: true });
+        if (typeof window.ensureWizardDropdownsReady === 'function') {
+          window.ensureWizardDropdownsReady();
+        }
+        showStep(bonusStep(), { skipSave: true });
+        renderPicksSummary();
       } else {
         step3ShowingSummary = false;
         showStep(resolveStartStep(), { skipSave: true });
@@ -1246,7 +1335,7 @@
     step3ShowingSummary = true;
     isEditWalkback = false;
     window._wizardInEditMode = false;
-    showStep(3, { skipSave: true });
+    showStep(bonusStep(), { skipSave: true });
     renderPicksSummary();
     updateDraftNote();
   }

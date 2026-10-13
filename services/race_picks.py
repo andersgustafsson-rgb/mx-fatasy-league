@@ -35,8 +35,9 @@ def _main():
     return _m
 
 
-_TOP450_CLASSES = frozenset({"450cc", "wsx_sx1", "mxgp"})
-_TOP250_CLASSES = frozenset({"250cc", "wsx_sx2", "mx2"})
+_TOP450_CLASSES = frozenset({"450cc", "wsx_sx1", "mxgp", "mxsm_mx1"})
+_TOP250_CLASSES = frozenset({"250cc", "wsx_sx2", "mx2", "mxsm_mx2"})
+_TOP_U17_CLASSES = frozenset({"mxsm_u17"})
 
 
 def my_picks_api_dict(user_id: int, comp: Competition) -> dict:
@@ -45,6 +46,15 @@ def my_picks_api_dict(user_id: int, comp: Competition) -> dict:
     series_u = (getattr(comp, "series", None) or "").strip().upper()
     is_wsx = series_u == "WSX"
     is_mxgp = series_u == "MXGP"
+    is_mxsm = series_u == "MXSM"
+    has_u17 = False
+    if is_mxsm:
+        try:
+            from mxsm_fantasy import competition_has_u17
+
+            has_u17 = competition_has_u17(comp)
+        except Exception:
+            has_u17 = False
     picks_locked = is_picks_locked(comp)
 
     snap = None
@@ -71,7 +81,7 @@ def my_picks_api_dict(user_id: int, comp: Competition) -> dict:
         (
             rid
             for cls, rid in holos_map.items()
-            if cls in ("450cc", "wsx_sx1", "mxgp")
+            if cls in ("450cc", "wsx_sx1", "mxgp", "mxsm_mx1")
         ),
         None,
     )
@@ -79,13 +89,17 @@ def my_picks_api_dict(user_id: int, comp: Competition) -> dict:
         (
             rid
             for cls, rid in holos_map.items()
-            if cls in ("250cc", "wsx_sx2", "mx2")
+            if cls in ("250cc", "wsx_sx2", "mx2", "mxsm_mx2")
         ),
+        None,
+    )
+    hs_u17_id = next(
+        (rid for cls, rid in holos_map.items() if cls in ("mxsm_u17",)),
         None,
     )
     qual_mxgp_id = qual_map.get("mxgp")
     qual_mx2_id = qual_map.get("mx2")
-    for extra_id in (hs450_id, hs250_id, wc_rider, qual_mxgp_id, qual_mx2_id):
+    for extra_id in (hs450_id, hs250_id, hs_u17_id, wc_rider, qual_mxgp_id, qual_mx2_id):
         if extra_id is not None:
             try:
                 rider_ids.append(int(extra_id))
@@ -141,6 +155,7 @@ def my_picks_api_dict(user_id: int, comp: Competition) -> dict:
 
     hs450 = _pick_rider_payload(hs450_id)
     hs250 = _pick_rider_payload(hs250_id)
+    hs_u17 = _pick_rider_payload(hs_u17_id)
     wc_payload = _pick_rider_payload(wc_rider)
     if wc_payload is not None and wc_pos is not None:
         wc_payload = {**wc_payload, "position": wc_pos}
@@ -156,6 +171,13 @@ def my_picks_api_dict(user_id: int, comp: Competition) -> dict:
             "mxgp": holos_map.get("mxgp") or hs450_id,
             "mx2": holos_map.get("mx2") or hs250_id,
         }
+    elif is_mxsm:
+        hs_extra = {
+            "mxsm_mx1": holos_map.get("mxsm_mx1") or hs450_id,
+            "mxsm_mx2": holos_map.get("mxsm_mx2") or hs250_id,
+        }
+        if has_u17 or hs_u17_id is not None:
+            hs_extra["mxsm_u17"] = holos_map.get("mxsm_u17") or hs_u17_id
 
     return {
         "top6_picks": top6_picks,
@@ -166,6 +188,7 @@ def my_picks_api_dict(user_id: int, comp: Competition) -> dict:
         },
         "holeshot_450": hs450,
         "holeshot_250": hs250,
+        "holeshot_u17": hs_u17,
         "wildcard_pick": wc_rider,
         "wildcard_pos": wc_pos,
         "wildcard": wc_payload,
@@ -177,6 +200,8 @@ def my_picks_api_dict(user_id: int, comp: Competition) -> dict:
         "qualifying_mx2": _pick_rider_payload(qual_mx2_id),
         "is_wsx": is_wsx,
         "is_mxgp": is_mxgp,
+        "is_mxsm": is_mxsm,
+        "has_u17": has_u17,
         "competition_id": competition_id,
         "series": getattr(comp, "series", None),
         "snapshot_used": bool(snap),
@@ -187,27 +212,66 @@ def my_picks_api_dict(user_id: int, comp: Competition) -> dict:
 _my_picks_api_dict = my_picks_api_dict
 
 
-def initial_wizard_step(my_picks: dict, *, is_wsx: bool, is_mxgp: bool = False) -> int:
+def _mxsm_class_flags(tippa_classes: list[str] | tuple[str, ...] | None, has_u17: bool) -> tuple[bool, bool, bool]:
+    """Return (has_mx1, has_mx2, has_u17) for an MXSM race tippa set."""
+    tippa = {str(c or "").strip().lower() for c in (tippa_classes or ())}
+    if not tippa:
+        return True, True, bool(has_u17)
+    return ("mxsm_mx1" in tippa, "mxsm_mx2" in tippa, "mxsm_u17" in tippa or bool(has_u17))
+
+
+def mxsm_wizard_bonus_step(
+    *,
+    has_mx1: bool = True,
+    has_mx2: bool = True,
+    has_u17: bool = False,
+) -> int:
+    """1-based step number for holeshot/overview (= number of top6 class steps + 1)."""
+    return (1 if has_mx1 else 0) + (1 if has_mx2 else 0) + (1 if has_u17 else 0) + 1
+
+
+def initial_wizard_step(
+    my_picks: dict,
+    *,
+    is_wsx: bool,
+    is_mxgp: bool = False,
+    is_mxsm: bool = False,
+    has_u17: bool = False,
+    tippa_classes: list[str] | tuple[str, ...] | None = None,
+) -> int:
     """Which wizard step to open on first paint.
 
     Incomplete picks always start at step 1 (forward flow).
-    Complete picks open step 3 (overview). Holeshot-first is edit-only in JS.
+    Complete picks open the bonus/overview step (last step).
     """
+    if is_mxsm:
+        has_mx1, has_mx2, has_u17 = _mxsm_class_flags(tippa_classes, has_u17)
+    else:
+        has_mx1, has_mx2 = True, True
     top6 = my_picks.get("top6_picks") or []
     n450 = sum(1 for p in top6 if (p.get("class") or "") in _TOP450_CLASSES)
     n250 = sum(1 for p in top6 if (p.get("class") or "") in _TOP250_CLASSES)
+    n_u17 = sum(1 for p in top6 if (p.get("class") or "") in _TOP_U17_CLASSES)
     hs = my_picks.get("holeshot_picks") or {}
-    hs450 = bool(hs.get("450cc") or hs.get("wsx_sx1") or hs.get("mxgp"))
-    hs250 = bool(hs.get("250cc") or hs.get("wsx_sx2") or hs.get("mx2"))
+    hs450 = bool(
+        hs.get("450cc") or hs.get("wsx_sx1") or hs.get("mxgp") or hs.get("mxsm_mx1")
+    )
+    hs250 = bool(
+        hs.get("250cc") or hs.get("wsx_sx2") or hs.get("mx2") or hs.get("mxsm_mx2")
+    )
+    hs_u17 = bool(hs.get("mxsm_u17"))
     wc_ok = True
-    if not is_wsx and not is_mxgp:
+    if not is_wsx and not is_mxgp and not is_mxsm:
         wc_ok = bool(my_picks.get("wildcard_pick")) and my_picks.get("wildcard_pos") is not None
     qual_ok = True
     if is_mxgp:
         qm = my_picks.get("qualifying_picks") or {}
         qual_ok = bool(qm.get("mxgp")) and bool(qm.get("mx2"))
-    if n450 >= 6 and n250 >= 6 and hs450 and hs250 and wc_ok and qual_ok:
-        return 3
+    top_ok = ((not has_mx1) or n450 >= 6) and ((not has_mx2) or n250 >= 6)
+    hs_ok = ((not has_mx1) or hs450) and ((not has_mx2) or hs250)
+    u17_ok = (not has_u17) or (n_u17 >= 6 and hs_u17)
+    if top_ok and hs_ok and wc_ok and qual_ok and u17_ok:
+        return mxsm_wizard_bonus_step(has_mx1=has_mx1, has_mx2=has_mx2, has_u17=has_u17)
     return 1
 
 
@@ -234,28 +298,39 @@ def user_picks_status_code(user_id: int | None, comp: Competition | None) -> str
         series_u = (getattr(comp, "series", None) or "").strip().upper()
         is_wsx = series_u == "WSX"
         is_mxgp = series_u == "MXGP"
+        is_mxsm = series_u == "MXSM"
         my = my_picks_api_dict(int(user_id), comp)
+        has_u17 = bool(my.get("has_u17")) if is_mxsm else False
         top6 = my.get("top6_picks") or []
         n450 = sum(1 for p in top6 if (p.get("class") or "") in _TOP450_CLASSES)
         n250 = sum(1 for p in top6 if (p.get("class") or "") in _TOP250_CLASSES)
+        n_u17 = sum(1 for p in top6 if (p.get("class") or "") in _TOP_U17_CLASSES)
         hs = my.get("holeshot_picks") or {}
-        hs450 = bool(hs.get("450cc") or hs.get("wsx_sx1") or hs.get("mxgp"))
-        hs250 = bool(hs.get("250cc") or hs.get("wsx_sx2") or hs.get("mx2"))
+        hs450 = bool(
+            hs.get("450cc") or hs.get("wsx_sx1") or hs.get("mxgp") or hs.get("mxsm_mx1")
+        )
+        hs250 = bool(
+            hs.get("250cc") or hs.get("wsx_sx2") or hs.get("mx2") or hs.get("mxsm_mx2")
+        )
+        hs_u17 = bool(hs.get("mxsm_u17"))
         wc_ok = True
-        if not is_wsx and not is_mxgp:
+        if not is_wsx and not is_mxgp and not is_mxsm:
             wc_ok = bool(my.get("wildcard_pick")) and my.get("wildcard_pos") is not None
         qual_ok = True
         qm = my.get("qualifying_picks") or {}
         if is_mxgp:
             qual_ok = bool(qm.get("mxgp")) and bool(qm.get("mx2"))
-        if n450 == 6 and n250 == 6 and hs450 and hs250 and wc_ok and qual_ok:
+        u17_ok = (not has_u17) or (n_u17 == 6 and hs_u17)
+        if n450 == 6 and n250 == 6 and hs450 and hs250 and wc_ok and qual_ok and u17_ok:
             return "has_picks"
         if (
             n450
             or n250
+            or n_u17
             or hs450
             or hs250
-            or (not is_wsx and not is_mxgp and my.get("wildcard_pick"))
+            or hs_u17
+            or (not is_wsx and not is_mxgp and not is_mxsm and my.get("wildcard_pick"))
             or (is_mxgp and (qm.get("mxgp") or qm.get("mx2")))
         ):
             return "partial_picks"
@@ -269,21 +344,55 @@ _user_picks_status_code = user_picks_status_code
 
 
 def picks_status_summary(
-    my_picks: dict, *, is_wsx: bool, picks_locked: bool, is_mxgp: bool = False
+    my_picks: dict,
+    *,
+    is_wsx: bool,
+    picks_locked: bool,
+    is_mxgp: bool = False,
+    is_mxsm: bool = False,
+    has_u17: bool = False,
+    tippa_classes: list[str] | tuple[str, ...] | None = None,
 ) -> dict:
     """UI strings for picks status banner (mirrors updatePicksStatus in race_picks.html)."""
+    if is_mxsm:
+        has_mx1, has_mx2, has_u17 = _mxsm_class_flags(tippa_classes, has_u17)
+    else:
+        has_mx1, has_mx2 = True, True
     top6 = my_picks.get("top6_picks") or []
     hs = my_picks.get("holeshot_picks") or {}
-    holeshot450 = hs.get("450cc") or hs.get("wsx_sx1") or hs.get("mxgp")
-    holeshot250 = hs.get("250cc") or hs.get("wsx_sx2") or hs.get("mx2")
-    has_wc = bool(my_picks.get("wildcard_pick")) and not is_wsx and not is_mxgp
+    holeshot450 = (
+        hs.get("450cc") or hs.get("wsx_sx1") or hs.get("mxgp") or hs.get("mxsm_mx1")
+    )
+    holeshot250 = (
+        hs.get("250cc") or hs.get("wsx_sx2") or hs.get("mx2") or hs.get("mxsm_mx2")
+    )
+    holeshot_u17 = hs.get("mxsm_u17") if has_u17 else None
+    has_wc = (
+        bool(my_picks.get("wildcard_pick"))
+        and not is_wsx
+        and not is_mxgp
+        and not is_mxsm
+    )
     qm = my_picks.get("qualifying_picks") or {}
     qual_count = (1 if qm.get("mxgp") else 0) + (1 if qm.get("mx2") else 0) if is_mxgp else 0
-    holeshot_count = (1 if holeshot450 else 0) + (1 if holeshot250 else 0)
+    holeshot_count = (
+        (1 if holeshot450 and has_mx1 else 0)
+        + (1 if holeshot250 and has_mx2 else 0)
+        + (1 if holeshot_u17 else 0)
+    )
     total = len(top6) + holeshot_count + (1 if has_wc else 0) + qual_count
     if is_mxgp:
         required = 16
         empty_msg = "Gör dina val för topp 6, holeshot och kvalvinnare"
+    elif is_mxsm:
+        n_cls = (1 if has_mx1 else 0) + (1 if has_mx2 else 0) + (1 if has_u17 else 0)
+        required = max(n_cls, 1) * 7  # topp 6 + HS per class
+        if has_u17 and not has_mx1 and not has_mx2:
+            empty_msg = "Gör dina val för U17 topp 6 och holeshot"
+        elif has_u17:
+            empty_msg = "Gör dina val för topp 6 (MX1/MX2/U17) och holeshot"
+        else:
+            empty_msg = "Gör dina val för topp 6 och holeshot"
     elif is_wsx:
         required = 14
         empty_msg = "Gör dina val för topp 6 och holeshot"

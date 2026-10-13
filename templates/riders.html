@@ -45,7 +45,7 @@
           </div>
         </div>
         <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Förarguide</h1>
-        <p class="text-cyan-100/70 text-sm mt-1">Bio, meriter och bilder — sök på nummer eller namn</p>
+        <p class="text-cyan-100/70 text-sm mt-1">Sök på nummer eller namn — klicka en förare för bio, meriter och bild.</p>
         <div class="flex flex-wrap gap-2 mt-4" id="seriesPills">
           <button type="button" data-series="all" class="series-pill px-3 py-1 rounded-full text-xs font-semibold bg-cyan-500 text-gray-900">Alla</button>
           <button type="button" data-series="250e" class="series-pill px-3 py-1 rounded-full text-xs font-medium bg-slate-800/80 text-cyan-300/90 border border-slate-600/60">250E · {{ riders_250_east|length }}</button>
@@ -53,13 +53,15 @@
           <button type="button" data-series="450" class="series-pill px-3 py-1 rounded-full text-xs font-medium bg-slate-800/80 text-amber-300/90 border border-slate-600/60">450 · {{ riders_450|length }}</button>
           <button type="button" data-series="wsx1" class="series-pill px-3 py-1 rounded-full text-xs font-medium bg-slate-800/80 text-purple-300/90 border border-slate-600/60">WSX SX1 · {{ riders_wsx_sx1|length }}</button>
           <button type="button" data-series="wsx2" class="series-pill px-3 py-1 rounded-full text-xs font-medium bg-slate-800/80 text-pink-300/90 border border-slate-600/60">WSX SX2 · {{ riders_wsx_sx2|length }}</button>
+          <button type="button" data-series="mxgp" class="series-pill px-3 py-1 rounded-full text-xs font-medium bg-slate-800/80 text-teal-300/90 border border-slate-600/60">MXGP · {{ riders_mxgp|length }}</button>
+          <button type="button" data-series="mx2" class="series-pill px-3 py-1 rounded-full text-xs font-medium bg-slate-800/80 text-sky-300/90 border border-slate-600/60">MX2 · {{ riders_mx2|length }}</button>
         </div>
       </div>
     </div>
 
     <div class="flex flex-col sm:flex-row gap-3 mb-5">
       <input id="searchInput" type="search" inputmode="search" autocomplete="off"
-        placeholder="{{ mx_icon('eye') }}   Sök #38 eller Deegan…"
+        placeholder="Sök #38 eller Herlings…"
         class="flex-1 px-4 py-3 rounded-xl bg-gray-900/80 border border-cyan-500/30 text-white placeholder-gray-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none" />
       <select id="seriesFilter"
         class="px-4 py-3 rounded-xl bg-gray-900/80 border border-gray-600 text-white sm:min-w-[11rem]">
@@ -69,6 +71,8 @@
         <option value="450">450</option>
         <option value="wsx1">WSX SX1</option>
         <option value="wsx2">WSX SX2</option>
+        <option value="mxgp">MXGP</option>
+        <option value="mx2">MX2</option>
       </select>
     </div>
 
@@ -123,6 +127,8 @@
       {{ rider_column('450', riders_450, '450', 'list-450', 'bg-amber-400/70') }}
       {{ rider_column('WSX SX1', riders_wsx_sx1, 'wsx1', 'list-wsx1', 'bg-purple-400/70') }}
       {{ rider_column('WSX SX2', riders_wsx_sx2, 'wsx2', 'list-wsx2', 'bg-pink-400/70') }}
+      {{ rider_column('MXGP', riders_mxgp, 'mxgp', 'list-mxgp', 'bg-teal-400/70') }}
+      {{ rider_column('MX2', riders_mx2, 'mx2', 'list-mx2', 'bg-sky-400/70') }}
     </div>
 
     {% if riders_250_unassigned %}
@@ -155,12 +161,16 @@
     const SERIES_LABELS = {
       'list-250e': '250E', 'list-250w': '250W', 'list-450': '450',
       'list-wsx1': 'WSX SX1', 'list-wsx2': 'WSX SX2', 'list-250u': '250?',
+      'list-mxgp': 'MXGP', 'list-mx2': 'MX2',
     };
     const SERIES_FILTER_MAP = {
       all: null, '250e': 'list-250e', '250w': 'list-250w', '450': 'list-450',
-      wsx1: 'list-wsx1', wsx2: 'list-wsx2',
+      wsx1: 'list-wsx1', wsx2: 'list-wsx2', mxgp: 'list-mxgp', mx2: 'list-mx2',
     };
-    const COL_SERIES = { '250e': 'list-250e', '250w': 'list-250w', '450': 'list-450', wsx1: 'list-wsx1', wsx2: 'list-wsx2' };
+    const COL_SERIES = {
+      '250e': 'list-250e', '250w': 'list-250w', '450': 'list-450',
+      wsx1: 'list-wsx1', wsx2: 'list-wsx2', mxgp: 'list-mxgp', mx2: 'list-mx2',
+    };
 
     const input = document.getElementById('searchInput');
     const seriesFilter = document.getElementById('seriesFilter');

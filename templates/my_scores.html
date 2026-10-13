@@ -39,6 +39,7 @@
     .series-btn[data-series="WSX"].is-active { border-color: rgba(251,191,36,0.6);  background: rgba(120,53,15,0.45); color: #fde68a; }
     .series-btn[data-series="MXON"].is-active { border-color: rgba(52,211,153,0.6); background: rgba(6,78,59,0.5); color: #6ee7b7; }
     .series-btn[data-series="MXGP"].is-active { border-color: rgba(248,113,113,0.55); background: rgba(127,29,29,0.4); color: #fca5a5; }
+    .series-btn[data-series="MXSM"].is-active { border-color: rgba(254,204,0,0.65); background: rgba(0,82,147,0.45); color: #fecc00; }
     .series-btn[data-series="all"].is-active { border-color: rgba(148,163,184,0.55); background: rgba(51,65,85,0.6); color: #cbd5e1; }
 
     tr.row-hidden { display: none; }
@@ -147,6 +148,7 @@
           {% elif series_filter in ('SX','MX','SMX','AMA') %}Mina poäng · AMA / SMX
           {% elif series_filter == 'MXON' %}Mina poäng · MXoN
           {% elif series_filter == 'MXGP' %}Mina poäng · MXGP
+          {% elif series_filter == 'MXSM' %}Mina poäng · MXSM
           {% else %}Mina poäng{% endif %}
         </h1>
         <p class="text-slate-400 text-sm mt-0.5 hidden sm:block">
@@ -217,6 +219,7 @@
             <button type="button" class="series-btn" data-series="WSX">WSX</button>
             <button type="button" class="series-btn" data-series="MXON">MXoN</button>
             <button type="button" class="series-btn" data-series="MXGP">MXGP</button>
+            <button type="button" class="series-btn" data-series="MXSM">MXSM</button>
             <span class="mx-1 text-slate-700">|</span>
             <button type="button" class="series-btn" data-status="completed" id="btn-status-completed">Körda</button>
             <button type="button" class="series-btn" data-status="pending" id="btn-status-pending">Kommande</button>
@@ -668,6 +671,7 @@
           </div>`;
           summaryEl.className = 'mt-3 grid grid-cols-3 gap-2 text-center';
         } else {
+          const hideWc = !!(data.labels && data.labels.hide_wildcard);
           cards = `
           <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
             <div class="text-[10px] text-slate-500 uppercase">Race picks</div>
@@ -676,11 +680,14 @@
           <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
             <div class="text-[10px] text-slate-500 uppercase">Holeshot</div>
             <div class="font-black text-white tabular-nums">${sum.holeshot_points??0}p</div>
-          </div>
+          </div>`;
+          if (!hideWc) {
+            cards += `
           <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
             <div class="text-[10px] text-slate-500 uppercase">Wildcard</div>
             <div class="font-black text-white tabular-nums">${sum.wildcard_points??0}p</div>
           </div>`;
+          }
           if (showSeasonTeam) {
             cards += noSeasonTeam
               ? `<div class="rounded-lg bg-amber-950/40 border border-amber-400/35 p-2">
@@ -692,9 +699,10 @@
                   <div class="font-black text-cyan-100 tabular-nums">${stPts == null ? '—' : `${stPts}p`}</div>
                 </div>`;
           }
-          summaryEl.className = showSeasonTeam
+          const colCount = (hideWc ? 2 : 3) + (showSeasonTeam ? 1 : 0);
+          summaryEl.className = colCount >= 4
             ? 'mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center'
-            : 'mt-3 grid grid-cols-3 gap-2 text-center';
+            : `mt-3 grid grid-cols-${colCount} gap-2 text-center`;
         }
         summaryEl.innerHTML = cards;
       }
@@ -723,12 +731,15 @@
       } else {
         html += renderSection((labels.primary||'450cc')+' — dina placeringar', sec.picks_450, renderPickRow);
         html += renderSection((labels.secondary||'250cc')+' — dina placeringar', sec.picks_250, renderPickRow);
+        if (sec.picks_u17?.length) {
+          html += renderSection((labels.tertiary||'U17')+' — dina placeringar', sec.picks_u17, renderPickRow);
+        }
         if (sec.holeshot?.length) {
           html += '<div><h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Holeshot</h4><div class="space-y-2">';
           sec.holeshot.forEach(r=>{html+=renderSimpleRow(r);});
           html += '</div></div>';
         }
-        if (sec.wildcard?.length) {
+        if (sec.wildcard?.length && !labels.hide_wildcard) {
           html += '<div><h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Wildcard</h4><div class="space-y-2">';
           sec.wildcard.forEach(r=>{html+=renderSimpleRow(r);});
           html += '</div></div>';

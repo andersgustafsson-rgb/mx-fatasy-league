@@ -59,6 +59,131 @@
       position: relative;
       overscroll-behavior-x: none;
     }
+
+    /* —— MXSM: svensk paddock-känsla (blått + gult, mörk navy) —— */
+    body.theme-mxsm {
+      --mxsm-blue: #005293;
+      --mxsm-blue-bright: #1d6fb8;
+      --mxsm-yellow: #fecc00;
+      --mxsm-yellow-soft: #ffe566;
+      background:
+        radial-gradient(ellipse 90% 55% at 100% -10%, rgba(254, 204, 0, 0.14), transparent 55%),
+        radial-gradient(ellipse 70% 50% at -5% 40%, rgba(0, 82, 147, 0.45), transparent 55%),
+        linear-gradient(160deg, #071428 0%, #0c2748 42%, #0f172a 100%) !important;
+    }
+    body.theme-mxsm::before {
+      content: '';
+      position: fixed;
+      inset: 0 0 auto 0;
+      height: 4px;
+      z-index: 80;
+      pointer-events: none;
+      background: linear-gradient(90deg, #005293 0 42%, #fecc00 42% 58%, #005293 58% 100%);
+      box-shadow: 0 2px 12px rgba(254, 204, 0, 0.25);
+    }
+    .mxsm-sweden-banner {
+      position: relative;
+      overflow: hidden;
+      border-radius: 0.85rem;
+      margin-bottom: 1.25rem;
+      border: 1px solid rgba(254, 204, 0, 0.28);
+      background:
+        linear-gradient(105deg, rgba(0, 82, 147, 0.92) 0%, rgba(7, 20, 40, 0.88) 55%, rgba(15, 23, 42, 0.95) 100%);
+      min-height: 7.5rem;
+      box-shadow: 0 10px 28px rgba(0, 40, 80, 0.35);
+    }
+    .mxsm-sweden-banner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, transparent 0%, transparent 46%, rgba(254, 204, 0, 0.95) 46%, rgba(254, 204, 0, 0.95) 54%, transparent 54%),
+        linear-gradient(0deg, transparent 0%, transparent 38%, rgba(254, 204, 0, 0.95) 38%, rgba(254, 204, 0, 0.95) 62%, transparent 62%);
+      opacity: 0.18;
+      pointer-events: none;
+    }
+    .mxsm-sweden-banner__inner {
+      position: relative;
+      z-index: 1;
+      padding: 1.15rem 1.25rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .mxsm-sweden-banner__eyebrow {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #ffe566;
+    }
+    .mxsm-sweden-banner__title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.15rem, 3.5vw, 1.65rem);
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.15;
+      margin: 0;
+    }
+    .mxsm-sweden-banner__sub {
+      margin: 0;
+      font-size: 0.95rem;
+      color: rgba(226, 232, 240, 0.88);
+    }
+    body.theme-mxsm h1.text-blue-500 {
+      color: #fecc00 !important;
+      text-shadow: 0 0 24px rgba(254, 204, 0, 0.2);
+    }
+    body.theme-mxsm .text-cyan-400,
+    body.theme-mxsm .text-cyan-300 {
+      color: #ffe566 !important;
+    }
+    body.theme-mxsm .border-cyan-500 {
+      border-color: rgba(254, 204, 0, 0.45) !important;
+    }
+    body.theme-mxsm .bg-gray-800.border.border-cyan-500 {
+      background: linear-gradient(135deg, rgba(0, 82, 147, 0.35), rgba(15, 23, 42, 0.95)) !important;
+    }
+    body.theme-mxsm .picks-wizard-progress__seg.is-done {
+      background: linear-gradient(90deg, #005293, #1d6fb8);
+    }
+    body.theme-mxsm .picks-wizard-progress__seg.is-active {
+      background: linear-gradient(90deg, #fecc00, #ffe566);
+      box-shadow: 0 0 14px rgba(254, 204, 0, 0.45);
+    }
+    body.theme-mxsm .wizard-step-hero--450 {
+      background: linear-gradient(135deg, rgba(0, 82, 147, 0.75), rgba(7, 20, 40, 0.95));
+      border-color: rgba(29, 111, 184, 0.55);
+    }
+    body.theme-mxsm .wizard-step-hero--250 {
+      background: linear-gradient(135deg, rgba(180, 140, 20, 0.35), rgba(7, 20, 40, 0.95));
+      border-color: rgba(254, 204, 0, 0.45);
+    }
+    body.theme-mxsm .wizard-step-hero--u17 {
+      background: linear-gradient(135deg, rgba(40, 120, 90, 0.45), rgba(7, 20, 40, 0.95));
+      border-color: rgba(80, 200, 150, 0.45);
+    }
+    body.theme-mxsm .wizard-step-hero--bonus {
+      background: linear-gradient(135deg, rgba(0, 82, 147, 0.55), rgba(120, 90, 0, 0.35), rgba(7, 20, 40, 0.95));
+      border-color: rgba(254, 204, 0, 0.4);
+    }
+    body.theme-mxsm .wizard-overview-toolbar {
+      border-color: rgba(254, 204, 0, 0.3);
+      background: rgba(7, 20, 40, 0.94);
+    }
+    body.theme-mxsm .rp-btn--primary {
+      background: linear-gradient(135deg, #fecc00, #e6b800);
+      color: #071428;
+      border-color: rgba(254, 204, 0, 0.7);
+      font-weight: 800;
+    }
+    body.theme-mxsm .rp-btn--primary:hover:not(:disabled) {
+      filter: brightness(1.06);
+    }
+    body.theme-mxsm .picks-status-row,
+    body.theme-mxsm #picks-status {
+      border-color: rgba(254, 204, 0, 0.35) !important;
+    }
     .race-picks-shell {
       width: 100%;
       max-width: 100%;
@@ -791,7 +916,7 @@
   <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=st-missing-cta-1">
 </head>
-<body class="text-gray-200 font-sans min-h-screen">
+<body class="text-gray-200 font-sans min-h-screen{% if (competition.series or '')|upper == 'MXSM' %} theme-mxsm{% endif %}">
   <div class="race-picks-shell mx-auto p-3 sm:p-4 md:p-6 max-w-7xl">
 
     <!-- Header - Responsiv layout -->
@@ -828,6 +953,26 @@
         <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--warm rp-btn--sm flex-1 sm:flex-initial">Trash Talk</a>
       </div>
 </div>
+
+    {% if (competition.series or '')|upper == 'MXSM' %}
+    <div class="mxsm-sweden-banner" aria-label="Motocross SM">
+      <div class="mxsm-sweden-banner__inner">
+        <span class="mxsm-sweden-banner__eyebrow">Motocross SM · Sverige</span>
+        <h2 class="mxsm-sweden-banner__title">{{ competition.name }}</h2>
+        <p class="mxsm-sweden-banner__sub">
+          {% if competition.event_date %}{{ competition.event_date.strftime('%d %b %Y') }} · {% endif %}
+          {% set _tippa_banner = mxsm_tippa_classes | default([]) %}
+          {% if _tippa_banner == ['mxsm_u17'] or (_tippa_banner|length == 1 and 'mxsm_u17' in _tippa_banner) %}
+          Tippa U17
+          {% elif has_u17 | default(false) %}
+          Tippa MX1 &amp; MX2 + U17
+          {% else %}
+          Tippa MX1 &amp; MX2
+          {% endif %}
+        </p>
+      </div>
+    </div>
+    {% endif %}
 
     <!-- WSX Background Banner -->
     {% if competition.series == "WSX" %}
@@ -868,8 +1013,9 @@
 
     {% set _is_wsx_hdr = competition.series == 'WSX' %}
     {% set _is_mxgp_hdr = (competition.series or '')|upper == 'MXGP' %}
-    {% set _class_450_hdr = 'SX1' if _is_wsx_hdr else ('MXGP' if _is_mxgp_hdr else '450cc') %}
-    {% set _class_250_hdr = 'SX2' if _is_wsx_hdr else ('MX2' if _is_mxgp_hdr else '250cc') %}
+    {% set _is_mxsm_hdr = (competition.series or '')|upper == 'MXSM' %}
+    {% set _class_450_hdr = 'SX1' if _is_wsx_hdr else ('MXGP' if _is_mxgp_hdr else ('MX1' if _is_mxsm_hdr else '450cc')) %}
+    {% set _class_250_hdr = 'SX2' if _is_wsx_hdr else ('MX2' if _is_mxgp_hdr else ('MX2' if _is_mxsm_hdr else '250cc')) %}
     {% set _trackmap_urls = trackmap_urls | default([]) %}
     {% set _good_to_know = picks_good_to_know | default([]) %}
     {% set _is_mx = is_mx_race | default(competition.series == 'MX') %}
@@ -896,7 +1042,9 @@
     {% set outset = out_ids | default([]) %}
     {% set is_wsx = competition.series == 'WSX' %}
     {% set is_mxgp = (competition.series or '')|upper == 'MXGP' %}
-    {% set skips_wildcard = is_wsx or is_mxgp %}
+    {% set is_mxsm = is_mxsm | default((competition.series or '')|upper == 'MXSM') %}
+    {% set has_u17 = has_u17 | default(false) %}
+    {% set skips_wildcard = is_wsx or is_mxgp or is_mxsm %}
     {% if is_wsx %}
     {% set class_450_label = 'SX1' %}
     {% set class_250_label = 'SX2' %}
@@ -907,13 +1055,40 @@
     {% set class_250_label = 'MX2' %}
     {% set class_450_data = 'mxgp' %}
     {% set class_250_data = 'mx2' %}
+    {% elif is_mxsm %}
+    {% set class_450_label = 'MX1' %}
+    {% set class_250_label = 'MX2' %}
+    {% set class_450_data = 'mxsm_mx1' %}
+    {% set class_250_data = 'mxsm_mx2' %}
     {% else %}
     {% set class_450_label = '450cc' %}
     {% set class_250_label = '250cc' %}
     {% set class_450_data = '450cc' %}
     {% set class_250_data = '250cc' %}
     {% endif %}
+    {% set class_u17_label = 'U17' %}
+    {% set class_u17_data = 'mxsm_u17' %}
     {% set initial_wiz_step = initial_wizard_step | default(1) %}
+    {% set _tippa = mxsm_tippa_classes | default([]) %}
+    {% if is_mxsm %}
+      {% set has_mx1 = ('mxsm_mx1' in _tippa) if _tippa else true %}
+      {% set has_mx2 = ('mxsm_mx2' in _tippa) if _tippa else true %}
+      {% set has_u17 = has_u17 | default(false) %}
+    {% else %}
+      {% set has_mx1 = true %}
+      {% set has_mx2 = true %}
+    {% endif %}
+    {# namespace: Jinja {% set %} inside if-blocks does not leak (breaks data-step) #}
+    {% set _wiz = namespace(n=0, mx1=0, mx2=0, u17=0) %}
+    {% if has_mx1 %}{% set _wiz.n = _wiz.n + 1 %}{% set _wiz.mx1 = _wiz.n %}{% endif %}
+    {% if has_mx2 %}{% set _wiz.n = _wiz.n + 1 %}{% set _wiz.mx2 = _wiz.n %}{% endif %}
+    {% if has_u17 %}{% set _wiz.n = _wiz.n + 1 %}{% set _wiz.u17 = _wiz.n %}{% endif %}
+    {% set step_mx1 = _wiz.mx1 %}
+    {% set step_mx2 = _wiz.mx2 %}
+    {% set step_u17 = _wiz.u17 %}
+    {% set wizard_bonus_step = _wiz.n + 1 %}
+    {% set wizard_total_steps = wizard_bonus_step %}
+    {% set wizard_u17_only = is_mxsm and has_u17 and not has_mx1 and not has_mx2 %}
     
     <!-- Picks Status Indicator (full bredd ovanför) -->
     <div id="picks-status" class="{{ initial_picks_status.container_class if initial_picks_status else 'mb-4 p-4 rounded-lg border-2 border-dashed border-cyan-500 bg-gray-800' }}">
@@ -939,7 +1114,7 @@
     </div>
 
     {% set _series_u = (competition.series or '')|upper %}
-    {% if season_team_promo_live and season_team_promo_copy and is_logged_in and not has_season_team and not is_wsx and not is_mxgp and _series_u not in ('WSX', 'MXON', 'MXGP') %}
+    {% if season_team_promo_live and season_team_promo_copy and is_logged_in and not has_season_team and not is_wsx and not is_mxgp and not is_mxsm and _series_u not in ('WSX', 'MXON', 'MXGP', 'MXSM') %}
     <div class="mb-4 p-4 rounded-xl border border-cyan-400/40 bg-gradient-to-r from-slate-900/90 to-cyan-950/40">
       <div class="text-[11px] font-bold uppercase tracking-wider text-cyan-300/90 mb-1">{{ season_team_promo_copy.eyebrow }}</div>
       <div class="font-bold text-white text-base mb-1">{{ season_team_promo_copy.title }}</div>
@@ -1005,7 +1180,7 @@
     </details>
     {% endif %}
 
-    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2"{% if competition.series == 'WSX' or (competition.series or '')|upper == 'MXGP' %} data-i18n="picks.guess_title_wsx"{% else %} data-i18n="picks.guess_title"{% endif %}>{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% elif (competition.series or '')|upper == 'MXGP' %}Gissa topp 6, Holeshot & Kvalvinnare{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
+    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2"{% if competition.series == 'WSX' or (competition.series or '')|upper == 'MXGP' %} data-i18n="picks.guess_title_wsx"{% elif is_mxsm %} data-i18n="{% if wizard_u17_only %}picks.guess_title_mxsm_u17{% elif has_u17 %}picks.guess_title_mxsm_u17_full{% else %}picks.guess_title_mxsm{% endif %}"{% else %} data-i18n="picks.guess_title"{% endif %}>{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% elif (competition.series or '')|upper == 'MXGP' %}Gissa topp 6, Holeshot & Kvalvinnare{% elif wizard_u17_only %}Gissa U17 topp 6 & Holeshot{% elif is_mxsm and has_u17 %}Gissa topp 6 (MX1/MX2/U17) & Holeshot{% elif is_mxsm %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
     {% if competition.series == 'SMX' %}
     <p class="mb-4 text-sm text-slate-300 bg-slate-900/70 border border-slate-600/50 rounded-lg px-3 py-2">
       Startlista = SMX Combined <strong class="text-white">topp 30</strong>:
@@ -1028,17 +1203,18 @@
 
 <div id="picks-wizard" class="picks-wizard is-booting">
   <div class="picks-wizard-progress" aria-hidden="true">
-    <div class="picks-wizard-progress__seg{% if initial_wiz_step >= 1 %} is-active{% endif %}" data-step="1"></div>
-    <div class="picks-wizard-progress__seg{% if initial_wiz_step >= 2 %} is-active{% endif %}" data-step="2"></div>
-    <div class="picks-wizard-progress__seg{% if initial_wiz_step >= 3 %} is-active{% endif %}" data-step="3"></div>
+    {% for s in range(1, wizard_total_steps + 1) %}
+    <div class="picks-wizard-progress__seg{% if initial_wiz_step >= s %} is-active{% endif %}" data-step="{{ s }}"></div>
+    {% endfor %}
   </div>
 
-  <!-- Steg 1: 450 / SX1 -->
-  <section id="wizard-step-1" class="wizard-step{% if initial_wiz_step == 1 %} wizard-step-active{% endif %}" data-step="1"{% if initial_wiz_step != 1 %} hidden{% endif %}>
+  {% if has_mx1 %}
+  <!-- MX1 / 450 / SX1 topp 6 -->
+  <section id="wizard-step-{{ step_mx1 }}" class="wizard-step{% if initial_wiz_step == step_mx1 %} wizard-step-active{% endif %}" data-step="{{ step_mx1 }}" data-wizard-class="450"{% if initial_wiz_step != step_mx1 %} hidden{% endif %}>
     <header class="wizard-step-hero wizard-step-hero--450">
       <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/bikers.svg') }}" alt="">
       <div>
-        <h2><span data-i18n="picks.step1">Steg 1</span> — {{ class_450_label }} <span data-i18n="picks.top6">topp 6</span></h2>
+        <h2><span>Steg {{ step_mx1 }}</span> — {{ class_450_label }} <span data-i18n="picks.top6">topp 6</span></h2>
         <p data-i18n-sv="Välj dina 6 förare. Snabbval ovan eller listan nedan." data-i18n-en="Choose your 6 riders. Quick picks above or the list below.">Välj dina 6 förare. Snabbval ovan eller listan nedan.</p>
       </div>
     </header>
@@ -1074,13 +1250,15 @@
       {% endfor %}
     </div>
   </section>
+  {% endif %}
 
-  <!-- Steg 2: 250 / SX2 -->
-  <section id="wizard-step-2" class="wizard-step{% if initial_wiz_step == 2 %} wizard-step-active{% endif %}" data-step="2"{% if initial_wiz_step != 2 %} hidden{% endif %}>
+  {% if has_mx2 %}
+  <!-- MX2 / 250 / SX2 topp 6 -->
+  <section id="wizard-step-{{ step_mx2 }}" class="wizard-step{% if initial_wiz_step == step_mx2 %} wizard-step-active{% endif %}" data-step="{{ step_mx2 }}" data-wizard-class="250"{% if initial_wiz_step != step_mx2 %} hidden{% endif %}>
     <header class="wizard-step-hero wizard-step-hero--250">
       <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/blue_biker.svg') }}" alt="">
       <div>
-        <h2><span data-i18n="picks.step2">Steg 2</span> — {{ class_250_label }} <span data-i18n="picks.top6">topp 6</span></h2>
+        <h2><span>Steg {{ step_mx2 }}</span> — {{ class_250_label }} <span data-i18n="picks.top6">topp 6</span></h2>
         <p data-i18n-sv="Välj 6 förare i {{ class_250_label }}." data-i18n-en="Choose 6 riders in {{ class_250_label }}.">Välj 6 förare i {{ class_250_label }}.</p>
       </div>
     </header>
@@ -1116,9 +1294,58 @@
       {% endfor %}
     </div>
   </section>
+  {% endif %}
 
-  <!-- Steg 3: Holeshot + Wildcard (eller översikt när alla val är klara) -->
-  <section id="wizard-step-3" class="wizard-step{% if initial_wiz_step == 3 %} wizard-step-active{% endif %}{% if initial_picks_status and initial_picks_status.icon == '✅' %} wizard-step--complete wizard-step--overview{% endif %}" data-step="3"{% if initial_wiz_step != 3 %} hidden{% endif %}>
+  {% if has_u17 %}
+  <!-- U17 topp 6 (eget steg endast när klassen ingår i deltävlingen) -->
+  <section id="wizard-step-{{ step_u17 }}" class="wizard-step{% if initial_wiz_step == step_u17 %} wizard-step-active{% endif %}" data-step="{{ step_u17 }}" data-wizard-class="u17"{% if initial_wiz_step != step_u17 %} hidden{% endif %}>
+    <header class="wizard-step-hero wizard-step-hero--u17">
+      <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/blue_biker.svg') }}" alt="">
+      <div>
+        <h2><span>Steg {{ step_u17 }}</span> — {{ class_u17_label }} <span data-i18n="picks.top6">topp 6</span></h2>
+        <p>Välj 6 förare i {{ class_u17_label }}. Holeshot kommer i nästa steg.</p>
+      </div>
+    </header>
+    <div id="wizard-quick-u17" class="wizard-quick-picks"></div>
+    <p class="wizard-slot-hint">Nu väljer du plats 1</p>
+    <div class="wizard-picks-column">
+      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">{{ class_u17_label }}</h3>
+      {% for i in range(1, 7) %}
+        <div class="pick-row mb-1.5">
+          <div class="preview-avatar-wrap">
+            <img id="prev-u17-{{ i }}" class="preview-img" alt="" loading="lazy" decoding="async" />
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
+            <div class="rider-selector" data-class="{{ class_u17_data }}" data-position="{{ i }}">
+              <div class="rider-selector-input" onclick="toggleRiderSelector('{{ class_u17_data }}', {{ i }})">
+                <span class="selected-rider" data-i18n="picks.choose_placeholder">-- välj förare --</span>
+                <div class="flex items-center gap-2">
+                  <span class="clear-selection" onclick="clearRiderSelection('{{ class_u17_data }}', {{ i }}); event.stopPropagation();" style="display: none;">✕</span>
+                  <span class="dropdown-arrow">▼</span>
+                </div>
+              </div>
+              <div class="rider-selector-dropdown" style="display: none;">
+                <div class="search-box">
+                  <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('{{ class_u17_data }}', {{ i }}, this.value)">
+                </div>
+                <div class="rider-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    {% for i in range(1, 7) %}
+    <select name="pick_u17_{{ i }}" style="display: none;">
+      <option value="">-- välj förare --</option>
+    </select>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <!-- Sista steget: Holeshot (+ wildcard/kval) eller översikt -->
+  <section id="wizard-step-{{ wizard_bonus_step }}" class="wizard-step{% if initial_wiz_step == wizard_bonus_step %} wizard-step-active{% endif %}{% if initial_picks_status and initial_picks_status.icon == '✅' %} wizard-step--complete wizard-step--overview{% endif %}" data-step="{{ wizard_bonus_step }}"{% if initial_wiz_step != wizard_bonus_step %} hidden{% endif %}>
     <header class="wizard-step-hero wizard-step-hero--bonus">
       <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/bike_silhouette.svg') }}" alt="">
       <div>
@@ -1126,8 +1353,8 @@
         <h2 data-i18n-sv="Översikt — dina val" data-i18n-en="Overview — your picks">Översikt — dina val</h2>
         <p data-i18n-sv="Inlämnat! Dina val är registrerade. Redigera om du vill ändra innan deadline." data-i18n-en="Submitted! Your picks are registered. Edit if you want to change them before the deadline.">Inlämnat! Dina val är registrerade. Redigera om du vill ändra innan deadline.</p>
         {% else %}
-        <h2><span data-i18n="picks.step3">Steg 3</span> — Holeshot{% if is_mxgp %} & Kvalvinnare{% elif not is_wsx %} & Wildcard{% endif %}</h2>
-        <p>{% if is_wsx %}Vem tar första kurvan i SX1 och SX2?{% elif is_mxgp %}Holeshot Race 1 + tippa lördagens kvalvinnare i MXGP och MX2.{% else %}Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.{% endif %}</p>
+        <h2><span>Steg {{ wizard_bonus_step }}</span> — Holeshot{% if is_mxgp %} & Kvalvinnare{% elif not is_wsx and not is_mxsm %} & Wildcard{% endif %}</h2>
+        <p>{% if is_wsx %}Vem tar första kurvan i SX1 och SX2?{% elif is_mxgp %}Holeshot Race 1 + tippa lördagens kvalvinnare i MXGP och MX2.{% elif wizard_u17_only %}Vem tar första kurvan i U17?{% elif is_mxsm and has_u17 and has_mx1 and has_mx2 %}Vem tar första kurvan i MX1, MX2 och U17?{% elif is_mxsm %}Vem tar första kurvan{% if has_mx1 and has_mx2 %} i MX1 och MX2{% elif has_mx1 %} i MX1{% elif has_mx2 %} i MX2{% endif %}{% if has_u17 %}{% if has_mx1 or has_mx2 %} och {% else %} i {% endif %}U17{% endif %}?{% else %}Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.{% endif %}</p>
         {% endif %}
       </div>
     </header>
@@ -1135,7 +1362,7 @@
     <div id="wizard-picks-summary" class="wizard-picks-summary" aria-live="polite"></div>
 
     {% set _series_u = (competition.series or '')|upper %}
-    {% if is_logged_in and not is_wsx and not is_mxgp and _series_u not in ('WSX', 'MXON', 'MXGP') %}
+    {% if is_logged_in and not is_wsx and not is_mxgp and not is_mxsm and _series_u not in ('WSX', 'MXON', 'MXGP', 'MXSM') %}
     <div id="season-team-under-picks-wrap" class="st-under-picks-wrap">
       {% if has_season_team and season_team_riders %}
       {% include 'partials/season_team_under_picks.html' %}
@@ -1149,7 +1376,8 @@
     <div id="wizard-step-3-forms" class="wizard-step-3-forms{% if initial_picks_status and initial_picks_status.icon == '✅' %} is-collapsed{% endif %}">
     <div class="mt-2">
       <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md" data-i18n="picks.holeshot">Gissa Holeshot</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2{% if has_mx1 and has_mx2 and has_u17 %} lg:grid-cols-3{% endif %} gap-3 sm:gap-4">
+        {% if has_mx1 %}
         <div>
           <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">{{ class_450_label }}:</label>
           <div class="rider-selector" data-class="holeshot-450">
@@ -1165,6 +1393,8 @@
             </div>
           </div>
         </div>
+        {% endif %}
+        {% if has_mx2 %}
         <div>
           <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">{{ class_250_label }}:</label>
           <div class="rider-selector" data-class="holeshot-250">
@@ -1180,13 +1410,40 @@
             </div>
           </div>
         </div>
+        {% endif %}
+        {% if has_u17 %}
+        <div>
+          <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">{{ class_u17_label }}:</label>
+          <div class="rider-selector" data-class="holeshot-u17">
+            <div class="rider-selector-input" onclick="toggleRiderSelector('holeshot-u17', 0)">
+              <span class="selected-rider" data-i18n="picks.choose_placeholder">-- välj förare --</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="rider-selector-dropdown" style="display: none;">
+              <div class="search-box">
+                <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('holeshot-u17', 0, this.value)">
+              </div>
+              <div class="rider-list"></div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
       </div>
+      {% if has_mx1 %}
       <select id="holeshot-450" name="holeshot_450" style="display: none;">
         <option value="">-- välj förare --</option>
       </select>
+      {% endif %}
+      {% if has_mx2 %}
       <select id="holeshot-250" name="holeshot_250" style="display: none;">
         <option value="">-- välj förare --</option>
       </select>
+      {% endif %}
+      {% if has_u17 %}
+      <select id="holeshot-u17" name="holeshot_u17" style="display: none;">
+        <option value="">-- välj förare --</option>
+      </select>
+      {% endif %}
     </div>
 
     {% if is_mxgp %}
@@ -1261,7 +1518,7 @@
     {% endif %}
     </div><!-- /wizard-step-3-forms -->
 
-    <div id="wizard-step-save" class="wizard-step-save" style="display: {% if initial_wiz_step >= 3 %}block{% else %}none{% endif %};">
+    <div id="wizard-step-save" class="wizard-step-save" style="display: {% if initial_wiz_step >= wizard_bonus_step %}block{% else %}none{% endif %};">
       <div class="wizard-step-save__actions mt-4 sm:mt-6">
         <button type="button" id="save-picks-btn" onclick="savePicks()" class="rp-btn rp-btn--primary" data-i18n="picks.submit">Lämna in mina val</button>
         {% if picks_locked %}
@@ -1276,7 +1533,7 @@
 
   <footer class="wizard-nav">
     <button type="button" id="wizard-btn-back" class="rp-btn rp-btn--secondary wizard-nav__btn wizard-nav__btn--back" disabled data-i18n-sv="← Tillbaka" data-i18n-en="← Back">← Tillbaka</button>
-    <span id="wizard-step-label" class="wizard-nav__label" data-i18n-sv="Steg 1 av 3" data-i18n-en="Step 1 of 3">Steg 1 av 3</span>
+    <span id="wizard-step-label" class="wizard-nav__label">Steg 1 av {{ wizard_total_steps }}</span>
     <button type="button" id="wizard-btn-next" class="rp-btn rp-btn--accent wizard-nav__btn wizard-nav__btn--next" data-i18n-sv="Nästa: {{ class_250_label }} →" data-i18n-en="Next: {{ class_250_label }} →">Nästa: {{ class_250_label }} →</button>
   </footer>
   <p class="wizard-draft-note">{% if initial_picks_status and initial_picks_status.icon == '✅' %}Dina val är registrerade hos tävlingen. Redigera och uppdatera om du vill ändra innan deadline.{% else %}Utkast sparas automatiskt på den här enheten. Lämna in för att registrera hos tävlingen.{% endif %}</p>
@@ -1301,8 +1558,9 @@
     {% endif %}
     {% set is_wsx = competition.series == 'WSX' %}
     {% set is_mxgp = (competition.series or '')|upper == 'MXGP' %}
-    {% set class_450_label = 'SX1' if is_wsx else ('MXGP' if is_mxgp else '450cc') %}
-    {% set class_250_label = 'SX2' if is_wsx else ('MX2' if is_mxgp else '250cc') %}
+    {% set is_mxsm = is_mxsm | default((competition.series or '')|upper == 'MXSM') %}
+    {% set class_450_label = 'SX1' if is_wsx else ('MXGP' if is_mxgp else ('MX1' if is_mxsm else '450cc')) %}
+    {% set class_250_label = 'SX2' if is_wsx else ('MX2' if is_mxgp else ('MX2' if is_mxsm else '250cc')) %}
     <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2">Resultat vs Dina Val</h2>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
       <div>
@@ -1320,7 +1578,7 @@
       <div id="holeshot-results" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"></div>
     </div>
 
-    {% if competition.series != 'WSX' and (competition.series or '')|upper != 'MXGP' %}
+    {% if competition.series != 'WSX' and (competition.series or '')|upper not in ('MXGP', 'MXSM') %}
     <div class="mt-4 sm:mt-6">
       <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">Wildcard Resultat</h3>
       <div id="wildcard-result" class="p-3 sm:p-4 bg-purple-900/40 border border-purple-500 rounded"></div>
@@ -1345,28 +1603,50 @@
       if (u === 'WSX') return 'WSX';
       if (u === 'MXON' || u === 'MXON') return 'MXON';
       if (u === 'MXGP') return 'MXGP';
+      if (u === 'MXSM') return 'MXSM';
       return u || null;
     })(competitionSeries);
     if (_homeCode) localStorage.setItem('home_selected_series', _homeCode);
   } catch (_) {}
   const isWSXSeries = competitionSeries === 'WSX';
   const isMXGPSeries = String(competitionSeries || '').toUpperCase() === 'MXGP';
+  const isMXSMSeries = String(competitionSeries || '').toUpperCase() === 'MXSM';
+  const hasU17 = {{ has_u17 | default(false) | tojson }};
+  const mxsmTippaClasses = {{ (mxsm_tippa_classes | default([])) | tojson }};
+  const hasMx1 = isMXSMSeries
+    ? (mxsmTippaClasses.length ? mxsmTippaClasses.includes('mxsm_mx1') : true)
+    : true;
+  const hasMx2 = isMXSMSeries
+    ? (mxsmTippaClasses.length ? mxsmTippaClasses.includes('mxsm_mx2') : true)
+    : true;
   const isSMXSeries = competitionSeries === 'SMX';
-  const isAmaSeasonTeamSeries = !isWSXSeries && !isMXGPSeries
-    && !['MXON', 'MXGP'].includes(String(competitionSeries || '').toUpperCase());
+  const isAmaSeasonTeamSeries = !isWSXSeries && !isMXGPSeries && !isMXSMSeries
+    && !['MXON', 'MXGP', 'MXSM'].includes(String(competitionSeries || '').toUpperCase());
   const hasSeasonTeam = {{ has_season_team | default(false) | tojson }};
   window.__HAS_SEASON_TEAM__ = hasSeasonTeam;
-  const skipsWildcard = isWSXSeries || isMXGPSeries;
-  const tippaClass450 = isWSXSeries ? 'wsx_sx1' : (isMXGPSeries ? 'mxgp' : '450cc');
-  const tippaClass250 = isWSXSeries ? 'wsx_sx2' : (isMXGPSeries ? 'mx2' : '250cc');
-  const tippaClasses = [tippaClass450, tippaClass250];
-  const tippaLabel450 = isWSXSeries ? 'SX1' : (isMXGPSeries ? 'MXGP' : '450cc');
-  const tippaLabel250 = isWSXSeries ? 'SX2' : (isMXGPSeries ? 'MX2' : '250cc');
-  // 12 topp6 + 2 HS + (WSX: 0 WC | övriga: 1 WC) + (MXGP: 2 kval)
-  const tippaRequiredCount = isMXGPSeries ? 16 : (isWSXSeries ? 14 : 15);
+  const skipsWildcard = isWSXSeries || isMXGPSeries || isMXSMSeries;
+  const tippaClass450 = isWSXSeries ? 'wsx_sx1' : (isMXGPSeries ? 'mxgp' : (isMXSMSeries ? 'mxsm_mx1' : '450cc'));
+  const tippaClass250 = isWSXSeries ? 'wsx_sx2' : (isMXGPSeries ? 'mx2' : (isMXSMSeries ? 'mxsm_mx2' : '250cc'));
+  const tippaClassU17 = 'mxsm_u17';
+  const tippaClasses = [
+    ...(hasMx1 ? [tippaClass450] : []),
+    ...(hasMx2 ? [tippaClass250] : []),
+    ...(hasU17 ? [tippaClassU17] : []),
+  ];
+  const tippaLabel450 = isWSXSeries ? 'SX1' : (isMXGPSeries ? 'MXGP' : (isMXSMSeries ? 'MX1' : '450cc'));
+  const tippaLabel250 = isWSXSeries ? 'SX2' : (isMXGPSeries ? 'MX2' : (isMXSMSeries ? 'MX2' : '250cc'));
+  const tippaLabelU17 = 'U17';
+  // Per tippa-klass: 6 topp + 1 HS. MXGP +2 kval. Övriga +1 WC.
+  const tippaRequiredCount = isMXGPSeries
+    ? 16
+    : isMXSMSeries
+    ? Math.max(tippaClasses.length, 1) * 7
+    : isWSXSeries
+    ? 14
+    : 15;
   const actualResults = {{ actual_results|tojson }};
   const holeshotResults = {{ holeshot_results|tojson }};
-  const allRiders = {{ (riders_450_json + riders_250_json) | tojson }};
+  const allRiders = {{ (riders_450_json + riders_250_json + (riders_u17_json | default([]))) | tojson }};
   window.allRiders = allRiders;
   const validRiderIdSet = new Set(allRiders.map((r) => String(r.id)));
   function isValidTippaRiderId(riderId) {
@@ -1387,8 +1667,9 @@
   function hiddenPickSelectName(riderClass, position) {
     const pos = Number(position);
     if (Number.isNaN(pos) || pos < 1 || pos > 6) return null;
-    if (riderClass === tippaClass450 || riderClass === '450cc' || riderClass === 'wsx_sx1' || riderClass === 'mxgp') return `pick_450_${pos}`;
-    if (riderClass === tippaClass250 || riderClass === '250cc' || riderClass === 'wsx_sx2' || riderClass === 'mx2') return `pick_250_${pos}`;
+    if (riderClass === tippaClass450 || riderClass === '450cc' || riderClass === 'wsx_sx1' || riderClass === 'mxgp' || riderClass === 'mxsm_mx1') return `pick_450_${pos}`;
+    if (riderClass === tippaClass250 || riderClass === '250cc' || riderClass === 'wsx_sx2' || riderClass === 'mx2' || riderClass === 'mxsm_mx2') return `pick_250_${pos}`;
+    if (riderClass === tippaClassU17 || riderClass === 'mxsm_u17') return `pick_u17_${pos}`;
     return null;
   }
   window.hiddenPickSelectName = hiddenPickSelectName;
@@ -1464,9 +1745,13 @@
   window.riderBadge = riderBadge;
 
   function riderOptionLabel(r) {
-    const brand = r.bike_brand || '';
+    const brand = String(r.bike_brand || '').trim();
     const badge = riderBadge(r.rider_number);
-    let label = badge ? `${badge} ${r.name} (${brand})` : `${r.name} (${brand})`;
+    let label = badge ? `${badge} ${r.name}` : String(r.name || '');
+    // Skip empty "()" when roster has no brand (common for some MXSM riders).
+    if (brand && brand !== '-' && brand.toLowerCase() !== 'unknown') {
+      label += ` (${brand})`;
+    }
     if (isSMXSeries && r.smx_zone === 'lcq') {
       label += ' · LCQ';
     } else if (isSMXSeries && r.smx_rank) {
@@ -1546,13 +1831,19 @@
 
   function pickColumn450List() {
     return sortTippaRiders(
-      allRiders.filter((r) => r.class === tippaClass450 || r.class === '450cc' || r.class === 'wsx_sx1' || r.class === 'mxgp')
+      allRiders.filter((r) => r.class === tippaClass450 || r.class === '450cc' || r.class === 'wsx_sx1' || r.class === 'mxgp' || r.class === 'mxsm_mx1')
     );
   }
 
   function pickColumn250List() {
     return sortTippaRiders(
-      allRiders.filter((r) => r.class === tippaClass250 || r.class === '250cc' || r.class === 'wsx_sx2' || r.class === 'mx2')
+      allRiders.filter((r) => r.class === tippaClass250 || r.class === '250cc' || r.class === 'wsx_sx2' || r.class === 'mx2' || r.class === 'mxsm_mx2')
+    );
+  }
+
+  function pickColumnU17List() {
+    return sortTippaRiders(
+      allRiders.filter((r) => r.class === tippaClassU17 || r.class === 'mxsm_u17')
     );
   }
 
@@ -1562,6 +1853,7 @@
       dc === '450cc' ||
       dc === 'wsx_sx1' ||
       dc === 'mxgp' ||
+      dc === 'mxsm_mx1' ||
       dc === 'holeshot-450' ||
       dc === 'wildcard-pick' ||
       dc === 'qualifying-mxgp'
@@ -1573,10 +1865,14 @@
       dc === '250cc' ||
       dc === 'wsx_sx2' ||
       dc === 'mx2' ||
+      dc === 'mxsm_mx2' ||
       dc === 'holeshot-250' ||
       dc === 'qualifying-mx2'
     ) {
       return pickColumn250List();
+    }
+    if (dc === tippaClassU17 || dc === 'mxsm_u17' || dc === 'holeshot-u17') {
+      return pickColumnU17List();
     }
     return [];
   }
@@ -1649,6 +1945,8 @@
         selectHoleshotRider('450', rider.id, label);
       } else if (dataClass === 'holeshot-250') {
         selectHoleshotRider('250', rider.id, label);
+      } else if (dataClass === 'holeshot-u17') {
+        selectHoleshotRider('u17', rider.id, label);
       } else if (dataClass === 'qualifying-mxgp') {
         selectQualifyingRider('mxgp', rider.id, label);
       } else if (dataClass === 'qualifying-mx2') {
@@ -1748,12 +2046,26 @@
 
         const span = selector.querySelector('.selected-rider');
         const current = (span?.textContent || '').trim();
-        if (!isEmptyRiderText(current) && selector.dataset.selectedRiderId === rid) continue;
+        // Labels already set (e.g. from applyMyPicks / overview): still refresh
+        // preview avatars — MXSM uses brand logos here, and lazy imgs in hidden
+        // steps often never loaded until "Redigera".
+        if (!isEmptyRiderText(current) && selector.dataset.selectedRiderId === rid) {
+          onPickChange(riderClass, i, rid);
+          continue;
+        }
 
         const rider = allRiders.find((r) => String(r.id) === rid);
         if (!rider) continue;
 
-        const label = riderOptionLabel(rider);
+        let label = riderOptionLabel(rider);
+        // Don't wipe a label that already has a brand when roster brand is empty.
+        if (
+          !isEmptyRiderText(current) &&
+          /\([^)]+\)/.test(current) &&
+          !String(rider.bike_brand || '').trim()
+        ) {
+          label = current;
+        }
         if (span) {
           span.textContent = label;
           span.removeAttribute('data-i18n');
@@ -1795,6 +2107,7 @@
     topClasses.forEach(restoreTop6);
     restoreBonus('holeshot-450', 'holeshot-450');
     restoreBonus('holeshot-250', 'holeshot-250');
+    if (hasU17) restoreBonus('holeshot-u17', 'holeshot-u17');
     if (!skipsWildcard) restoreBonus('wildcard-pick', 'wildcard-pick');
     topClasses.forEach((cls) => {
       removeDuplicateTop6Selections(cls);
@@ -1825,6 +2138,7 @@
       mapHidden('qualifying-mx2', 'qualifying-mx2');
     }
     mapHidden('holeshot-250', 'holeshot-250');
+    if (hasU17) mapHidden('holeshot-u17', 'holeshot-u17');
     mapHidden('wildcard-pick', 'wildcard-pick');
 
     const topClasses = tippaClasses;
@@ -1852,12 +2166,19 @@
   function populateHiddenSelectsFromJson() {
     const l450 = pickColumn450List();
     const l250 = pickColumn250List();
+    const lU17 = hasU17 ? pickColumnU17List() : [];
     for (let i = 1; i <= 6; i++) {
       fillSelectFromRiders(document.querySelector(`select[name="pick_450_${i}"]`), l450, emptyRiderLabel());
       fillSelectFromRiders(document.querySelector(`select[name="pick_250_${i}"]`), l250, emptyRiderLabel());
+      if (hasU17) {
+        fillSelectFromRiders(document.querySelector(`select[name="pick_u17_${i}"]`), lU17, emptyRiderLabel());
+      }
     }
     fillSelectFromRiders(document.getElementById('holeshot-450'), l450, emptyRiderLabel());
     fillSelectFromRiders(document.getElementById('holeshot-250'), l250, emptyRiderLabel());
+    if (hasU17) {
+      fillSelectFromRiders(document.getElementById('holeshot-u17'), lU17, emptyRiderLabel());
+    }
     if (isMXGPSeries) {
       fillSelectFromRiders(document.getElementById('qualifying-mxgp'), l450, emptyRiderLabel());
       fillSelectFromRiders(document.getElementById('qualifying-mx2'), l250, emptyRiderLabel());
@@ -1910,7 +2231,8 @@
     });
 
     // Save holeshot picks
-    ['450', '250'].forEach(classType => {
+    const hsTypes = hasU17 ? ['450', '250', 'u17'] : ['450', '250'];
+    hsTypes.forEach(classType => {
       const selector = document.querySelector(`.rider-selector[data-class="holeshot-${classType}"]`);
       if (selector) {
         const selectedRiderSpan = selector.querySelector('.selected-rider');
@@ -1998,7 +2320,7 @@
       let pruned = false;
       const dropIfInvalid = (pick) => {
         if (!pick || pick.riderId == null) return null;
-        if ((isWSXSeries || isSMXSeries) && !isValidTippaRiderId(pick.riderId)) {
+        if ((isWSXSeries || isSMXSeries || isMXSMSeries) && !isValidTippaRiderId(pick.riderId)) {
           pruned = true;
           return null;
         }
@@ -2047,7 +2369,7 @@
       });
 
       // Load holeshot picks
-      ['450', '250'].forEach(classType => {
+      (hasU17 ? ['450', '250', 'u17'] : ['450', '250']).forEach(classType => {
         if (picks.holeshotPicks && picks.holeshotPicks[classType]) {
           const pick = dropIfInvalid(picks.holeshotPicks[classType]);
           if (!pick) {
@@ -2225,9 +2547,29 @@
       selector.classList.add('open');
       
       // Update rider selectors to hide already selected / OUT riders
-      if (riderClass === '450cc' || riderClass === '250cc' || riderClass === 'wsx_sx1' || riderClass === 'wsx_sx2') {
+      if (
+        riderClass === tippaClass450 ||
+        riderClass === tippaClass250 ||
+        riderClass === tippaClassU17 ||
+        riderClass === '450cc' ||
+        riderClass === '250cc' ||
+        riderClass === 'wsx_sx1' ||
+        riderClass === 'wsx_sx2' ||
+        riderClass === 'mxgp' ||
+        riderClass === 'mx2' ||
+        riderClass === 'mxsm_mx1' ||
+        riderClass === 'mxsm_mx2' ||
+        riderClass === 'mxsm_u17'
+      ) {
         updateRiderSelectors(riderClass);
-      } else if (riderClass === 'wildcard-pick' || riderClass === 'holeshot-450' || riderClass === 'holeshot-250') {
+        // Re-apply search filter with chosen-id exclusion (MXSM/MXGP etc.)
+        filterRiders(riderClass, position, '');
+      } else if (
+        riderClass === 'wildcard-pick' ||
+        riderClass === 'holeshot-450' ||
+        riderClass === 'holeshot-250' ||
+        riderClass === 'holeshot-u17'
+      ) {
         filterRiders(riderClass, 0, '');
       }
       
@@ -2284,25 +2626,12 @@
             handleImageError(this);
           };
         } else {
-          // No image found, use brand logo directly
-          if (rider && rider.bike_brand) {
-            const brandName = (rider.bike_brand || "").toLowerCase().trim();
-            const brandMap = {
-              'honda': 'honda',
-              'ktm': 'ktm',
-              'yamaha': 'yamaha',
-              'kawasaki': 'kawasaki',
-              'suzuki': 'suzuki',
-              'husqvarna': 'husqvarna',
-              'gasgas': 'gasgas',
-              'beta': 'beta',
-              'triumph': 'triumph'
-            };
-            const logoName = brandMap[brandName] || brandName;
-            img.src = `/static/brand_logos/${logoName}.png`;
-          } else {
-            img.src = '/static/brand_logos/honda.png';
-          }
+          // No image found, use brand logo (or neutral unknown — never default Honda)
+          img.src = brandLogoSrcFor(rider);
+          img.onerror = function () {
+            this.onerror = null;
+            this.src = UNKNOWN_BRAND_LOGO;
+          };
         }
       }
     });
@@ -2419,7 +2748,20 @@
     
     // Get currently selected riders to hide (topp 6 duplicates; wildcard får inte återanvända topp 6 450)
     let chosenRiderIds = [];
-    if (riderClass === '450cc' || riderClass === '250cc' || riderClass === 'wsx_sx1' || riderClass === 'wsx_sx2') {
+    const isTop6Class =
+      riderClass === tippaClass450 ||
+      riderClass === tippaClass250 ||
+      riderClass === tippaClassU17 ||
+      riderClass === '450cc' ||
+      riderClass === '250cc' ||
+      riderClass === 'wsx_sx1' ||
+      riderClass === 'wsx_sx2' ||
+      riderClass === 'mxgp' ||
+      riderClass === 'mx2' ||
+      riderClass === 'mxsm_mx1' ||
+      riderClass === 'mxsm_mx2' ||
+      riderClass === 'mxsm_u17';
+    if (isTop6Class) {
       const selectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
       chosenRiderIds = Array.from(selectors).map(sel => {
         if (sel === selector) return null; // Skip current selector
@@ -2784,16 +3126,24 @@ function applyRiderPortraitFraming(img) {
   }
 }
 
+const KNOWN_BRAND_LOGOS = {
+  honda: 'honda', ktm: 'ktm', yamaha: 'yamaha', kawasaki: 'kawasaki',
+  suzuki: 'suzuki', husqvarna: 'husqvarna', gasgas: 'gasgas',
+  beta: 'beta', triumph: 'triumph', ducati: 'ducati',
+  // Fantic m.fl. saknar egen fil — visa neutral tills logo finns
+  fantic: 'unknown',
+};
+const UNKNOWN_BRAND_LOGO = '/static/brand_logos/unknown.png';
+
 function brandLogoSrcFor(rider) {
-  if (!rider || !rider.bike_brand) return '/static/brand_logos/honda.png';
+  if (!rider || !rider.bike_brand) return UNKNOWN_BRAND_LOGO;
   const brandName = (rider.bike_brand || '').toLowerCase().trim();
-  const brandMap = {
-    honda: 'honda', ktm: 'ktm', yamaha: 'yamaha', kawasaki: 'kawasaki',
-    suzuki: 'suzuki', husqvarna: 'husqvarna', gasgas: 'gasgas',
-    beta: 'beta', triumph: 'triumph', ducati: 'ducati',
-  };
-  const logoName = brandMap[brandName] || brandName;
-  return `/static/brand_logos/${logoName}.png`;
+  if (!brandName || brandName === '-' || brandName === 'unknown') return UNKNOWN_BRAND_LOGO;
+  const key = brandName.replace(/\s+/g, '');
+  const logoName = KNOWN_BRAND_LOGOS[brandName] || KNOWN_BRAND_LOGOS[key];
+  if (logoName) return `/static/brand_logos/${logoName}.png`;
+  // Okänt märke: försök filnamn; onerror → unknown
+  return `/static/brand_logos/${key}.png`;
 }
 
 /** Riktigt porträtt från server-JSON (samma som gamla race picks). */
@@ -2859,7 +3209,7 @@ function loadSelectedRiderPortrait(riderId, imgEl) {
 function imgSrcFor(riderId) {
   const r = allRiders.find((x) => Number(x.id) === Number(riderId));
   if (!r) {
-    return '/static/brand_logos/honda.png'; // Default fallback
+    return UNKNOWN_BRAND_LOGO;
   }
 
   const photo = effectivePhotoUrl(r);
@@ -2878,14 +3228,24 @@ function imgSrcFor(riderId) {
       return `/static/${imagePath}`;
     }
   }
+
+  const sp = String(r.series_participation || '').toLowerCase();
+  const cls = String(r.class || '');
+  const isMxsm = cls.startsWith('mxsm_') || sp === 'mxsm';
+  const isMxgp = cls === 'mxgp' || cls === 'mx2' || sp === 'mxgp';
   
   // 2. Check if this is a WSX rider - try WSX folder first (before standard format)
-  const isWSX = (r.class === 'wsx_sx1' || r.class === 'wsx_sx2' || (r.series_participation && r.series_participation && r.series_participation.toLowerCase() === 'wsx'));
+  const isWSX = (cls === 'wsx_sx1' || cls === 'wsx_sx2' || sp === 'wsx');
   if (staticRiderImages && isWSX && r.name) {
     const nameLower = (r.name || '').toLowerCase().trim();
     const fileSlugNoSpaces = nameLower.replace(/\./g, '').replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
     // Clean filenames (no spaces) — legacy "slug (1).jpg" handled in handleImageError
     return `/static/riders/wsx/${fileSlugNoSpaces}.jpg`;
+  }
+
+  // MXSM/MXGP: ingen lokal riders/-mapp — hoppa till märkeslogo (eller unknown)
+  if (isMxsm || isMxgp) {
+    return brandLogoSrcFor(r);
   }
   
   // 3. If no image_url, try 250 East/West subfolder first (e.g. riders/250east/50_enzo_lopes.png)
@@ -2904,21 +3264,8 @@ function imgSrcFor(riderId) {
     return `/static/${pngPath}`;
   }
 
-  // 5. If no rider image found, use bike brand logo directly
-  if (r.bike_brand) {
-    const brandName = (r.bike_brand || "").toLowerCase().trim();
-    const brandMap = {
-      'honda': 'honda', 'ktm': 'ktm', 'yamaha': 'yamaha',
-      'kawasaki': 'kawasaki', 'suzuki': 'suzuki', 'husqvarna': 'husqvarna',
-      'gasgas': 'gasgas', 'beta': 'beta', 'triumph': 'triumph', 'ducati': 'ducati'
-    };
-    const logoName = brandMap[brandName] || brandName;
-    const url = `/static/brand_logos/${logoName}.png`;
-    return url;
-  }
-  
-  // 6. Final fallback to Honda logo
-  return '/static/brand_logos/honda.png';
+  // 5–6. Brand logo, or neutral unknown (never pretend everyone rides Honda)
+  return brandLogoSrcFor(r);
 }
 
 window.imgSrcFor = imgSrcFor;
@@ -2948,27 +3295,16 @@ function handleImageError(img) {
     }
   }
   
-  // Always have a fallback to brand logo
+  // Always have a fallback to brand logo (unknown — never Honda as default)
   const fallbackToBrandLogo = function() {
-    if (rider && rider.bike_brand) {
-      const brandName = (rider.bike_brand || "").toLowerCase().trim();
-      const brandMap = {
-        'honda': 'honda', 'ktm': 'ktm', 'yamaha': 'yamaha',
-        'kawasaki': 'kawasaki', 'suzuki': 'suzuki', 'husqvarna': 'husqvarna',
-        'gasgas': 'gasgas', 'beta': 'beta', 'triumph': 'triumph', 'ducati': 'ducati'
-      };
-      const logoName = brandMap[brandName] || brandName;
-      img.src = `/static/brand_logos/${logoName}.png`;
+    const logo = brandLogoSrcFor(rider);
+    img.onerror = function() {
+      img.onerror = null;
+      img.src = UNKNOWN_BRAND_LOGO;
       applyRiderPortraitFraming(img);
-      img.onerror = function() {
-        // Final fallback
-        img.src = '/static/brand_logos/honda.png';
-        applyRiderPortraitFraming(img);
-      };
-    } else {
-      img.src = '/static/brand_logos/honda.png';
-      applyRiderPortraitFraming(img);
-    }
+    };
+    img.src = logo;
+    applyRiderPortraitFraming(img);
   };
   
   // If we tried jpg from wsx folder, try variations
@@ -3058,17 +3394,22 @@ function handleImageError(img) {
 // Function to update picks status indicator
 function isMyPicksComplete(myPicks) {
   if (!myPicks) return false;
-  const hasTop6 = myPicks.top6_picks && myPicks.top6_picks.length > 0;
-  const holeshot450 = myPicks.holeshot_picks?.['450cc'] || myPicks.holeshot_picks?.['wsx_sx1'] || myPicks.holeshot_picks?.['mxgp'];
-  const holeshot250 = myPicks.holeshot_picks?.['250cc'] || myPicks.holeshot_picks?.['wsx_sx2'] || myPicks.holeshot_picks?.['mx2'];
-  const hasHoleshot = Boolean(holeshot450 || holeshot250);
+  const holeshot450 = hasMx1
+    ? (myPicks.holeshot_picks?.['450cc'] || myPicks.holeshot_picks?.['wsx_sx1'] || myPicks.holeshot_picks?.['mxgp'] || myPicks.holeshot_picks?.['mxsm_mx1'])
+    : null;
+  const holeshot250 = hasMx2
+    ? (myPicks.holeshot_picks?.['250cc'] || myPicks.holeshot_picks?.['wsx_sx2'] || myPicks.holeshot_picks?.['mx2'] || myPicks.holeshot_picks?.['mxsm_mx2'])
+    : null;
+  const holeshotU17 = hasU17 ? myPicks.holeshot_picks?.['mxsm_u17'] : null;
   const hasWildcardPick = myPicks.wildcard_pick && !skipsWildcard;
   const qm = myPicks.qualifying_picks || {};
   const qualCount = isMXGPSeries ? ((qm.mxgp ? 1 : 0) + (qm.mx2 ? 1 : 0)) : 0;
-  const holeshotCount = (holeshot450 ? 1 : 0) + (holeshot250 ? 1 : 0);
+  const holeshotCount =
+    (hasMx1 && holeshot450 ? 1 : 0) +
+    (hasMx2 && holeshot250 ? 1 : 0) +
+    (holeshotU17 ? 1 : 0);
   const totalPicks = (myPicks.top6_picks?.length || 0) + holeshotCount + (hasWildcardPick ? 1 : 0) + qualCount;
-  const totalRequired = tippaRequiredCount;
-  return totalPicks >= totalRequired;
+  return totalPicks >= tippaRequiredCount;
 }
 
 function finishWizardBoot() {
@@ -3105,15 +3446,16 @@ function updatePicksStatus(myPicks) {
   
   const hasTop6Picks = myPicks.top6_picks && myPicks.top6_picks.length > 0;
   // Check for holeshot picks - backend may return '450cc'/'250cc' or 'wsx_sx1'/'wsx_sx2'
-  const holeshot450 = myPicks.holeshot_picks?.['450cc'] || myPicks.holeshot_picks?.['wsx_sx1'] || myPicks.holeshot_picks?.['mxgp'];
-  const holeshot250 = myPicks.holeshot_picks?.['250cc'] || myPicks.holeshot_picks?.['wsx_sx2'] || myPicks.holeshot_picks?.['mx2'];
+  const holeshot450 = myPicks.holeshot_picks?.['450cc'] || myPicks.holeshot_picks?.['wsx_sx1'] || myPicks.holeshot_picks?.['mxgp'] || myPicks.holeshot_picks?.['mxsm_mx1'];
+  const holeshot250 = myPicks.holeshot_picks?.['250cc'] || myPicks.holeshot_picks?.['wsx_sx2'] || myPicks.holeshot_picks?.['mx2'] || myPicks.holeshot_picks?.['mxsm_mx2'];
+  const holeshotU17 = hasU17 ? myPicks.holeshot_picks?.['mxsm_u17'] : null;
   const hasHoleshotPicks = myPicks.holeshot_picks && (holeshot450 || holeshot250);
   const hasWildcardPick = myPicks.wildcard_pick && !skipsWildcard;
   const qmStatus = myPicks.qualifying_picks || {};
   const qualCountStatus = isMXGPSeries ? ((qmStatus.mxgp ? 1 : 0) + (qmStatus.mx2 ? 1 : 0)) : 0;
   
   const holeshotCount = myPicks.holeshot_picks ? 
-    ((holeshot450 ? 1 : 0) + (holeshot250 ? 1 : 0)) : 0;
+    ((holeshot450 ? 1 : 0) + (holeshot250 ? 1 : 0) + (holeshotU17 ? 1 : 0)) : 0;
   
   const totalPicks = (myPicks.top6_picks?.length || 0) + holeshotCount + (hasWildcardPick ? 1 : 0) + qualCountStatus;
   
@@ -3126,7 +3468,7 @@ function updatePicksStatus(myPicks) {
     statusTitle.textContent = _en ? 'No picks made yet' : 'Inga val gjorda än';
     statusMessage.textContent = isMXGPSeries
       ? (_en ? 'Make your top 6, holeshot and qualifying picks' : 'Gör dina val för topp 6, holeshot och kvalvinnare')
-      : isWSXSeries
+      : (isWSXSeries || isMXSMSeries)
       ? (_en ? 'Make your top 6 and holeshot picks' : 'Gör dina val för topp 6 och holeshot')
       : (_en ? 'Make your top 6, holeshot and wildcard picks' : 'Gör dina val för topp 6, holeshot och wildcard');
     statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-yellow-400 bg-yellow-900/30';
@@ -3182,6 +3524,14 @@ function resetBonusPicksUI() {
   if (hs250Sel) hs250Sel.textContent = emptyRiderLabel();
   if (hs450SelEl) delete hs450SelEl.dataset.selectedRiderId;
   if (hs250SelEl) delete hs250SelEl.dataset.selectedRiderId;
+  if (hasU17) {
+    const hsU17SelEl = document.querySelector('.rider-selector[data-class="holeshot-u17"]');
+    const hsU17Sel = hsU17SelEl?.querySelector('.selected-rider');
+    if (hsU17Sel) hsU17Sel.textContent = emptyRiderLabel();
+    if (hsU17SelEl) delete hsU17SelEl.dataset.selectedRiderId;
+    const hsU17Hidden = document.getElementById('holeshot-u17');
+    if (hsU17Hidden) hsU17Hidden.value = '';
+  }
   if (isMXGPSeries) {
     for (const dc of ['qualifying-mxgp', 'qualifying-mx2']) {
       const sel = document.querySelector(`.rider-selector[data-class="${dc}"]`);
@@ -3259,13 +3609,15 @@ function onPickChange(cls, pos, riderId = null) {
     val = sel?.value;
   }
   
-  // Determine top class (450/SX1/MXGP) vs bottom (250/SX2/MX2)
+  // Determine top class (450/SX1/MXGP/MX1) vs bottom (250/SX2/MX2) vs U17
+  const isU17 = cls === tippaClassU17 || cls === 'mxsm_u17';
   const is450 =
     cls === tippaClass450 ||
     cls.startsWith("450") ||
     cls === 'wsx_sx1' ||
-    cls === 'mxgp';
-  const imgId = is450 ? `prev-450-${pos}` : `prev-250-${pos}`;
+    cls === 'mxgp' ||
+    cls === 'mxsm_mx1';
+  const imgId = isU17 ? `prev-u17-${pos}` : (is450 ? `prev-450-${pos}` : `prev-250-${pos}`);
   const img = document.getElementById(imgId);
 
   if (img) {
@@ -3338,7 +3690,13 @@ function onPickChange(cls, pos, riderId = null) {
     if (hsContainer) {
       // Use correct class names based on series
       const holeshotClasses = tippaClasses;
-      const holeshotLabels = isWSXSeries ? ['SX1', 'SX2'] : (isMXGPSeries ? ['MXGP', 'MX2'] : ['450cc', '250cc']);
+      const holeshotLabels = isWSXSeries
+        ? ['SX1', 'SX2']
+        : (isMXGPSeries
+          ? ['MXGP', 'MX2']
+          : (isMXSMSeries
+            ? (hasU17 ? ['MX1', 'MX2', 'U17'] : ['MX1', 'MX2'])
+            : ['450cc', '250cc']));
       
       hsContainer.innerHTML = holeshotClasses
         .map((cls, index) => {
@@ -3398,15 +3756,19 @@ function onPickChange(cls, pos, riderId = null) {
       const clearBtn = selector.querySelector('.clear-selection');
       if (clearBtn) clearBtn.style.display = 'block';
 
-      const hiddenSelectClass = (p.class === tippaClass450 || p.class === 'wsx_sx1' || p.class === '450cc' || p.class === 'mxgp') ? '450' : '250';
+      const isU17Pick = p.class === tippaClassU17 || p.class === 'mxsm_u17';
+      const is450Pick = p.class === tippaClass450 || p.class === 'wsx_sx1' || p.class === '450cc' || p.class === 'mxgp' || p.class === 'mxsm_mx1';
+      const hiddenSelectClass = isU17Pick ? 'u17' : (is450Pick ? '450' : '250');
       const hiddenSelect = document.querySelector(`select[name="pick_${hiddenSelectClass}_${p.predicted_position}"]`);
       ensureSelectValue(hiddenSelect, p.rider_id, riderText);
       selector.dataset.selectedRiderId = String(p.rider_id);
 
       if (loadPortraits) {
-        const imgId = (p.class === tippaClass450 || p.class === 'wsx_sx1' || p.class === '450cc' || p.class === 'mxgp' || (p.class || '').startsWith("450"))
-          ? `prev-450-${p.predicted_position}`
-          : `prev-250-${p.predicted_position}`;
+        const imgId = isU17Pick
+          ? `prev-u17-${p.predicted_position}`
+          : (is450Pick || (p.class || '').startsWith("450"))
+            ? `prev-450-${p.predicted_position}`
+            : `prev-250-${p.predicted_position}`;
         const img = document.getElementById(imgId);
         if (img) loadSelectedRiderPortrait(p.rider_id, img);
       }
@@ -3414,9 +3776,11 @@ function onPickChange(cls, pos, riderId = null) {
 
     updateRiderSelectors(tippaClass450);
     updateRiderSelectors(tippaClass250);
+    if (hasU17) updateRiderSelectors(tippaClassU17);
 
-    const holeshot450Id = myPicks.holeshot_picks?.["450cc"] || myPicks.holeshot_picks?.["wsx_sx1"] || myPicks.holeshot_picks?.["mxgp"];
-    const holeshot250Id = myPicks.holeshot_picks?.["250cc"] || myPicks.holeshot_picks?.["wsx_sx2"] || myPicks.holeshot_picks?.["mx2"];
+    const holeshot450Id = myPicks.holeshot_picks?.["450cc"] || myPicks.holeshot_picks?.["wsx_sx1"] || myPicks.holeshot_picks?.["mxgp"] || myPicks.holeshot_picks?.["mxsm_mx1"];
+    const holeshot250Id = myPicks.holeshot_picks?.["250cc"] || myPicks.holeshot_picks?.["wsx_sx2"] || myPicks.holeshot_picks?.["mx2"] || myPicks.holeshot_picks?.["mxsm_mx2"];
+    const holeshotU17Id = myPicks.holeshot_picks?.["mxsm_u17"] || myPicks.holeshot_u17?.rider_id;
 
     if (holeshot450Id) {
       const selector = document.querySelector('.rider-selector[data-class="holeshot-450"]');
@@ -3452,6 +3816,22 @@ function onPickChange(cls, pos, riderId = null) {
       }
     }
 
+    if (hasU17 && holeshotU17Id) {
+      const selector = document.querySelector('.rider-selector[data-class="holeshot-u17"]');
+      const rider = allRiders.find(r => Number(r.id) === Number(holeshotU17Id));
+      const label = rider ? riderOptionLabel(rider) : String(holeshotU17Id);
+      ensureSelectValue(document.getElementById("holeshot-u17"), holeshotU17Id, label);
+      if (selector) {
+        if (rider) {
+          const selectedRiderSpan = selector.querySelector('.selected-rider');
+          selectedRiderSpan.textContent = label;
+          selectedRiderSpan.removeAttribute('data-i18n');
+          const clearBtn = selector.querySelector('.clear-selection');
+          if (clearBtn) clearBtn.style.display = 'block';
+        }
+        selector.dataset.selectedRiderId = String(holeshotU17Id);
+      }
+    }
 
     const qualMxgpId = myPicks.qualifying_picks?.mxgp || myPicks.qualifying_mxgp?.rider_id;
     const qualMx2Id = myPicks.qualifying_picks?.mx2 || myPicks.qualifying_mx2?.rider_id;
@@ -3564,9 +3944,20 @@ function onPickChange(cls, pos, riderId = null) {
   function deferLoadPickPortraits(myPicks) {
     const run = () => {
       (myPicks.top6_picks || []).forEach((p) => {
-        const imgId = (p.class === 'wsx_sx1' || p.class === '450cc' || (p.class && p.class.startsWith("450")))
-          ? `prev-450-${p.predicted_position}`
-          : `prev-250-${p.predicted_position}`;
+        const cls = p.class || '';
+        const isU17 = cls === tippaClassU17 || cls === 'mxsm_u17';
+        const is450 =
+          cls === tippaClass450 ||
+          cls === 'wsx_sx1' ||
+          cls === '450cc' ||
+          cls === 'mxgp' ||
+          cls === 'mxsm_mx1' ||
+          cls.startsWith('450');
+        const imgId = isU17
+          ? `prev-u17-${p.predicted_position}`
+          : is450
+            ? `prev-450-${p.predicted_position}`
+            : `prev-250-${p.predicted_position}`;
         const img = document.getElementById(imgId);
         if (img && p.rider_id) loadSelectedRiderPortrait(p.rider_id, img);
       });
@@ -3865,6 +4256,20 @@ function onPickChange(cls, pos, riderId = null) {
     // Se till att dolda fält matchar det som syns (t.ex. efter snabböversikt / Ändra holeshot)
     if (typeof syncHiddenSelectsFromUi === 'function') syncHiddenSelectsFromUi();
 
+    // Already submitted, no edits — just return to overview (edit-walkback exit).
+    if (
+      window._picksSubmittedOnServer &&
+      typeof hasPicksChanged === 'function' &&
+      !hasPicksChanged()
+    ) {
+      if (window.PicksWizard && typeof window.PicksWizard.markSubmitted === 'function') {
+        window.PicksWizard.markSubmitted();
+      } else if (window.PicksWizard && typeof window.PicksWizard.showOverview === 'function') {
+        window.PicksWizard.showOverview();
+      }
+      return;
+    }
+
     const riderClassesCheck = tippaClasses;
     riderClassesCheck.forEach((cls) => removeDuplicateTop6Selections(cls));
 
@@ -3903,6 +4308,21 @@ function onPickChange(cls, pos, riderId = null) {
       }
     }
 
+    if (hasU17) {
+      for (let i = 1; i <= 6; i++) {
+        const selector = document.querySelector(`.rider-selector[data-class="${tippaClassU17}"][data-position="${i}"]`);
+        if (selector) {
+          const riderId = getRiderIdFromSelector(selector);
+          if (riderId) {
+            picks.push({
+              position: i,
+              rider_id: riderId,
+              class: tippaClassU17
+            });
+          }
+        }
+      }
+    }
 
     // Kontrollera dubletter
     const riderIds = picks.map(p => p.rider_id);
@@ -3912,34 +4332,43 @@ function onPickChange(cls, pos, riderId = null) {
       return;
     }
 
-    // Kontrollera att exakt 6 förare är valda för varje klass
+    // Kontrollera att exakt 6 förare är valda för varje tippa-klass
     const picks450 = picks.filter((p) => p.class === tippaClass450);
     const picks250 = picks.filter((p) => p.class === tippaClass250);
-    
-    
-    if (picks450.length !== 6) {
-      const classLabel = tippaLabel450;
-      alert(`Du måste välja exakt 6 förare för ${classLabel} (Top 6).`);
-      return;
-    }
-    
-    if (picks250.length !== 6) {
-      const classLabel = tippaLabel250;
-      alert(`Du måste välja exakt 6 förare för ${classLabel} (Top 6).`);
+    const picksU17 = picks.filter((p) => p.class === tippaClassU17);
+
+    if (hasMx1 && picks450.length !== 6) {
+      alert(`Du måste välja exakt 6 förare för ${tippaLabel450} (Top 6).`);
       return;
     }
 
-    // Validera holeshot (krävs för alla serier)
-    const holeshot450 = document.getElementById("holeshot-450")?.value;
-    const holeshot250 = document.getElementById("holeshot-250")?.value;
-    
-    if (!holeshot450) {
+    if (hasMx2 && picks250.length !== 6) {
+      alert(`Du måste välja exakt 6 förare för ${tippaLabel250} (Top 6).`);
+      return;
+    }
+
+    if (hasU17 && picksU17.length !== 6) {
+      alert(`Du måste välja exakt 6 förare för ${tippaLabelU17} (Top 6).`);
+      return;
+    }
+
+    // Validera holeshot för klasserna i denna deltävling
+    const holeshot450 = hasMx1 ? document.getElementById("holeshot-450")?.value : null;
+    const holeshot250 = hasMx2 ? document.getElementById("holeshot-250")?.value : null;
+    const holeshotU17 = hasU17 ? document.getElementById("holeshot-u17")?.value : null;
+
+    if (hasMx1 && !holeshot450) {
       alert(`Du måste välja en holeshot-förare för ${tippaLabel450}.`);
       return;
     }
-    
-    if (!holeshot250) {
+
+    if (hasMx2 && !holeshot250) {
       alert(`Du måste välja en holeshot-förare för ${tippaLabel250}.`);
+      return;
+    }
+
+    if (hasU17 && !holeshotU17) {
+      alert(`Du måste välja en holeshot-förare för ${tippaLabelU17}.`);
       return;
     }
 
@@ -3970,7 +4399,12 @@ function onPickChange(cls, pos, riderId = null) {
         return;
       }
     }
-    for (const hsId of [document.getElementById("holeshot-450")?.value, document.getElementById("holeshot-250")?.value]) {
+    const hsOutCheck = [
+      document.getElementById("holeshot-450")?.value,
+      document.getElementById("holeshot-250")?.value,
+    ];
+    if (hasU17) hsOutCheck.push(document.getElementById("holeshot-u17")?.value);
+    for (const hsId of hsOutCheck) {
       if (hsId && OUT_IDS.includes(Number(hsId))) {
         alert(`${outName(hsId)} (holeshot) är OUT. Välj en annan.`);
         return;
@@ -4005,6 +4439,7 @@ function onPickChange(cls, pos, riderId = null) {
       picks: picks,
       holeshot_450: document.getElementById("holeshot-450")?.value,
       holeshot_250: document.getElementById("holeshot-250")?.value,
+      holeshot_u17: hasU17 ? (document.getElementById("holeshot-u17")?.value || null) : null,
       wildcard_pick: skipsWildcard ? null : (document.getElementById("wildcard-pick")?.value || null),
       wildcard_pos: skipsWildcard ? null : (document.getElementById("wildcard-position")?.value || null),
       qualifying_mxgp: isMXGPSeries ? (document.getElementById("qualifying-mxgp")?.value || null) : null,
@@ -4154,7 +4589,7 @@ function onPickChange(cls, pos, riderId = null) {
     }
   }
 
-  ["holeshot-450", "holeshot-250", "wildcard-pick", "qualifying-mxgp", "qualifying-mx2"].forEach((id) => {
+  ["holeshot-450", "holeshot-250", "holeshot-u17", "wildcard-pick", "qualifying-mxgp", "qualifying-mx2"].forEach((id) => {
   const sel = document.getElementById(id);
   if (!sel) return;
   sel.addEventListener("change", () => {
@@ -4177,15 +4612,20 @@ function onPickChange(cls, pos, riderId = null) {
     function getCurrentPicksState() {
       const hs450Sel = document.querySelector('.rider-selector[data-class="holeshot-450"]');
       const hs250Sel = document.querySelector('.rider-selector[data-class="holeshot-250"]');
+      const hsU17Sel = hasU17 ? document.querySelector('.rider-selector[data-class="holeshot-u17"]') : null;
       const wcSel = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
       const hs450Id = getRiderIdFromSelector(hs450Sel) || document.getElementById("holeshot-450")?.value || "";
       const hs250Id = getRiderIdFromSelector(hs250Sel) || document.getElementById("holeshot-250")?.value || "";
+      const hsU17Id = hasU17
+        ? (getRiderIdFromSelector(hsU17Sel) || document.getElementById("holeshot-u17")?.value || "")
+        : "";
       const wcId = getRiderIdFromSelector(wcSel) || document.getElementById("wildcard-pick")?.value || "";
 
       const state = {
         racePicks: [],
         holeshot450: hs450Id ? String(hs450Id) : "",
         holeshot250: hs250Id ? String(hs250Id) : "",
+        holeshotU17: hsU17Id ? String(hsU17Id) : "",
         wildcardPick: wcId ? String(wcId) : "",
         wildcardPos: document.getElementById("wildcard-position")?.value || ""
       };
@@ -4210,6 +4650,15 @@ function onPickChange(cls, pos, riderId = null) {
             state.racePicks.push({ position: i, rider_id: riderId, class: class250 });
           }
         }
+        if (hasU17) {
+          const selectorU17 = document.querySelector(`.rider-selector[data-class="${tippaClassU17}"][data-position="${i}"]`);
+          if (selectorU17) {
+            const riderId = getRiderIdFromSelector(selectorU17);
+            if (riderId) {
+              state.racePicks.push({ position: i, rider_id: riderId, class: tippaClassU17 });
+            }
+          }
+        }
       }
       
       return JSON.stringify(state);
@@ -4226,18 +4675,24 @@ function onPickChange(cls, pos, riderId = null) {
     function myPicksFromFormState() {
       try {
         const state = JSON.parse(getCurrentPicksState());
+        const hs = {
+          "450cc": state.holeshot450 || null,
+          "wsx_sx1": state.holeshot450 || null,
+          "mxgp": state.holeshot450 || null,
+          "mxsm_mx1": state.holeshot450 || null,
+          "250cc": state.holeshot250 || null,
+          "wsx_sx2": state.holeshot250 || null,
+          "mx2": state.holeshot250 || null,
+          "mxsm_mx2": state.holeshot250 || null,
+        };
+        if (hasU17) hs.mxsm_u17 = state.holeshotU17 || null;
         return {
           top6_picks: (state.racePicks || []).map((p) => ({
             rider_id: p.rider_id,
             predicted_position: p.position,
             class: p.class,
           })),
-          holeshot_picks: {
-            "450cc": state.holeshot450 || null,
-            "wsx_sx1": state.holeshot450 || null,
-            "250cc": state.holeshot250 || null,
-            "wsx_sx2": state.holeshot250 || null,
-          },
+          holeshot_picks: hs,
           wildcard_pick: state.wildcardPick || null,
         };
       } catch (e) {
@@ -4274,13 +4729,24 @@ function onPickChange(cls, pos, riderId = null) {
 
       if (submitted && !dirty) {
         saveBtn.style.display = "flex";
-        saveBtn.disabled = true;
-        saveBtn.classList.add("opacity-50", "cursor-not-allowed", "wizard-btn-submitted");
-        saveBtn.classList.remove("rp-btn--save-ready");
-        saveBtn.textContent =
-          (typeof MxI18n !== "undefined" && MxI18n.t && MxI18n.t("picks.submitted_btn")) || "Inlämnat ✓";
         const saveWrap = document.getElementById('wizard-step-save');
         if (saveWrap) saveWrap.style.display = '';
+        // Under redigering: låt knappen ta tillbaka till översikten (annars fastnar man).
+        if (window._wizardInEditMode) {
+          saveBtn.disabled = false;
+          saveBtn.classList.remove("opacity-50", "cursor-not-allowed", "wizard-btn-submitted");
+          saveBtn.classList.add("rp-btn--save-ready");
+          saveBtn.textContent =
+            (typeof MxI18n !== "undefined" && MxI18n.getLang && MxI18n.getLang() === "en")
+              ? "Back to overview"
+              : "Tillbaka till översikt";
+        } else {
+          saveBtn.disabled = true;
+          saveBtn.classList.add("opacity-50", "cursor-not-allowed", "wizard-btn-submitted");
+          saveBtn.classList.remove("rp-btn--save-ready");
+          saveBtn.textContent =
+            (typeof MxI18n !== "undefined" && MxI18n.t && MxI18n.t("picks.submitted_btn")) || "Inlämnat ✓";
+        }
       } else if (dirty || (formComplete && !submitted)) {
         saveBtn.style.display = "flex";
         saveBtn.disabled = false;
@@ -4344,8 +4810,9 @@ function onPickChange(cls, pos, riderId = null) {
       }
 
       const riderClassesForInit = tippaClasses;
+      const wizardBonusStep = tippaClasses.length + 1;
       const quickOverview =
-        isMyPicksComplete(initialMyPicks) && Number(initialWizardStep) === 3;
+        isMyPicksComplete(initialMyPicks) && Number(initialWizardStep) === wizardBonusStep;
 
       if (!quickOverview) {
         populateAllRiderDropdowns();
@@ -4358,10 +4825,12 @@ function onPickChange(cls, pos, riderId = null) {
 
       const wizardRoot = document.getElementById('picks-wizard');
       const serverPicksComplete = isMyPicksComplete(initialMyPicks);
+      const _hs = initialMyPicks?.holeshot_picks || {};
       const serverPickCount =
         (initialMyPicks?.top6_picks?.length || 0) +
-        (initialMyPicks?.holeshot_picks?.['450cc'] || initialMyPicks?.holeshot_picks?.['wsx_sx1'] || initialMyPicks?.holeshot_picks?.['mxgp'] ? 1 : 0) +
-        (initialMyPicks?.holeshot_picks?.['250cc'] || initialMyPicks?.holeshot_picks?.['wsx_sx2'] || initialMyPicks?.holeshot_picks?.['mx2'] ? 1 : 0) +
+        (_hs['450cc'] || _hs['wsx_sx1'] || _hs['mxgp'] || _hs['mxsm_mx1'] ? 1 : 0) +
+        (_hs['250cc'] || _hs['wsx_sx2'] || _hs['mx2'] || _hs['mxsm_mx2'] ? 1 : 0) +
+        (_hs['mxsm_u17'] ? 1 : 0) +
         (initialMyPicks?.wildcard_pick && !skipsWildcard ? 1 : 0) +
         (isMXGPSeries && initialMyPicks?.qualifying_picks?.mxgp ? 1 : 0) +
         (isMXGPSeries && initialMyPicks?.qualifying_picks?.mx2 ? 1 : 0);
@@ -4389,11 +4858,17 @@ function onPickChange(cls, pos, riderId = null) {
           competitionId,
           isWSX: isWSXSeries,
           isMXGP: isMXGPSeries,
+          isMXSM: isMXSMSeries,
+          hasMx1: hasMx1,
+          hasMx2: hasMx2,
+          hasU17: hasU17,
           skipsWildcard: skipsWildcard,
           class450: ps.class_450 || tippaClass450,
           class250: ps.class_250 || tippaClass250,
+          classU17: tippaClassU17,
           label450: tippaLabel450,
           label250: tippaLabel250,
+          labelU17: tippaLabelU17,
           suggestions: ps,
           startStep: initialWizardStep,
           picksComplete: serverPicksComplete,
@@ -4468,7 +4943,7 @@ function setMainTrackmap(src, thumbEl) {
 }
 
 </script>
-<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=mxgp-kval-1"></script>
+<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=mxsm-edit-brands-1"></script>
 
 {% if not is_logged_in %}
 {% set pit_pass_race_name = competition.name %}

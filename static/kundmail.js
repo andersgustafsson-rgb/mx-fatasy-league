@@ -1183,7 +1183,7 @@ Vi räknar med ca ${weeks} veckor innan vi kan skicka till dig.
 
 Är det okej att vänta? Bekräfta gärna innan vi lägger ordern hos MIVV. Om vi inte hört från dig inom 10 arbetsdagar makuleras beställningen.
 
-${outro}`;
+${mailOutro(ctx, { skipSympathy: true })}`;
       break;
     }
     case "delager": {
@@ -1492,7 +1492,7 @@ Vi regner med ca ${weeks} uger, før vi kan sende til dig.
 
 Er det okay at vente? Bekræft venligst, før vi afgiver ordren hos MIVV. Hvis vi ikke har hørt fra dig inden for 10 arbejdsdage, annulleres bestillingen.
 
-${outro}`;
+${mailOutro(ctx, { skipSympathy: true })}`;
       break;
     }
     case "delager": {
@@ -1801,7 +1801,7 @@ We currently expect around ${weeks} weeks before we can ship to you.
 
 Is it OK to wait? Please confirm before we place the order with MIVV. If we have not heard from you within 10 business days, the order will be cancelled.
 
-${outro}`;
+${mailOutro(ctx, { skipSympathy: true })}`;
       break;
     }
     case "delager": {

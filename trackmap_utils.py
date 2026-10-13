@@ -643,6 +643,16 @@ def get_picks_good_to_know(competition) -> list[str]:
         )
         return tips
 
+    if series.upper() == "MXSM":
+        tips.extend(
+            [
+                "MXSM: tippa topp 6 per klass + holeshot — ingen wildcard.",
+                "Klasserna styrs per deltävling (MX1/MX2, ibland + U17).",
+                "Deadline är 2 timmar före start — spara picks i tid.",
+            ]
+        )
+        return tips
+
     if is_smx_competition(competition):
         name = (getattr(competition, "name", None) or "").strip()
         venue = SMX_VENUE_LABELS.get(name, "")

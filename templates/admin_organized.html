@@ -770,6 +770,7 @@
             <button type="button" class="ap-nav-item" data-section="race-results" onclick="showSection('race-results', this)">SMX</button>
             <button type="button" class="ap-nav-item" data-section="wsx-results" onclick="showSection('wsx-results', this)">WSX</button>
             <button type="button" class="ap-nav-item" data-section="mxgp-scaffold" onclick="showSection('mxgp-scaffold', this)">MXGP</button>
+            <button type="button" class="ap-nav-item" data-section="mxsm-scaffold" onclick="showSection('mxsm-scaffold', this)">MXSM</button>
             <a href="/admin/mxon" class="ap-nav-item">MXoN</a>
             <p class="ap-nav-label">Spel</p>
             <button type="button" class="ap-nav-item" data-section="picks-management" onclick="showSection('picks-management', this)">Picks</button>
@@ -1238,6 +1239,137 @@
                     </div>
                 </details>
 
+            </div>
+        </div>
+
+        <!-- MXSM scaffold (admin test) -->
+        <div id="mxsm-scaffold" class="section-panel hidden">
+            <div class="section-card rounded-lg p-6 mb-6">
+                <div class="ap-hub-head">
+                    <h2>MXSM</h2>
+                    <p>2026-sandbox (roster + kalender). Tippa MX1/MX2 (+U17 per race). Orbits-PDF för resultat.</p>
+                </div>
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <a href="/admin/seed_mxsm" class="ap-btn ap-btn--primary"
+                       title="Seedar 2026 roster/kalender + 2027 UC + admin-test">
+                        Seed MXSM scaffold
+                    </a>
+                    <span class="text-xs text-gray-500">Idempotent — 244 förare, 7 race, tippa_classes per helg.</span>
+                </div>
+                <div class="admin-flow mb-6">
+                    <span><strong>1.</strong> Seed</span>
+                    <span><strong>2.</strong> Tippa som admin</span>
+                    <span><strong>3.</strong> Importera Orbits-PDF</span>
+                    <span><strong>4.</strong> Sätt holeshot (MX1/MX2/U17)</span>
+                    <span><strong>5.</strong> <button type="button" onclick="showSection('picks-management')" class="text-cyan-400 underline">Räkna om poäng</button></span>
+                </div>
+                <ul class="text-sm text-gray-300 space-y-2 list-disc list-inside mb-6">
+                    <li>Tippa: topp 6 MX1 + topp 6 MX2 + holeshot×2. U17 (topp 6 + HS) när <code class="text-cyan-300">tippa_classes</code> inkluderar U17 (alla utom Tibro).</li>
+                    <li>Ingen wildcard. 2-/3-heat spelar ingen roll — overall Pos gäller.</li>
+                    <li>Publik tippa låst tills <code class="text-cyan-300">MXSM_PUBLIC_PLAY</code>.</li>
+                </ul>
+
+                <div class="border border-gray-700 rounded-lg p-4 mb-4">
+                    <h3 class="text-lg font-semibold text-white mb-3">Orbits PDF → resultat</h3>
+                    <p class="text-sm text-gray-400 mb-3">MyLaps «Total För Dagen» (MX1 / MX2 / USM 125 U17). En PDF per klass.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Tävling</label>
+                            <select id="mxsm-orbits-comp" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                <option value="">Laddar…</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Klass (valfritt override)</label>
+                            <select id="mxsm-orbits-class" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                <option value="">Auto från PDF</option>
+                                <option value="mxsm_mx1">MX1</option>
+                                <option value="mxsm_mx2">MX2</option>
+                                <option value="mxsm_u17">U17</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-300 mb-2">PDF-fil</label>
+                        <input type="file" id="mxsm-orbits-file" accept=".pdf,application/pdf"
+                               class="w-full text-sm text-gray-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-cyan-600 file:text-white" />
+                    </div>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <button type="button" class="ap-btn ap-btn--secondary" onclick="previewMxsmOrbits()">Förhandsgranska</button>
+                        <button type="button" class="ap-btn ap-btn--primary" onclick="importMxsmOrbits()">Importera + räkna poäng</button>
+                    </div>
+                    <div id="mxsm-orbits-out" class="hidden space-y-3"></div>
+                </div>
+
+                <div class="border border-gray-700 rounded-lg p-4 mb-4">
+                    <h3 class="text-lg font-semibold text-white mb-3">Holeshot</h3>
+                    <p class="text-sm text-gray-400 mb-3">Orbits har ingen HS — sätt manuellt. MX1 + MX2 (+ U17 när tippa inkluderar U17). Poäng räknas om vid sparning.</p>
+                    <form method="POST" action="/admin/update_holeshot" class="space-y-4">
+                        <input type="hidden" name="next_section" value="mxsm-scaffold">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Tävling</label>
+                                <select id="mxsm-quick-holeshot-competition" data-searchable="1" name="competition_id" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" required onchange="loadQuickMxsmHoleshotRiders()">
+                                    <option value="">Laddar…</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot MX1</label>
+                                <select id="mxsm-quick-holeshot-mx1" data-searchable="1" name="holeshot_450" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <option value="">Ingen</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot MX2</label>
+                                <select id="mxsm-quick-holeshot-mx2" data-searchable="1" name="holeshot_250" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <option value="">Ingen</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot U17</label>
+                                <select id="mxsm-quick-holeshot-u17" data-searchable="1" name="holeshot_u17" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <option value="">Ingen</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="ap-btn ap-btn--primary">Spara holeshot</button>
+                    </form>
+                </div>
+
+                <div class="border border-gray-700 rounded-lg p-4 mb-4">
+                    <h3 class="text-lg font-semibold text-white mb-3">Rider OUT</h3>
+                    <p class="text-sm text-gray-400 mb-3">Samma som SMX: OUT döljs i tippa. Sätts även på framtida MXSM-race tills du clearar.</p>
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Tävling</label>
+                        <select id="mxsm-out-competition" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" onchange="loadMxsmOutPanel()">
+                            <option value="">Laddar…</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                        <div>
+                            <label class="block text-sm text-gray-300 mb-1">Lägg till OUT MX1</label>
+                            <select id="mxsm-out-mx1" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white mb-2"></select>
+                            <h4 class="text-cyan-300 font-semibold mb-1 text-sm">OUT – MX1</h4>
+                            <ul id="mxsm-out-list-mx1" class="text-sm text-gray-300 space-y-1 max-h-40 overflow-auto"></ul>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-300 mb-1">Lägg till OUT MX2</label>
+                            <select id="mxsm-out-mx2" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white mb-2"></select>
+                            <h4 class="text-cyan-300 font-semibold mb-1 text-sm">OUT – MX2</h4>
+                            <ul id="mxsm-out-list-mx2" class="text-sm text-gray-300 space-y-1 max-h-40 overflow-auto"></ul>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-300 mb-1">Lägg till OUT U17</label>
+                            <select id="mxsm-out-u17" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white mb-2"></select>
+                            <h4 class="text-cyan-300 font-semibold mb-1 text-sm">OUT – U17</h4>
+                            <ul id="mxsm-out-list-u17" class="text-sm text-gray-300 space-y-1 max-h-40 overflow-auto"></ul>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="setMxsmRiderOut('OUT')" class="btn-danger px-4 py-2 rounded-lg">Set OUT</button>
+                        <button type="button" onclick="setMxsmRiderOut('CLEAR')" class="ap-btn ap-btn--secondary">Clear</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -2793,6 +2925,7 @@
             'race-results': { title: 'SMX', sub: 'Importera resultat, holeshot och manuell inmatning' },
             'wsx-results': { title: 'WSX', sub: 'WSX-resultat och verktyg' },
             'mxgp-scaffold': { title: 'MXGP', sub: 'MXGP-scaffold' },
+            'mxsm-scaffold': { title: 'MXSM', sub: 'MXSM-scaffold' },
             'picks-management': { title: 'Picks', sub: 'Statistik, simulering och omräkning' },
             'rider-competition-management': { title: 'Förare & tävlingar', sub: 'Hantera roster och kalender' },
             'user-management': { title: 'Användare', sub: 'Konton och behörigheter' },
@@ -2843,6 +2976,9 @@
             }
             if (sectionId === 'mxgp-scaffold') {
                 loadMxgpAdminCompetitions();
+            }
+            if (sectionId === 'mxsm-scaffold') {
+                loadMxsmAdminCompetitions();
             }
             if (sectionId === 'picks-management') {
                 loadPicksStatsCompetitions(true);
@@ -6094,6 +6230,363 @@
                 if (typeof initSearchableSelects === 'function') initSearchableSelects();
             } catch (error) {
                 console.error('Error loading MXGP competitions:', error);
+            }
+        }
+
+        async function loadMxsmAdminCompetitions() {
+            try {
+                const data = await fetchCompetitionsForImportShared('MXSM');
+                const comps = data.competitions || [];
+                const fill = (id, placeholder) => {
+                    const select = document.getElementById(id);
+                    if (!select) return;
+                    select.innerHTML = `<option value="">${placeholder}</option>`;
+                    comps.forEach(comp => {
+                        const opt = document.createElement('option');
+                        opt.value = comp.id;
+                        opt.textContent = comp.name;
+                        select.appendChild(opt);
+                    });
+                };
+                fill('mxsm-orbits-comp', 'Välj MXSM-tävling...');
+                fill('mxsm-out-competition', 'Välj MXSM-tävling...');
+                fill('mxsm-quick-holeshot-competition', 'Välj MXSM-tävling...');
+                if (typeof initSearchableSelects === 'function') initSearchableSelects();
+            } catch (error) {
+                console.error('Error loading MXSM competitions:', error);
+                ['mxsm-orbits-comp', 'mxsm-out-competition', 'mxsm-quick-holeshot-competition'].forEach(id => {
+                    const select = document.getElementById(id);
+                    if (select) select.innerHTML = '<option value="">Fel vid laddning</option>';
+                });
+            }
+        }
+
+        async function loadQuickMxsmHoleshotRiders() {
+            const compId = document.getElementById('mxsm-quick-holeshot-competition')?.value;
+            const hsMx1 = document.getElementById('mxsm-quick-holeshot-mx1');
+            const hsMx2 = document.getElementById('mxsm-quick-holeshot-mx2');
+            const hsU17 = document.getElementById('mxsm-quick-holeshot-u17');
+            const clear = (el) => { if (el) el.innerHTML = '<option value="">Ingen</option>'; };
+            if (!compId) {
+                clear(hsMx1); clear(hsMx2); clear(hsU17);
+                return;
+            }
+            try {
+                const [resultsRes, ridersRes] = await Promise.all([
+                    fetch(`/admin/get_results/${compId}`),
+                    fetch(`/admin/get_out_status/${compId}`),
+                ]);
+                if (!ridersRes.ok) return;
+                const riders = await ridersRes.json();
+                if (!Array.isArray(riders)) return;
+
+                let existingMx1 = null;
+                let existingMx2 = null;
+                let existingU17 = null;
+                if (resultsRes.ok) {
+                    const resultsData = await resultsRes.json();
+                    const hs = resultsData.holeshot_results || [];
+                    existingMx1 = hs.find(h => h.class === 'mxsm_mx1' || h.class === '450cc');
+                    existingMx2 = hs.find(h => h.class === 'mxsm_mx2' || h.class === '250cc');
+                    existingU17 = hs.find(h => h.class === 'mxsm_u17' || h.class === 'u17');
+                }
+
+                const fill = (el, list, existing) => {
+                    if (!el) return;
+                    el.innerHTML = '<option value="">Ingen</option>';
+                    list.forEach(r => {
+                        const opt = document.createElement('option');
+                        opt.value = r.id;
+                        opt.textContent = (r.rider_number ? r.rider_number + ' ' : '') + r.name;
+                        if (existing && existing.rider_id == r.id) opt.selected = true;
+                        el.appendChild(opt);
+                    });
+                };
+                fill(hsMx1, riders.filter(r => r.class === 'mxsm_mx1'), existingMx1);
+                fill(hsMx2, riders.filter(r => r.class === 'mxsm_mx2'), existingMx2);
+                fill(hsU17, riders.filter(r => r.class === 'mxsm_u17'), existingU17);
+                if (typeof initSearchableSelects === 'function') initSearchableSelects();
+            } catch (error) {
+                console.error('Error loading MXSM holeshot riders:', error);
+            }
+        }
+
+        async function loadMxsmOutPanel() {
+            const compId = document.getElementById('mxsm-out-competition')?.value;
+            const sels = {
+                mxsm_mx1: document.getElementById('mxsm-out-mx1'),
+                mxsm_mx2: document.getElementById('mxsm-out-mx2'),
+                mxsm_u17: document.getElementById('mxsm-out-u17'),
+            };
+            const lists = {
+                mxsm_mx1: document.getElementById('mxsm-out-list-mx1'),
+                mxsm_mx2: document.getElementById('mxsm-out-list-mx2'),
+                mxsm_u17: document.getElementById('mxsm-out-list-u17'),
+            };
+            Object.values(sels).forEach(s => { if (s) s.innerHTML = '<option value="">Välj förare</option>'; });
+            Object.values(lists).forEach(l => { if (l) l.innerHTML = '<li class="text-gray-500">Välj tävling först</li>'; });
+            if (!compId) return;
+            try {
+                const res = await fetch(`/admin/get_out_status/${compId}`);
+                if (!res.ok) {
+                    alert('Kunde inte hämta MXSM-förare');
+                    return;
+                }
+                const riders = await res.json();
+                if (!Array.isArray(riders)) return;
+                Object.keys(sels).forEach(cls => {
+                    const sel = sels[cls];
+                    const list = lists[cls];
+                    const inClass = riders.filter(r => r.class === cls);
+                    if (sel) {
+                        sel.innerHTML = '<option value="">Välj förare</option>';
+                        inClass.filter(r => !r.is_out).forEach(r => {
+                            const opt = document.createElement('option');
+                            opt.value = r.id;
+                            opt.textContent = (r.rider_number ? '#' + r.rider_number + ' ' : '') + r.name;
+                            sel.appendChild(opt);
+                        });
+                    }
+                    if (list) {
+                        const outs = inClass.filter(r => r.is_out);
+                        if (!outs.length) {
+                            list.innerHTML = '<li class="text-gray-500">Ingen OUT</li>';
+                        } else {
+                            list.innerHTML = '';
+                            outs.forEach(r => {
+                                const li = document.createElement('li');
+                                li.className = 'cursor-pointer hover:text-cyan-300';
+                                li.dataset.riderId = r.id;
+                                li.innerHTML = `<span>#${r.rider_number || '–'} ${r.name}</span>`;
+                                li.onclick = () => clearMxsmOutRider(r.id, r.name);
+                                list.appendChild(li);
+                            });
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('loadMxsmOutPanel', e);
+            }
+        }
+
+        async function setMxsmRiderOut(status) {
+            const compId = document.getElementById('mxsm-out-competition')?.value;
+            if (!compId) { alert('Välj tävling först'); return; }
+            const riderIds = [
+                document.getElementById('mxsm-out-mx1')?.value,
+                document.getElementById('mxsm-out-mx2')?.value,
+                document.getElementById('mxsm-out-u17')?.value,
+            ].filter(Boolean);
+            if (!riderIds.length) { alert('Välj minst en förare'); return; }
+
+            let clearAllFuture = false;
+            if (status === 'CLEAR') {
+                clearAllFuture = confirm(
+                    'Ta bort OUT för alla framtida MXSM-tävlingar också?\n\nOK = ja, Avbryt = bara denna'
+                );
+            } else if (!confirm(`Sätt OUT på ${riderIds.length} förare? (gäller även framtida MXSM-race)`)) {
+                return;
+            }
+
+            try {
+                for (const rid of riderIds) {
+                    await fetch('/admin/set_out_status', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            competition_id: parseInt(compId),
+                            rider_id: parseInt(rid),
+                            status,
+                            clear_all_future: clearAllFuture,
+                        }),
+                    });
+                }
+                await loadMxsmOutPanel();
+                alert(status === 'OUT' ? '✅ OUT sparat' : '✅ OUT rensat');
+            } catch (e) {
+                alert('Fel: ' + e.message);
+            }
+        }
+
+        async function clearMxsmOutRider(riderId, riderName) {
+            const compId = document.getElementById('mxsm-out-competition')?.value;
+            if (!compId) return;
+            if (!confirm(`Ta bort ${riderName || 'föraren'} från OUT?`)) return;
+            const clearAllFuture = confirm('Ta bort för alla framtida MXSM-tävlingar också?\n\nOK = ja, Avbryt = bara denna');
+            try {
+                await fetch('/admin/set_out_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        competition_id: parseInt(compId),
+                        rider_id: parseInt(riderId),
+                        status: 'CLEAR',
+                        clear_all_future: clearAllFuture,
+                    }),
+                });
+                await loadMxsmOutPanel();
+            } catch (e) {
+                alert('Fel: ' + e.message);
+            }
+        }
+
+        function _mxsmOrbitsFormData() {
+            const fd = new FormData();
+            const compId = document.getElementById('mxsm-orbits-comp')?.value;
+            const cls = document.getElementById('mxsm-orbits-class')?.value || '';
+            const file = document.getElementById('mxsm-orbits-file')?.files?.[0];
+            if (compId) fd.append('competition_id', compId);
+            if (cls) fd.append('class_name', cls);
+            if (file) fd.append('file', file);
+            return { fd, compId, file };
+        }
+
+        function _mxsmClassLabel(cls) {
+            const m = { mxsm_mx1: 'MX1', mxsm_mx2: 'MX2', mxsm_u17: 'U17' };
+            return m[cls] || cls || '—';
+        }
+
+        function _escHtml(s) {
+            return String(s ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function renderMxsmOrbitsOut(data, { mode } = {}) {
+            const out = document.getElementById('mxsm-orbits-out');
+            if (!out) return;
+            out.classList.remove('hidden');
+
+            if (data.error) {
+                out.innerHTML = `<div class="rounded-lg border border-red-500/50 bg-red-900/30 p-3 text-sm text-red-200">${_escHtml(data.error)}</div>`;
+                return;
+            }
+
+            const isImport = mode === 'import';
+            const cls = data.class_name || data.preview?.class_name || '';
+            const rows = data.rows || data.preview?.rows || [];
+            const missing = data.missing || data.preview?.missing || [];
+            const skipped = data.skipped_names || data.skipped || [];
+            const matched = rows.filter((r) => r.found_in_db).length;
+            const missingCount = missing.length || rows.filter((r) => !r.found_in_db).length;
+            const importable = data.importable_count ?? rows.length;
+            const imported = data.imported;
+            const warnings = data.warnings || data.preview?.warnings || [];
+
+            const summaryBits = [
+                `<span class="text-cyan-300 font-semibold">${_escHtml(_mxsmClassLabel(cls))}</span>`,
+                isImport
+                    ? `<span class="text-emerald-300">${imported ?? 0} importerade</span>`
+                    : `<span>${importable} rader</span>`,
+                `<span class="text-emerald-400">${matched} matchade</span>`,
+                missingCount
+                    ? `<span class="text-amber-300">${missingCount} saknas i roster</span>`
+                    : `<span class="text-gray-400">alla matchade</span>`,
+            ];
+            if (isImport && skipped.length) {
+                summaryBits.push(`<span class="text-amber-300">${skipped.length} skippade</span>`);
+            }
+
+            const warnHtml = warnings.length
+                ? `<div class="text-xs text-amber-200/90 bg-amber-900/20 border border-amber-700/40 rounded-lg px-3 py-2">${warnings.map((w) => _escHtml(w)).join('<br>')}</div>`
+                : '';
+
+            const tableRows = rows.slice(0, 60).map((r) => {
+                const ok = !!r.found_in_db;
+                const name = r.db_rider_name || r.rider_name || '—';
+                const pdfName = r.rider_name && r.db_rider_name && r.rider_name !== r.db_rider_name
+                    ? `<div class="text-[10px] text-gray-500">PDF: ${_escHtml(r.rider_name)}</div>`
+                    : '';
+                const num = r.rider_number != null ? `#${_escHtml(r.rider_number)}` : '';
+                return `<tr class="${ok ? 'bg-emerald-950/20' : 'bg-amber-950/30'}">
+                    <td class="px-2 py-1.5 text-center font-mono text-cyan-300">${_escHtml(r.position ?? '—')}</td>
+                    <td class="px-2 py-1.5 font-mono text-gray-400">${num}</td>
+                    <td class="px-2 py-1.5">${_escHtml(name)}${pdfName}</td>
+                    <td class="px-2 py-1.5 text-center text-gray-400">${_escHtml(r.total_points ?? '')}</td>
+                    <td class="px-2 py-1.5 text-center">${ok
+                        ? '<span class="text-emerald-400 text-xs font-semibold">OK</span>'
+                        : '<span class="text-amber-300 text-xs font-semibold">SAKNAS</span>'}</td>
+                </tr>`;
+            }).join('');
+
+            const more = rows.length > 60
+                ? `<p class="text-xs text-gray-500 mt-1">Visar 60 av ${rows.length} rader.</p>`
+                : '';
+
+            const missingList = (missing.length ? missing : rows.filter((r) => !r.found_in_db))
+                .slice(0, 20)
+                .map((m) => `#${_escHtml(m.rider_number ?? '?')} ${_escHtml(m.rider_name || '')}`)
+                .join(' · ');
+
+            out.innerHTML = `
+                <div class="rounded-lg border border-gray-600 bg-gray-900/80 p-3 space-y-3">
+                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm">${summaryBits.join('<span class="text-gray-600">·</span>')}</div>
+                    ${warnHtml}
+                    <div class="overflow-auto max-h-72 rounded border border-gray-700">
+                        <table class="w-full text-xs text-left">
+                            <thead class="sticky top-0 bg-gray-800 text-gray-400">
+                                <tr>
+                                    <th class="px-2 py-1.5 w-12">Pos</th>
+                                    <th class="px-2 py-1.5 w-14">Nr</th>
+                                    <th class="px-2 py-1.5">Förare</th>
+                                    <th class="px-2 py-1.5 w-14 text-center">Poäng</th>
+                                    <th class="px-2 py-1.5 w-16 text-center">Match</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-gray-200 divide-y divide-gray-800">${tableRows || '<tr><td colspan="5" class="px-2 py-3 text-gray-500">Inga rader</td></tr>'}</tbody>
+                        </table>
+                    </div>
+                    ${more}
+                    ${missingList ? `<details class="text-xs"><summary class="cursor-pointer text-amber-300/90">Saknas i roster</summary><p class="mt-1 text-gray-400 leading-relaxed">${missingList}</p></details>` : ''}
+                    <details class="text-xs text-gray-500">
+                        <summary class="cursor-pointer hover:text-gray-300">Rå JSON</summary>
+                        <pre class="mt-2 overflow-auto max-h-40 text-[10px] text-gray-400 bg-black/40 rounded p-2">${_escHtml(JSON.stringify(data, null, 2))}</pre>
+                    </details>
+                </div>`;
+        }
+
+        async function previewMxsmOrbits() {
+            const { fd, file } = _mxsmOrbitsFormData();
+            if (!file) { alert('Välj en Orbits-PDF först'); return; }
+            if (String(file.name || '').endsWith('.crdownload')) {
+                alert('Filen ser ut att fortfarande laddas ner (.crdownload). Vänta tills PDF:en är klar.');
+                return;
+            }
+            try {
+                const res = await fetch('/preview_mxsm_orbits', { method: 'POST', body: fd });
+                const data = await res.json();
+                renderMxsmOrbitsOut(data, { mode: 'preview' });
+                if (!res.ok) alert(data.error || 'Preview misslyckades');
+            } catch (e) {
+                alert('Preview-fel: ' + e.message);
+            }
+        }
+
+        async function importMxsmOrbits() {
+            const { fd, compId, file } = _mxsmOrbitsFormData();
+            if (!compId) { alert('Välj tävling'); return; }
+            if (!file) { alert('Välj Orbits-PDF'); return; }
+            if (String(file.name || '').endsWith('.crdownload')) {
+                alert('Filen ser ut att fortfarande laddas ner (.crdownload). Vänta tills PDF:en är klar.');
+                return;
+            }
+            if (!confirm('Importera Orbits-resultat för vald klass och räkna om tipppoäng?')) return;
+            fd.append('calculate', '1');
+            fd.append('replace_class', '1');
+            try {
+                const res = await fetch('/import_mxsm_orbits', { method: 'POST', body: fd });
+                const data = await res.json();
+                renderMxsmOrbitsOut(data, { mode: 'import' });
+                if (!res.ok) {
+                    alert(data.error || 'Import misslyckades');
+                    return;
+                }
+                alert(`Importerade ${data.imported || 0} rader` +
+                    (data.skipped_names?.length ? ` (saknas: ${data.skipped_names.length})` : ''));
+            } catch (e) {
+                alert('Import-fel: ' + e.message);
             }
         }
 
