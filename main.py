@@ -9229,6 +9229,10 @@ def _bio_sentences(text: str) -> list[str]:
     cleaned = _clean_bio_text(text)
     if not cleaned:
         return []
+    if "\n" in cleaned:
+        lines = [p.strip() for p in cleaned.splitlines() if p.strip()]
+        if lines:
+            return lines
     parts = re.split(r"(?<=[.!?])\s+", cleaned)
     return [p.strip() for p in parts if p.strip()]
 
@@ -10468,6 +10472,15 @@ def rider_profile(rider_id: int):
     except Exception as exc:
         db.session.rollback()
         print(f"ensure_rider_content_from_twins: {exc}")
+    try:
+        from mxgp_rider_bio import ensure_mxgp_rider_bio
+
+        if ensure_mxgp_rider_bio(rider):
+            db.session.commit()
+            db.session.refresh(rider)
+    except Exception as exc:
+        db.session.rollback()
+        print(f"ensure_mxgp_rider_bio: {exc}")
     bio_source = resolve_rider_bio_source(rider, riders=twins)
     img_map = twins_by_name
     if img_map is None and twins:
@@ -10477,11 +10490,20 @@ def rider_profile(rider_id: int):
     bio_en = _bio_content_parts(bio_source.bio)
     bio_sv_raw = (bio_source.bio_sv or "").strip()
     bio_sv = _bio_content_parts(bio_sv_raw) if bio_sv_raw else {"hook": "", "body": "", "full": ""}
+    mxgp_profile_url = None
+    try:
+        from mxgp_rider_bio import is_mxgp_roster_rider, mxgp_official_profile_url
+
+        if is_mxgp_roster_rider(rider):
+            mxgp_profile_url = mxgp_official_profile_url(rider.name)
+    except Exception:
+        pass
     resp = make_response(
         render_template(
         'rider_detail.html',
         rider=rider,
         bio_source=bio_source,
+        mxgp_profile_url=mxgp_profile_url,
         series_label=_rider_directory_series_label(rider),
         brand_logo_url=_rider_brand_logo_url(rider.bike_brand),
         bio_en=bio_en,

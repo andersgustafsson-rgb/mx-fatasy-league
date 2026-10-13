@@ -131,6 +131,9 @@
               {% if rider.hometown %}<span>📍 {{ rider.hometown }}</span>{% endif %}
               {% if rider.team %}<span>🏢 {{ rider.team }}</span>{% endif %}
               {% if rider.turned_pro %}<span>{{ mx_icon('star') }}  Pro {{ rider.turned_pro }}</span>{% endif %}
+              {% if mxgp_profile_url %}
+              <a href="{{ mxgp_profile_url }}" target="_blank" rel="noopener" class="text-cyan-400/90 hover:text-cyan-300 underline-offset-2 hover:underline">mxgp.com-profil</a>
+              {% endif %}
             </div>
           </div>
         </div>

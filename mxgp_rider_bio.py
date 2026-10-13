@@ -203,6 +203,32 @@ def fetch_mxgp_rider_profile(name_or_url: str, *, timeout: int = 25) -> dict[str
     return {"ok": False, "error": last_err or "not_found", "tried_urls": urls}
 
 
+def is_mxgp_roster_rider(rider: Rider) -> bool:
+    sp = (getattr(rider, "series_participation", None) or "").strip().lower()
+    cls = (getattr(rider, "class_name", None) or "").strip().lower()
+    return sp == "mxgp" and cls in ("mxgp", "mx2")
+
+
+def mxgp_official_profile_url(name: str | None) -> str | None:
+    """Publik mxgp.com-URL (samma slug som fetch_mxgp_rider_profile)."""
+    urls = mxgp_rider_profile_urls(name or "")
+    return urls[0] if urls else None
+
+
+def ensure_mxgp_rider_bio(rider: Rider) -> bool:
+    """Hämta och spara mxgp.com-profil första gången bio saknas (t.ex. prod-DB)."""
+    if not is_mxgp_roster_rider(rider):
+        return False
+    if (getattr(rider, "bio", None) or "").strip():
+        return False
+    if (getattr(rider, "achievements", None) or "").strip():
+        return False
+    profile = fetch_mxgp_rider_profile(getattr(rider, "name", None) or "")
+    if not profile.get("ok"):
+        return False
+    return apply_mxgp_profile_to_rider(rider, profile)
+
+
 def apply_mxgp_profile_to_rider(rider: Rider, profile: dict[str, Any]) -> bool:
     from racerx_rider_bio import apply_profile_to_rider
 

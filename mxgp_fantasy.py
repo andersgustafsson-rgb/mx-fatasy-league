@@ -329,6 +329,25 @@ def ensure_mxgp_scaffold() -> dict[str, Any]:
         f"test_gp={test_gp.id} cal2027={len(cal_2027['competition_ids'])} "
         f"roster+={roster['created']}"
     )
+    try:
+        from flask import current_app
+
+        sync_mxgp_portrait_image_urls(
+            os.path.join(current_app.root_path, "static"),
+            commit=True,
+        )
+    except Exception as portrait_err:
+        print(f"[MXGP-SEED] portrait URL sync skipped: {portrait_err}")
+    try:
+        from mxgp_rider_bio import bulk_fetch_mxgp_bios, iter_mxgp_riders_needing_bio
+
+        missing = len(iter_mxgp_riders_needing_bio(limit=None))
+        if missing:
+            cap = min(missing, 32)
+            print(f"[MXGP-SEED] Fetching {cap} rider bios from mxgp.com …")
+            bulk_fetch_mxgp_bios(limit=cap, pause_sec=0.3)
+    except Exception as bio_err:
+        print(f"[MXGP-SEED] bio fetch skipped: {bio_err}")
     return info
 
 
