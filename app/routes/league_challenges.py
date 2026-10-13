@@ -345,52 +345,29 @@ def admin_re_resolve_league_challenges_post():
         return jsonify({"error": str(e)}), 500
 
 
-@bp.route("/admin/re-resolve-challenges", methods=["GET"])
-def admin_re_resolve_challenges_by_name():
-    """Re-resolve locked/stale-tied league duels for a race (admin). ?name=southwick"""
+def _re_resolve_get_disabled():
+    """GET disabled — use POST /admin/leagues/challenges/re-resolve (CSRF-safe)."""
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
-    name = (request.args.get("name") or "southwick").strip()
-    comp = (
-        Competition.query.filter(Competition.name.ilike(f"%{name}%"))
-        .order_by(Competition.event_date.desc().nullslast())
-        .first()
-    )
-    if not comp:
-        return jsonify({"error": f"Ingen tävling matchar '{name}'"}), 404
-    try:
-        report = lc._build_re_resolve_challenges_report(comp.id)
-        return jsonify(
+    return (
+        jsonify(
             {
-                "success": True,
-                "message": f"Dueller omräknade för {report['competition_name']}",
-                **report,
+                "error": "method_not_allowed",
+                "message": (
+                    "Använd POST /admin/leagues/challenges/re-resolve "
+                    "med JSON {\"competition_id\": …} eller {\"name\": \"southwick\"}."
+                ),
             }
-        )
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        ),
+        405,
+    )
+
+
+@bp.route("/admin/re-resolve-challenges", methods=["GET"])
+def admin_re_resolve_challenges_by_name():
+    return _re_resolve_get_disabled()
 
 
 @bp.route("/admin/re-resolve-challenges/<int:competition_id>", methods=["GET"])
 def admin_re_resolve_league_challenges(competition_id: int):
-    """Re-resolve league duels after results (fixes stale ties, DNF logic, badges/shame)."""
-    if not is_admin_user():
-        return jsonify({"error": "admin_only"}), 403
-    try:
-        report = lc._build_re_resolve_challenges_report(competition_id)
-        return jsonify(
-            {
-                "success": True,
-                "message": f"Dueller omräknade för {report['competition_name']}",
-                **report,
-            }
-        )
-    except ValueError:
-        return jsonify({"error": "competition not found"}), 404
-    except Exception as e:
-        db.session.rollback()
-        import traceback
-
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+    return _re_resolve_get_disabled()

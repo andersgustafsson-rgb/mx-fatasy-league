@@ -1,5 +1,15 @@
 # 🔐 SECRET_KEY Setup - Instruktioner
 
+## ⚠️ Innan du deployar senaste `render.yaml`
+
+`SECRET_KEY` finns **inte längre i git** (`sync: false`). På Render **måste** variabeln finnas i Dashboard **innan** deploy, annars startar inte appen.
+
+1. Generera ny nyckel (rotera bort den gamla som låg i repot).
+2. Render → Web Service → Environment → `SECRET_KEY` = ny nyckel → Save.
+3. Deploya kod.
+
+Alla användare loggas ut vid rotation (ny session-signering).
+
 ## Problemet
 Applikationen använder en osäker default SECRET_KEY i production, vilket är en säkerhetsrisk.
 

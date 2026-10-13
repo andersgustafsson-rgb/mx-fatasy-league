@@ -33,6 +33,8 @@ from public_url import get_public_base_url
 
 bp = Blueprint("auth", __name__)
 
+MIN_PASSWORD_LENGTH = 10
+
 
 @bp.route("/login", methods=["GET", "POST"])
 def login():
@@ -156,8 +158,11 @@ def reset_password():
         if not new_password:
             flash("Ange ett nytt lösenord.", "error")
             return render_template("reset_password.html", token=token)
-        if len(new_password) < 4:
-            flash("Lösenordet måste vara minst 4 tecken.", "error")
+        if len(new_password) < MIN_PASSWORD_LENGTH:
+            flash(
+                f"Lösenordet måste vara minst {MIN_PASSWORD_LENGTH} tecken.",
+                "error",
+            )
             return render_template("reset_password.html", token=token)
         user.password_hash = generate_password_hash(new_password)
         user.password_reset_token = None
@@ -200,8 +205,10 @@ def register():
             return _fail("Giltig e-post krävs (för återställning av lösenord)")
         if not password:
             return _fail("Lösenord krävs")
-        if len(password) < 4:
-            return _fail("Lösenordet måste vara minst 4 tecken långt")
+        if len(password) < MIN_PASSWORD_LENGTH:
+            return _fail(
+                f"Lösenordet måste vara minst {MIN_PASSWORD_LENGTH} tecken långt"
+            )
 
         if User.query.filter_by(username=username).first():
             return _fail("Användarnamnet är redan upptaget")

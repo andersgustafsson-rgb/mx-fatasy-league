@@ -6,8 +6,9 @@ services:
     startCommand: gunicorn -c gunicorn.conf.py main:app
     healthCheckPath: /health
     envVars:
+      # Sätt värdet endast i Render Dashboard (sync: false) — aldrig i git.
       - key: SECRET_KEY
-        value: my-super-secret-key-for-mx-fantasy-league-2025
+        sync: false
       - key: FLASK_ENV
         value: production
       - key: PUBLIC_BASE_URL
