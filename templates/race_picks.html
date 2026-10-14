@@ -681,9 +681,12 @@
       grid-area: logo;
       align-self: start;
       justify-self: start;
-      display: inline-flex;
+      width: fit-content;
+      max-width: min(100%, 20rem);
+      display: flex;
       align-items: center;
-      padding: 0.5rem 0.85rem;
+      justify-content: center;
+      padding: 0.45rem 0.65rem;
       background: rgba(255, 255, 255, 0.96);
       border-radius: 5px;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
@@ -691,8 +694,8 @@
     .sj-plaque__logo img {
       display: block;
       width: auto;
-      height: 48px;
-      max-width: min(300px, 78vw);
+      height: clamp(2rem, 5.5vw, 2.85rem);
+      max-width: 100%;
       object-fit: contain;
     }
     .sj-plaque__copy { grid-area: copy; align-self: end; min-width: 0; }
@@ -745,7 +748,8 @@
         grid-template-columns: minmax(0, 1fr) minmax(150px, 38%) auto;
         padding: 1.55rem 1.6rem 1.45rem;
       }
-      .sj-plaque__logo img { height: 58px; max-width: 340px; }
+      .sj-plaque__logo { padding: 0.5rem 0.75rem; }
+      .sj-plaque__logo img { height: clamp(2.35rem, 4.2vw, 3.35rem); }
       .sj-plaque__rider {
         margin-left: -1rem;
         transform: translateX(-8%);
@@ -767,8 +771,8 @@
           "badge badge";
         align-items: center;
       }
-      .sj-plaque__logo { justify-self: start; }
-      .sj-plaque__logo img { height: 44px; }
+      .sj-plaque__logo { justify-self: start; max-width: 100%; }
+      .sj-plaque__logo img { height: 2.15rem; }
       .sj-plaque__rider { grid-row: auto; margin-left: 0; transform: none; }
       .sj-plaque__rider img { max-width: 280px; margin: 0 auto; }
       .sj-plaque__badge { grid-row: auto; justify-self: center; }
