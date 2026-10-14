@@ -71,10 +71,11 @@ SX_2027: list[dict[str, Any]] = [
         "round": 6,
         "coast_250": "showdown",
         "is_triple_crown": False,
+        "is_st_jude_love_moto": True,
         "venue": "State Farm Stadium, Glendale, AZ",
         "timezone_label": "MST",
-        "blurb": "East/West Showdown i State Farm Stadium (Cardinals). Båda 250-coasts kör samma kväll i Arizona.",
-        "highlights": ["East/West Showdown", "State Farm Stadium", "Arizona"],
+        "blurb": "St. Jude Love Moto Stop Cancer i State Farm Stadium. East/West Showdown — 450 + båda 250-coasts samma kväll.",
+        "highlights": ["Love Moto Stop Cancer", "East/West Showdown", "State Farm Stadium"],
     },
     {
         "name": "Detroit",
@@ -289,6 +290,8 @@ def competition_public_info(competition, series_year: int | None = None) -> dict
             highlights = list(race.get("highlights") or [])
             if race.get("is_military_appreciation") and "Military Appreciation Day" not in highlights:
                 highlights.insert(0, "Military Appreciation Day")
+            if race.get("is_st_jude_love_moto") and "Love Moto Stop Cancer" not in highlights:
+                highlights.insert(0, "Love Moto Stop Cancer")
             info.update(
                 {
                     "blurb": race.get("blurb") or "",
@@ -300,6 +303,7 @@ def competition_public_info(competition, series_year: int | None = None) -> dict
                     "is_triple_crown": bool(race.get("is_triple_crown")),
                     "is_showdown": coast in ("showdown", "both"),
                     "is_military_appreciation": bool(race.get("is_military_appreciation")),
+                    "is_st_jude_love_moto": bool(race.get("is_st_jude_love_moto")),
                 }
             )
             return info

@@ -717,6 +717,13 @@ def get_picks_good_to_know(competition) -> list[str]:
                 0,
                 "Military Appreciation Day — lag kör ofta camo/militär-grafik. Samma tippregler som vanligt SX.",
             )
+        from services.race_theme import is_st_jude_love_moto_race
+
+        if is_st_jude_love_moto_race(competition):
+            tips.insert(
+                0,
+                "St. Jude Love Moto Stop Cancer — specialhelg i Glendale. Samma tippregler som vanligt SX.",
+            )
     except Exception:
         pass
 

@@ -1,0 +1,56 @@
+{# St. Jude / Love Moto hero. Expects sj namespace + competition #}
+<section class="sj-stage" aria-label="St. Jude Love Moto Stop Cancer">
+  <div class="sj-stage__bar">
+    <div class="sj-stage__brand">PICK <span>★</span> THE <span>★</span> WINNER</div>
+    <div class="rp-btn-row w-full sm:w-auto sm:shrink-0" style="align-items:center;gap:0.5rem;">
+      <div class="mx-lang-toggle" role="group" aria-label="Välj språk / Choose language">
+        <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>
+        <button type="button" class="mx-lang-btn" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm flex-1 sm:flex-initial" data-i18n="picks.back">← Tillbaka</a>
+      <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--warm rp-btn--sm flex-1 sm:flex-initial">Trash Talk</a>
+    </div>
+  </div>
+  <div class="sj-stage__venue">
+    <h1>{{ sj.city }}</h1>
+    <p>
+      {{ sj.date_short }}
+      {% if sj.coast %} / {{ sj.coast|upper }}{% endif %}
+    </p>
+  </div>
+
+  <div class="sj-plaque">
+    <div class="sj-plaque__logo">
+      <img src="{{ url_for('static', filename='images/stjude_logo.png') }}" alt="St. Jude Children's Research Hospital" width="150" height="150" loading="eager" decoding="async">
+    </div>
+    <div class="sj-plaque__copy">
+      <span class="sj-plaque__pill" data-i18n="picks.stjude_eyebrow">St. Jude · Love Moto · Stop Cancer</span>
+      <h2 class="sj-plaque__city">{{ sj.city }}</h2>
+      <p class="sj-plaque__fight" data-i18n="picks.stjude_fight">Fuck cancer.</p>
+      <p class="sj-plaque__tag" data-i18n="picks.stjude_sub">Ride for every kid in the fight.</p>
+      <p class="sj-plaque__meta">
+        {% if sj.round %}ROUND {{ sj.round }} · {% endif %}
+        {% if sj.venue_short %}{{ sj.venue_short|upper }} · {% endif %}
+        {% if sj.date_short %}{{ sj.date_short|upper }}{% endif %}
+      </p>
+    </div>
+    <div class="sj-plaque__rider" aria-hidden="true">
+      <img src="{{ url_for('static', filename='images/stjude_rider.png') }}" alt="" width="640" height="640" loading="eager" decoding="async">
+    </div>
+    <div class="sj-plaque__badge" aria-hidden="true">
+      {% set sj_city = sj.city %}
+      {% set sj_year = sj.year %}
+      {% set sj_uid = 'picks' %}
+      {% include 'includes/stjude_shield.html' %}
+    </div>
+  </div>
+
+  <div class="sj-quote">
+    <div class="sj-quote__heart" aria-hidden="true"></div>
+    <blockquote data-i18n="picks.stjude_quote">“For every kid fighting the toughest race — we ride.”</blockquote>
+  </div>
+
+  <p class="sj-ribbon">
+    {{ sj.city }} · <span data-i18n="picks.stjude_ribbon">St. Jude Love Moto Stop Cancer Race</span> · {{ sj.year }}
+  </p>
+</section>

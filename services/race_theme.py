@@ -10,6 +10,13 @@ MILITARY_APPRECIATION_RACES = frozenset(
     }
 )
 
+# St. Jude / Love Moto Stop Cancer (AMA SX Glendale).
+ST_JUDE_LOVE_MOTO_RACES = frozenset(
+    {
+        (2027, "SX", "Glendale"),
+    }
+)
+
 _MONTHS_EN = (
     "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
     "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
@@ -66,9 +73,20 @@ def is_military_appreciation_race(competition: Any) -> bool:
     return bool(race and race.get("is_military_appreciation"))
 
 
-def military_theme_meta(competition: Any) -> dict[str, Any]:
-    """Copy + round/coast labels for the Military Appreciation Day hero."""
+def _race_theme_dates(competition: Any) -> tuple[str, str, str]:
     name = (getattr(competition, "name", None) or "").strip()
+    ed = getattr(competition, "event_date", None)
+    date_short = ""
+    date_long = ""
+    if ed is not None and getattr(ed, "month", None):
+        month_i = int(ed.month) - 1
+        date_short = f"{int(ed.day)} {_MONTHS_EN_SHORT[month_i]} {int(ed.year)}"
+        date_long = f"{int(ed.day)} {_MONTHS_EN[month_i]} {int(ed.year)}"
+    return name, date_short, date_long
+
+
+def _race_theme_base(competition: Any) -> dict[str, Any]:
+    name, date_short, date_long = _race_theme_dates(competition)
     year = _competition_year(competition)
     coast = (getattr(competition, "coast_250", None) or "").strip().lower()
     round_n = None
@@ -78,15 +96,6 @@ def military_theme_meta(competition: Any) -> dict[str, Any]:
         round_n = race.get("round")
         venue = race.get("venue") or ""
         coast = (race.get("coast_250") or coast or "").strip().lower()
-
-    ed = getattr(competition, "event_date", None)
-    date_short = ""
-    date_long = ""
-    if ed is not None and getattr(ed, "month", None):
-        month_i = int(ed.month) - 1
-        date_short = f"{int(ed.day)} {_MONTHS_EN_SHORT[month_i]} {int(ed.year)}"
-        date_long = f"{int(ed.day)} {_MONTHS_EN[month_i]} {int(ed.year)}"
-
     return {
         "city": name.upper(),
         "year": year,
@@ -96,15 +105,48 @@ def military_theme_meta(competition: Any) -> dict[str, Any]:
         "venue": venue,
         "date_short": date_short,
         "date_long": date_long,
-        "motto": "HONOR · COURAGE",
     }
+
+
+def is_st_jude_love_moto_race(competition: Any) -> bool:
+    """True for AMA SX St. Jude / Love Moto Stop Cancer weekends (Glendale)."""
+    if competition is None:
+        return False
+    name = (getattr(competition, "name", None) or "").strip()
+    if "st. jude" in name.lower() or "love moto" in name.lower():
+        return True
+    series = (getattr(competition, "series", None) or "").strip().upper()
+    year = _competition_year(competition)
+    if year and series and (year, series, name) in ST_JUDE_LOVE_MOTO_RACES:
+        return True
+    race = _sx_calendar_race(competition)
+    return bool(race and race.get("is_st_jude_love_moto"))
+
+
+def military_theme_meta(competition: Any) -> dict[str, Any]:
+    """Copy + round/coast labels for the Military Appreciation Day hero."""
+    meta = _race_theme_base(competition)
+    meta["motto"] = "HONOR · COURAGE"
+    return meta
+
+
+def st_jude_theme_meta(competition: Any) -> dict[str, Any]:
+    """Copy + labels for St. Jude Love Moto hero."""
+    meta = _race_theme_base(competition)
+    meta["motto"] = "LOVE MOTO · STOP CANCER"
+    venue = meta.get("venue") or ""
+    if venue and "," in venue:
+        meta["venue_short"] = venue.split(",")[0].strip()
+    else:
+        meta["venue_short"] = venue
+    return meta
 
 
 def race_card_marks(competition: Any) -> dict[str, bool]:
     """Icons for series schedule cards: Triple Crown, East/West, Military Appreciation."""
     series = (getattr(competition, "series", None) or "").strip().upper()
     if series != "SX":
-        return {"triple_crown": False, "showdown": False, "military": False}
+        return {"triple_crown": False, "showdown": False, "military": False, "st_jude": False}
     race = _sx_calendar_race(competition)
     coast = (
         (race.get("coast_250") if race else None)
@@ -119,4 +161,5 @@ def race_card_marks(competition: Any) -> dict[str, bool]:
         "triple_crown": triple,
         "showdown": coast in ("showdown", "both"),
         "military": is_military_appreciation_race(competition),
+        "st_jude": is_st_jude_love_moto_race(competition),
     }

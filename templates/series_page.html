@@ -612,6 +612,13 @@
       border: 1px solid rgba(196, 178, 138, 0.62);
       color: #e6d7b0;
     }
+    .sp-mark--heart {
+      padding: 0.32rem 0.45rem;
+      background: rgba(40, 8, 16, 0.88);
+      border: 1px solid rgba(244, 63, 94, 0.55);
+      color: #fda4af;
+    }
+    .sp-mark--heart svg { width: 18px; height: 18px; }
     .sp-mark--mad svg {
       width: 44px;
       height: 28px;
@@ -951,6 +958,7 @@
         {% set is_tc = is_sx and (marks.triple_crown or info.get('is_triple_crown') or comp.is_triple_crown) %}
         {% set is_ew = is_sx and (marks.showdown or info.get('is_showdown') or _coast in ('showdown', 'both')) %}
         {% set is_mad = is_sx and (marks.military or info.get('is_military_appreciation') or ((comp.name or '')|lower == 'seattle' and comp.event_date and comp.event_date.year == 2027)) %}
+        {% set is_stjude = is_sx and (marks.st_jude or info.get('is_st_jude_love_moto') or ((comp.name or '')|lower == 'glendale' and comp.event_date and comp.event_date.year == 2027)) %}
         <button type="button"
                 class="sp-race-card{% if cancelled %} sp-race-card--cancelled{% endif %}"
                 data-open-race
@@ -1000,7 +1008,7 @@
                 {% endif %}
               </div>
             </div>
-            {% if is_tc or is_ew or is_mad %}
+            {% if is_tc or is_ew or is_mad or is_stjude %}
             <div class="sp-race-card__icons">
               {% if is_tc %}
               <span class="sp-mark sp-mark--crown" title="Triple Crown">
@@ -1016,6 +1024,11 @@
                 <svg viewBox="0 0 48 28" aria-hidden="true">
                   <path fill="currentColor" d="M20.5 4.2h11.2c.7 0 1.3.5 1.3 1.2v5.1H19.4V5.4c0-.7.5-1.2 1.1-1.2Zm12.8 4.2h12.4v2.4H33.3V8.4ZM8.2 11.4h27.2c1 0 1.8.8 1.8 1.8v6.1H6.5v-6.2c0-.9.8-1.7 1.7-1.7Zm-4.6 8.2h40.8c.9 0 1.6.6 1.6 1.4v2.6H2.1v-2.6c0-.8.7-1.4 1.5-1.4Zm2.4 4.3h2.2v3.2H6Zm4.8 0h2.2v3.2h-2.2zm4.8 0h2.2v3.2h-2.2zm4.8 0h2.2v3.2H20.4zm4.8 0h2.2v3.2h-2.2zm4.8 0h2.2v3.2h-2.2zm4.8 0h2.2v3.2h-2.2zm4.8 0h2.2v3.2h-2.2z"/>
                 </svg>
+              </span>
+              {% endif %}
+              {% if is_stjude %}
+              <span class="sp-mark sp-mark--heart" title="St. Jude Love Moto Stop Cancer">
+                <svg viewBox="0 0 24 22" aria-hidden="true"><path fill="currentColor" d="M12 20.5S3 14.2 3 8.8C3 6 5.2 4 7.8 4c1.6 0 3.1.8 4.2 2.1C13.1 4.8 14.6 4 16.2 4 18.8 4 21 6 21 8.8c0 5.4-9 11.7-9 11.7Z"/></svg>
               </span>
               {% endif %}
             </div>

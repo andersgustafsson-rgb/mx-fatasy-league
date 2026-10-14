@@ -8002,7 +8002,7 @@ def series_page(series_id):
             if _comp_public_info:
                 try:
                     info = _comp_public_info(c, series_year=getattr(series, "year", None))
-                    if info and (info.get("blurb") or info.get("highlights") or info.get("is_triple_crown") or info.get("is_showdown") or info.get("is_military_appreciation")):
+                    if info and (info.get("blurb") or info.get("highlights") or info.get("is_triple_crown") or info.get("is_showdown") or info.get("is_military_appreciation") or info.get("is_st_jude_love_moto")):
                         competition_info[c.id] = info
                 except Exception:
                     pass
@@ -8964,11 +8964,30 @@ def race_picks_page(competition_id):
         except Exception:
             military_meta = {}
 
+    st_jude_love_moto = False
+    st_jude_meta = {}
+    if not military_appreciation:
+        try:
+            from services.race_theme import is_st_jude_love_moto_race
+
+            st_jude_love_moto = bool(is_st_jude_love_moto_race(comp))
+        except Exception:
+            st_jude_love_moto = False
+    if st_jude_love_moto:
+        try:
+            from services.race_theme import st_jude_theme_meta
+
+            st_jude_meta = st_jude_theme_meta(comp) or {}
+        except Exception:
+            st_jude_meta = {}
+
     return render_template(
         "race_picks.html",
         competition=comp,
         military_appreciation=military_appreciation,
         military_meta=military_meta,
+        st_jude_love_moto=st_jude_love_moto,
+        st_jude_meta=st_jude_meta,
         riders_450_json=riders_450_json,
         riders_250_json=riders_250_json,
         riders_u17_json=riders_u17_json,
