@@ -366,7 +366,7 @@ def is_picks_preseason_locked(competition) -> bool:
 
 
 def _current_pick_round_for_series(series_code: str) -> Competition | None:
-    """Earliest upcoming AMA round in this series that still accepts picks."""
+    """First AMA round in calendar order without results (next race to tip)."""
     code = (series_code or "").strip().upper()
     if code not in _AMA_SEQUENTIAL_ROUND_SERIES:
         return None
@@ -384,8 +384,6 @@ def _current_pick_round_for_series(series_code: str) -> Competition | None:
         if getattr(comp, "is_cancelled", False):
             continue
         if CompetitionResult.query.filter_by(competition_id=comp.id).first():
-            continue
-        if is_picks_deadline_passed(comp):
             continue
         return comp
     return None

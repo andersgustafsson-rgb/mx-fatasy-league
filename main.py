@@ -1023,16 +1023,22 @@ def _next_competition_for_picks(
 ) -> Competition | None:
     """
     Nästa tävling utan resultat i DB. Med require_open=True: bara där picks inte är låsta.
+    Nästa race öppnar när resultat finns för föregående (AMA: en omgång i taget via picks_lock).
     Ignorerar stale global_simulation.active_race_id.
     """
-    today = get_today()
-    q = Competition.query.filter(Competition.event_date.isnot(None))
     if series:
-        q = q.filter(Competition.series == series)
+        from services.picks_lock import _current_pick_round_for_series
+
+        active = _current_pick_round_for_series(series)
+        if active is None:
+            return None
+        if require_open and is_picks_locked(active):
+            return None
+        return active
+
+    q = Competition.query.filter(Competition.event_date.isnot(None))
     for comp in q.order_by(Competition.event_date.asc()).all():
         if getattr(comp, "is_cancelled", False):
-            continue
-        if comp.event_date and comp.event_date < today:
             continue
         if CompetitionResult.query.filter_by(competition_id=comp.id).first():
             continue
