@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 from flask import session
 
-from models import Competition, Series, db
+from models import Competition, CompetitionResult, Series, db
 
 
 # Default: picks open this many calendar days before Series.start_date.
@@ -18,6 +18,9 @@ PICKS_OPEN_DAYS_BEFORE_SERIES = 30
 PICKS_OPEN_DAYS_BEFORE_SERIES_BY_CODE = {
     "SX": 100,  # Anaheim 1 2027-01-09 → open from ~2026-10-01
 }
+
+# AMA fantasy: one round at a time (SX/MX/SMX) after the series window opens.
+_AMA_SEQUENTIAL_ROUND_SERIES = frozenset({"SX", "MX", "SMX"})
 
 _SV_MONTHS = (
     "",
@@ -325,8 +328,8 @@ def picks_open_days_before_series(competition=None) -> int:
     return int(PICKS_OPEN_DAYS_BEFORE_SERIES_BY_CODE.get(code, PICKS_OPEN_DAYS_BEFORE_SERIES))
 
 
-def picks_preseason_opens_on(competition) -> "date | None":
-    """First calendar day picks may be submitted for this competition's series."""
+def _series_preseason_opens_on(competition) -> "date | None":
+    """First calendar day the series tippa window opens (e.g. 100 days before SX Anaheim)."""
     if isinstance(competition, int):
         competition = Competition.query.get(competition)
         if not competition:
@@ -338,9 +341,14 @@ def picks_preseason_opens_on(competition) -> "date | None":
     return start - timedelta(days=days)
 
 
-def is_picks_preseason_locked(competition) -> bool:
+def picks_preseason_opens_on(competition) -> "date | None":
+    """First calendar day picks may be submitted for this competition's series."""
+    return _series_preseason_opens_on(competition)
+
+
+def _is_series_preseason_locked(competition) -> bool:
     """True when the series tippa window has not opened yet (too early)."""
-    opens = picks_preseason_opens_on(competition)
+    opens = _series_preseason_opens_on(competition)
     if opens is None:
         return False
     try:
@@ -350,6 +358,67 @@ def is_picks_preseason_locked(competition) -> bool:
 
         today = date_type.today()
     return today < opens
+
+
+def is_picks_preseason_locked(competition) -> bool:
+    """True when the series tippa window has not opened yet (too early)."""
+    return _is_series_preseason_locked(competition)
+
+
+def _current_pick_round_for_series(series_code: str) -> Competition | None:
+    """Earliest upcoming AMA round in this series that still accepts picks."""
+    code = (series_code or "").strip().upper()
+    if code not in _AMA_SEQUENTIAL_ROUND_SERIES:
+        return None
+    try:
+        comps = (
+            Competition.query.filter(Competition.series == code)
+            .filter(Competition.event_date.isnot(None))
+            .order_by(Competition.event_date.asc())
+            .all()
+        )
+    except Exception:
+        db.session.rollback()
+        return None
+    for comp in comps:
+        if getattr(comp, "is_cancelled", False):
+            continue
+        if CompetitionResult.query.filter_by(competition_id=comp.id).first():
+            continue
+        if is_picks_deadline_passed(comp):
+            continue
+        return comp
+    return None
+
+
+def active_pick_round_for_competition(competition) -> Competition | None:
+    """The AMA round users should tip right now (same series as competition)."""
+    if isinstance(competition, int):
+        competition = Competition.query.get(competition)
+        if not competition:
+            return None
+    code = _series_code_for_competition(competition)
+    return _current_pick_round_for_series(code)
+
+
+def is_picks_round_queue_locked(competition) -> bool:
+    """
+    True when the series window is open but this race is not yet the active tipping round
+    (e.g. Glendale locked while Anaheim is still open).
+    """
+    if isinstance(competition, int):
+        competition = Competition.query.get(competition)
+        if not competition:
+            return False
+    code = _series_code_for_competition(competition)
+    if code not in _AMA_SEQUENTIAL_ROUND_SERIES:
+        return False
+    if _is_series_preseason_locked(competition):
+        return False
+    active = _current_pick_round_for_series(code)
+    if not active:
+        return False
+    return active.id != competition.id
 
 
 def is_picks_deadline_passed(competition) -> bool:
@@ -637,7 +706,9 @@ def is_picks_deadline_passed(competition) -> bool:
 
 
 def is_picks_locked(competition):
-    """True when picks cannot be submitted (too early for the series, or past race deadline)."""
-    if is_picks_preseason_locked(competition):
+    """True when picks cannot be submitted (too early, wrong round, or past race deadline)."""
+    if _is_series_preseason_locked(competition):
+        return True
+    if is_picks_round_queue_locked(competition):
         return True
     return is_picks_deadline_passed(competition)

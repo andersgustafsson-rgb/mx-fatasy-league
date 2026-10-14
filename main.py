@@ -8551,10 +8551,19 @@ def race_picks_page(competition_id):
                 return redirect(url_for("index"))
 
     # Use the unified picks lock check function
+    from services.picks_lock import (
+        active_pick_round_for_competition,
+        is_picks_round_queue_locked,
+    )
+
     picks_locked = is_picks_locked(comp)
     preseason_locked = is_picks_preseason_locked(comp)
+    round_queue_locked = is_picks_round_queue_locked(comp)
     opens_on = picks_preseason_opens_on(comp) if preseason_locked else None
-    
+    active_pick_round = (
+        active_pick_round_for_competition(comp) if round_queue_locked else None
+    )
+
     # If picks are locked, show locked page instead of redirect
     if picks_locked:
         return render_template(
@@ -8562,6 +8571,8 @@ def race_picks_page(competition_id):
             competition=comp,
             picks_locked=True,
             preseason_locked=preseason_locked,
+            round_queue_locked=round_queue_locked,
+            active_pick_round=active_pick_round,
             picks_opens_on=opens_on,
             picks_open_days_before=picks_open_days_before_series(comp),
         )

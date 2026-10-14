@@ -4,7 +4,7 @@
   {% from 'includes/mx_icon.html' import mx_icon %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if preseason_locked %}Picks öppnar snart{% else %}Picks Låsta{% endif %} - {{ competition.name }}</title>
+    <title>{% if preseason_locked %}Picks öppnar snart{% elif round_queue_locked %}Picks öppnar senare{% else %}Picks Låsta{% endif %} - {{ competition.name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -14,7 +14,7 @@
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900 mb-2">
                       {{ mx_icon('lock') }}
-                      {% if preseason_locked %}Picks öppnar snart{% else %}Picks Låsta{% endif %}
+                      {% if preseason_locked %}Picks öppnar snart{% elif round_queue_locked %}Inte öppet för detta race än{% else %}Picks Låsta{% endif %}
                     </h1>
                     <p class="text-gray-600">{{ competition.name }} - {{ competition.event_date }}</p>
                 </div>
@@ -24,7 +24,37 @@
             </div>
         </div>
 
-        {% if preseason_locked %}
+        {% if round_queue_locked and not preseason_locked %}
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-6">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-lg font-medium text-amber-900">
+                        Tippa öppnar när det är dags för detta race
+                    </h3>
+                    <div class="mt-2 text-sm text-amber-800 space-y-1">
+                        <p>Du kan bara tippa ett race i taget i serien.</p>
+                        {% if active_pick_round %}
+                        <p class="font-semibold">Just nu: {{ active_pick_round.name }} ({{ active_pick_round.event_date }}).</p>
+                        {% endif %}
+                        <p>{{ competition.name }} blir tillgängligt när det är nästa omgång i kalendern.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 class="text-lg font-medium text-blue-800 mb-3">Info</h3>
+            <ul class="text-sm text-blue-700 space-y-2">
+                <li>• SX / MX / SMX: en omgång i taget — samma som på seriesidan</li>
+                <li>• När racet är öppet låses picks 2 timmar före start (eller vid kval om det är satt)</li>
+            </ul>
+        </div>
+        {% elif preseason_locked %}
         <div class="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-6">
             <div class="flex items-start">
                 <div class="flex-shrink-0">
