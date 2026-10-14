@@ -1,8 +1,15 @@
 {% from 'includes/mx_icon.html' import mx_icon %}
-{# Expects: discover_leagues (list of card dicts), compact (optional bool) #}
+{# Expects: discover_leagues, compact (optional), hide_joined (optional), section_title (optional) #}
 {% set compact = compact|default(false) %}
+{% set hide_joined = hide_joined|default(false) %}
+{% set cards_list = discover_leagues %}
+{% if hide_joined and discover_leagues %}
+  {% set cards_list = discover_leagues|rejectattr('membership_status', 'equalto', 'member')|list %}
+{% endif %}
 <section class="lg-discover{% if compact %} lg-discover--compact{% endif %}" aria-label="Publika ligor">
-  {% if not compact %}
+  {% if section_title %}
+  <h3 class="lg-discover__title" style="margin:0 0 1rem">{{ section_title }}</h3>
+  {% elif not compact %}
   <div class="lg-discover__intro">
     <p class="lg-discover__eyebrow">Ligor i MX Fantasy</p>
     <h3 class="lg-discover__title">Tippa som vanligt — tävla i grupp</h3>
@@ -14,9 +21,9 @@
   </div>
   {% endif %}
 
-  {% if discover_leagues and discover_leagues|length > 0 %}
+  {% if cards_list and cards_list|length > 0 %}
   <div class="lg-discover__grid">
-    {% for card in discover_leagues %}
+    {% for card in cards_list %}
     <article class="lg-discover-card">
       <div class="lg-discover-card__head">
         <h4 class="lg-discover-card__name">{{ card.name }}</h4>
@@ -69,14 +76,18 @@
     </article>
     {% endfor %}
   </div>
+  {% elif hide_joined %}
+  <p class="lg-discover__empty" style="padding:0.5rem 0">Du är med i alla publika ligor som finns listade — eller prova <button type="button" class="lg-btn lg-btn--ghost" data-switch-tab="join">inbjudningskod</button>.</p>
   {% else %}
   <div class="lg-discover__empty">
     <p>Inga publika ligor ännu. Skapa en och kryssa i <strong>Publik liga</strong>, eller be admin sätta upp officiella ligor.</p>
   </div>
   {% endif %}
 
+  {% if not hide_joined %}
   <div class="lg-discover__secondary">
     <a href="{{ url_for('leagues_page', tab='create') }}" class="lg-btn lg-btn--ghost">{{ mx_icon('rocket') }} Skapa egen liga</a>
     <button type="button" class="lg-btn lg-btn--ghost" data-switch-tab="join">{{ mx_icon('user-plus') }} Har du en kod?</button>
   </div>
+  {% endif %}
 </section>

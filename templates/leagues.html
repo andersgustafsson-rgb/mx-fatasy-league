@@ -559,6 +559,9 @@
             </article>
           {% endfor %}
         </div>
+        {% with compact=true, hide_joined=true, section_title='Fler publika ligor' %}
+          {% include 'includes/league_discover_section.html' %}
+        {% endwith %}
       {% else %}
         {% include 'includes/league_discover_section.html' %}
       {% endif %}

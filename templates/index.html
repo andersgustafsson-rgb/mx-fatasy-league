@@ -1025,6 +1025,8 @@
     }
     .home-league-discover-card__top li:last-child { border-bottom: none; }
     .home-league-discover-card__top .pts { color: #67e8f9; font-weight: 700; }
+    .home-league-discover--below-mine { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid rgba(148, 163, 184, 0.15); }
+    .home-league-discover--below-mine .home-league-discover__intro h3 { font-size: 1.1rem; }
     .home-league-discover__foot {
       display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 1rem;
     }
@@ -4246,8 +4248,26 @@
       }
     }
 
-    function renderHomeLeagueDiscover(discover) {
+    function bindHomeLeagueDiscoverActions(container) {
+      if (!container) return;
+      container.querySelectorAll('[data-join-league-id]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-join-league-id');
+          if (id) joinPublicLeagueHome(id, btn);
+        });
+      });
+      container.querySelectorAll('[data-request-league-id]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-request-league-id');
+          if (id) requestPublicLeagueHome(id, btn);
+        });
+      });
+    }
+
+    function renderHomeLeagueDiscover(discover, opts) {
+      const options = opts || {};
       const cards = Array.isArray(discover) ? discover : [];
+      const belowMine = !!options.belowMine;
       const topHtml = (card) => {
         const rows = card.top_standings || [];
         if (!rows.length) return '<p class="text-xs text-slate-500 text-center py-1">Inga poäng ännu</p>';
@@ -4289,17 +4309,28 @@
               .join('')}</div>`
           : `<p class="text-sm text-slate-400 text-center py-4">Inga publika ligor ännu. Skapa en och kryssa i &quot;Publik liga&quot;, eller be admin lägga upp officiella ligor.</p>`;
 
-      return `
-        <div class="home-league-discover">
-          <div class="home-league-discover__intro">
+      const intro = belowMine
+        ? `<div class="home-league-discover__intro"><h3>Fler publika ligor</h3><p class="text-sm text-slate-400">Du kan vara med i flera ligor samtidigt.</p></div>`
+        : `<div class="home-league-discover__intro">
             <h3>Tippa tillsammans — utan kod</h3>
             <p>Officiella ligor — gå med direkt. Andra publika ligor — ansök så godkänner skaparen. Privat liga? Använd inbjudningskod.</p>
-          </div>
-          ${grid}
-          <div class="home-league-discover__foot">
+          </div>`;
+      const foot = belowMine
+        ? `<div class="home-league-discover__foot">
+            <a href="{{ url_for('leagues_page', tab='explore') }}" class="rp-btn rp-btn--ghost">Alla publika ligor</a>
+          </div>`
+        : `<div class="home-league-discover__foot">
             <a href="{{ url_for('leagues_page') }}" class="rp-btn rp-btn--secondary">Hantera alla ligor</a>
             <a href="{{ url_for('leagues_page', tab='join') }}" class="rp-btn rp-btn--ghost">Anslut med kod</a>
-          </div>
+          </div>`;
+      const emptyBelow = belowMine && cards.length === 0
+        ? '<p class="text-sm text-slate-500 text-center py-2">Inga fler publika ligor att gå med i just nu.</p>'
+        : grid;
+      return `
+        <div class="home-league-discover${belowMine ? ' home-league-discover--below-mine' : ''}">
+          ${intro}
+          ${emptyBelow}
+          ${foot}
         </div>`;
     }
 
@@ -4325,18 +4356,7 @@
           const heading = document.getElementById('home-leagues-heading');
           if (heading) heading.textContent = 'Gå med i en liga';
           container.innerHTML = renderHomeLeagueDiscover(data.discover);
-          container.querySelectorAll('[data-join-league-id]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-              const id = btn.getAttribute('data-join-league-id');
-              if (id) joinPublicLeagueHome(id, btn);
-            });
-          });
-          container.querySelectorAll('[data-request-league-id]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-              const id = btn.getAttribute('data-request-league-id');
-              if (id) requestPublicLeagueHome(id, btn);
-            });
-          });
+          bindHomeLeagueDiscoverActions(container);
           return;
         }
 
@@ -4384,7 +4404,17 @@
             </div>`;
         });
         html += '</div>';
+        const openDiscover = (data.discover || []).filter((c) => c.membership_status !== 'member');
+        if (openDiscover.length) {
+          html += renderHomeLeagueDiscover(openDiscover, { belowMine: true });
+        } else {
+          html += `
+            <div class="home-league-discover home-league-discover--below-mine text-center">
+              <a href="{{ url_for('leagues_page', tab='explore') }}" class="rp-btn rp-btn--ghost mt-2">Utforska publika ligor</a>
+            </div>`;
+        }
         container.innerHTML = html;
+        bindHomeLeagueDiscoverActions(container);
       } catch (e) {
         console.error('League load error:', e);
         container.innerHTML = `<div class="bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900 dark:to-red-800 p-4 rounded-lg"><p class="text-red-600 dark:text-red-300 text-center">${typeof mxIcon==='function'?mxIcon('x-circle'):''} Kunde inte hämta ligor: ${e.message}</p></div>`;
