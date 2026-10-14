@@ -13,7 +13,7 @@
       document.documentElement.lang = _mxLang === 'en' ? 'en' : 'sv';
     } catch (_) {}
   </script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
     /* Dark background like leagues page */
     html {
@@ -184,7 +184,390 @@
     body.theme-mxsm #picks-status {
       border-color: rgba(254, 204, 0, 0.35) !important;
     }
+
+    /* —— Military Appreciation Day (AMA SX, t.ex. Seattle 2027) —— */
+    body.theme-military {
+      --mad-gold: #d4af37;
+      --mad-gold-soft: #e8d48b;
+      --mad-navy: #0b1418;
+      --mad-ink: #080e0c;
+      background:
+        radial-gradient(ellipse 70% 40% at 90% 110%, rgba(212, 175, 55, 0.08), transparent 55%),
+        linear-gradient(180deg, #0c1412 0%, #0a100e 42%, #070b0a 100%) !important;
+    }
+    body.theme-military::before {
+      content: '';
+      position: fixed;
+      inset: 0 0 auto 0;
+      height: 3px;
+      z-index: 80;
+      pointer-events: none;
+      background: linear-gradient(90deg, #bf0a30 0 34%, #f4f4f4 34% 50%, #002868 50% 66%, #d4af37 66% 100%);
+    }
+    body.theme-military::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 680px;
+      z-index: 0;
+      pointer-events: none;
+      background-color: #1a2214;
+      background-image:
+        linear-gradient(180deg, rgba(10, 16, 14, 0.18) 0%, rgba(10, 16, 14, 0.42) 62%, #0a100e 100%),
+        url("{{ url_for('static', filename='images/mad_camo.svg') }}?v=4");
+      background-size: auto, cover;
+      background-repeat: no-repeat;
+      background-position: center top;
+    }
+
+    .mad-stage {
+      position: relative;
+      margin: -0.75rem -0.75rem 1.35rem;
+      padding: 1.15rem 0.9rem 1.35rem;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    @media (min-width: 640px) {
+      .mad-stage {
+        margin: -1rem -1rem 1.5rem;
+        padding: 1.35rem 1.15rem 1.6rem;
+      }
+    }
+    @media (min-width: 768px) {
+      .mad-stage {
+        margin: -1.5rem -1.5rem 1.75rem;
+        padding: 1.5rem 1.5rem 1.85rem;
+      }
+    }
+    .mad-stage::before { content: none; }
+    .mad-stage > * { position: relative; z-index: 1; }
+
+    .mad-stage__bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 1.1rem;
+    }
+    .mad-stage__brand {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 800;
+      font-size: 0.72rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #f4efe0;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    }
+    .mad-stage__brand span { color: var(--mad-gold); }
+    .mad-stage__venue h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.7rem, 5vw, 2.55rem);
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #fff;
+      margin: 0 0 0.2rem;
+      line-height: 1;
+      text-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+    }
+    .mad-stage__venue p {
+      margin: 0 0 1.05rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(232, 212, 139, 0.85);
+    }
+
+    .mad-plaque {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(160px, 42%) auto;
+      gap: 0.65rem 1rem;
+      align-items: end;
+      padding: 1.35rem 1.25rem 1.25rem;
+      border: 1px solid rgba(212, 175, 55, 0.62);
+      background:
+        linear-gradient(165deg, rgba(16, 26, 24, 0.94) 0%, rgba(8, 14, 12, 0.96) 100%);
+      box-shadow:
+        0 0 0 1px rgba(212, 175, 55, 0.12),
+        0 18px 40px rgba(0, 0, 0, 0.45);
+    }
+    .mad-plaque::before {
+      content: '';
+      position: absolute;
+      inset: 7px;
+      border: 1px solid rgba(212, 175, 55, 0.28);
+      pointer-events: none;
+    }
+    .mad-plaque__pill {
+      display: inline-block;
+      background: linear-gradient(180deg, #e8d48b, #d4af37);
+      color: #14110a;
+      font-size: 0.58rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 0.32rem 0.85rem 0.32rem 0.7rem;
+      clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 100%, 0 100%);
+      margin-bottom: 0.7rem;
+    }
+    .mad-plaque__city {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.55rem, 4.2vw, 2.35rem);
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #fff;
+      margin: 0 0 0.35rem;
+      line-height: 1;
+    }
+    .mad-plaque__tag {
+      margin: 0 0 0.7rem;
+      font-size: 0.95rem;
+      color: rgba(226, 232, 224, 0.82);
+    }
+    .mad-plaque__meta {
+      margin: 0;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--mad-gold);
+    }
+    .mad-shield {
+      width: 168px;
+      height: 184px;
+      flex-shrink: 0;
+      overflow: visible;
+      filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
+    }
+    @media (min-width: 640px) {
+      .mad-shield { width: 220px; height: 240px; }
+      .mad-plaque { padding: 1.55rem 1.6rem 1.45rem; }
+    }
+    .mad-plaque__honor {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      align-self: stretch;
+      padding: 0.15rem 0.25rem 0.35rem;
+      min-width: 0;
+    }
+    .mad-honor-salute {
+      width: 100%;
+      max-width: 260px;
+      height: auto;
+      display: block;
+      opacity: 0.96;
+      filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.42));
+    }
+    @media (min-width: 640px) {
+      .mad-honor-salute { max-width: 320px; }
+    }
+    .mad-honor-salute--photo {
+      max-width: min(100%, 480px);
+      max-height: 172px;
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      object-position: center bottom;
+      opacity: 1;
+      border-radius: 2px;
+      filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.55));
+    }
+    @media (min-width: 640px) {
+      .mad-honor-salute--photo {
+        max-width: 520px;
+        max-height: 198px;
+      }
+    }
+    @media (max-width: 520px) {
+      .mad-plaque {
+        grid-template-columns: 1fr auto;
+        align-items: center;
+      }
+      .mad-plaque__honor {
+        grid-column: 1 / -1;
+        padding: 0.25rem 0 0.5rem;
+      }
+      .mad-plaque__honor .mad-honor-salute { max-width: 300px; margin: 0 auto; }
+      .mad-plaque__badge { justify-self: center; }
+    }
+
+    .mad-quote {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      margin-top: 0.85rem;
+      padding: 0.9rem 1.1rem;
+      border: 1px solid rgba(212, 175, 55, 0.38);
+      background: rgba(8, 14, 12, 0.78);
+    }
+    .mad-quote__flag {
+      width: 5px;
+      align-self: stretch;
+      min-height: 2.6rem;
+      border-radius: 1px;
+      background: linear-gradient(180deg, #bf0a30 0 33%, #f4f4f4 33% 66%, #002868 66% 100%);
+      flex-shrink: 0;
+    }
+    .mad-quote blockquote {
+      margin: 0;
+      flex: 1;
+      font-family: 'Cinzel', serif;
+      font-style: italic;
+      font-size: clamp(0.92rem, 2.4vw, 1.12rem);
+      color: #f3efe4;
+      line-height: 1.35;
+    }
+    .mad-quote cite {
+      display: block;
+      margin-top: 0.15rem;
+      font-family: 'Rajdhani', sans-serif;
+      font-style: normal;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(232, 212, 139, 0.72);
+      text-align: right;
+      white-space: nowrap;
+    }
+    @media (max-width: 640px) {
+      .mad-quote { flex-wrap: wrap; }
+      .mad-quote cite { width: 100%; text-align: left; white-space: normal; }
+    }
+
+    .mad-united {
+      margin-top: 0.85rem;
+      padding: 1.1rem 1rem 1.05rem;
+      border: 1px solid rgba(212, 175, 55, 0.38);
+      background: rgba(8, 14, 12, 0.78);
+      text-align: center;
+    }
+    .mad-united__title {
+      margin: 0 0 0.85rem;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--mad-gold);
+    }
+    .mad-united__badges {
+      display: flex;
+      justify-content: center;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .mad-badge {
+      width: 5.6rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .mad-badge svg {
+      width: 64px;
+      height: 74px;
+    }
+    .mad-badge span {
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(232, 212, 139, 0.9);
+    }
+    .mad-united__sub {
+      margin: 0.75rem 0 0;
+      font-size: 0.88rem;
+      color: rgba(226, 232, 224, 0.82);
+    }
+
+    body.theme-military .mx-lang-toggle {
+      background: rgba(8, 14, 12, 0.7);
+      border-color: rgba(212, 175, 55, 0.4);
+    }
+    body.theme-military .mx-lang-btn--active,
+    body.theme-military .mx-lang-btn[aria-pressed="true"] {
+      background: var(--mad-gold);
+      color: #14110a;
+    }
+    body.theme-military h1.text-blue-500 {
+      color: #e8d48b !important;
+    }
+    body.theme-military .text-cyan-400,
+    body.theme-military .text-cyan-300 {
+      color: var(--mad-gold-soft) !important;
+    }
+    body.theme-military .border-cyan-500 {
+      border-color: rgba(212, 175, 55, 0.45) !important;
+    }
+    body.theme-military .bg-gray-800.border.border-cyan-500 {
+      background: linear-gradient(135deg, rgba(36, 48, 28, 0.5), rgba(8, 14, 12, 0.95)) !important;
+    }
+    body.theme-military .picks-wizard-progress__seg.is-done {
+      background: linear-gradient(90deg, #2c3a20, #4a5c32);
+    }
+    body.theme-military .picks-wizard-progress__seg.is-active {
+      background: linear-gradient(90deg, #d4af37, #e8d48b);
+      box-shadow: 0 0 14px rgba(212, 175, 55, 0.45);
+    }
+    body.theme-military .wizard-step-hero--450 {
+      background: linear-gradient(135deg, rgba(36, 48, 28, 0.85), rgba(8, 14, 12, 0.95));
+      border-color: rgba(212, 175, 55, 0.4);
+    }
+    body.theme-military .wizard-step-hero--250 {
+      background: linear-gradient(135deg, rgba(80, 70, 32, 0.4), rgba(8, 14, 12, 0.95));
+      border-color: rgba(212, 175, 55, 0.45);
+    }
+    body.theme-military .wizard-step-hero--bonus {
+      background: linear-gradient(135deg, rgba(36, 48, 28, 0.6), rgba(80, 70, 32, 0.28), rgba(8, 14, 12, 0.95));
+      border-color: rgba(212, 175, 55, 0.4);
+    }
+    body.theme-military .wizard-overview-toolbar {
+      border-color: rgba(212, 175, 55, 0.3);
+      background: rgba(8, 14, 12, 0.94);
+    }
+    body.theme-military .rp-btn--primary {
+      background: linear-gradient(135deg, #e8d48b, #d4af37);
+      color: #14110a;
+      border-color: rgba(212, 175, 55, 0.75);
+      font-weight: 800;
+    }
+    body.theme-military .rp-btn--primary:hover:not(:disabled) {
+      filter: brightness(1.06);
+    }
+    body.theme-military .rp-btn--warm {
+      background: linear-gradient(135deg, #3a2418, #1a120e);
+      border-color: rgba(212, 175, 55, 0.45);
+      color: #e8d48b;
+    }
+    body.theme-military .picks-status-row,
+    body.theme-military #picks-status {
+      border-color: rgba(90, 170, 100, 0.45) !important;
+      background: linear-gradient(90deg, rgba(28, 58, 34, 0.55), rgba(10, 18, 14, 0.92)) !important;
+    }
+    body.theme-military .race-prep-panel,
+    body.theme-military .race-prep-mobile-fold {
+      border-color: rgba(212, 175, 55, 0.32);
+      background: rgba(8, 14, 12, 0.78);
+    }
+    body.theme-military .race-prep-head--sx h2,
+    body.theme-military .race-prep-mobile-fold > summary {
+      color: var(--mad-gold) !important;
+    }
+    body.theme-military #main-trackmap {
+      filter: sepia(0.45) saturate(0.7) hue-rotate(8deg) brightness(1.05);
+      background: #0b1410 !important;
+    }
     .race-picks-shell {
+      position: relative;
+      z-index: 1;
       width: 100%;
       max-width: 100%;
       overflow-x: clip;
@@ -912,38 +1295,130 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
-  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=5"></script>
+  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=10"></script>
   <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=st-missing-cta-1">
 </head>
-<body class="text-gray-200 font-sans min-h-screen{% if (competition.series or '')|upper == 'MXSM' %} theme-mxsm{% endif %}">
+<body class="text-gray-200 font-sans min-h-screen{% if (competition.series or '')|upper == 'MXSM' %} theme-mxsm{% elif military_appreciation|default(false) %} theme-military{% endif %}">
   <div class="race-picks-shell mx-auto p-3 sm:p-4 md:p-6 max-w-7xl">
 
+    {% set mm = military_meta | default({}) %}
+    {% set mad = namespace(
+      city=(mm.city or competition.name or ''),
+      year=mm.year or (competition.event_date.year if competition.event_date else none),
+      round=mm.round,
+      coast=mm.coast_label or (('250SX ' ~ competition.coast_250|capitalize) if competition.coast_250 else ''),
+      date_short=mm.date_short or (competition.event_date.strftime('%d %b %Y') if competition.event_date else ''),
+      date_long=mm.date_long or (competition.event_date.strftime('%d %B %Y') if competition.event_date else '')
+    ) %}
+    {% if not mad.round and (competition.name or '')|lower == 'seattle' %}{% set mad.round = 11 %}{% endif %}
+    {% if not mad.round and (competition.name or '')|lower == 'arlington' %}{% set mad.round = 5 %}{% endif %}
+    {% if military_appreciation|default(false) %}
+    <section class="mad-stage" aria-label="Military Appreciation Day">
+      <div class="mad-stage__bar">
+        <div class="mad-stage__brand">PICK <span>★</span> THE <span>★</span> WINNER</div>
+        <div class="rp-btn-row w-full sm:w-auto sm:shrink-0" style="align-items:center;gap:0.5rem;">
+          <div class="mx-lang-toggle" role="group" aria-label="Välj språk / Choose language">
+            <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>
+            <button type="button" class="mx-lang-btn" data-lang="en" aria-pressed="false">EN</button>
+          </div>
+          <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm flex-1 sm:flex-initial" data-i18n="picks.back">← Tillbaka</a>
+          <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--warm rp-btn--sm flex-1 sm:flex-initial">Trash Talk</a>
+        </div>
+      </div>
+      <div class="mad-stage__venue">
+        <h1>{{ mad.city }}</h1>
+        <p>
+          {{ mad.date_short }}
+          {% if mad.coast %} / {{ mad.coast|upper }}{% endif %}
+        </p>
+      </div>
+
+      <div class="mad-plaque">
+        <div>
+          <span class="mad-plaque__pill" data-i18n="picks.military_eyebrow">Military Appreciation Day</span>
+          <h2 class="mad-plaque__city">{{ mad.city }}</h2>
+          <p class="mad-plaque__tag" data-i18n="picks.military_sub">One race. One nation. A salute to those who serve.</p>
+          <p class="mad-plaque__meta">
+            {% if mad.round %}ROUND {{ mad.round }} · {% endif %}
+            {% if mad.coast %}{{ mad.coast|upper }} · {% endif %}
+            {{ mad.date_long }}
+          </p>
+        </div>
+        <div class="mad-plaque__honor" aria-hidden="true">
+          {% include 'includes/mad_honor_salute.html' %}
+        </div>
+        <div class="mad-plaque__badge" aria-hidden="true">
+          {% set mad_city = mad.city %}
+          {% set mad_year = mad.year %}
+          {% set mad_uid = 'picks' %}
+          {% include 'includes/mad_shield.html' %}
+        </div>
+      </div>
+
+      <div class="mad-quote">
+        <div class="mad-quote__flag" aria-hidden="true"></div>
+        <blockquote data-i18n="picks.military_quote">“Because of your courage, we ride free. Thank you for your service.”</blockquote>
+        <cite data-i18n="picks.military_quote_attr">— WITH GRATITUDE, FROM THE RACE COMMUNITY</cite>
+      </div>
+
+      <div class="mad-united">
+        <p class="mad-united__title" data-i18n="picks.military_united">United by the ride</p>
+        <div class="mad-united__badges">
+          <div class="mad-badge">
+            <svg viewBox="0 0 72 84" aria-hidden="true">
+              <path d="M36 4 L66 16 L66 48 C66 66 36 80 36 80 C36 80 6 66 6 48 L6 16 Z" fill="#0b1418" stroke="#d4af37" stroke-width="2"/>
+              <circle cx="36" cy="26" r="5" fill="none" stroke="#d4af37" stroke-width="2"/>
+              <path d="M36 31 v26 M28 38 h16" fill="none" stroke="#d4af37" stroke-width="2" stroke-linecap="round"/>
+              <path d="M36 57 C26 57 20 50 20 44 M36 57 C46 57 52 50 52 44" fill="none" stroke="#d4af37" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span data-i18n="picks.military_navy">Navy</span>
+          </div>
+          <div class="mad-badge">
+            <svg viewBox="0 0 72 84" aria-hidden="true">
+              <path d="M36 4 L66 16 L66 48 C66 66 36 80 36 80 C36 80 6 66 6 48 L6 16 Z" fill="#0b1418" stroke="#d4af37" stroke-width="2"/>
+              <path d="M36 26 L41 40 L36 52 L31 40 Z" fill="none" stroke="#d4af37" stroke-width="1.7" stroke-linejoin="round"/>
+              <path d="M31 36 C22 34 12 32 8 36 c4 4 12 6 23 4" fill="none" stroke="#d4af37" stroke-width="1.7"/>
+              <path d="M41 36 C50 34 60 32 64 36 c-4 4 -12 6 -23 4" fill="none" stroke="#d4af37" stroke-width="1.7"/>
+              <path d="M30 42 C20 42 12 44 10 48 M42 42 C52 42 60 44 62 48" fill="none" stroke="#d4af37" stroke-width="1.5"/>
+            </svg>
+            <span data-i18n="picks.military_airforce">Air Force</span>
+          </div>
+          <div class="mad-badge">
+            <svg viewBox="0 0 72 84" aria-hidden="true">
+              <path d="M36 4 L66 16 L66 48 C66 66 36 80 36 80 C36 80 6 66 6 48 L6 16 Z" fill="#0b1418" stroke="#d4af37" stroke-width="2"/>
+              <path d="M16 48 h8 l5-10 h16 l7 10 h6 v8 H16 Z" fill="none" stroke="#d4af37" stroke-width="1.8" stroke-linejoin="round"/>
+              <circle cx="26" cy="58" r="3.2" fill="none" stroke="#d4af37" stroke-width="1.7"/>
+              <circle cx="50" cy="58" r="3.2" fill="none" stroke="#d4af37" stroke-width="1.7"/>
+              <path d="M20 32 h10" stroke="#bf0a30" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span>Race Crew</span>
+          </div>
+        </div>
+        <p class="mad-united__sub" data-i18n="picks.military_united_sub">Ride for honor. Ride for those who serve.</p>
+      </div>
+    </section>
+    {% else %}
     <!-- Header - Responsiv layout -->
     <div class="flex flex-col gap-3 mb-4 sm:mb-6 sm:flex-row sm:justify-between sm:items-center">
-  <div class="min-w-0">
+      <div class="min-w-0">
         <h1 class="text-2xl sm:text-3xl font-bold text-blue-500 break-words">{{ competition.name }}</h1>
-
-    {# Visa datum om du har det #}
-    {% if competition.event_date %}
+        {% if competition.event_date %}
           <p class="text-xs sm:text-sm text-gray-300 mt-1">
-        {{ competition.event_date.strftime('%Y-%m-%d') }}
-      </p>
-    {% endif %}
-
-    {# 250SX East/West label #}
-    {% if competition.coast_250 %}
-      <div class="mt-2 inline-flex items-center gap-2">
-        <span class="text-xs text-gray-300">
-          250SX {{ competition.coast_250|capitalize }}
-        </span>
-        <span class="text-[10px] px-2 py-0.5 rounded bg-blue-600 text-white">
-          {{ 'W' if competition.coast_250 == 'west' else 'E' }}
-        </span>
+            {{ competition.event_date.strftime('%Y-%m-%d') }}
+          </p>
+        {% endif %}
+        {% if competition.coast_250 %}
+          <div class="mt-2 inline-flex items-center gap-2">
+            <span class="text-xs text-gray-300">
+              250SX {{ competition.coast_250|capitalize }}
+            </span>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-blue-600 text-white">
+              {{ 'W' if competition.coast_250 == 'west' else 'E' }}
+            </span>
+          </div>
+        {% endif %}
       </div>
-    {% endif %}
-  </div>
-
       <div class="rp-btn-row w-full sm:w-auto sm:shrink-0" style="align-items:center;gap:0.5rem;">
         <div class="mx-lang-toggle" role="group" aria-label="Välj språk / Choose language">
           <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>
@@ -952,7 +1427,8 @@
         <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm flex-1 sm:flex-initial" data-i18n="picks.back">← Tillbaka</a>
         <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--warm rp-btn--sm flex-1 sm:flex-initial">Trash Talk</a>
       </div>
-</div>
+    </div>
+    {% endif %}
 
     {% if (competition.series or '')|upper == 'MXSM' %}
     <div class="mxsm-sweden-banner" aria-label="Motocross SM">

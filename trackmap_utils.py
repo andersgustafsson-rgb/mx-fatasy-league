@@ -709,6 +709,17 @@ def get_picks_good_to_know(competition) -> list[str]:
             "Triple Crown-format: tre korta main events — form och start är extra viktigt."
         )
 
+    try:
+        from services.race_theme import is_military_appreciation_race
+
+        if is_military_appreciation_race(competition):
+            tips.insert(
+                0,
+                "Military Appreciation Day — lag kör ofta camo/militär-grafik. Samma tippregler som vanligt SX.",
+            )
+    except Exception:
+        pass
+
     tips.extend(
         [
             "Holeshot-val kan skilja dig från fältet — välj en förare med bra startrit.",

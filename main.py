@@ -8002,10 +8002,22 @@ def series_page(series_id):
             if _comp_public_info:
                 try:
                     info = _comp_public_info(c, series_year=getattr(series, "year", None))
-                    if info and (info.get("blurb") or info.get("highlights")):
+                    if info and (info.get("blurb") or info.get("highlights") or info.get("is_triple_crown") or info.get("is_showdown") or info.get("is_military_appreciation")):
                         competition_info[c.id] = info
                 except Exception:
                     pass
+
+        competition_marks: dict[int, dict] = {}
+        try:
+            from services.race_theme import race_card_marks as _race_card_marks
+
+            for c in competitions:
+                try:
+                    competition_marks[c.id] = _race_card_marks(c)
+                except Exception:
+                    competition_marks[c.id] = {}
+        except Exception:
+            competition_marks = {}
 
         mxon_nations = []
         if series.name in ("MXON", "MXoN"):
@@ -8262,6 +8274,7 @@ def series_page(series_id):
                              competition_gates=competition_gates,
                              competition_trackmaps=competition_trackmaps,
                              competition_info=competition_info,
+                             competition_marks=competition_marks,
                              user_picks_status=user_picks_status,
                              picks_locked_status=picks_locked_status,
                              next_race=next_race,
@@ -8935,9 +8948,27 @@ def race_picks_page(competition_id):
             season_team_riders = []
             season_team_meta = None
 
+    military_appreciation = False
+    military_meta = {}
+    try:
+        from services.race_theme import is_military_appreciation_race
+
+        military_appreciation = bool(is_military_appreciation_race(comp))
+    except Exception:
+        military_appreciation = False
+    if military_appreciation:
+        try:
+            from services.race_theme import military_theme_meta
+
+            military_meta = military_theme_meta(comp) or {}
+        except Exception:
+            military_meta = {}
+
     return render_template(
         "race_picks.html",
         competition=comp,
+        military_appreciation=military_appreciation,
+        military_meta=military_meta,
         riders_450_json=riders_450_json,
         riders_250_json=riders_250_json,
         riders_u17_json=riders_u17_json,

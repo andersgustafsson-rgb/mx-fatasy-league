@@ -126,10 +126,11 @@ SX_2027: list[dict[str, Any]] = [
         "round": 11,
         "coast_250": "west",
         "is_triple_crown": False,
+        "is_military_appreciation": True,
         "venue": "Lumen Field, Seattle, WA",
         "timezone_label": "PT",
-        "blurb": "Lumen Field (Seahawks) — SX i Seattle sedan 1978 (Kingdome-eran). Flyttat senare i schemat 2027.",
-        "highlights": ["250 West", "Lumen Field", "Historisk SX-marknad"],
+        "blurb": "Military Appreciation Day i Lumen Field (Seahawks). SX i Seattle sedan 1978 — den här omgången hyllar militären. 250 West.",
+        "highlights": ["Military Appreciation Day", "250 West", "Lumen Field"],
     },
     {
         "name": "Foxborough",
@@ -285,14 +286,20 @@ def competition_public_info(competition, series_year: int | None = None) -> dict
                 "both": "250 båda coasts",
             }.get(coast, "")
             fmt = "Triple Crown" if race.get("is_triple_crown") else "Standard (1 main)"
+            highlights = list(race.get("highlights") or [])
+            if race.get("is_military_appreciation") and "Military Appreciation Day" not in highlights:
+                highlights.insert(0, "Military Appreciation Day")
             info.update(
                 {
                     "blurb": race.get("blurb") or "",
-                    "highlights": list(race.get("highlights") or []),
+                    "highlights": highlights,
                     "round": race.get("round"),
                     "coast_label": coast_label,
                     "format_label": fmt,
                     "timezone_label": race.get("timezone_label") or "",
+                    "is_triple_crown": bool(race.get("is_triple_crown")),
+                    "is_showdown": coast in ("showdown", "both"),
+                    "is_military_appreciation": bool(race.get("is_military_appreciation")),
                 }
             )
             return info
