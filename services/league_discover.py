@@ -4,6 +4,7 @@ from __future__ import annotations
 from models import League, LeagueMembership, LeagueRequest, db
 from services.official_leagues import (
     OFFICIAL_LEAGUE_OWNER_LABEL,
+    ensure_official_public_leagues_if_missing,
     is_official_public_league,
 )
 
@@ -16,6 +17,15 @@ def _league_member_standings(league_id: int) -> list[dict]:
 
 def build_public_league_discover(viewer_user_id: int | None) -> list[dict]:
     """Publika ligor med medlemsantal, topp 3 och viewer-status."""
+    try:
+        ensure_official_public_leagues_if_missing()
+    except Exception as e:
+        print(f"official public leagues ensure skipped: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
     rows = (
         db.session.query(
             League,

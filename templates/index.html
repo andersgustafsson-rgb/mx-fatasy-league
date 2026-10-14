@@ -3816,7 +3816,7 @@
               <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <h2 class="text-xl sm:text-2xl font-bold text-slate-100"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span id="home-leagues-heading">Ligor</span></span></h2>
                 <div class="flex flex-wrap gap-2">
-                  <a href="{{ url_for('leagues_page') }}" class="rp-btn rp-btn--sm rp-btn--primary">Alla ligor</a>
+                  <a href="{{ url_for('leagues_page', tab='explore') }}" class="rp-btn rp-btn--sm rp-btn--primary">Alla ligor</a>
                   <a href="{{ url_for('leagues_page', tab='create') }}" class="rp-btn rp-btn--sm rp-btn--secondary">Skapa liga</a>
                   <a href="{{ url_for('leagues_page', tab='leaderboard') }}" class="rp-btn rp-btn--sm rp-btn--secondary">Liga-topplista</a>
                 </div>

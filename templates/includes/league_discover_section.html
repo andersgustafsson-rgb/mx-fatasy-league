@@ -2,10 +2,11 @@
 {# Expects: discover_leagues, compact (optional), hide_joined (optional), section_title (optional) #}
 {% set compact = compact|default(false) %}
 {% set hide_joined = hide_joined|default(false) %}
-{% set cards_list = discover_leagues %}
-{% if hide_joined and discover_leagues %}
-  {% set cards_list = discover_leagues|rejectattr('membership_status', 'equalto', 'member')|list %}
+{% set ns = namespace(cards=discover_leagues or []) %}
+{% if hide_joined and ns.cards %}
+  {% set ns.cards = ns.cards|rejectattr('membership_status', 'equalto', 'member')|list %}
 {% endif %}
+{% set cards_list = ns.cards %}
 <section class="lg-discover{% if compact %} lg-discover--compact{% endif %}" aria-label="Publika ligor">
   {% if section_title %}
   <h3 class="lg-discover__title" style="margin:0 0 1rem">{{ section_title }}</h3>

@@ -182,7 +182,7 @@
 
     <div class="au-panel" style="margin-bottom:1rem;padding:1rem 1.15rem">
       <h2 style="margin:0 0 0.75rem;font-family:'Barlow Condensed',sans-serif;font-size:1.25rem;font-weight:800;color:#f8fafc">Skapa publik liga (manuellt)</h2>
-      <p class="au-muted" style="margin:0 0 0.75rem;font-size:0.85rem">De fem officiella ligorna (MX Fantasy) seedas med <code style="color:#a5f3fc">scripts/seed_official_public_leagues.py --apply</code> — inga spelare som ägare, bara admin här.</p>
+      <p class="au-muted" style="margin:0 0 0.75rem;font-size:0.85rem">De fem officiella ligorna (MX Fantasy) skapas automatiskt vid start och när någon öppnar ligor — inga spelare som ägare, bara admin här. Manuell seed: <code style="color:#a5f3fc">scripts/seed_official_public_leagues.py --apply</code>.</p>
       <form action="{{ url_for('create_league') }}" method="POST" class="au-actions" style="flex-wrap:wrap;align-items:flex-end;gap:0.65rem">
         <div style="flex:1 1 200px;min-width:160px">
           <label class="au-muted" style="font-size:0.75rem;display:block;margin-bottom:0.25rem">Namn</label>

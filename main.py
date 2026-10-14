@@ -18866,6 +18866,12 @@ def init_database():
                     invalidate_series_status_cache()
                 except Exception as seed_err:
                     print(f"Warning: MXSM scaffold seed failed: {seed_err}")
+                try:
+                    from services.official_leagues import ensure_official_public_leagues
+
+                    ensure_official_public_leagues(render_images=False)
+                except Exception as seed_err:
+                    print(f"Warning: official public leagues seed failed: {seed_err}")
             except Exception as e:
                 print(f"Warning: Could not create tables (they may already exist): {e}")
             

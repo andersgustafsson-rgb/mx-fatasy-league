@@ -239,6 +239,20 @@ def _generate_invite_code(length: int = 6) -> str:
             return code
 
 
+def ensure_official_public_leagues_if_missing() -> dict[str, Any] | None:
+    """Cheap request-path check: seed official public leagues only if any name is missing."""
+    from models import League, db
+
+    names = official_public_league_names()
+    found = {
+        row[0]
+        for row in db.session.query(League.name).filter(League.name.in_(names)).all()
+    }
+    if found == set(names):
+        return None
+    return ensure_official_public_leagues(render_images=False)
+
+
 def ensure_official_public_leagues(
     *,
     render_images: bool = True,
