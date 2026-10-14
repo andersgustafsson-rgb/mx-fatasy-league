@@ -983,6 +983,51 @@
       color: #67e8f9;
       font-weight: 750;
     }
+    .home-league-discover__intro {
+      margin-bottom: 1rem; text-align: left;
+    }
+    .home-league-discover__intro h3 {
+      margin: 0 0 0.35rem; font-size: 1.15rem; font-weight: 800; color: #f1f5f9;
+    }
+    .home-league-discover__intro p {
+      margin: 0; font-size: 0.85rem; line-height: 1.5; color: #94a3b8;
+    }
+    .home-league-discover__grid {
+      display: grid; grid-template-columns: 1fr; gap: 0.75rem;
+    }
+    @media (min-width: 1024px) { .home-league-discover__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .home-league-discover-card {
+      border: 1px solid rgba(34, 211, 238, 0.25);
+      border-radius: 0.85rem;
+      background: linear-gradient(160deg, rgba(8, 47, 73, 0.4), rgba(15, 23, 42, 0.9));
+      padding: 0.9rem 1rem;
+    }
+    .home-league-discover-card__head {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.35rem;
+    }
+    .home-league-discover-card__name { font-weight: 800; color: #f8fafc; font-size: 1rem; }
+    .home-league-discover-card__badge {
+      font-size: 0.6rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+      border-radius: 999px; padding: 0.15rem 0.4rem;
+    }
+    .home-league-discover-card__badge--official {
+      color: #67e8f9; border: 1px solid rgba(34, 211, 238, 0.4); background: rgba(34, 211, 238, 0.08);
+    }
+    .home-league-discover-card__badge--request {
+      color: #fcd34d; border: 1px solid rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.08);
+    }
+    .home-league-discover-card__desc { font-size: 0.8rem; color: #cbd5e1; margin: 0 0 0.45rem; line-height: 1.4; }
+    .home-league-discover-card__meta { font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; }
+    .home-league-discover-card__top { list-style: none; margin: 0 0 0.65rem; padding: 0; font-size: 0.78rem; }
+    .home-league-discover-card__top li {
+      display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.2rem 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+    .home-league-discover-card__top li:last-child { border-bottom: none; }
+    .home-league-discover-card__top .pts { color: #67e8f9; font-weight: 700; }
+    .home-league-discover__foot {
+      display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 1rem;
+    }
     .bg-smx {
       background-image: url('/static/images/smx playoffs.webp');
       background-size: cover;
@@ -3767,11 +3812,11 @@
           <div id="leagues" class="tab-panel hidden">
             <div class="bg-gray-800/90 p-4 sm:p-6 rounded-lg shadow-lg mb-6 md:mb-8">
               <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <h2 class="text-xl sm:text-2xl font-bold text-slate-100"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Mina ligor</span></span></h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-100"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span id="home-leagues-heading">Ligor</span></span></h2>
                 <div class="flex flex-wrap gap-2">
-                  <a href="{{ url_for('leagues_page') }}" class="rp-btn rp-btn--sm rp-btn--secondary">Hantera ligor</a>
-                  <a href="{{ url_for('leagues_page', tab='explore') }}" class="rp-btn rp-btn--sm rp-btn--secondary">Utforska</a>
-                  <a href="{{ url_for('leagues_page', tab='leaderboard') }}" class="rp-btn rp-btn--sm rp-btn--primary">Liga leaderboard</a>
+                  <a href="{{ url_for('leagues_page') }}" class="rp-btn rp-btn--sm rp-btn--primary">Alla ligor</a>
+                  <a href="{{ url_for('leagues_page', tab='create') }}" class="rp-btn rp-btn--sm rp-btn--secondary">Skapa liga</a>
+                  <a href="{{ url_for('leagues_page', tab='leaderboard') }}" class="rp-btn rp-btn--sm rp-btn--secondary">Liga-topplista</a>
                 </div>
               </div>
               <div id="my-leagues-container" class="space-y-4">
@@ -4142,6 +4187,122 @@
       });
     }
 
+    function _escLeague(s) {
+      if (typeof _escHome === 'function') return _escHome(s);
+      return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    async function joinPublicLeagueHome(leagueId, btn) {
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Går med…';
+      }
+      try {
+        const res = await fetch(`/leagues/${leagueId}/join`, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Kunde inte gå med');
+        setLeaguePromoGlow(false);
+        window.location.href = `/leagues/${leagueId}`;
+      } catch (e) {
+        alert(e.message || 'Fel');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Gå med';
+        }
+      }
+    }
+
+    async function requestPublicLeagueHome(leagueId, btn) {
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Skickar…';
+      }
+      try {
+        const res = await fetch(`/leagues/${leagueId}/request`, {
+          method: 'POST',
+          body: new FormData(),
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const err = data.error || 'Kunde inte skicka ansökan';
+          if (err === 'request_already_sent') throw new Error('Du har redan en väntande ansökan.');
+          throw new Error(err);
+        }
+        if (btn) {
+          btn.textContent = 'Ansökan skickad';
+          btn.classList.remove('rp-btn--primary');
+          btn.classList.add('rp-btn--ghost');
+        }
+      } catch (e) {
+        alert(e.message || 'Fel');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Ansök';
+        }
+      }
+    }
+
+    function renderHomeLeagueDiscover(discover) {
+      const cards = Array.isArray(discover) ? discover : [];
+      const topHtml = (card) => {
+        const rows = card.top_standings || [];
+        if (!rows.length) return '<p class="text-xs text-slate-500 text-center py-1">Inga poäng ännu</p>';
+        return `<ul class="home-league-discover-card__top">${rows
+          .map(
+            (r) =>
+              `<li><span>${r.rank}. ${_escLeague(r.display_name)}</span><span class="pts">${Number(r.total_points || 0)}p</span></li>`
+          )
+          .join('')}</ul>`;
+      };
+      const grid =
+        cards.length > 0
+          ? `<div class="home-league-discover__grid">${cards
+              .map((card) => {
+                const badge = card.is_official
+                  ? '<span class="home-league-discover-card__badge home-league-discover-card__badge--official" title="Skapad av MX Fantasy">Officiell</span>'
+                  : '<span class="home-league-discover-card__badge home-league-discover-card__badge--request" title="Ligaskaparen godkänner">Ansökan</span>';
+                let action = '';
+                if (card.membership_status === 'member') {
+                  action = `<a href="/leagues/${card.id}" class="rp-btn rp-btn--sm rp-btn--primary w-full justify-center">Öppna liga</a>`;
+                } else if (card.membership_status === 'pending') {
+                  action = `<span class="text-xs text-amber-200/90 text-center block">Ansökan skickad — väntar på godkännande</span>`;
+                } else if (card.is_official || card.join_mode === 'instant') {
+                  action = `<button type="button" class="rp-btn rp-btn--sm rp-btn--primary w-full justify-center" data-join-league-id="${card.id}">Gå med</button>`;
+                } else {
+                  action = `<button type="button" class="rp-btn rp-btn--sm rp-btn--primary w-full justify-center" data-request-league-id="${card.id}">Ansök</button>`;
+                }
+                return `<article class="home-league-discover-card">
+                  <div class="home-league-discover-card__head">
+                    <span class="home-league-discover-card__name">${_escLeague(card.name)}</span>
+                    ${badge}
+                  </div>
+                  ${card.description ? `<p class="home-league-discover-card__desc">${_escLeague(card.description)}</p>` : ''}
+                  <p class="home-league-discover-card__meta">${card.member_count} medlemmar · ${card.total_points} liga-poäng</p>
+                  ${topHtml(card)}
+                  ${action}
+                </article>`;
+              })
+              .join('')}</div>`
+          : `<p class="text-sm text-slate-400 text-center py-4">Inga publika ligor ännu. Skapa en och kryssa i &quot;Publik liga&quot;, eller be admin lägga upp officiella ligor.</p>`;
+
+      return `
+        <div class="home-league-discover">
+          <div class="home-league-discover__intro">
+            <h3>Tippa tillsammans — utan kod</h3>
+            <p>Officiella ligor — gå med direkt. Andra publika ligor — ansök så godkänner skaparen. Privat liga? Använd inbjudningskod.</p>
+          </div>
+          ${grid}
+          <div class="home-league-discover__foot">
+            <a href="{{ url_for('leagues_page') }}" class="rp-btn rp-btn--secondary">Hantera alla ligor</a>
+            <a href="{{ url_for('leagues_page', tab='join') }}" class="rp-btn rp-btn--ghost">Anslut med kod</a>
+          </div>
+        </div>`;
+    }
+
     async function loadMyLeagues() {
       const container = document.getElementById('my-leagues-container');
       if (!container) return;
@@ -4161,21 +4322,27 @@
 
         if (!data.leagues || data.leagues.length === 0) {
           setLeaguePromoGlow(true);
-          container.innerHTML = `
-            <div class="rounded-xl border border-cyan-400/40 bg-gradient-to-br from-cyan-950/50 via-slate-900 to-slate-900 p-5 sm:p-6 text-center">
-              <p class="text-[11px] font-bold uppercase tracking-wider text-cyan-300/90 mb-1">Ligor</p>
-              <p class="text-lg font-bold text-white mb-1">Utmana kompisarna</p>
-              <p class="text-sm text-slate-400 mb-4 leading-relaxed">${data.message || 'Du är inte med i någon liga ännu. Skapa en egen eller gå med via kod.'}</p>
-              <div class="flex flex-wrap justify-center gap-2">
-                <a href="{{ url_for('leagues_page', tab='create') }}" class="rp-btn rp-btn--primary">Skapa liga</a>
-                <a href="{{ url_for('leagues_page', tab='join') }}" class="rp-btn rp-btn--accent">Anslut med kod</a>
-                <a href="{{ url_for('leagues_page', tab='explore') }}" class="rp-btn rp-btn--secondary">Utforska</a>
-              </div>
-            </div>`;
+          const heading = document.getElementById('home-leagues-heading');
+          if (heading) heading.textContent = 'Gå med i en liga';
+          container.innerHTML = renderHomeLeagueDiscover(data.discover);
+          container.querySelectorAll('[data-join-league-id]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const id = btn.getAttribute('data-join-league-id');
+              if (id) joinPublicLeagueHome(id, btn);
+            });
+          });
+          container.querySelectorAll('[data-request-league-id]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const id = btn.getAttribute('data-request-league-id');
+              if (id) requestPublicLeagueHome(id, btn);
+            });
+          });
           return;
         }
 
         setLeaguePromoGlow(false);
+        const heading = document.getElementById('home-leagues-heading');
+        if (heading) heading.textContent = 'Mina ligor';
         let html = '<div class="grid grid-cols-1 xl:grid-cols-2 gap-4">';
         data.leagues.forEach((league) => {
           const standings = league.standings || [];
@@ -5352,6 +5519,7 @@
         fetchPowerRanking(),
         fetchRiderSpotlight(),
       ]);
+      if (window.__MX_LOGGED_IN__) loadWelcomeLatestRace();
     }
 
     function updateAmaOnlyHomeUi() {
@@ -7848,15 +8016,20 @@
       return res;
     }
 
+    let _welcomeLatestRaceReq = 0;
     async function loadWelcomeLatestRace() {
       const latestLine = document.getElementById('welcome-latest-line');
       const uname = (window.currentUsername || '').toString().trim();
       if (!latestLine || !uname) return;
+      const req = ++_welcomeLatestRaceReq;
       try {
-        const seriesQ = homeSelectedSeries
-          ? `?series=${encodeURIComponent(homeSelectedSeries)}`
-          : '';
+        let seriesParam = homeSelectedSeries;
+        if (!seriesParam || isAmaHomeSeries(seriesParam)) {
+          seriesParam = 'SX';
+        }
+        const seriesQ = `?series=${encodeURIComponent(seriesParam)}`;
         const r2 = await fetch(`/api/users/${encodeURIComponent(uname)}/latest_points${seriesQ}`);
+        if (req !== _welcomeLatestRaceReq) return;
         const d2 = await r2.json().catch(() => ({}));
         if (latestLine && r2.ok && d2 && d2.ok && d2.latest) {
           const pts = Number(d2.latest.points || 0);
@@ -7865,7 +8038,7 @@
           latestLine.className = 'home-sidebar-points__delta' + (pts > 0 ? ' home-sidebar-points__delta--gain' : '');
           if (name) latestLine.textContent += ` · ${name}`;
         } else if (latestLine) {
-          latestLine.textContent = 'Inget race.resultat ännu';
+          latestLine.textContent = 'Inget raceresultat ännu';
           latestLine.className = 'home-sidebar-points__delta';
         }
       } catch (_e) {
@@ -7923,8 +8096,6 @@
       window.addEventListener('resize', () => {
         if (window.matchMedia('(min-width: 640px)').matches) setHomeMenuOpen(false);
       });
-      if (window.__MX_LOGGED_IN__) loadWelcomeLatestRace();
-
       if (window.__MX_DEBUG_PERF__) {
         const nav = performance.getEntriesByType('navigation')[0];
         if (nav) {
@@ -7939,6 +8110,7 @@
         try {
           if (homeSelectedSeries) localStorage.setItem('home_selected_series', homeSelectedSeries);
         } catch (_) {}
+        if (window.__MX_LOGGED_IN__) loadWelcomeLatestRace();
         renderSeriesSelection(_seriesStatusCache);
         updateAmaOnlyHomeUi();
         loadSeriesPicksStatus().then(() => {

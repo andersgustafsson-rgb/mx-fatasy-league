@@ -123,19 +123,16 @@ def user_latest_points(username: str):
 		comps = Competition.query.filter(Competition.id.in_(list(latest_by_comp.keys()))).all()
 
 		ama_series = {"SX", "MX", "SMX", "SUPERCROSS", "MOTOCROSS"}
-		tippa_only = {"WSX", "MXON", "MXGP"}
+		tippa_only = {"WSX", "MXON", "MXGP", "MXSM"}
+
+		def _series_code(comp: Competition) -> str:
+			return (getattr(comp, "series", None) or "").strip().upper()
+
 		if series_raw in tippa_only:
-			comps = [
-				c
-				for c in comps
-				if (getattr(c, "series", None) or "").strip().upper() == series_raw
-			]
-		elif series_raw in ama_series:
-			comps = [
-				c
-				for c in comps
-				if (getattr(c, "series", None) or "").strip().upper() in ama_series
-			]
+			comps = [c for c in comps if _series_code(c) == series_raw]
+		else:
+			# Default (no ?series=) + SX/MX/SMX/AMA: AMA fantasy chain only — not WSX/MXoN.
+			comps = [c for c in comps if _series_code(c) not in tippa_only]
 
 		comps_sorted = sorted(
 			comps,

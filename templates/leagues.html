@@ -305,6 +305,76 @@
     }
     .lg-explore-meta .m { color: #67e8f9; }
     .lg-explore-meta .p { color: var(--lg-amber); font-weight: 700; }
+    .lg-discover { margin-top: 0.5rem; }
+    .lg-discover__intro { margin-bottom: 1.35rem; }
+    .lg-discover__eyebrow {
+      margin: 0 0 0.35rem; font-size: 0.72rem; font-weight: 750;
+      letter-spacing: 0.12em; text-transform: uppercase; color: #67e8f9;
+    }
+    .lg-discover__title {
+      margin: 0 0 0.5rem; font-family: "Bebas Neue", Impact, sans-serif;
+      font-size: clamp(1.45rem, 4vw, 2rem); color: #f8fafc; letter-spacing: 0.03em;
+    }
+    .lg-discover__lead {
+      margin: 0; font-size: 0.9rem; line-height: 1.55; color: #94a3b8; max-width: 42rem;
+    }
+    .lg-discover__grid {
+      display: grid; grid-template-columns: 1fr; gap: 1rem;
+    }
+    @media (min-width: 768px) { .lg-discover__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .lg-discover-card {
+      border: 1px solid rgba(34, 211, 238, 0.22);
+      border-radius: 1rem;
+      background: linear-gradient(155deg, rgba(8, 47, 73, 0.35), rgba(15, 23, 42, 0.88));
+      padding: 1.1rem 1.15rem 1.2rem;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+    }
+    .lg-discover-card__head {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.35rem;
+    }
+    .lg-discover-card__name {
+      margin: 0; font-size: 1.15rem; font-weight: 800; color: #f1f5f9; line-height: 1.2;
+    }
+    .lg-discover-card__badge {
+      font-size: 0.65rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 0.2rem 0.45rem; border-radius: 999px;
+    }
+    .lg-discover-card__badge--official {
+      background: rgba(34, 211, 238, 0.12); color: #67e8f9; border: 1px solid rgba(34, 211, 238, 0.35);
+    }
+    .lg-discover-card__badge--request {
+      background: rgba(251, 191, 36, 0.12); color: #fcd34d; border: 1px solid rgba(251, 191, 36, 0.35);
+    }
+    .lg-discover-card__desc { margin: 0 0 0.5rem; font-size: 0.82rem; color: #cbd5e1; line-height: 1.45; }
+    .lg-discover-card__meta {
+      font-size: 0.78rem; color: #64748b; font-weight: 600; margin-bottom: 0.65rem;
+    }
+    .lg-discover-card__dot { margin: 0 0.25rem; }
+    .lg-discover-card__top {
+      list-style: none; margin: 0 0 0.85rem; padding: 0;
+      border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 0.65rem; overflow: hidden;
+    }
+    .lg-discover-card__top li {
+      display: grid; grid-template-columns: 1.75rem 1fr auto; gap: 0.35rem; align-items: center;
+      padding: 0.4rem 0.55rem; font-size: 0.8rem; border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+    }
+    .lg-discover-card__top li:last-child { border-bottom: none; }
+    .lg-discover-card__top li.is-me { background: rgba(34, 211, 238, 0.08); }
+    .lg-discover-card__top .rank { color: #64748b; font-weight: 800; }
+    .lg-discover-card__top .pts { color: #a5f3fc; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .lg-discover-card__empty-top {
+      margin: 0 0 0.85rem; font-size: 0.8rem; color: #64748b; text-align: center; padding: 0.5rem;
+    }
+    .lg-discover-card__actions { display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center; }
+    .lg-discover__empty {
+      border: 1px dashed rgba(148, 163, 184, 0.35); border-radius: 0.85rem;
+      padding: 1.25rem; text-align: center; color: #94a3b8; font-size: 0.9rem;
+    }
+    .lg-discover__secondary {
+      display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 1.25rem;
+    }
+    .lg-discover--compact .lg-discover__intro { display: none; }
+    .lg-discover--compact .lg-discover__secondary { margin-top: 0.75rem; }
     .lg-badge {
       flex: 1; text-align: center;
       padding: 0.65rem 0.75rem; border-radius: 0.65rem;
@@ -490,17 +560,7 @@
           {% endfor %}
         </div>
       {% else %}
-        <div class="lg-panel">
-          <div class="lg-empty">
-            <div class="icon">{{ mx_icon('trophy', 'mx-icon--2xl') }}</div>
-            <h3>Ingen liga ännu</h3>
-            <p>Skapa en egen eller anslut med inbjudningskod.</p>
-            <div class="flex flex-wrap justify-center gap-2">
-              <button type="button" class="lg-btn lg-btn--primary" data-switch-tab="create">{{ mx_icon('rocket') }} Skapa liga</button>
-              <button type="button" class="lg-btn lg-btn--ghost" data-switch-tab="join">{{ mx_icon('user-plus') }} Anslut</button>
-            </div>
-          </div>
-        </div>
+        {% include 'includes/league_discover_section.html' %}
       {% endif %}
     </div>
 
@@ -513,8 +573,17 @@
             <div>
               <label for="league_name" class="lg-label">Namn på ligan</label>
               <input type="text" name="league_name" id="league_name" required class="lg-input"
-                     placeholder="T.ex. Mina Vänner Liga">
+                     placeholder="T.ex. Skåne-ligan eller Mina vänner">
             </div>
+            <div>
+              <label for="league_description" class="lg-label">Beskrivning (valfritt)</label>
+              <textarea name="league_description" id="league_description" rows="2" class="lg-input"
+                        placeholder="Kort text som syns för andra — t.ex. regional liga eller kompisgäng"></textarea>
+            </div>
+            <label class="flex items-start gap-2.5 cursor-pointer text-sm text-slate-300">
+              <input type="checkbox" name="is_public" value="1" class="mt-1 rounded border-slate-500">
+              <span><strong class="text-white">Publik liga</strong> — syns under Utforska. Andra <strong class="text-white">ansöker</strong> och du godkänner (officiella MX Fantasy-ligor har direkt «Gå med»).</span>
+            </label>
             <div>
               <label for="league_image" class="lg-label">Ligabild (valfritt)</label>
               <input type="file" name="league_image" id="league_image" accept="image/*" class="lg-input text-sm">
@@ -544,44 +613,7 @@
 
     <!-- Utforska -->
     <div id="tab-explore" class="lg-tab-panel{% if initial_tab == 'explore' %} active{% endif %}" role="tabpanel">
-      {% if public_leagues %}
-        <div class="lg-grid">
-          {% for league_data in public_leagues %}
-            {% set league = league_data[0] %}
-            {% set member_count = league_data[1] %}
-            <div class="lg-card" style="padding:1.05rem 1.1rem 1.15rem">
-              <h3 class="lg-card__title" style="cursor:default">{{ league.name }}</h3>
-              {% if league.description %}
-                <p class="lg-card__meta" style="margin-top:0.45rem">{{ league.description }}</p>
-              {% endif %}
-              <div class="lg-explore-meta">
-                <span class="m">{{ member_count }} medlemmar</span>
-                <span class="p">{{ league.total_points or 0 }} p</span>
-              </div>
-              <div class="lg-card__actions">
-                {% if league.id in user_league_ids %}
-                  <span class="lg-badge lg-badge--ok">{{ mx_icon('check-circle') }} Medlem</span>
-                {% elif league.id in pending_league_ids %}
-                  <span class="lg-badge lg-badge--wait">{{ mx_icon('hourglass') }} Väntar</span>
-                {% else %}
-                  <button type="button" onclick="requestJoinLeague({{ league.id }}, {{ league.name|tojson }})"
-                          class="lg-btn lg-btn--primary" style="flex:1">Ansök</button>
-                {% endif %}
-                <a href="{{ url_for('league_detail_page', league_id=league.id) }}"
-                   class="lg-btn lg-btn--ghost" style="flex:1">Visa</a>
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="lg-panel">
-          <div class="lg-empty">
-            <h3>Inga publika ligor</h3>
-            <p>Skapa den första ligan så syns den här.</p>
-            <button type="button" class="lg-btn lg-btn--primary" data-switch-tab="create">Skapa liga</button>
-          </div>
-        </div>
-      {% endif %}
+      {% include 'includes/league_discover_section.html' %}
     </div>
 
     <!-- Leaderboard -->
@@ -686,6 +718,46 @@
 
     document.getElementById('requestModal').addEventListener('click', function(e) {
       if (e.target === this) closeRequestModal();
+    });
+
+    async function joinPublicLeague(leagueId, leagueName, btn) {
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Går med…';
+      }
+      try {
+        const response = await fetch(`/leagues/${leagueId}/join`, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(result.error || 'Kunde inte gå med');
+        }
+        window.location.href = `/leagues/${leagueId}`;
+      } catch (err) {
+        alert(err.message || 'Fel vid anslutning');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Gå med';
+        }
+      }
+    }
+
+    document.querySelectorAll('.js-join-public-league').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-league-id');
+        const name = btn.getAttribute('data-league-name') || '';
+        if (id) joinPublicLeague(id, name, btn);
+      });
+    });
+
+    document.querySelectorAll('.js-request-public-league').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-league-id');
+        const name = btn.getAttribute('data-league-name') || '';
+        if (id) requestJoinLeague(id, name);
+      });
     });
   </script>
 </body>

@@ -22,7 +22,9 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
-from auth_helpers import _redirect_to_login
+from auth_helpers import _redirect_to_login, is_admin_user
+from services.league_discover import build_public_league_discover
+from services.official_leagues import is_official_public_league
 from models import (
     Competition,
     CompetitionResult,
@@ -174,6 +176,8 @@ def leagues_page():
         summary = _league_summary_for_user(league.id, uid)
         my_league_cards.append({"league": league, **summary})
 
+    discover_leagues = build_public_league_discover(uid)
+
     return render_template(
         "leagues.html",
         my_leagues=my_leagues,
@@ -181,6 +185,7 @@ def leagues_page():
         username=session.get("username", "Gäst"),
         is_logged_in=True,
         public_leagues=public_leagues,
+        discover_leagues=discover_leagues,
         user_league_ids=user_league_ids,
         pending_league_ids=pending_league_ids,
         league_leaderboard=league_leaderboard,
@@ -281,7 +286,8 @@ def api_leagues_stats():
         if not my_leagues:
             return jsonify({
                 "leagues": [],
-                "message": "Du är inte medlem i någon liga ännu."
+                "message": "Du är inte medlem i någon liga ännu.",
+                "discover": build_public_league_discover(uid),
             })
         
         # Get all competitions that have results
@@ -337,14 +343,45 @@ def api_leagues_stats():
             })
         
         return jsonify({
-            "leagues": stats
+            "leagues": stats,
+            "discover": build_public_league_discover(uid),
         })
-        
+
     except Exception as e:
         print(f"Error loading league statistics: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/api/leagues/public")
+def api_public_leagues():
+    """Publika ligor för discover (inloggad)."""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    return jsonify({"discover": build_public_league_discover(session["user_id"])})
+
+
+@bp.post("/leagues/<int:league_id>/join")
+def join_public_league(league_id: int):
+    """Gå med direkt — endast officiella MX Fantasy-ligor (övriga publika kräver ansökan)."""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+
+    league = League.query.get_or_404(league_id)
+    if not getattr(league, "is_public", False):
+        return jsonify({"error": "not_public"}), 403
+    if not is_official_public_league(league):
+        return jsonify({"error": "approval_required"}), 403
+
+    uid = session["user_id"]
+    if LeagueMembership.query.filter_by(league_id=league_id, user_id=uid).first():
+        return jsonify({"ok": True, "already_member": True})
+
+    db.session.add(LeagueMembership(league_id=league_id, user_id=uid))
+    db.session.commit()
+    return jsonify({"ok": True, "league_id": league_id, "name": league.name})
+
 
 @bp.route("/leagues/<int:league_id>")
 def league_detail_page(league_id):
@@ -471,13 +508,18 @@ def create_league():
                 print(f"Error processing league image: {e}")
                 # Continue without image if processing fails
 
+        description = (request.form.get("league_description") or "").strip()[:255]
+        is_public = request.form.get("is_public") in ("1", "on", "true", "yes")
+
         league = League(
-            name=name, 
-            creator_id=session["user_id"], 
-            invite_code=code, 
+            name=name,
+            creator_id=session["user_id"],
+            invite_code=code,
             image_url=image_url,
             image_data=image_data,
-            image_mime_type=image_mime_type
+            image_mime_type=image_mime_type,
+            description=description or None,
+            is_public=is_public,
         )
         db.session.add(league)
         db.session.flush()
@@ -545,7 +587,14 @@ def edit_league(league_id):
         new_name = (request.form.get("league_name") or "").strip()
         if new_name and new_name != league.name:
             league.name = new_name
-        
+
+        if league.creator_id == session["user_id"] or is_admin_user():
+            desc = request.form.get("league_description")
+            if desc is not None:
+                league.description = desc.strip()[:255] or None
+            if "is_public" in request.form:
+                league.is_public = request.form.get("is_public") in ("1", "on", "true", "yes")
+
         # Handle new image upload
         file = request.files.get("league_image")
         if file and file.filename and allowed_file(file.filename):
@@ -629,16 +678,22 @@ def request_join_league(league_id):
         return jsonify({"error": "not_logged_in"}), 401
     
     league = League.query.get_or_404(league_id)
-    
+
+    if is_official_public_league(league):
+        return jsonify({"error": "use_instant_join"}), 400
+
+    if not getattr(league, "is_public", False):
+        return jsonify({"error": "not_public"}), 403
+
     # Check if user is already a member
     existing_membership = LeagueMembership.query.filter_by(
-        league_id=league_id, 
+        league_id=league_id,
         user_id=session["user_id"]
     ).first()
-    
+
     if existing_membership:
         return jsonify({"error": "already_member"}), 400
-    
+
     # Check if user already has a pending request
     existing_request = LeagueRequest.query.filter_by(
         league_id=league_id,
@@ -660,7 +715,7 @@ def request_join_league(league_id):
     db.session.add(request_obj)
     db.session.commit()
     
-    return jsonify({"message": "Request sent successfully"})
+    return jsonify({"ok": True, "message": "Request sent successfully"})
 
 @bp.post("/leagues/<int:league_id>/approve_request/<int:request_id>")
 def approve_league_request(league_id, request_id):

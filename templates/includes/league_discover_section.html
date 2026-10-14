@@ -1,0 +1,82 @@
+{% from 'includes/mx_icon.html' import mx_icon %}
+{# Expects: discover_leagues (list of card dicts), compact (optional bool) #}
+{% set compact = compact|default(false) %}
+<section class="lg-discover{% if compact %} lg-discover--compact{% endif %}" aria-label="Publika ligor">
+  {% if not compact %}
+  <div class="lg-discover__intro">
+    <p class="lg-discover__eyebrow">Ligor i MX Fantasy</p>
+    <h3 class="lg-discover__title">Tippa som vanligt — tävla i grupp</h3>
+    <p class="lg-discover__lead">
+      Efter varje race uppdateras ligans topplista. Poäng bygger på medlemmarnas fantasy-resultat (AMA/SMX).
+      Du kan vara med i flera ligor. <strong class="text-slate-200">Officiella</strong> ligor — gå med direkt.
+      <strong class="text-slate-200">Andra publika</strong> — ansök. <strong class="text-slate-200">Privata</strong> — kod från skaparen.
+    </p>
+  </div>
+  {% endif %}
+
+  {% if discover_leagues and discover_leagues|length > 0 %}
+  <div class="lg-discover__grid">
+    {% for card in discover_leagues %}
+    <article class="lg-discover-card">
+      <div class="lg-discover-card__head">
+        <h4 class="lg-discover-card__name">{{ card.name }}</h4>
+        {% if card.is_official %}
+        <span class="lg-discover-card__badge lg-discover-card__badge--official" title="Skapad av MX Fantasy">Officiell</span>
+        {% else %}
+        <span class="lg-discover-card__badge lg-discover-card__badge--request" title="Ligaskaparen godkänner">Ansökan</span>
+        {% endif %}
+      </div>
+      {% if card.description %}
+      <p class="lg-discover-card__desc">{{ card.description }}</p>
+      {% endif %}
+      <div class="lg-discover-card__meta">
+        <span>{{ card.member_count }} medlemmar</span>
+        <span class="lg-discover-card__dot" aria-hidden="true">·</span>
+        <span>{{ card.total_points }} liga-poäng</span>
+      </div>
+      {% if card.top_standings %}
+      <ol class="lg-discover-card__top">
+        {% for row in card.top_standings %}
+        <li class="{% if row.is_me %}is-me{% endif %}">
+          <span class="rank">{{ row.rank }}.</span>
+          <span class="name truncate">{{ row.display_name }}</span>
+          <span class="pts">{{ row.total_points }}p</span>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <p class="lg-discover-card__empty-top">Inga poäng ännu — bli först!</p>
+      {% endif %}
+      <div class="lg-discover-card__actions">
+        {% if card.membership_status == 'member' %}
+          <span class="lg-badge lg-badge--ok">{{ mx_icon('check-circle') }} Medlem</span>
+          <a href="{{ url_for('league_detail_page', league_id=card.id) }}" class="lg-btn lg-btn--primary">Öppna liga</a>
+        {% elif card.membership_status == 'pending' %}
+          <span class="lg-badge lg-badge--wait">{{ mx_icon('hourglass') }} Väntar</span>
+          <a href="{{ url_for('league_detail_page', league_id=card.id) }}" class="lg-btn lg-btn--ghost">Visa</a>
+        {% else %}
+          {% if card.join_mode == 'instant' or card.is_official %}
+          <button type="button" class="lg-btn lg-btn--primary js-join-public-league" data-league-id="{{ card.id }}" data-league-name="{{ card.name|e }}" data-join-mode="instant">
+            Gå med
+          </button>
+          {% else %}
+          <button type="button" class="lg-btn lg-btn--primary js-request-public-league" data-league-id="{{ card.id }}" data-league-name="{{ card.name|e }}">
+            Ansök
+          </button>
+          {% endif %}
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="lg-discover__empty">
+    <p>Inga publika ligor ännu. Skapa en och kryssa i <strong>Publik liga</strong>, eller be admin sätta upp officiella ligor.</p>
+  </div>
+  {% endif %}
+
+  <div class="lg-discover__secondary">
+    <a href="{{ url_for('leagues_page', tab='create') }}" class="lg-btn lg-btn--ghost">{{ mx_icon('rocket') }} Skapa egen liga</a>
+    <button type="button" class="lg-btn lg-btn--ghost" data-switch-tab="join">{{ mx_icon('user-plus') }} Har du en kod?</button>
+  </div>
+</section>

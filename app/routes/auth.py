@@ -66,6 +66,19 @@ def login():
                 db.func.lower(User.email) == username.lower(),
             ).first()
         
+        from services.official_leagues import is_official_league_system_user
+
+        if user and is_official_league_system_user(user):
+            err = "Det här kontot kan inte logga in."
+            if modal:
+                return jsonify({"success": False, "error": err})
+            flash(err, "error")
+            return render_template(
+                "login.html",
+                next_url=next_url,
+                google_login_enabled=_google_login_enabled(),
+            )
+
         if user and user.password_hash and check_password_hash(user.password_hash, password):
             # Complete session reset - nuclear approach
             session.clear()

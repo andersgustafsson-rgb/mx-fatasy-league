@@ -660,9 +660,11 @@ try:
         ("leagues_leaderboard", "/leagues/leaderboard", ["GET"]),
         ("api_leagues_leaderboard", "/api/leagues/leaderboard", ["GET"]),
         ("api_leagues_stats", "/api/leagues/stats", ["GET"]),
+        ("api_public_leagues", "/api/leagues/public", ["GET"]),
         ("league_detail_page", "/leagues/<int:league_id>", None),
         ("create_league", "/create_league", ["POST"]),
         ("join_league", "/join_league", ["POST"]),
+        ("join_public_league", "/leagues/<int:league_id>/join", ["POST"]),
         ("leave_league", "/leagues/<int:league_id>/leave", ["POST"]),
         ("edit_league", "/leagues/<int:league_id>/edit", ["POST"]),
         ("delete_league", "/leagues/<int:league_id>/delete", ["POST"]),
@@ -20130,16 +20132,29 @@ def admin_leagues():
             League.created_at.desc()
         ).all()
         
+        from services.official_leagues import (
+            OFFICIAL_LEAGUE_OWNER_LABEL,
+            OFFICIAL_LEAGUE_OWNER_USERNAME,
+            is_official_public_league,
+        )
+
         leagues_list = []
         for league_data in leagues_data:
             league = league_data[0]
             member_count = league_data[1]
             creator_username = league_data[2]
-            
+            is_official = is_official_public_league(league)
+            if is_official or creator_username == OFFICIAL_LEAGUE_OWNER_USERNAME:
+                creator_label = OFFICIAL_LEAGUE_OWNER_LABEL
+            else:
+                creator_label = creator_username
+
             leagues_list.append({
                 'id': league.id,
                 'name': league.name,
                 'creator_username': creator_username,
+                'creator_label': creator_label,
+                'is_official': is_official,
                 'member_count': member_count,
                 'total_points': league.total_points or 0,
                 'is_public': getattr(league, 'is_public', True),

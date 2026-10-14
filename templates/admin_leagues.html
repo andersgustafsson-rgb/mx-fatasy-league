@@ -180,6 +180,23 @@
       </div>
     </div>
 
+    <div class="au-panel" style="margin-bottom:1rem;padding:1rem 1.15rem">
+      <h2 style="margin:0 0 0.75rem;font-family:'Barlow Condensed',sans-serif;font-size:1.25rem;font-weight:800;color:#f8fafc">Skapa publik liga (manuellt)</h2>
+      <p class="au-muted" style="margin:0 0 0.75rem;font-size:0.85rem">De fem officiella ligorna (MX Fantasy) seedas med <code style="color:#a5f3fc">scripts/seed_official_public_leagues.py --apply</code> — inga spelare som ägare, bara admin här.</p>
+      <form action="{{ url_for('create_league') }}" method="POST" class="au-actions" style="flex-wrap:wrap;align-items:flex-end;gap:0.65rem">
+        <div style="flex:1 1 200px;min-width:160px">
+          <label class="au-muted" style="font-size:0.75rem;display:block;margin-bottom:0.25rem">Namn</label>
+          <input name="league_name" required class="au-search" style="max-width:none;width:100%" placeholder="T.ex. Skåne-ligan">
+        </div>
+        <div style="flex:2 1 280px;min-width:200px">
+          <label class="au-muted" style="font-size:0.75rem;display:block;margin-bottom:0.25rem">Beskrivning</label>
+          <input name="league_description" class="au-search" style="max-width:none;width:100%" placeholder="Kort text för spelare">
+        </div>
+        <input type="hidden" name="is_public" value="1">
+        <button type="submit" class="au-btn au-btn--primary">Skapa publik liga</button>
+      </form>
+    </div>
+
     <div class="au-toolbar">
       <input id="leagueSearch" class="au-search" type="search" placeholder="Sök liga eller skapare…" oninput="applyLeagueFilter()" autocomplete="off">
       <span class="au-meta" id="leagueCount">{{ leagues|length }} ligor</span>
@@ -207,11 +224,14 @@
             >
               <td>
                 <span class="au-name">{{ league.name }}</span>
+                {% if league.is_official %}
+                  <span class="au-badge" style="margin-left:0.35rem;background:rgba(34,211,238,0.12);color:#67e8f9">Officiell</span>
+                {% endif %}
                 {% if league.description %}
                   <div class="au-muted" style="font-size:0.8rem;max-width:16rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ league.description }}</div>
                 {% endif %}
               </td>
-              <td class="au-muted">{{ league.creator_username }}</td>
+              <td class="au-muted">{{ league.creator_label or league.creator_username }}</td>
               <td class="au-mono">{{ league.member_count }}</td>
               <td class="au-mono">{{ league.total_points }}</td>
               <td>
