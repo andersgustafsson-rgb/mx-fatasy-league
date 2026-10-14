@@ -16,7 +16,7 @@ PICKS_OPEN_DAYS_BEFORE_SERIES = 30
 # SX opens earlier so registered users have something to tip (Anaheim etc.).
 # Picks store rider_id — number tweaks are free; class/coast changes: edit until race deadline.
 PICKS_OPEN_DAYS_BEFORE_SERIES_BY_CODE = {
-    "SX": 30,
+    "SX": 100,  # Anaheim 1 2027-01-09 → open from ~2026-10-01
 }
 
 _SV_MONTHS = (
