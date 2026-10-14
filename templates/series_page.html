@@ -950,7 +950,7 @@
         {% set is_sx = _series == 'SX' %}
         {% set is_tc = is_sx and (marks.triple_crown or info.get('is_triple_crown') or comp.is_triple_crown) %}
         {% set is_ew = is_sx and (marks.showdown or info.get('is_showdown') or _coast in ('showdown', 'both')) %}
-        {% set is_mad = is_sx and (marks.military or info.get('is_military_appreciation') or ((comp.name or '')|lower == 'seattle' and comp.event_date and comp.event_date.year == 2027) or ((comp.name or '')|lower == 'arlington' and comp.event_date and comp.event_date.year == 2026)) %}
+        {% set is_mad = is_sx and (marks.military or info.get('is_military_appreciation') or ((comp.name or '')|lower == 'seattle' and comp.event_date and comp.event_date.year == 2027)) %}
         <button type="button"
                 class="sp-race-card{% if cancelled %} sp-race-card--cancelled{% endif %}"
                 data-open-race

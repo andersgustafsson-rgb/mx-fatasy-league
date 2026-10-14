@@ -1312,7 +1312,6 @@
       date_long=mm.date_long or (competition.event_date.strftime('%d %B %Y') if competition.event_date else '')
     ) %}
     {% if not mad.round and (competition.name or '')|lower == 'seattle' %}{% set mad.round = 11 %}{% endif %}
-    {% if not mad.round and (competition.name or '')|lower == 'arlington' %}{% set mad.round = 5 %}{% endif %}
     {% if military_appreciation|default(false) %}
     <section class="mad-stage" aria-label="Military Appreciation Day">
       <div class="mad-stage__bar">

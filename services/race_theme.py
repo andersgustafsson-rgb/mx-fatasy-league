@@ -6,7 +6,6 @@ from typing import Any
 # Official MAD weekends by (year, series, competition name).
 MILITARY_APPRECIATION_RACES = frozenset(
     {
-        (2026, "SX", "Arlington"),
         (2027, "SX", "Seattle"),
     }
 )
