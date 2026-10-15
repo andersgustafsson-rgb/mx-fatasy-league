@@ -16,6 +16,8 @@ set HOST=127.0.0.1
 set PORT=5000
 set DATABASE_URL=sqlite:///fantasy_mx_local.db
 set RENDER=
+REM Prod-liknande pick-las lokalt. Satt =1 tillfalligt for att testa alla omgangar:
+set PICKS_UNLOCK_ALL_LOCAL=0
 REM Visuell preview av sasongsteam-promo (glow/CTA). Combined: SEASON_TEAM_COMBINED_LIVE=1
 set SEASON_TEAM_PROMO_LIVE=1
 

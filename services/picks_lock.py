@@ -32,8 +32,7 @@ def _is_local_sqlite_database() -> bool:
 def picks_unlock_all_local() -> bool:
     """
     Local dev only: open every race for picks UI testing.
-    On by default for FLASK_ENV=development + SQLite (fantasy_mx_local.db).
-    Force with PICKS_UNLOCK_ALL_LOCAL=1, or disable with PICKS_UNLOCK_ALL_LOCAL=0.
+    Off by default — set PICKS_UNLOCK_ALL_LOCAL=1 when you need all rounds open.
     Never applies on Render or FLASK_ENV=production.
     """
     if (os.environ.get("RENDER") or "").strip().lower() == "true":
@@ -42,14 +41,8 @@ def picks_unlock_all_local() -> bool:
         return False
 
     raw = (os.environ.get("PICKS_UNLOCK_ALL_LOCAL") or "").strip().lower()
-    if raw in ("0", "false", "no", "off"):
-        return False
     if raw in ("1", "true", "yes", "on"):
-        return True
-
-    env = (os.environ.get("FLASK_ENV") or "").strip().lower()
-    if env in ("development", "dev") and _is_local_sqlite_database():
-        return True
+        return _is_local_sqlite_database()
     return False
 
 _SV_MONTHS = (

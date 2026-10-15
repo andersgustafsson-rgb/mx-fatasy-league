@@ -1944,7 +1944,7 @@
 <body class="text-gray-200 font-sans min-h-screen{% if (competition.series or '')|upper == 'MXSM' %} theme-mxsm{% elif military_appreciation|default(false) %} theme-military{% elif st_jude_love_moto|default(false) %} theme-stjude{% elif sx_format == 'triple_showdown' %} theme-sx-triple-showdown{% elif sx_format == 'triple_crown' %} theme-sx-triple-crown{% elif sx_format == 'showdown' %} theme-sx-showdown{% elif sx_format == 'coast_west' %} theme-sx-west{% elif sx_format == 'coast_east' %} theme-sx-east{% endif %}">
   <div class="race-picks-shell mx-auto p-3 sm:p-4 md:p-6 max-w-7xl">
     {% if picks_local_unlock|default(false) %}
-    <p class="picks-local-unlock-banner" role="status">Lokal dev: alla picks öppna (PICKS_UNLOCK_ALL_LOCAL) — stäng av innan deploy</p>
+    <p class="picks-local-unlock-banner" role="status">Lokal dev: alla picks öppna (PICKS_UNLOCK_ALL_LOCAL=1) — prod använder normal kö</p>
     {% endif %}
 
     {% set mm = military_meta | default({}) %}
