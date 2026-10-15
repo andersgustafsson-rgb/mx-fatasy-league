@@ -1,5 +1,5 @@
 /* PWA service worker: cache static assets + Web Push. */
-const CACHE = "mx-fantasy-v69";
+const CACHE = "mx-fantasy-v70";
 const OFFLINE_URL = "/static/offline.html";
 const NOTIFY_ICON = "/static/icons/mx_fantasy_app_icon_192.png";
 const NOTIFY_BADGE_DATA =
@@ -115,8 +115,24 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (req.mode === "navigate") {
+    const isLocalDev =
+      url.hostname === "localhost" || url.hostname === "127.0.0.1";
     event.respondWith(
-      fetch(req).catch(() => caches.match(OFFLINE_URL))
+      fetch(req).catch(() => {
+        if (isLocalDev) {
+          const html =
+            "<!DOCTYPE html><html lang='sv'><head><meta charset='utf-8'>" +
+            "<title>Lokal server av</title></head><body style='font-family:system-ui;background:#0f172a;color:#e2e8f0;padding:2rem'>" +
+            "<h1>Lokal server körs inte</h1>" +
+            "<p>Starta <strong>MX Fantasy (lokalt)</strong> från Start-menyn och vänta tills servern är igång.</p>" +
+            "<p>Logg: <code>instance\\local_server.log</code></p>" +
+            "</body></html>";
+          return new Response(html, {
+            headers: { "Content-Type": "text/html; charset=utf-8" },
+          });
+        }
+        return caches.match(OFFLINE_URL);
+      })
     );
     return;
   }

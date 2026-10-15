@@ -850,29 +850,61 @@ def _mark_local_dev_html(response):
             "}catch(e){}})();</script>"
             "<style>"
             ".mx-local-dev-badge{position:fixed;left:10px;bottom:10px;z-index:9000;"
-            "background:#84cc16;color:#14532d;"
             "font:700 11px/1.25 system-ui,Segoe UI,sans-serif;"
             "padding:8px 10px;border-radius:8px;"
             "box-shadow:0 2px 10px rgba(0,0,0,.35);opacity:.96;"
-            "display:flex;flex-direction:column;gap:6px;max-width:200px}"
+            "display:flex;flex-direction:column;gap:6px;max-width:200px;"
+            "transition:background .25s ease,color .25s ease,border-color .25s ease;"
+            "border:2px solid transparent}"
+            ".mx-local-dev-badge--online{background:#86efac;color:#14532d;border-color:#22c55e}"
+            ".mx-local-dev-badge--offline{background:#fecaca;color:#7f1d1d;border-color:#ef4444}"
             ".mx-local-dev-badge .mx-local-dev-title{font-weight:900;letter-spacing:.12em;"
             "font-size:10px}"
+            ".mx-local-dev-server{display:flex;align-items:center;gap:6px;font-size:10px;"
+            "font-weight:800;letter-spacing:.04em}"
+            ".mx-local-dev-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;"
+            "background:currentColor;box-shadow:0 0 0 2px rgba(255,255,255,.35)}"
+            ".mx-local-dev-badge--online .mx-local-dev-dot{animation:mx-local-pulse 2s ease infinite}"
+            "@keyframes mx-local-pulse{0%,100%{opacity:1}50%{opacity:.55}}"
             ".mx-local-dev-badge button{appearance:none;border:0;cursor:pointer;"
             "background:#14532d;color:#ecfccb;font:700 11px/1 system-ui,Segoe UI,sans-serif;"
             "padding:7px 8px;border-radius:6px;text-align:left;width:100%}"
+            ".mx-local-dev-badge--offline button{background:#991b1b;color:#fef2f2}"
             ".mx-local-dev-badge button:hover{background:#052e16}"
+            ".mx-local-dev-badge--offline button:hover{background:#7f1d1d}"
             ".mx-local-dev-badge button.mx-local-dev-btn--stop{background:#3f6212}"
+            ".mx-local-dev-badge--offline button.mx-local-dev-btn--stop{background:#b91c1c}"
             ".mx-local-dev-badge button.mx-local-dev-btn--stop:hover{background:#365314}"
+            ".mx-local-dev-badge--offline button.mx-local-dev-btn--stop:hover{background:#991b1b}"
             ".mx-local-dev-badge button:disabled{opacity:.6;cursor:wait}"
             ".mx-local-dev-badge .mx-local-dev-status{font-size:10px;font-weight:600;"
-            "color:#14532d;opacity:.9;min-height:1.2em}"
+            "opacity:.9;min-height:1.2em}"
             "</style>"
             "<script>(function(){"
             "function ready(fn){if(document.readyState!=='loading')fn();"
             "else document.addEventListener('DOMContentLoaded',fn);}"
             "ready(function(){"
+            "var badge=document.getElementById('mx-local-dev-badge');"
+            "var serverTxt=document.getElementById('mx-local-server-text');"
             "var btn=document.getElementById('mx-local-sync-btn');"
             "var st=document.getElementById('mx-local-sync-status');"
+            "function setServerLive(live){"
+            "if(!badge)return;"
+            "badge.classList.toggle('mx-local-dev-badge--online',!!live);"
+            "badge.classList.toggle('mx-local-dev-badge--offline',!live);"
+            "if(serverTxt)serverTxt.textContent=live?'Server igång':'Server av';"
+            "try{var tc=document.querySelector('meta[name=theme-color]');"
+            "if(tc)tc.content=live?'#86efac':'#fecaca';}catch(e){}"
+            "}"
+            "async function pingServer(){"
+            "try{var r=await fetch('/health',{cache:'no-store',credentials:'same-origin'});"
+            "setServerLive(r.ok);return r.ok;}catch(e){setServerLive(false);return false;}"
+            "}"
+            "setServerLive(true);"
+            "pingServer();"
+            "setInterval(pingServer,10000);"
+            "document.addEventListener('visibilitychange',function(){"
+            "if(!document.hidden)pingServer();});"
             "if(!btn)return;"
             "btn.addEventListener('click',async function(){"
             "if(!confirm('Skriv över lokal databas med senaste från prod?\\n\\n"
@@ -901,8 +933,11 @@ def _mark_local_dev_html(response):
             "stopBtn.disabled=true;if(st)st.textContent='Stänger server…';"
             "try{"
             "await fetch('/local/api/stop-server',{method:'POST',credentials:'same-origin'});"
+            "setServerLive(false);"
             "if(st)st.textContent='Server stoppad. Du kan stänga fliken.';"
+            "setTimeout(pingServer,800);"
             "}catch(e){"
+            "setServerLive(false);"
             "if(st)st.textContent='Kör stopp_local.bat om sidan hänger.';"
             "stopBtn.disabled=false;"
             "}"
@@ -912,8 +947,14 @@ def _mark_local_dev_html(response):
             "})();</script>"
         )
         inject_body = (
-            '<div class="mx-local-dev-badge" role="region" aria-label="Lokal utvecklingsmiljö">'
+            '<div class="mx-local-dev-badge mx-local-dev-badge--online" id="mx-local-dev-badge" '
+            'role="region" aria-label="Lokal utvecklingsmiljö">'
             '<div class="mx-local-dev-title">LOKAL</div>'
+            '<div class="mx-local-dev-server" id="mx-local-server-status" role="status" '
+            'aria-live="polite">'
+            '<span class="mx-local-dev-dot" aria-hidden="true"></span>'
+            '<span id="mx-local-server-text">Server igång</span>'
+            "</div>"
             '<button type="button" id="mx-local-sync-btn" title="Kopiera prod-databasen till lokal">'
             "Synka DB från prod"
             "</button>"
@@ -22548,8 +22589,16 @@ except Exception as _rem_sched_err:
 
 if __name__ == "__main__":
     # Production vs Development configuration
-    debug_mode = os.getenv('FLASK_ENV') != 'production'
-    host = os.getenv('HOST', '0.0.0.0')
-    port = int(os.getenv('PORT', 5000))
-    
-    app.run(host=host, port=port, debug=debug_mode)
+    debug_mode = os.getenv("FLASK_ENV") != "production"
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", 5000))
+    rel_raw = (os.getenv("FLASK_USE_RELOADER") or "").strip().lower()
+    if rel_raw in ("1", "true", "yes", "on"):
+        use_reloader = True
+    elif rel_raw in ("0", "false", "no", "off"):
+        use_reloader = False
+    else:
+        # Default off locally: faster startup + stop-server works reliably.
+        use_reloader = False
+
+    app.run(host=host, port=port, debug=debug_mode, use_reloader=use_reloader)

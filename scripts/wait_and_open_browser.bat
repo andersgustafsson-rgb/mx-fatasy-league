@@ -6,12 +6,11 @@ set "LOCAL_URL=http://127.0.0.1:%PORT%/"
 set /a TRIES=0
 
 :loop
-timeout /t 1 /nobreak >nul
+ping 127.0.0.1 -n 2 >nul
 set /a TRIES+=1
 if %TRIES% gtr 240 exit /b 1
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "if (Get-NetTCPConnection -LocalPort %PORT% -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0local_health_ok.ps1" -Port %PORT% >nul 2>&1
 if errorlevel 1 goto loop
 
 call "%~dp0open_local_url.bat" "%LOCAL_URL%"

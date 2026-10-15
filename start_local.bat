@@ -18,6 +18,7 @@ set DATABASE_URL=sqlite:///fantasy_mx_local.db
 set RENDER=
 REM Prod-liknande pick-las lokalt. Satt =1 tillfalligt for att testa alla omgangar:
 set PICKS_UNLOCK_ALL_LOCAL=0
+set FLASK_USE_RELOADER=0
 REM Visuell preview av sasongsteam-promo (glow/CTA). Combined: SEASON_TEAM_COMBINED_LIVE=1
 set SEASON_TEAM_PROMO_LIVE=1
 
@@ -70,22 +71,30 @@ set "LOCAL_URL=http://127.0.0.1:%PORT%/"
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\is_port_listening.ps1" -Port %PORT% >nul 2>&1
 if not errorlevel 1 (
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\local_health_ok.ps1" -Port %PORT% >nul 2>&1
+  if not errorlevel 1 (
+    echo.
+    echo   Servern kor redan pa port %PORT%.
+    echo   Oppnar webblasare: %LOCAL_URL%
+    call "%~dp0scripts\open_local_url.bat" "%LOCAL_URL%"
+    if defined MX_LOCAL_HIDDEN exit /b 0
+    echo.
+    echo   Stoppa med genvagen "MX Fantasy ^(stopp^)" eller stopp_local.bat
+    pause
+    exit /b 0
+  )
   echo.
-  echo   Servern kor redan pa port %PORT%.
-  echo   Oppnar webblasare: %LOCAL_URL%
-  call "%~dp0scripts\open_local_url.bat" "%LOCAL_URL%"
-  if defined MX_LOCAL_HIDDEN exit /b 0
-  echo.
-  echo   Stoppa med genvagen "MX Fantasy ^(stopp^)" eller stopp_local.bat
-  pause
-  exit /b 0
+  echo   Port %PORT% upptagen men servern svarar inte — rensar och startar om...
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\stop_local_server.ps1" -Port %PORT%
 )
 
 echo.
 echo Startar servern...
+echo   Forsta start efter stopp kan ta 30-60 sek ^(DB-init^).
 echo   Oppnas automatiskt: %LOCAL_URL%
 if defined MX_LOCAL_HIDDEN (
-  echo   Lage: dold ^(logg: instance\local_server.log^)
+  echo   Dolt fonster — senaste logg: instance\local_server_latest.txt
+  echo   ^(sok "Running on http://127.0.0.1:%PORT%" i loggfilen^)
 ) else (
   echo   Stopp:  Ctrl+C i detta fonster
 )
@@ -94,10 +103,15 @@ echo.
 REM Oppna webblasare forst nar porten lyssnar (DB-init kan ta tid)
 start /b "" "%~dp0scripts\wait_and_open_browser.bat" %PORT%
 
-"%PY%" main.py
+if defined MX_LOCAL_HIDDEN (
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\run_local_server_logged.ps1"
+) else (
+  "%PY%" main.py
+)
 if errorlevel 1 (
     echo.
     echo FEL: Servern startade inte.
+    if defined MX_LOCAL_HIDDEN echo Se instance\local_server_latest.txt
 )
 
 echo.

@@ -1,13 +1,12 @@
 @echo off
-REM Stoppa dold lokal MX Fantasy-server (port 5000)
+chcp 65001 >nul
 cd /d "%~dp0"
 title Stoppa MX Fantasy (lokal)
+set PORT=5000
+if not "%~1"=="" set PORT=%~1
 echo.
-echo   Stoppar lokal server pa port 5000...
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$conns = Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue;" ^
-  "if (-not $conns) { Write-Host '  Ingen server kor pa 5000.'; exit 0 };" ^
-  "$pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique;" ^
-  "foreach ($pid in $pids) { try { Stop-Process -Id $pid -Force -ErrorAction Stop; Write-Host ('  Stoppade PID ' + $pid) } catch { Write-Host ('  Kunde inte stoppa PID ' + $pid + ': ' + $_.Exception.Message) } }"
+echo   Stoppar lokal server pa port %PORT%...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\stop_local_server.ps1" -Port %PORT%
 echo.
-timeout /t 2 /nobreak >nul
+if defined MX_LOCAL_HIDDEN exit /b 0
+pause
