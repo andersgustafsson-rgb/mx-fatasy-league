@@ -1,0 +1,68 @@
+# Secrets and local env (never index)
+.env
+.env.*
+private/
+cookies.txt
+
+# Python / tooling caches
+.pip-cache/
+.venv/
+.venv-ci/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# Local DB and runtime instance
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Bundled third-party (Ghostscript) — thousands of non-app files
+tools/gs/
+
+# Downloaded or generated media (paths still appear in Python/templates)
+downloaded_trackmaps/
+downloaded_wsx_race_images/
+static/uploads/
+static/riders/
+static/trackmaps/
+static/posters/
+static/brand_logos/
+static/images/
+static/leagues/
+static/fonts/
+static/schema/assets/
+static/tidrapport/
+static/recap_templates/
+
+# Archives, backups, office exports
+backups/
+scripts/archive/
+excel/
+Hämtade filer/
+
+# Large binaries (code references paths; no need to embed file contents)
+*.zip
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.ico
+*.svg
+*.woff
+*.woff2
+*.ttf
+*.mp3
+*.wav
+*.dll
+*.exe
+
+# Misc local artifacts
+_ci_log.zip
+test_mx_out.txt

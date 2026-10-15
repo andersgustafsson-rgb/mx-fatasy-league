@@ -1,0 +1,64 @@
+---
+description: Where to look in MX Fantasy League — entry points, routes, services
+alwaysApply: true
+---
+
+# Repository map (MX Fantasy League)
+
+Use this index before broad searches. Full conventions: `AGENTS.md`.
+
+## Entry points
+
+| File | Role |
+|------|------|
+| `main.py` | **Production** WSGI app (`gunicorn main:app`). Registers all blueprints. |
+| `app/__init__.py` | `create_app()` factory; subset of blueprints for gradual migration. |
+| `app.py` | Legacy monolith (large); prefer `app/routes/` + `main.py` for new work. |
+| `models.py` | All SQLAlchemy models (single file). |
+| `wsgi.py` | Deployment hook if used by host. |
+
+## HTTP layer — `app/routes/`
+
+| Module | Blueprint | Notes |
+|--------|-----------|--------|
+| `public.py` | `public` | Pages, SEO landings, core UI |
+| `api.py` | `/api` | JSON API |
+| `admin.py` | `admin` | Admin UI |
+| `auth.py` | `auth` | Login, register, Google OAuth |
+| `race_picks.py` | `race_picks` | Race tipping flows |
+| `mxon_picks.py` | `mxon_picks` | MXoN nation/class picks |
+| `leagues.py` | `leagues` | Leagues, membership |
+| `league_challenges.py` | `league_challenges` | Challenge badges |
+| `pit_lane.py` | `pit_lane` | Pit lane / social feed |
+| `invite.py` | `invite` | Invites and share cards |
+| `series_status.py` | `series_status` | Series open/closed status |
+| `results_admin.py` | `results_admin` | Import/admin for results |
+| `kundmail.py` | `kundmail` | Customer email tooling |
+| `push_api.py` | `push_api` | Web push |
+| `debug_tools.py` | `debug_tools` | Dev-only helpers |
+
+Blueprint registration list in code: search `register_blueprint` in `main.py`.
+
+## Domain logic — `services/`
+
+Business rules live here when extracted from routes: `scoring.py`, `race_picks.py`, `picks_lock.py`, `results_import.py`, `official_leagues.py`, `league_challenges.py`, `invite_share.py`, `series_status.py`, `schema_patches.py`, etc.
+
+## Root-level modules (grep by feature name)
+
+Poster/social/ops scripts often sit at repo root: `*_poster_service.py`, `pit_lane_service.py`, `reminder_service.py`, `push_service.py`, `trojtryck_service.py`, plus fetch/import `*_fetch.py`, `seed_*.py`, `scoring.py`.
+
+## Front-end
+
+- Templates: `templates/` (Jinja2; Swedish UI copy).
+- Client JS/CSS: `static/*.js`, `static/*.css` (not under ignored image dirs).
+- PWA: `static/sw.js`; registered from `app/__init__.py`.
+
+## Data and schema
+
+- Migrations: `migrations/versions/`
+- Seed/paste data: `data/`
+- Env template: `env.example` (never commit `.env`)
+
+## What is intentionally not indexed
+
+See `.cursorignore` (bulk images, `tools/gs`, caches). If you need an asset path, search string literals in `.py` / `templates/`.

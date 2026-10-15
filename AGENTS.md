@@ -123,21 +123,31 @@ except Exception as e:
 
 ### File Structure
 ```
-main.py              # Legacy entry point (keep for backward compatibility)
-app.py              # Main application entry point
-models.py           # All SQLAlchemy models
+main.py              # Production WSGI entry (gunicorn main:app); registers all blueprints
+app.py               # Legacy monolith (large); prefer app/routes + main.py for changes
+models.py            # All SQLAlchemy models
 app/
-  __init__.py       # App factory: create_app()
-  routes/
-    api.py          # API endpoints (Blueprint)
-    admin.py        # Admin routes (Blueprint)
-    public.py       # Public routes (Blueprint)
-static/
-  uploads/          # User uploads
-  images/           # Static images
-  sfx/              # Sound effects
-templates/          # Jinja2 templates
+  __init__.py        # App factory: create_app() (subset of blueprints)
+  routes/            # Flask blueprints (see .cursor/rules/repo-map.mdc)
+services/            # Domain logic extracted from routes
+migrations/          # Alembic versions
+templates/           # Jinja2 templates (Swedish UI)
+static/              # JS/CSS + assets (.cursorignore skips bulk images)
 ```
+
+### Repository map (quick navigation)
+
+| Area | Where to look |
+|------|----------------|
+| New page or JSON endpoint | `app/routes/` then register in `main.py` |
+| DB tables / relationships | `models.py` only |
+| Scoring, picks lock, imports | `services/` |
+| Posters, reminders, push | Root `*_service.py` files |
+| Admin results / imports | `app/routes/results_admin.py`, `services/results_import.py` |
+| MXoN | `app/routes/mxon_picks.py`, `Mxon*` models in `models.py` |
+| Leagues | `app/routes/leagues.py`, `services/official_leagues.py` |
+
+Bulk assets and `tools/gs` are listed in `.cursorignore` so search/index stays on application code.
 
 ### Environment Variables
 Load from `.env` file using python-dotenv. Required in `.env`:
