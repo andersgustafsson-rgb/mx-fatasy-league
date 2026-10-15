@@ -750,6 +750,32 @@ except Exception as e:
     print(f"force_dark register skip: {type(e).__name__}: {e}")
 
 
+@app.post("/local/api/stop-server")
+def local_stop_server():
+    """LOKAL only: shut down this dev server process (127.0.0.1)."""
+    if not _is_local_dev_mark():
+        return jsonify({"error": "Not found"}), 404
+    host = (request.host or "").split(":")[0].lower()
+    if host not in ("127.0.0.1", "localhost"):
+        return jsonify({"error": "Not found"}), 404
+
+    import threading
+
+    shutdown = request.environ.get("werkzeug.server.shutdown")
+
+    def _exit_after_response() -> None:
+        import time
+
+        time.sleep(0.35)
+        if callable(shutdown):
+            shutdown()
+        else:
+            os._exit(0)
+
+    threading.Thread(target=_exit_after_response, daemon=True).start()
+    return jsonify({"ok": True, "message": "Servern stängs…"})
+
+
 @app.post("/local/api/sync-prod-db")
 def local_sync_prod_db():
     """
@@ -833,8 +859,10 @@ def _mark_local_dev_html(response):
             "font-size:10px}"
             ".mx-local-dev-badge button{appearance:none;border:0;cursor:pointer;"
             "background:#14532d;color:#ecfccb;font:700 11px/1 system-ui,Segoe UI,sans-serif;"
-            "padding:7px 8px;border-radius:6px;text-align:left}"
+            "padding:7px 8px;border-radius:6px;text-align:left;width:100%}"
             ".mx-local-dev-badge button:hover{background:#052e16}"
+            ".mx-local-dev-badge button.mx-local-dev-btn--stop{background:#3f6212}"
+            ".mx-local-dev-badge button.mx-local-dev-btn--stop:hover{background:#365314}"
             ".mx-local-dev-badge button:disabled{opacity:.6;cursor:wait}"
             ".mx-local-dev-badge .mx-local-dev-status{font-size:10px;font-weight:600;"
             "color:#14532d;opacity:.9;min-height:1.2em}"
@@ -866,6 +894,20 @@ def _mark_local_dev_html(response):
             "setTimeout(function(){location.reload();},1200);"
             "}catch(e){if(st)st.textContent='Fel: '+(e&&e.message||e);btn.disabled=false;}"
             "});"
+            "var stopBtn=document.getElementById('mx-local-stop-btn');"
+            "if(stopBtn){"
+            "stopBtn.addEventListener('click',async function(){"
+            "if(!confirm('Stoppa lokal Flask-server på port 5000?'))return;"
+            "stopBtn.disabled=true;if(st)st.textContent='Stänger server…';"
+            "try{"
+            "await fetch('/local/api/stop-server',{method:'POST',credentials:'same-origin'});"
+            "if(st)st.textContent='Server stoppad. Du kan stänga fliken.';"
+            "}catch(e){"
+            "if(st)st.textContent='Kör stopp_local.bat om sidan hänger.';"
+            "stopBtn.disabled=false;"
+            "}"
+            "});"
+            "}"
             "});"
             "})();</script>"
         )
@@ -875,6 +917,8 @@ def _mark_local_dev_html(response):
             '<button type="button" id="mx-local-sync-btn" title="Kopiera prod-databasen till lokal">'
             "Synka DB från prod"
             "</button>"
+            '<button type="button" id="mx-local-stop-btn" class="mx-local-dev-btn--stop" '
+            'title="Avsluta denna lokala server">Stoppa server</button>'
             '<div class="mx-local-dev-status" id="mx-local-sync-status"></div>'
             "</div>"
         )
@@ -8251,7 +8295,13 @@ def series_page(series_id):
                 None,
             )
 
-        picks_open = bool(next_race and not is_picks_locked(next_race))
+        from services.picks_lock import picks_unlock_all_local
+
+        picks_local_unlock = picks_unlock_all_local()
+        picks_open = bool(
+            picks_local_unlock
+            or (next_race and not is_picks_locked(next_race))
+        )
         if next_race and comp_ids:
             picks_locked_status[next_race.id] = not picks_open
 
@@ -8288,6 +8338,7 @@ def series_page(series_id):
                              picks_open=picks_open,
                              picks_preseason=picks_preseason,
                              picks_opens_on=picks_opens_on,
+                             picks_local_unlock=picks_local_unlock,
                              current_date=get_today(),
                              active_race_id=active_race_id,
                              mxon_nations=mxon_nations,
@@ -8998,6 +9049,23 @@ def race_picks_page(competition_id):
         except Exception:
             st_jude_meta = {}
 
+    sx_format = ""
+    sx_format_meta: dict = {}
+    if not military_appreciation and not st_jude_love_moto:
+        try:
+            from services.race_theme import sx_format_kind, sx_format_theme_meta
+
+            sx_format = sx_format_kind(comp) or ""
+            if sx_format:
+                sx_format_meta = sx_format_theme_meta(comp) or {}
+        except Exception:
+            sx_format = ""
+            sx_format_meta = {}
+
+    from services.picks_lock import picks_unlock_all_local
+
+    picks_local_unlock = picks_unlock_all_local()
+
     return render_template(
         "race_picks.html",
         competition=comp,
@@ -9005,6 +9073,9 @@ def race_picks_page(competition_id):
         military_meta=military_meta,
         st_jude_love_moto=st_jude_love_moto,
         st_jude_meta=st_jude_meta,
+        sx_format=sx_format,
+        sx_format_meta=sx_format_meta,
+        picks_local_unlock=picks_local_unlock,
         riders_450_json=riders_450_json,
         riders_250_json=riders_250_json,
         riders_u17_json=riders_u17_json,

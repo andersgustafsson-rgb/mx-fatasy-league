@@ -1,0 +1,130 @@
+{# SX format hero: triple_crown | showdown | triple_showdown | coast_west | coast_east #}
+<section class="sxf-stage sxf-stage--{{ sx_format }}{% if sx.hero_image or sx.hero_background %} sxf-stage--full-hero{% endif %}"
+         aria-label="{{ sx.city }} — {{ sx_format|replace('_', ' ') }}">
+  <div class="sxf-stage__bar">
+    <div class="sxf-stage__brand">PICK <span>★</span> THE <span>★</span> WINNER</div>
+    <div class="rp-btn-row w-full sm:w-auto sm:shrink-0" style="align-items:center;gap:0.5rem;">
+      <div class="mx-lang-toggle" role="group" aria-label="Välj språk / Choose language">
+        <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>
+        <button type="button" class="mx-lang-btn" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm flex-1 sm:flex-initial" data-i18n="picks.back">← Tillbaka</a>
+      <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--warm rp-btn--sm flex-1 sm:flex-initial">Trash Talk</a>
+    </div>
+  </div>
+
+  {% if sx.hero_background %}
+  <div class="sxf-hero-banner sxf-hero-banner--overlay"
+       style="--sxf-hero-url: url('{{ url_for('static', filename=sx.hero_background) }}');{% if sx.hero_aspect_w and sx.hero_aspect_h %} --sxf-hero-aspect: {{ sx.hero_aspect_w }} / {{ sx.hero_aspect_h }};{% endif %}">
+    <div class="sxf-hero-banner__shade" aria-hidden="true"></div>
+    <div class="sxf-hero-banner__content">
+      {% include 'includes/sx_format_hero_overlay.html' %}
+    </div>
+    <div class="sxf-hero-banner__badge" aria-hidden="true">
+      {% include 'includes/sx_format_shield.html' %}
+    </div>
+  </div>
+  {% elif sx.hero_image %}
+  <div class="sxf-hero-banner"
+       role="img"
+       aria-label="{{ competition.name }} — {{ sx.date_short }}"
+       style="--sxf-hero-url: url('{{ url_for('static', filename=sx.hero_image) }}');{% if sx.hero_aspect_w and sx.hero_aspect_h %} --sxf-hero-aspect: {{ sx.hero_aspect_w }} / {{ sx.hero_aspect_h }};{% endif %}">
+  </div>
+  {% else %}
+
+  {% if not sx.hero_plaque_composed %}
+  <div class="sxf-stage__venue">
+    <h1>{{ sx.city }}</h1>
+    <p>
+      {{ sx.date_short }}
+      {% if sx.coast_line %} / {{ sx.coast_line }}{% endif %}
+    </p>
+  </div>
+  {% endif %}
+
+  <div class="sxf-plaque{% if sx_format == 'showdown' %} sxf-plaque--ew-logo{% elif sx_format == 'triple_showdown' %} sxf-plaque--tc-ew{% endif %}{% if sx.hero_plaque_background %} sxf-plaque--hero-bg{% if sx.hero_plaque_composed %} sxf-plaque--composed{% endif %}{% endif %}"
+       {% if sx.hero_plaque_background %}style="--sxf-plaque-bg: url('{{ url_for('static', filename=sx.hero_plaque_background) }}');{% if sx.hero_aspect_w and sx.hero_aspect_h %} --sxf-plaque-aspect: {{ sx.hero_aspect_w }} / {{ sx.hero_aspect_h }};{% endif %}"{% endif %}>
+    {% if sx.hero_plaque_background %}
+    <div class="sxf-plaque__hero-bg" aria-hidden="true"></div>
+    {% endif %}
+    <div class="sxf-plaque__copy">
+      {% if sx_format == 'triple_showdown' %}
+      <span class="sxf-plaque__pill" data-i18n="picks.sx_tc_showdown_eyebrow">Triple Crown · East/West Showdown</span>
+      {% if not sx.hero_plaque_composed %}<h2 class="sxf-plaque__city">{{ sx.city }}</h2>{% endif %}
+      <p class="sxf-plaque__tag" data-i18n="picks.sx_tc_showdown_sub">Three mains. Both coasts. One epic night.</p>
+      {% elif sx_format == 'showdown' %}
+      <span class="sxf-plaque__pill" data-i18n="picks.sx_showdown_eyebrow">East/West Showdown</span>
+      {% if not sx.hero_plaque_composed %}<h2 class="sxf-plaque__city">{{ sx.city }}</h2>{% endif %}
+      <p class="sxf-plaque__tag" data-i18n="picks.sx_showdown_sub">250 East and 250 West — same gate, same points fight.</p>
+      {% elif sx_format == 'triple_crown' %}
+      <span class="sxf-plaque__pill" data-i18n="picks.sx_tc_eyebrow">Triple Crown</span>
+      {% if not sx.hero_plaque_composed %}<h2 class="sxf-plaque__city">{{ sx.city }}</h2>{% endif %}
+      <p class="sxf-plaque__tag" data-i18n="picks.sx_tc_sub">Three mains. Combined scoring. Crown the king.</p>
+      {% elif sx_format == 'coast_west' %}
+      <span class="sxf-plaque__pill" data-i18n="picks.sx_west_eyebrow">250SX West</span>
+      {% if not sx.hero_plaque_composed %}<h2 class="sxf-plaque__city">{{ sx.city }}</h2>{% endif %}
+      <p class="sxf-plaque__tag" data-i18n="picks.sx_west_sub">West coast speed — pick your six.</p>
+      {% else %}
+      <span class="sxf-plaque__pill" data-i18n="picks.sx_east_eyebrow">250SX East</span>
+      {% if not sx.hero_plaque_composed %}<h2 class="sxf-plaque__city">{{ sx.city }}</h2>{% endif %}
+      <p class="sxf-plaque__tag" data-i18n="picks.sx_east_sub">East coast charge — pick your six.</p>
+      {% endif %}
+      <p class="sxf-plaque__meta">
+        {% if sx.round %}ROUND {{ sx.round }} · {% endif %}
+        {% if sx.venue_short %}{{ sx.venue_short|upper }} · {% endif %}
+        {% if sx.date_short %}{{ sx.date_short|upper }}{% endif %}
+      </p>
+    </div>
+
+    <div class="sxf-plaque__art" aria-hidden="true">
+      <div class="sxf-art-slot">
+        {% if sx_format in ('triple_crown', 'triple_showdown') and not sx.hero_plaque_composed %}
+        <div class="sxf-crowns">
+          <span class="sxf-crown" title="Main 1">♛</span>
+          <span class="sxf-crown sxf-crown--mid" title="Main 2">♛</span>
+          <span class="sxf-crown" title="Main 3">♛</span>
+        </div>
+        <p class="sxf-art-label" data-i18n="picks.sx_tc_mains">3 MAINS</p>
+        {% endif %}
+        {% if sx_format == 'coast_west' %}
+        <div class="sxf-coast-badge sxf-coast-badge--west">W</div>
+        {% elif sx_format == 'coast_east' %}
+        <div class="sxf-coast-badge sxf-coast-badge--east">E</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="sxf-plaque__badge{% if sx_format in ('showdown', 'triple_showdown') %} sxf-plaque__badge--ew-logo{% endif %}" aria-hidden="true">
+      {% if sx_format in ('showdown', 'triple_showdown') %}
+      {% include 'includes/sx_showdown_logo_badge.html' %}
+      {% else %}
+      {% include 'includes/sx_format_shield.html' %}
+      {% endif %}
+    </div>
+  </div>
+
+  {% endif %}
+
+  {% if not sx.hero_image and not sx.hero_background %}
+  <div class="sxf-quote">
+    <div class="sxf-quote__bar" aria-hidden="true"></div>
+    <blockquote>
+      {% if sx_format == 'triple_showdown' %}
+      <span data-i18n="picks.sx_tc_showdown_quote">“Triple Crown pressure. Showdown stakes. Pick like it’s the finale.”</span>
+      {% elif sx_format == 'showdown' %}
+      <span data-i18n="picks.sx_showdown_quote">“East meets West — only one gate, two titles on the line.”</span>
+      {% elif sx_format == 'triple_crown' %}
+      <span data-i18n="picks.sx_tc_quote">“Survive three mains. Stack the points. Wear the crown.”</span>
+      {% elif sx_format == 'coast_west' %}
+      <span data-i18n="picks.sx_west_quote">“West coast style — holeshot or hustle.”</span>
+      {% else %}
+      <span data-i18n="picks.sx_east_quote">“East coast grit — send it into turn one.”</span>
+      {% endif %}
+    </blockquote>
+  </div>
+
+  <p class="sxf-ribbon">
+    {{ sx.city }} · {{ sx.year }} AMA SUPERCROSS
+  </p>
+  {% endif %}
+</section>

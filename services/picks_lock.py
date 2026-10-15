@@ -4,6 +4,7 @@ Moved from main.py without behavior change. See docs/REFACTOR.md.
 """
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta
 
 from flask import session
@@ -21,6 +22,35 @@ PICKS_OPEN_DAYS_BEFORE_SERIES_BY_CODE = {
 
 # AMA fantasy: one round at a time (SX/MX/SMX) after the series window opens.
 _AMA_SEQUENTIAL_ROUND_SERIES = frozenset({"SX", "MX", "SMX"})
+
+
+def _is_local_sqlite_database() -> bool:
+    url = (os.environ.get("DATABASE_URL") or "").strip().lower()
+    return url.startswith("sqlite:")
+
+
+def picks_unlock_all_local() -> bool:
+    """
+    Local dev only: open every race for picks UI testing.
+    On by default for FLASK_ENV=development + SQLite (fantasy_mx_local.db).
+    Force with PICKS_UNLOCK_ALL_LOCAL=1, or disable with PICKS_UNLOCK_ALL_LOCAL=0.
+    Never applies on Render or FLASK_ENV=production.
+    """
+    if (os.environ.get("RENDER") or "").strip().lower() == "true":
+        return False
+    if (os.environ.get("FLASK_ENV") or "").strip().lower() == "production":
+        return False
+
+    raw = (os.environ.get("PICKS_UNLOCK_ALL_LOCAL") or "").strip().lower()
+    if raw in ("0", "false", "no", "off"):
+        return False
+    if raw in ("1", "true", "yes", "on"):
+        return True
+
+    env = (os.environ.get("FLASK_ENV") or "").strip().lower()
+    if env in ("development", "dev") and _is_local_sqlite_database():
+        return True
+    return False
 
 _SV_MONTHS = (
     "",
@@ -705,6 +735,8 @@ def is_picks_deadline_passed(competition) -> bool:
 
 def is_picks_locked(competition):
     """True when picks cannot be submitted (too early, wrong round, or past race deadline)."""
+    if picks_unlock_all_local():
+        return False
     if _is_series_preseason_locked(competition):
         return True
     if is_picks_round_queue_locked(competition):

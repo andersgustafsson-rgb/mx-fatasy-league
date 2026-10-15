@@ -64,9 +64,24 @@ echo     Annars test: test / password
 echo     Tom databas: http://127.0.0.1:%PORT%/register
 echo.
 
+set "LOCAL_URL=http://127.0.0.1:%PORT%/"
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\is_port_listening.ps1" -Port %PORT% >nul 2>&1
+if not errorlevel 1 (
+  echo.
+  echo   Servern kor redan pa port %PORT%.
+  echo   Oppnar webblasare: %LOCAL_URL%
+  call "%~dp0scripts\open_local_url.bat" "%LOCAL_URL%"
+  if defined MX_LOCAL_HIDDEN exit /b 0
+  echo.
+  echo   Stoppa med genvagen "MX Fantasy ^(stopp^)" eller stopp_local.bat
+  pause
+  exit /b 0
+)
+
 echo.
 echo Startar servern...
-echo   Oppna:  http://127.0.0.1:%PORT%/
+echo   Oppnas automatiskt: %LOCAL_URL%
 if defined MX_LOCAL_HIDDEN (
   echo   Lage: dold ^(logg: instance\local_server.log^)
 ) else (
@@ -74,18 +89,8 @@ if defined MX_LOCAL_HIDDEN (
 )
 echo.
 
-timeout /t 2 /nobreak >nul
-REM Oppna Chrome explicit - undvik AVG Secure Browser som ofta kaper start "" http://...
-set "LOCAL_URL=http://127.0.0.1:%PORT%/"
-if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" (
-  start "" "%ProgramFiles%\Google\Chrome\Application\chrome.exe" "%LOCAL_URL%"
-) else if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" (
-  start "" "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" "%LOCAL_URL%"
-) else if exist "%LocalAppData%\Google\Chrome\Application\chrome.exe" (
-  start "" "%LocalAppData%\Google\Chrome\Application\chrome.exe" "%LOCAL_URL%"
-) else (
-  echo Kunde inte hitta Chrome - oppna manuellt: %LOCAL_URL%
-)
+REM Oppna webblasare forst nar porten lyssnar (DB-init kan ta tid)
+start /b "" "%~dp0scripts\wait_and_open_browser.bat" %PORT%
 
 "%PY%" main.py
 if errorlevel 1 (

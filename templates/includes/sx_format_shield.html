@@ -1,0 +1,45 @@
+{# Hex badge for SX format heroes — sx_format set by parent include #}
+<svg class="sxf-shield" viewBox="0 0 120 132" role="img" aria-hidden="true">
+  <defs>
+    <linearGradient id="sxf-shield-grad-{{ sx_uid | default('picks') }}" x1="0%" y1="0%" x2="100%" y2="100%">
+      {% if sx_format == 'triple_showdown' %}
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="50%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+      {% elif sx_format == 'showdown' %}
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="50%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+      {% elif sx_format == 'triple_crown' %}
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="100%" stop-color="#b45309"/>
+      {% elif sx_format == 'coast_west' %}
+      <stop offset="0%" stop-color="#fb923c"/>
+      <stop offset="100%" stop-color="#9a3412"/>
+      {% else %}
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+      {% endif %}
+    </linearGradient>
+  </defs>
+  <path d="M60 6 L108 24 V66 C108 96 60 126 60 126 C60 126 12 96 12 66 V24 Z"
+        fill="#0a0f18" stroke="url(#sxf-shield-grad-{{ sx_uid | default('picks') }})" stroke-width="3"/>
+  {% if sx_format == 'triple_showdown' %}
+  <text x="60" y="48" text-anchor="middle" fill="#fde68a" font-family="Orbitron, sans-serif" font-size="10" font-weight="800">TC</text>
+  <text x="38" y="66" text-anchor="middle" fill="#fb923c" font-family="Orbitron, sans-serif" font-size="12" font-weight="900">W</text>
+  <text x="82" y="66" text-anchor="middle" fill="#38bdf8" font-family="Orbitron, sans-serif" font-size="12" font-weight="900">E</text>
+  <text x="60" y="82" text-anchor="middle" fill="#e2e8f0" font-family="Rajdhani, sans-serif" font-size="7" font-weight="700">SHOWDOWN</text>
+  {% elif sx_format == 'triple_crown' %}
+  <text x="60" y="52" text-anchor="middle" fill="#fde68a" font-family="Orbitron, sans-serif" font-size="11" font-weight="800">TC</text>
+  <text x="60" y="72" text-anchor="middle" fill="#fef3c7" font-family="Rajdhani, sans-serif" font-size="9" font-weight="700">3× MAIN</text>
+  {% elif sx_format == 'showdown' %}
+  <text x="38" y="58" text-anchor="middle" fill="#fb923c" font-family="Orbitron, sans-serif" font-size="16" font-weight="900">W</text>
+  <text x="82" y="58" text-anchor="middle" fill="#38bdf8" font-family="Orbitron, sans-serif" font-size="16" font-weight="900">E</text>
+  <text x="60" y="78" text-anchor="middle" fill="#e2e8f0" font-family="Rajdhani, sans-serif" font-size="8" font-weight="700">SHOWDOWN</text>
+  {% elif sx_format == 'coast_west' %}
+  <text x="60" y="64" text-anchor="middle" fill="#fdba74" font-family="Orbitron, sans-serif" font-size="22" font-weight="900">W</text>
+  {% else %}
+  <text x="60" y="64" text-anchor="middle" fill="#7dd3fc" font-family="Orbitron, sans-serif" font-size="22" font-weight="900">E</text>
+  {% endif %}
+  <text x="60" y="98" text-anchor="middle" fill="#94a3b8" font-family="Rajdhani, sans-serif" font-size="7" font-weight="700" letter-spacing="1">SX</text>
+</svg>

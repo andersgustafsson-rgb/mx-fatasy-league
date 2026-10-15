@@ -1,0 +1,27 @@
+{# Text + badges over sx_tc_* background (expects sx_format, sx) #}
+{% if sx_format == 'triple_showdown' %}
+<span class="sxf-plaque__pill" data-i18n="picks.sx_tc_showdown_eyebrow">Triple Crown · East/West Showdown</span>
+<h2 class="sxf-plaque__city sxf-hero-banner__city">{{ sx.city }}</h2>
+<p class="sxf-plaque__tag sxf-hero-banner__tag" data-i18n="picks.sx_tc_showdown_sub">Three mains. Both coasts. One epic night.</p>
+{% elif sx_format == 'showdown' %}
+<span class="sxf-plaque__pill" data-i18n="picks.sx_showdown_eyebrow">East/West Showdown</span>
+<h2 class="sxf-plaque__city sxf-hero-banner__city">{{ sx.city }}</h2>
+<p class="sxf-plaque__tag sxf-hero-banner__tag" data-i18n="picks.sx_showdown_sub">250 East and 250 West — same gate, same points fight.</p>
+{% elif sx_format == 'triple_crown' %}
+<span class="sxf-plaque__pill" data-i18n="picks.sx_tc_eyebrow">Triple Crown</span>
+<h2 class="sxf-plaque__city sxf-hero-banner__city">{{ sx.city }}</h2>
+<p class="sxf-plaque__tag sxf-hero-banner__tag" data-i18n="picks.sx_tc_sub">Three mains. Combined scoring. Crown the king.</p>
+{% elif sx_format == 'coast_west' %}
+<span class="sxf-plaque__pill" data-i18n="picks.sx_west_eyebrow">250SX West</span>
+<h2 class="sxf-plaque__city sxf-hero-banner__city">{{ sx.city }}</h2>
+<p class="sxf-plaque__tag sxf-hero-banner__tag" data-i18n="picks.sx_west_sub">West coast speed — pick your six.</p>
+{% else %}
+<span class="sxf-plaque__pill" data-i18n="picks.sx_east_eyebrow">250SX East</span>
+<h2 class="sxf-plaque__city sxf-hero-banner__city">{{ sx.city }}</h2>
+<p class="sxf-plaque__tag sxf-hero-banner__tag" data-i18n="picks.sx_east_sub">East coast charge — pick your six.</p>
+{% endif %}
+<p class="sxf-plaque__meta sxf-hero-banner__meta">
+  {% if sx.round %}ROUND {{ sx.round }} · {% endif %}
+  {% if sx.venue_short %}{{ sx.venue_short|upper }} · {% endif %}
+  {% if sx.date_short %}{{ sx.date_short|upper }}{% endif %}
+</p>

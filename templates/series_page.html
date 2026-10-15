@@ -686,6 +686,21 @@
       gap: 0.35rem;
       margin-top: 0.55rem;
     }
+    .sp-race-card__picks-link {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 0.5rem;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #6ee7b7;
+      text-decoration: none;
+    }
+    .sp-race-card__picks-link:hover {
+      color: #a7f3d0;
+      text-decoration: underline;
+    }
     .sp-map-modal__meta {
       display: grid;
       grid-template-columns: 1fr;
@@ -934,6 +949,11 @@
           Klicka på en tävling för bana och mer info.
         {% endif %}
       </p>
+      {% if picks_local_unlock|default(false) %}
+      <p class="px-4 pt-2 pb-0 text-xs font-semibold text-amber-200/90">
+        Lokal dev: klicka «Gå till picks» på kortet eller öppna kortet → Gör picks.
+      </p>
+      {% endif %}
       {% if schedule_sections %}
       <div class="flex flex-wrap gap-2 px-4 pt-3">
         {% for section in schedule_sections %}
@@ -943,7 +963,8 @@
       </div>
       {% endif %}
 
-      {% macro ama_race_card(comp) -%}
+      {% macro ama_race_card(comp, dev_unlock=false, picks_open_flag=false, next_race_obj=none) -%}
+        {% set card_picks_open = dev_unlock or (picks_open_flag and next_race_obj and next_race_obj.id == comp.id) %}
         {% set has_results = (competition_results.get(comp.id) or [])|length > 0 %}
         {% set _ps = user_picks_status.get(comp.id) %}
         {% set user_has_picks = (_ps.has_picks if _ps else false) %}
@@ -969,8 +990,8 @@
                 data-race-gate="{{ competition_gates.get(comp.id, '') }}"
                 data-map-url="{% if map_url %}{{ url_for('static', filename=map_url) }}{% endif %}"
                 data-picks-url="{% if not cancelled %}{{ url_for('race_picks_page', competition_id=comp.id) }}{% endif %}"
-                data-picks-open="{% if picks_open and next_race and next_race.id == comp.id %}1{% else %}0{% endif %}"
-                data-status="{% if cancelled %}Cancelled{% elif has_results %}Avslutad{% elif not comp.event_date %}Datum TBA{% elif next_race and comp.id == next_race.id %}Nästa{% else %}Kommande{% endif %}"
+                data-picks-open="{% if card_picks_open %}1{% else %}0{% endif %}"
+                data-status="{% if cancelled %}Cancelled{% elif has_results %}Avslutad{% elif not comp.event_date %}Datum TBA{% elif next_race_obj and comp.id == next_race_obj.id %}Nästa{% elif card_picks_open %}Tippa{% else %}Kommande{% endif %}"
                 data-blurb="{{ info.get('blurb', '')|e }}"
                 data-highlights="{{ (info.get('highlights') or [])|join(' · ')|e }}"
                 data-round="{{ info.get('round') or '' }}"
@@ -998,8 +1019,10 @@
                   <span class="sp-badge sp-badge--cancelled">Cancelled</span>
                 {% elif has_results %}
                   <span class="sp-badge sp-badge--done">Avslutad</span>
-                {% elif next_race and comp.id == next_race.id %}
+                {% elif next_race_obj and comp.id == next_race_obj.id %}
                   <span class="sp-badge sp-badge--next">Nästa</span>
+                {% elif card_picks_open %}
+                  <span class="sp-badge sp-badge--open">Tippa</span>
                 {% else %}
                   <span class="sp-badge sp-badge--upcoming">Kommande</span>
                 {% endif %}
@@ -1007,6 +1030,11 @@
                   <span class="sp-badge sp-badge--picks">Picks klara</span>
                 {% endif %}
               </div>
+              {% if card_picks_open and not cancelled and not has_results %}
+              <a href="{{ url_for('race_picks_page', competition_id=comp.id) }}"
+                 class="sp-race-card__picks-link"
+                 onclick="event.stopPropagation();">Gå till picks →</a>
+              {% endif %}
             </div>
             {% if is_tc or is_ew or is_mad or is_stjude %}
             <div class="sp-race-card__icons">
@@ -1050,7 +1078,7 @@
         </div>
         <div class="sp-race-grid">
           {% for comp in section.competitions %}
-            {{ ama_race_card(comp) }}
+            {{ ama_race_card(comp, picks_local_unlock|default(false), picks_open, next_race) }}
           {% else %}
             <p class="text-slate-400 text-sm px-4 py-6 col-span-full">Inga tävlingar i kalendern ännu.</p>
           {% endfor %}
@@ -1059,7 +1087,7 @@
       {% else %}
       <div class="sp-race-grid">
         {% for comp in competitions %}
-          {{ ama_race_card(comp) }}
+          {{ ama_race_card(comp, picks_local_unlock|default(false), picks_open, next_race) }}
         {% endfor %}
       </div>
       {% endif %}
