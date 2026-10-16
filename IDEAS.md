@@ -116,6 +116,26 @@ Scaffold + admin-test klart. **Inte live** förrän `MXGP_PUBLIC_PLAY`.
 
 ---
 
+## Admin — översikt & drift (idéer)
+
+**Läge okt 2026:** Översikten har sajthälsa, KPI-rutnät, **Besökare & trafik**, **Konvertering & räckvidd**, senaste race. Besöksdata = `visit_stats.py` (dagliga UV/PV, fingerprint). **Räcker så länge** — utvärdera resten när AMA 2027-säsongen rullar och ni ser vad som faktiskt saknas på racedag.
+
+| # | Idé | Prioritet | Kommentar |
+|---|-----|-----------|-----------|
+| A1 | **Racevecka / drift** | Hög (säsong) | En kategori på översikten: checklista nästa event — picks öppet/låst, deadline, % klara / ej startat (ev. toppnamn), resultat importerade?, holeshot?, poäng räknade?, länk till rätt flik (SMX/WSX/MXGP/MXON). Allt från befintlig DB + samma logik som Picks-fliken. |
+| A2 | **Aktiva serier nu** | Medel | 1–3 kort: vilken tippa är “live” (AMA vs WSX vs MXGP vs MXON), nästa datum, om något ser fel (inställt race, resultat saknas efter `event_date`). |
+| A3 | **Picks-trend inför deadline** | Medel | Enkel sparkline: antal klara picks senaste 24–48 h (racevecka). Kräver bara `created_at` på picks — inga nya trackers. |
+| A4 | **Ligor (djupare)** | Låg | Utöver väntande ansökningar: ligor med 1 medlem, största ligor, nya ligor/vecka. |
+| A5 | **Datakvalitet (lätt)** | Låg / försäsong | Antal förare utan bild, tävlingar utan trackmap, tävlingar utan `start_time` — bra innan SX, inte varje vecka. |
+| A6 | **Besök Fas 2** | Uppskjuten | Path + referrer-domän + inloggad/gäst, top-sidor, ev. `mx_vid` återkommande, enkel sessionlängd (beacon). First-party; retention/aggragat. Se chat okt 2026. |
+| A7 | **Tippa-wizard avhopp** | Låg | Vilka steg i race_picks-wizard folk lämnar — kräver liten beacon eller steg-events. Produkt, inte trafik. |
+| A8 | **Extern analytics** | Valbar | Plausible/Umami om kampanjer (Instagram → landning) ska mätas utan egen utveckling. |
+| A9 | **Live raceday** | Nice | UV senaste timmen — kräver tim-buckets eller Redis; annars “Uppdatera KPI” räcker. |
+
+**Beslut:** Bygg **A1–A3** först när första riktiga 2027-raceveckan känns — då ser ni om översikten eller Picks-fliken redan räcker.
+
+---
+
 ## Mindre / valfritt
 
 - [ ] Sticky race-strip mobil
@@ -141,7 +161,7 @@ Scaffold + admin-test klart. **Inte live** förrän `MXGP_PUBLIC_PLAY`.
 
 - **SMX 2026 playoffs:** Columbus 12 sep · Carson 19 sep · Ridgedale 26 sep.
 - **SMX overlay 2026:** `official_smx_2026.py` — nästa AMA-säsong: mindre manuell lista om SX+MX-import räcker.
-- **IDEAS.md** uppdaterades **13 okt 2026** mot kodbasen (inte live DB).
+- **IDEAS.md** uppdaterades **16 okt 2026** (admin-översikt idéer + tidigare sanity).
 
 ---
 

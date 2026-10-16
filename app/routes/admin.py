@@ -26,6 +26,7 @@ from flask import (
 from app.portrait_urls import normalize_racerx_portrait_url, score_racerx_portrait_url
 
 from models import (
+	DailyVisitorSighting,
 	db,
 	Competition,
 	CompetitionResult,
@@ -35,6 +36,7 @@ from models import (
 	LeagueRequest,
 	MxonNationResult,
 	PicksSnapshot,
+	PushSubscription,
 	RacePick,
 	Rider,
 	SeasonTeam,
@@ -1275,6 +1277,167 @@ def _admin_last_race_stats() -> dict:
 	}
 
 
+def _admin_dashboard_insights(
+	today_uv: int,
+	today_pv: int,
+	today_signups: int,
+	week_uv_sum: int,
+	week_signups: int,
+) -> dict:
+	"""Phase-A engagement KPIs from existing DB (no new page tracking)."""
+	now = datetime.utcnow()
+	d30 = now - timedelta(days=30)
+
+	def _pct(num: float, denom: float) -> float | None:
+		if denom <= 0:
+			return None
+		return round(100.0 * num / denom, 1)
+
+	insights: dict = {
+		"ok": True,
+		"conversion": {
+			"today_signup_pct": _pct(float(today_signups), float(today_uv)),
+			"week_signup_pct": _pct(float(week_signups), float(week_uv_sum)),
+			"today_uv": int(today_uv),
+			"today_pv": int(today_pv),
+			"pages_per_visitor_today": round(today_pv / today_uv, 1) if today_uv > 0 else None,
+		},
+		"reach": {
+			"push_users": 0,
+			"email_reachable": 0,
+			"email_opt_out": 0,
+			"google_accounts": 0,
+			"google_pct": None,
+		},
+		"tippers": {
+			"returning_30d": 0,
+			"signup_picked_30d": 0,
+			"signup_picked_30d_pct": None,
+			"signups_30d": 0,
+		},
+		"visitors": {
+			"unique_keys_7d": 0,
+			"returning_7d": 0,
+			"returning_7d_pct": None,
+		},
+	}
+
+	try:
+		from visit_stats import today_stockholm
+
+		end = today_stockholm()
+		start = end - timedelta(days=6)
+		rows = (
+			db.session.query(
+				DailyVisitorSighting.visitor_key,
+				db.func.count(DailyVisitorSighting.day),
+			)
+			.filter(
+				DailyVisitorSighting.day >= start,
+				DailyVisitorSighting.day <= end,
+			)
+			.group_by(DailyVisitorSighting.visitor_key)
+			.all()
+		)
+		unique_keys = len(rows)
+		returning = sum(1 for _k, n in rows if int(n or 0) >= 2)
+		insights["visitors"] = {
+			"unique_keys_7d": unique_keys,
+			"returning_7d": returning,
+			"returning_7d_pct": _pct(float(returning), float(unique_keys)),
+		}
+	except Exception:
+		pass
+
+	try:
+		push_users = int(
+			db.session.query(db.func.count(db.func.distinct(PushSubscription.user_id))).scalar()
+			or 0
+		)
+		insights["reach"]["push_users"] = push_users
+	except Exception:
+		pass
+
+	try:
+		from main import _ensure_email_opt_out_column, _ensure_google_oauth_columns
+
+		_ensure_google_oauth_columns()
+		_ensure_email_opt_out_column()
+	except Exception:
+		pass
+
+	total_users = 0
+	try:
+		total_users = int(User.query.count() or 0)
+	except Exception:
+		pass
+
+	try:
+		opt_out = int(User.query.filter_by(email_opt_out=True).count() or 0)
+		reachable = int(
+			User.query.filter(
+				User.email.isnot(None),
+				User.email != "",
+				User.email_opt_out.is_(False),
+			).count()
+			or 0
+		)
+		google_n = int(
+			User.query.filter(User.google_sub.isnot(None), User.google_sub != "").count() or 0
+		)
+		insights["reach"].update(
+			{
+				"email_opt_out": opt_out,
+				"email_reachable": reachable,
+				"google_accounts": google_n,
+				"google_pct": _pct(float(google_n), float(total_users)),
+			}
+		)
+	except Exception:
+		pass
+
+	try:
+		returning_tippers = (
+			db.session.query(RacePick.user_id)
+			.filter(RacePick.created_at.isnot(None), RacePick.created_at >= d30)
+			.group_by(RacePick.user_id)
+			.having(db.func.count(db.func.distinct(RacePick.competition_id)) >= 2)
+			.count()
+		)
+		insights["tippers"]["returning_30d"] = int(returning_tippers or 0)
+	except Exception:
+		pass
+
+	try:
+		signups_30d = int(
+			User.query.filter(User.created_at.isnot(None), User.created_at >= d30).count() or 0
+		)
+		picked = 0
+		if signups_30d > 0:
+			picked = int(
+				db.session.query(db.func.count(db.func.distinct(User.id)))
+				.filter(User.created_at.isnot(None), User.created_at >= d30)
+				.filter(
+					db.session.query(RacePick.id)
+					.filter(RacePick.user_id == User.id)
+					.exists()
+				)
+				.scalar()
+				or 0
+			)
+		insights["tippers"].update(
+			{
+				"signups_30d": signups_30d,
+				"signup_picked_30d": picked,
+				"signup_picked_30d_pct": _pct(float(picked), float(signups_30d)),
+			}
+		)
+	except Exception:
+		pass
+
+	return insights
+
+
 @bp.get("/admin/api/dashboard")
 @login_required
 def admin_dashboard_stats():
@@ -1407,27 +1570,47 @@ def admin_dashboard_stats():
 	except Exception as health_err:
 		site_health = {"ok": False, "error": str(health_err)}
 
+	today_uv = int(today.get("unique_visitors") or 0)
+	today_pv = int(today.get("pageviews") or 0)
+	today_signups = int(today.get("new_signups") or 0)
+	week_uv_sum = int(week.get("unique_visitors") or 0)
+	week_signups = int(week.get("new_signups") or 0)
+	insights = None
+	try:
+		insights = _admin_dashboard_insights(
+			today_uv,
+			today_pv,
+			today_signups,
+			week_uv_sum,
+			week_signups,
+		)
+	except Exception as insights_err:
+		insights = {"ok": False, "error": str(insights_err)}
+
 	return jsonify(
 		{
 			"ok": True,
 			"users": {
 				"total": _user_total(),
-				"today": int(today.get("new_signups") or 0),
+				"today": today_signups,
 				"today_names": [
 					u.get("username")
 					for u in (today.get("new_signup_users") or [])
 					if u.get("username")
 				],
-				"week": int(week.get("new_signups") or 0),
+				"week": week_signups,
 			},
 			"visits": {
-				"today_uv": int(today.get("unique_visitors") or 0),
-				"today_pv": int(today.get("pageviews") or 0),
-				"week_uv": int(week.get("unique_visitors") or 0),
+				"today_uv": today_uv,
+				"today_pv": today_pv,
+				"week_uv": week_uv_sum,
+				"week_pv": int(week.get("pageviews") or 0),
 				"peak_uv": int(peak.get("unique_visitors") or 0),
 				"peak_day": peak.get("day"),
 				"series": visit_series,
+				"week_uv_note": "Summan av dagliga unika — samma person kan räknas flera dagar",
 			},
+			"insights": insights,
 			"picks": picks,
 			"last_race": last_race,
 			"site_health": site_health,

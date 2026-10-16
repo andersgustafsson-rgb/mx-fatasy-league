@@ -251,7 +251,7 @@
             margin-bottom: 0.85rem;
         }
         @media (min-width: 900px) {
-            .ap-health__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .ap-health__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
         .ap-health__card {
             border: 1px solid rgba(71, 85, 105, 0.45);
@@ -293,6 +293,102 @@
             font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em;
             text-transform: uppercase; color: #94a3b8;
         }
+        .ap-dash-cat {
+            margin: 0 0 1.15rem;
+            border: 1px solid var(--ap-line);
+            border-radius: 0.9rem;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.28));
+            padding: 0.85rem 0.95rem 0.95rem;
+        }
+        .ap-dash-cat--traffic {
+            border-color: rgba(34, 211, 238, 0.22);
+            background:
+                radial-gradient(ellipse 70% 55% at 100% 0%, rgba(34, 211, 238, 0.06), transparent 50%),
+                linear-gradient(180deg, rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.28));
+        }
+        .ap-dash-cat__head { margin-bottom: 0.7rem; }
+        .ap-dash-cat__eyebrow {
+            font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em;
+            text-transform: uppercase; color: #64748b;
+        }
+        .ap-dash-cat__title {
+            font-family: "Barlow Condensed", sans-serif; font-weight: 800;
+            font-size: 1.25rem; color: #f1f5f9; letter-spacing: 0.01em; margin-top: 0.1rem;
+        }
+        .ap-dash-cat__sub {
+            margin: 0.3rem 0 0; font-size: 0.78rem; color: var(--ap-muted); line-height: 1.35;
+        }
+        .ap-dash-cat__h3 {
+            margin: 0.75rem 0 0.45rem;
+            font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em;
+            text-transform: uppercase; color: #94a3b8;
+        }
+        .ap-dash-cat__hero {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.55rem;
+        }
+        @media (min-width: 720px) {
+            .ap-dash-cat__hero { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        .ap-dash-cat__stat {
+            border: 1px solid rgba(71, 85, 105, 0.45);
+            border-radius: 0.65rem;
+            background: rgba(26, 36, 54, 0.65);
+            padding: 0.55rem 0.65rem;
+            min-height: 4.5rem;
+        }
+        .ap-dash-cat__stat .lbl {
+            font-size: 0.62rem; font-weight: 700; letter-spacing: 0.07em;
+            text-transform: uppercase; color: #64748b; margin-bottom: 0.2rem;
+        }
+        .ap-dash-cat__stat .val {
+            font-family: "Barlow Condensed", sans-serif; font-weight: 800;
+            font-size: 1.55rem; line-height: 1; color: #f8fafc;
+            font-variant-numeric: tabular-nums;
+        }
+        .ap-dash-cat__stat-row {
+            display: flex; align-items: center; justify-content: space-between; gap: 0.35rem;
+        }
+        .ap-dash-cat__stat .meta {
+            margin-top: 0.25rem; font-size: 0.72rem; color: var(--ap-muted); line-height: 1.25;
+        }
+        .ap-dash-cat__stat .ap-ring { width: 2.5rem; height: 2.5rem; flex-shrink: 0; }
+        .ap-dash-cat__spark-wrap { margin-top: 0.65rem; }
+        .ap-dash-cat__spark-label {
+            font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em;
+            text-transform: uppercase; color: #64748b; margin-bottom: 0.35rem;
+        }
+        .ap-dash-cat__grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.55rem;
+        }
+        @media (min-width: 720px) {
+            .ap-dash-cat__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
+        @media (min-width: 1000px) {
+            .ap-dash-cat__grid--reach { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+        }
+        .ap-dash-cat__card {
+            border: 1px solid rgba(71, 85, 105, 0.45);
+            border-radius: 0.65rem;
+            background: rgba(2, 6, 23, 0.35);
+            padding: 0.55rem 0.65rem;
+        }
+        .ap-dash-cat__card .lbl {
+            font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em;
+            text-transform: uppercase; color: #94a3b8;
+        }
+        .ap-dash-cat__card .val {
+            font-family: "Barlow Condensed", sans-serif;
+            font-size: 1.35rem; font-weight: 800; color: #f8fafc;
+            font-variant-numeric: tabular-nums; margin-top: 0.15rem; line-height: 1.1;
+        }
+        .ap-dash-cat__card .meta {
+            margin-top: 0.25rem; font-size: 0.68rem; color: var(--ap-muted); line-height: 1.25;
+        }
+        .ap-dash-cat--hot { border-color: rgba(34, 211, 238, 0.38); }
         .ap-bars {
             display: flex; align-items: flex-end; gap: 0.28rem;
             height: 6.5rem; width: 100%;
@@ -831,11 +927,6 @@
                         <div class="val" id="sh-completion">–</div>
                         <div class="meta" id="sh-completion-meta">kompletta picks</div>
                     </div>
-                    <div class="ap-health__card">
-                        <div class="lbl">Besökare 7d</div>
-                        <div class="val" id="sh-visits-week">–</div>
-                        <div class="meta" id="sh-visits-meta">unika</div>
-                    </div>
                 </div>
                 <div class="ap-health__charts">
                     <div class="ap-health__chart">
@@ -882,17 +973,6 @@
                     <div class="ap-meter" id="kpi-picks-meter"><i id="kpi-picks-meter-fill"></i></div>
                     <div class="ap-kpi__meta" id="kpi-picks-meta">nästa race</div>
                 </button>
-                <button type="button" class="ap-kpi" data-kpi="visits">
-                    <div class="ap-kpi__top">
-                        <div>
-                            <div class="ap-kpi__label">Unika idag</div>
-                            <div class="ap-kpi__value" id="kpi-visits-uv">–</div>
-                        </div>
-                        <div class="ap-ring" id="kpi-visits-ring" style="--pct:0"><span id="kpi-visits-ring-txt">–</span></div>
-                    </div>
-                    <div class="ap-spark" id="kpi-visit-spark" aria-hidden="true"></div>
-                    <div class="ap-kpi__meta">7d: <strong id="kpi-visits-week">–</strong> UV · peak <span id="kpi-visits-peak">–</span></div>
-                </button>
                 <button type="button" class="ap-kpi" onclick="showSection('league-management')" data-kpi="leagues">
                     <div class="ap-kpi__label">Ligor</div>
                     <div class="ap-kpi__value" id="kpi-leagues">–</div>
@@ -919,6 +999,96 @@
                     <div class="ap-kpi__value" id="kpi-next-race" style="font-size:1.15rem;line-height:1.15;">–</div>
                     <div class="ap-kpi__meta" id="kpi-next-race-meta">—</div>
                 </button>
+            </div>
+
+            <div class="ap-dash-cat ap-dash-cat--traffic" id="apCatTraffic" hidden>
+                <div class="ap-dash-cat__head">
+                    <div class="ap-dash-cat__eyebrow">Trafik</div>
+                    <div class="ap-dash-cat__title">Besökare &amp; trafik</div>
+                    <p class="ap-dash-cat__sub" id="ap-traffic-note">Unika räknas per kalenderdag (Stockholm). Endast publika spelsidor — inte admin eller API.</p>
+                </div>
+                <div class="ap-dash-cat__hero">
+                    <div class="ap-dash-cat__stat">
+                        <div class="lbl">Unika idag</div>
+                        <div class="ap-dash-cat__stat-row">
+                            <div class="val" id="kpi-visits-uv">–</div>
+                            <div class="ap-ring" id="kpi-visits-ring" style="--pct:0"><span id="kpi-visits-ring-txt">–</span></div>
+                        </div>
+                        <div class="meta" id="kpi-visits-uv-meta">mot peak-dag</div>
+                    </div>
+                    <div class="ap-dash-cat__stat">
+                        <div class="lbl">Sidvisningar idag</div>
+                        <div class="val" id="kpi-visits-pv">–</div>
+                        <div class="meta" id="kpi-visits-pv-meta">pageviews</div>
+                    </div>
+                    <div class="ap-dash-cat__stat">
+                        <div class="lbl">Unika 7 dagar</div>
+                        <div class="val" id="kpi-visits-week">–</div>
+                        <div class="meta" id="kpi-visits-week-meta">summa dagliga UV</div>
+                    </div>
+                    <div class="ap-dash-cat__stat">
+                        <div class="lbl">Peak</div>
+                        <div class="val" id="kpi-visits-peak-val">–</div>
+                        <div class="meta" id="kpi-visits-peak-meta">rekorddag</div>
+                    </div>
+                </div>
+                <div class="ap-dash-cat__spark-wrap">
+                    <div class="ap-dash-cat__spark-label">Unika per dag · senaste 7</div>
+                    <div class="ap-spark" id="kpi-visit-spark" aria-hidden="true" style="height:2.25rem;"></div>
+                </div>
+                <h3 class="ap-dash-cat__h3">Konvertering från trafik</h3>
+                <div class="ap-dash-cat__grid">
+                    <div class="ap-dash-cat__card">
+                        <div class="lbl">Signup / besök idag</div>
+                        <div class="val" id="ins-conv-today">–</div>
+                        <div class="meta" id="ins-conv-today-meta">nya konton / unika besökare</div>
+                    </div>
+                    <div class="ap-dash-cat__card">
+                        <div class="lbl">Sidor per besökare</div>
+                        <div class="val" id="ins-ppv">–</div>
+                        <div class="meta" id="ins-ppv-meta">pageviews / UV idag</div>
+                    </div>
+                    <div class="ap-dash-cat__card">
+                        <div class="lbl">Återkommande besök 7d</div>
+                        <div class="val" id="ins-return-visitors">–</div>
+                        <div class="meta" id="ins-return-visitors-meta">fingerprint på 2+ dagar</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ap-dash-cat" id="apCatReach" hidden>
+                <div class="ap-dash-cat__head">
+                    <div class="ap-dash-cat__eyebrow">Engagemang</div>
+                    <div class="ap-dash-cat__title">Konvertering &amp; räckvidd</div>
+                    <p class="ap-dash-cat__sub">Konton, picks och kanaler du kan nå användare via.</p>
+                </div>
+                <div class="ap-dash-cat__grid ap-dash-cat__grid--reach">
+                    <div class="ap-dash-cat__card">
+                        <div class="lbl">Nya → pick (30d)</div>
+                        <div class="val" id="ins-signup-pick">–</div>
+                        <div class="meta" id="ins-signup-pick-meta">minst ett race-pick</div>
+                    </div>
+                    <div class="ap-dash-cat__card">
+                        <div class="lbl">Återkommande tippare</div>
+                        <div class="val" id="ins-return-tippers">–</div>
+                        <div class="meta" id="ins-return-tippers-meta">2+ race senaste 30d</div>
+                    </div>
+                    <div class="ap-dash-cat__card">
+                        <div class="lbl">Push</div>
+                        <div class="val" id="ins-push">–</div>
+                        <div class="meta" id="ins-push-meta">användare med prenumeration</div>
+                    </div>
+                    <div class="ap-dash-cat__card">
+                        <div class="lbl">Mail nåbara</div>
+                        <div class="val" id="ins-email">–</div>
+                        <div class="meta" id="ins-email-meta">e-post &amp; ej avregistrerade</div>
+                    </div>
+                    <div class="ap-dash-cat__card">
+                        <div class="lbl">Google-inlogg</div>
+                        <div class="val" id="ins-google">–</div>
+                        <div class="meta" id="ins-google-meta">andel av konton</div>
+                    </div>
+                </div>
             </div>
 
             <div class="ap-last-race" id="apLastRace" hidden>
@@ -3050,6 +3220,7 @@
                 if (v < 0) return { cls: 'down', text: String(v) };
                 return { cls: 'flat', text: '±0' };
             };
+            const fmtPct = (n) => (n == null || Number.isNaN(Number(n)) ? '–' : `${Number(n)}%`);
             try {
                 const res = await fetch('/admin/api/dashboard');
                 const data = await res.json();
@@ -3115,10 +3286,6 @@
                     set('sh-completion-meta', comp.races
                         ? `snitt kompletta · ${comp.races} race`
                         : 'kompletta picks');
-                    set('sh-visits-week', String(v.week_uv ?? 0));
-                    set('sh-visits-meta', v.peak_uv
-                        ? `unika · peak ${v.peak_uv}`
-                        : 'unika senaste 7 dagarna');
                     setBars('sh-tippare-bars', sh.tippare_per_race || [], {
                         valueKey: 'tippare',
                         labelKey: 'short',
@@ -3139,13 +3306,40 @@
                 set('kpi-users-total', String(u.total ?? 0));
                 setSpark('kpi-signup-spark', series.map((d) => d.signups));
 
+                const trafficWrap = document.getElementById('apCatTraffic');
+                if (trafficWrap) {
+                    trafficWrap.hidden = false;
+                    trafficWrap.classList.toggle('ap-dash-cat--hot', Number(v.today_uv || 0) > 0);
+                }
                 set('kpi-visits-uv', String(v.today_uv ?? 0));
                 set('kpi-visits-week', String(v.week_uv ?? 0));
-                set('kpi-visits-peak', v.peak_uv ? String(v.peak_uv) : '–');
-                const peak = Math.max(1, Number(v.peak_uv) || Number(v.today_uv) || 1);
-                setRing('kpi-visits-ring', Math.round((Number(v.today_uv || 0) / peak) * 100), v.today_uv ?? 0);
+                const pvToday = Number(v.today_pv ?? 0);
+                const wkPv = Number(v.week_pv ?? 0);
+                set('kpi-visits-pv', String(pvToday));
+                set('kpi-visits-pv-meta', pvToday ? 'spelsidor idag' : 'inga sidvisningar idag');
+                set(
+                    'kpi-visits-week-meta',
+                    wkPv ? `summa dagliga UV · ${wkPv} sidvisningar` : 'summa dagliga UV'
+                );
+                const peakUv = Number(v.peak_uv) || 0;
+                set('kpi-visits-peak-val', peakUv ? String(peakUv) : '–');
+                set(
+                    'kpi-visits-peak-meta',
+                    v.peak_day ? String(v.peak_day) : 'rekorddag'
+                );
+                const peak = Math.max(1, peakUv || Number(v.today_uv) || 1);
+                const uvToday = Number(v.today_uv || 0);
+                setRing('kpi-visits-ring', Math.round((uvToday / peak) * 100), uvToday);
+                set(
+                    'kpi-visits-uv-meta',
+                    peakUv ? `${Math.round((uvToday / peak) * 100)}% av peak (${peakUv})` : 'mot peak-dag'
+                );
                 setSpark('kpi-visit-spark', series.map((d) => d.uv));
-                document.querySelector('[data-kpi="visits"]')?.classList.toggle('ap-kpi--hot', Number(v.today_uv || 0) > 0);
+                const trafficNote = document.getElementById('ap-traffic-note');
+                if (trafficNote) {
+                    trafficNote.textContent = v.week_uv_note
+                        || 'Unika räknas per kalenderdag (Stockholm). Endast publika spelsidor — inte admin eller API.';
+                }
 
                 set('kpi-leagues', String(data.leagues ?? 0));
                 const pending = Number(data.pending_league_requests || 0);
@@ -3189,6 +3383,69 @@
                     setRing('kpi-missing-ring', 0, '–');
                     set('kpi-next-race', '–');
                     set('kpi-next-race-meta', '—');
+                }
+
+                const ins = data.insights || {};
+                const reachWrap = document.getElementById('apCatReach');
+                if (reachWrap) {
+                    reachWrap.hidden = ins.ok === false;
+                }
+                if (ins.ok !== false) {
+                    const conv = ins.conversion || {};
+                    const todayPct = conv.today_signup_pct;
+                    set('ins-conv-today', fmtPct(todayPct));
+                    const tSu = Number(u.today ?? 0);
+                    const tUv = Number(conv.today_uv ?? v.today_uv ?? 0);
+                    set(
+                        'ins-conv-today-meta',
+                        `${tSu} konto · ${tUv} UV` + (conv.week_signup_pct != null
+                            ? ` · 7d ${fmtPct(conv.week_signup_pct)}`
+                            : '')
+                    );
+                    set('ins-ppv', conv.pages_per_visitor_today != null ? String(conv.pages_per_visitor_today) : '–');
+                    set(
+                        'ins-ppv-meta',
+                        `${conv.today_pv ?? v.today_pv ?? 0} PV · ${tUv} UV idag`
+                    );
+                    const vis = ins.visitors || {};
+                    set(
+                        'ins-return-visitors',
+                        vis.returning_7d != null ? String(vis.returning_7d) : '–'
+                    );
+                    set(
+                        'ins-return-visitors-meta',
+                        vis.unique_keys_7d
+                            ? `${fmtPct(vis.returning_7d_pct)} av ${vis.unique_keys_7d} nycklar (7d)`
+                            : 'fingerprint på 2+ dagar'
+                    );
+                    const tip = ins.tippers || {};
+                    set('ins-signup-pick', fmtPct(tip.signup_picked_30d_pct));
+                    set(
+                        'ins-signup-pick-meta',
+                        tip.signups_30d
+                            ? `${tip.signup_picked_30d ?? 0}/${tip.signups_30d} nya konton`
+                            : 'minst ett race-pick'
+                    );
+                    set('ins-return-tippers', String(tip.returning_30d ?? 0));
+                    const reach = ins.reach || {};
+                    set('ins-push', String(reach.push_users ?? 0));
+                    set('ins-email', String(reach.email_reachable ?? 0));
+                    set(
+                        'ins-email-meta',
+                        reach.email_opt_out
+                            ? `${reach.email_opt_out} avregistrerade mail`
+                            : 'e-post & ej avregistrerade'
+                    );
+                    set(
+                        'ins-google',
+                        reach.google_pct != null ? fmtPct(reach.google_pct) : String(reach.google_accounts ?? 0)
+                    );
+                    set(
+                        'ins-google-meta',
+                        reach.google_accounts != null
+                            ? `${reach.google_accounts} Google-konton`
+                            : 'andel av konton'
+                    );
                 }
 
                 const lr = data.last_race || {};
