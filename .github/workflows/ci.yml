@@ -19,7 +19,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Compile check
-        run: python -m compileall -q main.py app mxgp_fantasy.py mxsm_fantasy.py mxgp_rider_bio.py
+        run: python -m compileall -q main.py app mxgp_fantasy.py mxsm_fantasy.py mxgp_rider_bio.py paris_fantasy.py
       - name: Security audit (pip-audit)
         run: |
           pip install pip-audit
