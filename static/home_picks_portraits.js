@@ -2,10 +2,11 @@
 (function () {
   function photoUrl(r) {
     if (!r) return null;
-    const candidates = [r.racerx_portrait_url, r.portrait_url, r.image_url];
+    // Prefer CDN photo, then local /rider_portrait/ (same as race_picks overview).
+    const candidates = [r.racerx_portrait_url, r.image_url, r.portrait_url];
     for (const raw of candidates) {
       const u = String(raw || '').trim();
-      if (!u || u.includes('/brand_logos/') || u.startsWith('/rider_portrait/')) continue;
+      if (!u || u.includes('/brand_logos/')) continue;
       return u;
     }
     return null;
@@ -21,30 +22,23 @@
     document
       .querySelectorAll('.picks-summary--on-home img.wizard-summary-portrait[data-rider-id]')
       .forEach((img) => {
-        const r = map[String(img.dataset.riderId)];
-        if (!r) {
-          img.removeAttribute('src');
-          return;
-        }
-        const photo = photoUrl(r);
+        const rid = String(img.dataset.riderId || '');
+        const r = map[rid] || { portrait_url: `/rider_portrait/${rid}` };
+        const photo = photoUrl(r) || `/rider_portrait/${rid}`;
         img.loading = 'eager';
         img.decoding = 'async';
         img.dataset.brandTried = '';
         img.onload = null;
         img.onerror = function onPortraitError() {
           const fallback = brandSrc(r);
-          if (photo && this.getAttribute('src') !== fallback && !this.dataset.brandTried) {
+          if (this.getAttribute('src') !== fallback && !this.dataset.brandTried) {
             this.dataset.brandTried = '1';
             this.src = fallback;
             return;
           }
           this.removeAttribute('src');
         };
-        if (photo) {
-          img.src = photo;
-        } else {
-          img.src = brandSrc(r);
-        }
+        img.src = photo;
       });
   }
 

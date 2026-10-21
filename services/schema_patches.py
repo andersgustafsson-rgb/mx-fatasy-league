@@ -31,6 +31,37 @@ def _sqlite_add_column_if_missing(table: str, column: str, ddl: str) -> None:
     db.session.commit()
     print(f'Added missing column {table}.{column}')
 
+
+def _ensure_competition_start_time_column() -> None:
+    """competitions.start_time — needed for countdown / pick lock (local SQLite often missing)."""
+    try:
+        from models import Competition
+
+        url = str(db.engine.url)
+        if "sqlite" in url:
+            _sqlite_add_column_if_missing(
+                "competitions", "start_time", "start_time VARCHAR(50)"
+            )
+        elif "postgresql" in url:
+            result = db.session.execute(
+                db.text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'competitions' AND column_name = 'start_time'"
+                )
+            )
+            if not result.fetchone():
+                db.session.execute(
+                    db.text(
+                        "ALTER TABLE competitions ADD COLUMN start_time TIME"
+                    )
+                )
+                print("Added missing column competitions.start_time")
+            db.session.commit()
+        Competition._start_time_column_exists = None
+    except Exception as col_err:
+        print(f"Warning: competitions.start_time migration skipped: {col_err}")
+        db.session.rollback()
+
 def _ensure_email_opt_out_column() -> None:
     """users.email_opt_out — avregistrering från picks/nyhetsmail."""
     try:

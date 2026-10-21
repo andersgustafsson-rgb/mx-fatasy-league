@@ -1,0 +1,56 @@
+{# Paris Supercross race-picks hero. Expects pm namespace + competition #}
+<section class="paris-stage" aria-label="Paris Supercross">
+  <div class="paris-stage__bar">
+    <div class="paris-stage__brand">PARIS <span>★</span> SUPERCROSS <span>★</span> {{ pm.year or '' }}</div>
+    <div class="rp-btn-row w-full sm:w-auto sm:shrink-0" style="align-items:center;gap:0.5rem;">
+      <div class="mx-lang-toggle" role="group" aria-label="Välj språk / Choose language">
+        <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>
+        <button type="button" class="mx-lang-btn" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm flex-1 sm:flex-initial" data-i18n="picks.back">← Tillbaka</a>
+      <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--warm rp-btn--sm flex-1 sm:flex-initial">Trash Talk</a>
+    </div>
+  </div>
+
+  <div class="paris-stage__venue">
+    <h1>PARIS</h1>
+    <p>
+      {{ pm.evening_sv }}
+      {% if pm.date_short %} · {{ pm.date_short }}{% endif %}
+      {% if pm.venue_short %} · {{ pm.venue_short|upper }}{% endif %}
+    </p>
+  </div>
+
+  <div class="paris-plaque">
+    <div class="paris-plaque__copy">
+      <span class="paris-plaque__pill">{{ pm.evening_tag }} · {{ pm.evening_sv|upper }}</span>
+      <h2 class="paris-plaque__city">Paris Supercross</h2>
+      <p class="paris-plaque__tag" data-i18n-sv="Under Eiffeltornets ljus — tippa kvällens show." data-i18n-en="Under the lights of the Tower — tip the night.">
+        Under Eiffeltornets ljus — tippa kvällens show.
+      </p>
+      <p class="paris-plaque__meta">
+        {{ pm.motto }}
+        {% if pm.date_long %} · {{ pm.date_long }}{% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="paris-quote">
+    <div class="paris-quote__bar" aria-hidden="true"></div>
+    <blockquote data-i18n-sv="“I City of Lights — där dirt och glamour möts.”" data-i18n-en="“In the City of Lights — where dirt meets glamour.”">
+      “I City of Lights — där dirt och glamour möts.”
+    </blockquote>
+    <cite>PARIS SUPERCROSS{% if pm.year %} · {{ pm.year }}{% endif %}</cite>
+  </div>
+
+  <div class="paris-chips" aria-hidden="true">
+    <span class="paris-chip">SX1</span>
+    <span class="paris-chip">SX2</span>
+    {% if pm.is_saturday %}
+    <span class="paris-chip paris-chip--gold">Superpole</span>
+    {% else %}
+    <span class="paris-chip paris-chip--gold">King of Paris</span>
+    <span class="paris-chip">Prince of Paris</span>
+    {% endif %}
+  </div>
+</section>

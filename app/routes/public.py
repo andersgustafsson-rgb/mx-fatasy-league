@@ -879,3 +879,83 @@ def tippa_mxon_page():
 	from services.seo_tippa import _tippa_mxon_page_data
 
 	return render_template("tippa_serie.html", page=_tippa_mxon_page_data())
+
+
+# Paris Supercross — registrerat här så rutterna alltid följer public-blueprinten.
+@bp.get("/paris-sx")
+def paris_hub_page():
+	from app.routes.paris_picks import paris_hub_page as _view
+
+	return _view()
+
+
+@bp.get("/paris_picks/<int:competition_id>")
+def paris_picks_page(competition_id: int):
+	"""Samma UI som race_picks (Paris-wizard i mallen)."""
+	from app.routes.paris_picks import paris_picks_page as _view
+
+	return _view(competition_id)
+
+
+@bp.get("/paris_picks/<int:competition_id>/roster")
+def paris_roster_api(competition_id: int):
+	from app.routes.paris_picks import paris_roster_api as _view
+
+	return _view(competition_id)
+
+
+@bp.get("/paris_picks/weekend/mine")
+def paris_weekend_mine_api():
+	from app.routes.paris_picks import paris_weekend_mine_api as _view
+
+	return _view()
+
+
+@bp.get("/get_paris_my_picks")
+def get_paris_my_picks():
+	"""Homepage Paris weekend picks — stable path (same pattern as get_paris_leaderboard)."""
+	from app.routes.paris_picks import paris_weekend_mine_api as _view
+
+	return _view()
+
+
+@bp.get("/paris_picks/<int:competition_id>/mine")
+def paris_mine_api(competition_id: int):
+	from app.routes.paris_picks import paris_mine_api as _view
+
+	return _view(competition_id)
+
+
+@bp.post("/paris_picks/<int:competition_id>/save")
+def paris_save_api(competition_id: int):
+	from app.routes.paris_picks import paris_save_api as _view
+
+	return _view(competition_id)
+
+
+@bp.get("/get_paris_leaderboard")
+def get_paris_leaderboard():
+	"""Paris SX fantasy leaderboard — on public bp so create_app / reload always has it."""
+	from flask import jsonify, request
+
+	try:
+		from paris_fantasy import fantasy_paris_leaderboard_payload, get_active_paris_year
+
+		year_raw = request.args.get("year")
+		year = int(year_raw) if year_raw else get_active_paris_year()
+		payload = fantasy_paris_leaderboard_payload(year)
+		return jsonify({
+			"series": "PARIS",
+			"year": payload.get("year", year),
+			"saturday_scored": bool(payload.get("saturday_scored")),
+			"sunday_scored": bool(payload.get("sunday_scored")),
+			"label_sv": payload.get("label_sv") or "",
+			"label_en": payload.get("label_en") or "",
+			"leaderboard": payload.get("leaderboard") or [],
+		})
+	except Exception as e:
+		from models import db
+
+		db.session.rollback()
+		print(f"ERROR in public.get_paris_leaderboard: {e}")
+		return jsonify({"error": str(e), "leaderboard": []}), 500

@@ -296,6 +296,15 @@ def user_picks_status_code(user_id: int | None, comp: Competition | None) -> str
                 return "partial_picks"
             return "no_picks"
         series_u = (getattr(comp, "series", None) or "").strip().upper()
+        if series_u == "PARIS":
+            from paris_fantasy import get_user_paris_picks, paris_picks_complete
+
+            if paris_picks_complete(int(user_id), comp):
+                return "has_picks"
+            picks = get_user_paris_picks(int(user_id), comp)
+            if any(picks.get(k) for k in picks):
+                return "partial_picks"
+            return "no_picks"
         is_wsx = series_u == "WSX"
         is_mxgp = series_u == "MXGP"
         is_mxsm = series_u == "MXSM"

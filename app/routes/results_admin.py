@@ -1430,7 +1430,7 @@ def get_competitions_for_import():
         series_filter = None
         if series_raw == "AMA":
             series_filter = "AMA"
-        elif series_raw in ("WSX", "SX", "MX", "SMX", "MXGP", "MXSM"):
+        elif series_raw in ("WSX", "SX", "MX", "SMX", "MXGP", "MXSM", "PARIS"):
             series_filter = series_raw
 
         year_raw = (request.args.get("year") or "").strip().lower()
@@ -1498,6 +1498,7 @@ def get_competitions_for_import():
                 "event_date": comp.event_date.isoformat() if comp.event_date else None,
                 "location": getattr(comp, "location", "Unknown"),
                 "has_results": comp.id in has_results_ids,
+                "phase": getattr(comp, "phase", None),
             }
             for comp in competitions
         ]

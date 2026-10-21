@@ -926,6 +926,7 @@
             <p class="ap-nav-label">Resultat</p>
             <button type="button" class="ap-nav-item" data-section="race-results" onclick="showSection('race-results', this)">SMX</button>
             <button type="button" class="ap-nav-item" data-section="wsx-results" onclick="showSection('wsx-results', this)">WSX</button>
+            <button type="button" class="ap-nav-item" data-section="paris-sx" onclick="showSection('paris-sx', this)">Paris SX</button>
             <button type="button" class="ap-nav-item" data-section="mxgp-scaffold" onclick="showSection('mxgp-scaffold', this)">MXGP</button>
             <button type="button" class="ap-nav-item" data-section="mxsm-scaffold" onclick="showSection('mxsm-scaffold', this)">MXSM</button>
             <a href="/admin/mxon" class="ap-nav-item">MXoN</a>
@@ -1751,6 +1752,78 @@
                             <button type="submit" class="ap-btn ap-btn--primary mt-4">Spara MXGP-resultat</button>
                         </form>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paris SX -->
+        <div id="paris-sx" class="section-panel hidden">
+            <div class="section-card rounded-lg p-6 mb-6">
+                <div class="ap-hub-head">
+                    <h2>Paris Supercross</h2>
+                    <p>Lördag och söndag — egna competitions, samma startlista. Poäng räknas automatiskt vid spara (delställning efter lördag).</p>
+                </div>
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <button type="button" class="ap-btn ap-btn--primary" onclick="seedParis2026()">Seed Paris 2026</button>
+                    <span class="text-xs text-gray-500">Serie, lördag/söndag, roster (idempotent).</span>
+                </div>
+                <ul class="text-sm text-gray-300 space-y-2 list-disc list-inside mb-6">
+                    <li><strong>Lördag:</strong> Superpole SX1/SX2 (20+20, +10 om båda) + finalvinnare (proximity max 40/klass). Max ~130.</li>
+                    <li><strong>Söndag:</strong> finalvinnare (samma proximity) + King/Prince 50p vardera. Max ~180. Helg ~310.</li>
+                    <li>Spara lördag först → leaderboard visar <em>Efter lördag</em>; efter söndag <em>Helg totalt</em>.</li>
+                    <li>OUT-förare: <button type="button" onclick="showSection('rider-competition-management')" class="text-cyan-400 underline">Förare &amp; tävlingar</button>.</li>
+                </ul>
+                <div class="bg-gray-800 rounded-lg p-4 border border-cyan-700/30">
+                    <form method="POST" action="/admin/paris_results" class="space-y-4" id="paris-results-form">
+                        <input type="hidden" name="next_section" value="paris-sx">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Kväll</label>
+                            <select id="paris-results-competition" data-searchable="1" name="competition_id" class="w-full max-w-xl px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" required onchange="loadParisResultsForm()">
+                                <option value="">Välj lördag eller söndag…</option>
+                            </select>
+                        </div>
+                        <div id="paris-sat-fields" class="hidden space-y-4">
+                            <p class="text-cyan-300 text-sm font-semibold">Lördag — superpole</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-gray-300 mb-1">Superpole SX1</label>
+                                    <select id="paris-superpole-sx1" data-searchable="1" name="superpole_sx1" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"><option value="">—</option></select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-300 mb-1">Superpole SX2</label>
+                                    <select id="paris-superpole-sx2" data-searchable="1" name="superpole_sx2" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"><option value="">—</option></select>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="paris-finals-fields" class="hidden space-y-4">
+                            <p class="text-white text-sm font-semibold">Finalvinnare</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-gray-300 mb-1">Vinnare final SX1</label>
+                                    <select id="paris-final-sx1" data-searchable="1" name="final_sx1" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"><option value="">—</option></select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-300 mb-1">Vinnare final SX2</label>
+                                    <select id="paris-final-sx2" data-searchable="1" name="final_sx2" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"><option value="">—</option></select>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="paris-sun-fields" class="hidden space-y-4">
+                            <p class="text-amber-300 text-sm font-semibold">Söndag — overall</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-gray-300 mb-1">King of Paris (overall SX1)</label>
+                                    <select id="paris-overall-sx1" data-searchable="1" name="overall_sx1" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"><option value="">—</option></select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-300 mb-1">Prince of Paris (overall SX2)</label>
+                                    <select id="paris-overall-sx2" data-searchable="1" name="overall_sx2" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"><option value="">—</option></select>
+                                </div>
+                            </div>
+                        </div>
+                        <p id="paris-results-hint" class="text-xs text-gray-500">Välj kväll för att visa fält.</p>
+                        <button type="submit" class="ap-btn ap-btn--primary">Spara &amp; räkna om poäng</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -3155,6 +3228,7 @@
             overview: { title: 'Översikt', sub: 'Sajthälsa, KPI:er och genvägar' },
             'race-results': { title: 'SMX', sub: 'Importera resultat, holeshot och manuell inmatning' },
             'wsx-results': { title: 'WSX', sub: 'WSX-resultat och verktyg' },
+            'paris-sx': { title: 'Paris SX', sub: 'Seed, resultat lördag/söndag' },
             'mxgp-scaffold': { title: 'MXGP', sub: 'MXGP-scaffold' },
             'mxsm-scaffold': { title: 'MXSM', sub: 'MXSM-scaffold' },
             'picks-management': { title: 'Picks', sub: 'Statistik, simulering och omräkning' },
@@ -3207,6 +3281,9 @@
             }
             if (sectionId === 'mxgp-scaffold') {
                 loadMxgpAdminCompetitions();
+            }
+            if (sectionId === 'paris-sx') {
+                loadParisAdminCompetitions();
             }
             if (sectionId === 'mxsm-scaffold') {
                 loadMxsmAdminCompetitions();
@@ -6523,6 +6600,112 @@
                 console.error('Error loading WSX quick holeshot competitions:', error);
                 const select = document.getElementById('wsx-quick-holeshot-competition');
                 if (select) select.innerHTML = '<option value="">Fel vid laddning</option>';
+            }
+        }
+
+        async function seedParis2026() {
+            try {
+                const res = await fetch('/admin/seed_paris', { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || res.statusText);
+                alert(data.message || 'Paris seed OK');
+                loadParisAdminCompetitions();
+            } catch (e) {
+                alert('Seed misslyckades: ' + (e.message || e));
+            }
+        }
+
+        async function loadParisAdminCompetitions() {
+            try {
+                const data = await fetchCompetitionsForImportShared('PARIS');
+                const select = document.getElementById('paris-results-competition');
+                if (!select) return;
+                select.innerHTML = '<option value="">Välj lördag eller söndag…</option>';
+                (data.competitions || []).forEach(comp => {
+                    const opt = document.createElement('option');
+                    opt.value = comp.id;
+                    opt.textContent = comp.name;
+                    opt.dataset.phase = comp.phase || '';
+                    select.appendChild(opt);
+                });
+                if (typeof initSearchableSelects === 'function') initSearchableSelects();
+            } catch (error) {
+                console.error('Error loading Paris competitions:', error);
+            }
+        }
+
+        function _parisFillSelect(el, riders, selectedId) {
+            if (!el) return;
+            el.innerHTML = '<option value="">—</option>';
+            (riders || []).forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.id;
+                opt.textContent = r.name || r.label || ('#' + r.id);
+                if (selectedId && String(selectedId) === String(r.id)) opt.selected = true;
+                el.appendChild(opt);
+            });
+        }
+
+        async function loadParisResultsForm() {
+            const compId = document.getElementById('paris-results-competition')?.value;
+            const satBlock = document.getElementById('paris-sat-fields');
+            const finalsBlock = document.getElementById('paris-finals-fields');
+            const sunBlock = document.getElementById('paris-sun-fields');
+            const hint = document.getElementById('paris-results-hint');
+            const toggleDisabled = (root, on) => {
+                root?.querySelectorAll('select').forEach(el => { el.disabled = !on; });
+            };
+            if (!compId) {
+                satBlock?.classList.add('hidden');
+                finalsBlock?.classList.add('hidden');
+                sunBlock?.classList.add('hidden');
+                toggleDisabled(satBlock, false);
+                toggleDisabled(finalsBlock, false);
+                toggleDisabled(sunBlock, false);
+                if (hint) hint.textContent = 'Välj kväll för att visa fält.';
+                return;
+            }
+            try {
+                if (hint) hint.textContent = 'Laddar startlista…';
+                const res = await fetch(`/admin/api/paris_roster/${compId}`);
+                let data = {};
+                try { data = await res.json(); } catch (_) { data = {}; }
+                if (!res.ok) {
+                    throw new Error(data.error || (`HTTP ${res.status}`));
+                }
+                const roster = data.roster || {};
+                const sx1 = roster.sx1 || roster.wsx_sx1 || [];
+                const sx2 = roster.sx2 || roster.wsx_sx2 || [];
+                const off = data.official || {};
+                const isSat = !!data.is_saturday;
+                satBlock?.classList.toggle('hidden', !isSat);
+                finalsBlock?.classList.remove('hidden');
+                sunBlock?.classList.toggle('hidden', isSat);
+                toggleDisabled(satBlock, isSat);
+                toggleDisabled(finalsBlock, true);
+                toggleDisabled(sunBlock, !isSat);
+                if (hint) {
+                    if (roster.empty) {
+                        hint.textContent = roster.message || 'Startlista saknas — kör Seed Paris 2026.';
+                    } else {
+                        hint.textContent = isSat
+                            ? `Lördag: ${sx1.length} SX1 + ${sx2.length} SX2. Tomma fält lämnas oförändrade.`
+                            : `Söndag: ${sx1.length} SX1 + ${sx2.length} SX2. King/Prince = overall.`;
+                    }
+                }
+                _parisFillSelect(document.getElementById('paris-final-sx1'), sx1, off.final_sx1);
+                _parisFillSelect(document.getElementById('paris-final-sx2'), sx2, off.final_sx2);
+                if (isSat) {
+                    _parisFillSelect(document.getElementById('paris-superpole-sx1'), sx1, off.superpole_sx1);
+                    _parisFillSelect(document.getElementById('paris-superpole-sx2'), sx2, off.superpole_sx2);
+                } else {
+                    _parisFillSelect(document.getElementById('paris-overall-sx1'), sx1, off.overall_sx1);
+                    _parisFillSelect(document.getElementById('paris-overall-sx2'), sx2, off.overall_sx2);
+                }
+                if (typeof initSearchableSelects === 'function') initSearchableSelects(document.getElementById('paris-results-form'));
+            } catch (e) {
+                console.error('Paris results form:', e);
+                if (hint) hint.textContent = 'Kunde inte ladda roster: ' + (e.message || e);
             }
         }
 

@@ -108,6 +108,56 @@ def _race_theme_base(competition: Any) -> dict[str, Any]:
     }
 
 
+def is_paris_sx_race(competition: Any) -> bool:
+    """True for Paris Supercross weekend competitions (lördag/söndag)."""
+    if competition is None:
+        return False
+    series = (getattr(competition, "series", None) or "").strip().upper()
+    if series == "PARIS":
+        return True
+    try:
+        from paris_fantasy import paris_is_weekend_comp
+
+        return bool(paris_is_weekend_comp(competition))
+    except Exception:
+        name = (getattr(competition, "name", None) or "").strip().lower()
+        return "paris supercross" in name or name.startswith("paris")
+
+
+def paris_theme_meta(competition: Any) -> dict[str, Any]:
+    """Copy for Paris SX race-picks hero (Eiffel / night theme)."""
+    name, date_short, date_long = _race_theme_dates(competition)
+    year = _competition_year(competition)
+    phase = (getattr(competition, "phase", None) or "").strip().lower()
+    name_l = name.lower()
+    is_saturday = phase == "paris_sat" or "lördag" in name_l or "saturday" in name_l
+    is_sunday = phase == "paris_sun" or "söndag" in name_l or "sunday" in name_l
+    if is_sunday:
+        evening_sv = "Söndag"
+        evening_en = "Sunday"
+        evening_tag = "NIGHT 2"
+    else:
+        evening_sv = "Lördag"
+        evening_en = "Saturday"
+        evening_tag = "NIGHT 1"
+        is_saturday = True
+    return {
+        "city": "PARIS",
+        "title": name or "Paris Supercross",
+        "year": year,
+        "date_short": date_short,
+        "date_long": date_long,
+        "is_saturday": is_saturday,
+        "is_sunday": is_sunday,
+        "evening_sv": evening_sv,
+        "evening_en": evening_en,
+        "evening_tag": evening_tag,
+        "motto": "VILLE LUMIÈRE · SUPERCROSS",
+        "venue": "Paris La Défense Arena",
+        "venue_short": "La Défense Arena",
+    }
+
+
 def is_st_jude_love_moto_race(competition: Any) -> bool:
     """True for AMA SX St. Jude / Love Moto Stop Cancer weekends (Glendale)."""
     if competition is None:

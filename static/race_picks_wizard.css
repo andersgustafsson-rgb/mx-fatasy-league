@@ -1014,6 +1014,102 @@
   border-color: rgba(251, 191, 36, 0.28);
 }
 
+/* Paris homepage: day sections + King/Prince highlight */
+.home-paris-weekend .wizard-summary-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.home-paris-day {
+  margin: 0;
+}
+.home-paris-day__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.home-paris-day__label span.is-done {
+  color: #6ee7b7;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-size: 0.72rem;
+}
+.home-paris-day .wizard-summary-extras {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+.home-paris-crowns {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+}
+.wizard-summary-extra--paris-king,
+.wizard-summary-extra--paris-prince {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.65rem;
+}
+.wizard-summary-extra--paris-king {
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  background: linear-gradient(120deg, rgba(251, 191, 36, 0.22), rgba(0, 0, 0, 0.28) 55%);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.12), 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+.wizard-summary-extra--paris-prince {
+  border: 1px solid rgba(186, 198, 214, 0.5);
+  background: linear-gradient(120deg, rgba(203, 213, 225, 0.2), rgba(0, 0, 0, 0.28) 55%);
+  box-shadow: 0 0 0 1px rgba(226, 232, 240, 0.08), 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+.wizard-summary-extra--paris-king .wizard-summary-extra__label {
+  color: #fbbf24;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+.wizard-summary-extra--paris-prince .wizard-summary-extra__label {
+  color: #e2e8f0;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+.wizard-summary-extra--paris-king .wizard-summary-extra__name,
+.wizard-summary-extra--paris-prince .wizard-summary-extra__name {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.wizard-summary-extra--paris-king .wizard-summary-portrait,
+.wizard-summary-extra--paris-prince .wizard-summary-portrait {
+  width: 3.35rem;
+  height: 3.35rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+}
+.wizard-summary-extra--paris-king .wizard-summary-portrait {
+  border-color: rgba(251, 191, 36, 0.75);
+}
+.wizard-summary-extra--paris-prince .wizard-summary-portrait {
+  border-color: rgba(226, 232, 240, 0.55);
+}
+.wizard-summary-extra--paris-crown-mark {
+  flex-shrink: 0;
+  font-size: 1.15rem;
+  line-height: 1;
+  opacity: 0.9;
+}
+
 .wizard-summary-extra__icon {
   font-size: 1.1rem;
   flex-shrink: 0;

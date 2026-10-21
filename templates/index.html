@@ -17,9 +17,9 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
   <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=7"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=ios-mxon-picks-visible-1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=paris-crowns-2">
   {% if is_logged_in %}
-  <script src="{{ url_for('static', filename='home_picks_portraits.js') }}?v=3" defer></script>
+  <script src="{{ url_for('static', filename='home_picks_portraits.js') }}?v=4" defer></script>
   {% endif %}
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/mx_fantasy_app_icon_512.png') }}" />
   <link rel="preload" as="image" href="{{ url_for('static', filename='images/mx_fantasy_logo_sm.png') }}?v=5" />
@@ -4573,13 +4573,20 @@
         : null;
       try {
         const res = await fetch(url, ctrl ? { signal: ctrl.signal } : undefined);
+        // 404 = route missing on stale server process — empty board, don't break the grid
+        if (res.status === 404) return [];
         if (!res.ok) throw new Error(String(res.status));
         const payload = await res.json();
-        if (payload && payload.error) throw new Error(payload.error);
+        if (payload && payload.error && !Array.isArray(payload[wrapKey || ''])) {
+          throw new Error(payload.error);
+        }
         if (wrapKey) {
           return Array.isArray(payload[wrapKey]) ? payload[wrapKey] : [];
         }
         return Array.isArray(payload) ? payload : [];
+      } catch (err) {
+        console.warn('leaderboard fetch failed', url, err);
+        return [];
       } finally {
         if (timer) clearTimeout(timer);
       }
@@ -4592,9 +4599,15 @@
         ? `<a href="/profile/${uid}" class="hover:text-cyan-200 transition-colors">${_escHome(name)}</a>`
         : _escHome(name);
       const pts = Number(row.total_points || 0);
-      const sub = row.combined
-        ? `Tippa ${Number(row.tippa_points || 0).toLocaleString('sv-SE')} · Team ${Number(row.team_points || 0).toLocaleString('sv-SE')}`
-        : '';
+      let sub = '';
+      if (row.paris_split) {
+        const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+        const sat = Number(row.saturday_points || 0).toLocaleString('sv-SE');
+        const sun = Number(row.sunday_points || 0).toLocaleString('sv-SE');
+        sub = isEn ? `Sat ${sat} · Sun ${sun}` : `Lör ${sat} · Sön ${sun}`;
+      } else if (row.combined) {
+        sub = `Tippa ${Number(row.tippa_points || 0).toLocaleString('sv-SE')} · Team ${Number(row.team_points || 0).toLocaleString('sv-SE')}`;
+      }
       const topClass = rank <= 3 ? String(rank) : 'n';
       return `<div class="leaderboard-entry home-standings-row">
         <span class="home-standings-row__rank home-standings-row__rank--${topClass}">${rank}</span>
@@ -4753,6 +4766,25 @@
           empty: isEn ? 'No MXSM points yet.' : 'Inga MXSM-poäng ännu.',
           load: () => _fetchLeaderboardRows('/get_mxsm_leaderboard?year=2026', { wrapKey: 'leaderboard' }),
         },
+        {
+          id: 'paris',
+          title: 'Paris SX Fantasy',
+          sub: '2026',
+          empty: isEn ? 'No Paris points yet.' : 'Inga Paris-poäng ännu.',
+          load: async () => {
+            const res = await fetch('/get_paris_leaderboard?year=2026');
+            if (res.status === 404) return { rows: [], sub: '2026' };
+            if (!res.ok) throw new Error(String(res.status));
+            const payload = await res.json();
+            const label = isEn
+              ? (payload.label_en || '2026')
+              : (payload.label_sv || '2026');
+            return {
+              rows: Array.isArray(payload.leaderboard) ? payload.leaderboard : [],
+              sub: label,
+            };
+          },
+        },
       ];
     }
 
@@ -4771,8 +4803,13 @@
         const settled = await Promise.all(
           boards.map(async (b) => {
             try {
-              const rows = await b.load();
-              return { ...b, rows };
+              const loaded = await b.load();
+              if (Array.isArray(loaded)) return { ...b, rows: loaded };
+              return {
+                ...b,
+                rows: Array.isArray(loaded?.rows) ? loaded.rows : [],
+                sub: loaded?.sub || b.sub,
+              };
             } catch (e) {
               console.warn('standings board', b.id, e);
               return { ...b, rows: [], empty: isEn ? 'Could not load.' : 'Kunde inte ladda.' };
@@ -5270,6 +5307,8 @@
       // MXSM before generic motocross / smx so it does not map to AMA MX or SMX
       if (n.includes('mxsm') || n === 'motocross sm' || n.includes('motocrosssm')) return 'MXSM';
       if (n.includes('wsx')) return 'WSX';
+      // Paris before generic "supercross" / "sx" so "Paris SX" never becomes AMA SX
+      if (n.includes('paris')) return 'PARIS';
       if (n.includes('supercross')) return 'SX';
       if (n.includes('smx')) return 'SMX';
       if (n.includes('motocross')) return 'MX';
@@ -5328,6 +5367,7 @@
       else if (code === 'MX' || raw === 'Motocross') label = 'AMA Pro Motocross';
       else if (code === 'MXON' || raw === 'MXON' || raw === 'MXoN') label = 'MXoN';
       else if (code === 'MXSM' || raw === 'MXSM') label = 'MXSM';
+      else if (code === 'PARIS' || (raw && raw.toLowerCase().includes('paris'))) label = 'Paris SX';
       const year = serie?.year;
       if (year && (code === 'SX' || code === 'MX' || code === 'SMX' || raw === 'SMX Finals')) {
         return `${label} (${year})`;
@@ -5339,7 +5379,8 @@
     }
 
     function isTippaOnlyHomeSeries(code) {
-      return code === 'WSX' || code === 'MXON' || code === 'MXGP' || code === 'MXSM';
+      const c = String(code || '').toUpperCase();
+      return c === 'WSX' || c === 'MXON' || c === 'MXGP' || c === 'MXSM' || c === 'PARIS';
     }
 
     /** AMA series for season-team LB (hidden on tippa-only MXON/WSX/MXGP). */
@@ -5459,8 +5500,19 @@
       return 9000;
     }
 
+    function daysUntilIsoDate(iso) {
+      if (!iso) return null;
+      const datePart = String(iso).split('T')[0];
+      const parts = datePart.split('-').map(Number);
+      if (parts.length < 3 || !parts[0] || !parts[1] || !parts[2]) return null;
+      const target = Date.UTC(parts[0], parts[1] - 1, parts[2]);
+      const now = new Date();
+      const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+      return Math.round((target - today) / 86400000);
+    }
+
     function sortSeriesByNextRace(seriesList) {
-      const order = { SX: 1, MX: 2, SMX: 3, WSX: 4, MXGP: 5, MXON: 6, MXSM: 7 };
+      const order = { PARIS: 0, SX: 1, MX: 2, SMX: 3, WSX: 4, MXGP: 5, MXON: 6, MXSM: 7 };
       return [...(Array.isArray(seriesList) ? seriesList : [])].sort((a, b) => {
         const ka = seriesNextRaceSortKey(a);
         const kb = seriesNextRaceSortKey(b);
@@ -5511,7 +5563,8 @@
       if (preferred === 'MXON' && validCodes.has('MXON')) return 'MXON';
       if (preferred === 'MXGP' && validCodes.has('MXGP')) return 'MXGP';
       if (preferred === 'MXSM' && validCodes.has('MXSM')) return 'MXSM';
-      if (preferred && preferred !== 'WSX' && preferred !== 'MXON' && preferred !== 'MXGP' && preferred !== 'MXSM' && validCodes.has(preferred)) return preferred;
+      if (preferred === 'PARIS' && validCodes.has('PARIS')) return 'PARIS';
+      if (preferred && preferred !== 'WSX' && preferred !== 'MXON' && preferred !== 'MXGP' && preferred !== 'MXSM' && preferred !== 'PARIS' && validCodes.has(preferred)) return preferred;
       return validCodes.has(nextActive) ? nextActive : 'SX';
     }
 
@@ -5541,6 +5594,8 @@
       updateAmaOnlyHomeUi();
       // Clear stale countdown race id so power ranking doesn't keep AMA while WSX loads
       window._homeCountdownCompetitionId = null;
+      const raceNameEl = document.getElementById('real-countdown-race-name');
+      if (raceNameEl) raceNameEl.textContent = 'Laddar…';
       // Countdown first (sets live race id), then other series-scoped panels
       await fetchRealCountdownData();
       await Promise.all([
@@ -5610,40 +5665,119 @@
       if (contentEl) contentEl.classList.toggle('hidden', !hasRace);
     }
 
+    let _countdownFetchGen = 0;
+
+    function _homeSeriesRow(seriesCode) {
+      const code = String(seriesCode || '').toUpperCase();
+      if (!code || !Array.isArray(_seriesStatusCache)) return null;
+      return _seriesStatusCache.find((s) => {
+        const sc = String(s.series_code || seriesNameToCode(s.name) || '').toUpperCase();
+        if (sc === code) return true;
+        if (s._ama_combined && isAmaHomeSeries(code)) return true;
+        return false;
+      }) || null;
+    }
+
+    function _homeNextRaceIdForSeries(seriesCode) {
+      const row = _homeSeriesRow(seriesCode);
+      const id = row && row.next_race && row.next_race.id;
+      return id ? Number(id) : null;
+    }
+
+    function _paintCountdownFromSeriesCache(seriesCode) {
+      const row = _homeSeriesRow(seriesCode);
+      const nr = row && row.next_race;
+      if (!nr || !nr.date) return false;
+      const nameEl = document.getElementById('real-countdown-race-name');
+      if (nameEl) nameEl.textContent = nr.name || 'Nästa race';
+      setSidebarRaceVisibility(true);
+      const sidebarName = document.getElementById('sidebar-race-name');
+      if (sidebarName) sidebarName.textContent = nr.name || '';
+      const sidebarDate = document.getElementById('sidebar-race-date');
+      if (sidebarDate) sidebarDate.textContent = nr.date || '';
+      if (nr.id) window._homeCountdownCompetitionId = nr.id;
+
+      // Rough local countdown: Paris show defaults sat 19:00 / sun 14:00 Europe/Paris ≈ UTC+1/2
+      const datePart = String(nr.date).split('T')[0];
+      const isSun = /söndag|sunday/i.test(nr.name || '');
+      const hour = isSun ? 14 : 19;
+      const startLocal = new Date(`${datePart}T${String(hour).padStart(2, '0')}:00:00`);
+      // Treat as Europe/Paris wall clock ≈ subtract 1h in winter from local SE (CET) — good enough for hero
+      const raceSec = Math.max(0, Math.floor((startLocal.getTime() - Date.now()) / 1000));
+      const deadlineSec = Math.max(0, raceSec - 2 * 3600);
+      _realCountdownSeconds.race = raceSec;
+      _realCountdownSeconds.deadline = deadlineSec;
+      _realCountdownLastSyncMs = Date.now();
+      renderRealCountdownsFromSeconds();
+      updateNextMxDaysLabel({
+        next_race: { name: nr.name, event_date: nr.date },
+        countdown: { race_start: { days: Math.floor(raceSec / 86400), total_seconds: raceSec } },
+      });
+      return true;
+    }
+
     async function fetchRealCountdownData() {
+      const requestedSeries = String(homeSelectedSeries || '').toUpperCase();
+      const gen = ++_countdownFetchGen;
       try {
-        const seriesQ = homeSelectedSeries ? `&series=${encodeURIComponent(homeSelectedSeries)}` : '';
+        const parts = [];
+        if (requestedSeries) parts.push(`series=${encodeURIComponent(requestedSeries)}`);
+        const compId = _homeNextRaceIdForSeries(requestedSeries);
+        if (compId) parts.push(`competition_id=${encodeURIComponent(compId)}`);
+        const seriesQ = parts.length ? `&${parts.join('&')}` : '';
         const response = await fetch(`/race_countdown?mode=real${seriesQ}`);
         if (!response.ok) {
           throw new Error(`race_countdown HTTP ${response.status}`);
         }
         const data = await response.json();
 
-        if (data.error) {
+        // Drop stale responses (older request finished after a newer series click).
+        if (gen !== _countdownFetchGen) return;
+        const selectedNow = String(homeSelectedSeries || '').toUpperCase();
+        if (requestedSeries && selectedNow && requestedSeries !== selectedNow) return;
+
+        const returnedSeries = String(
+          data.series || data.next_race?.series || ''
+        ).toUpperCase();
+        if (
+          requestedSeries
+          && returnedSeries
+          && requestedSeries !== returnedSeries
+          && !homeSeriesCodesMatch(requestedSeries, returnedSeries)
+        ) {
+          // Wrong series payload (e.g. AMA while Paris selected) — prefer card cache over blank hero.
+          if (_paintCountdownFromSeriesCache(requestedSeries)) return;
           document.getElementById('real-countdown-race-name').textContent = 'Inga races';
-          document.getElementById('real-race-countdown').textContent = '--:--:--';
-          document.getElementById('real-deadline-countdown').textContent = '--:--:--';
+          _realCountdownSeconds.race = null;
+          _realCountdownSeconds.deadline = null;
+          const raceEl = document.getElementById('real-race-countdown');
+          const deadlineEl = document.getElementById('real-deadline-countdown');
+          if (raceEl) raceEl.textContent = '--:--:--';
+          if (deadlineEl) deadlineEl.textContent = '--:--:--';
+          updateRaceHeroMeta(null);
+          updateRaceDayWeather(null);
+          setSidebarRaceVisibility(false);
+          return;
+        }
+
+        if (data.error) {
+          // Fallback: series card already knows next race — don't blank the hero.
+          if (_paintCountdownFromSeriesCache(requestedSeries)) return;
+          document.getElementById('real-countdown-race-name').textContent = 'Inga races';
+          const raceEl = document.getElementById('real-race-countdown');
+          const deadlineEl = document.getElementById('real-deadline-countdown');
+          if (raceEl) raceEl.textContent = '--:--:--';
+          if (deadlineEl) deadlineEl.textContent = '--:--:--';
           _realCountdownSeconds.race = null;
           _realCountdownSeconds.deadline = null;
           updateRaceHeroMeta(null);
           updateRaceDayWeather(null);
           setSidebarRaceVisibility(false);
-          if (data.series) {
-            homeSelectedSeries = data.series;
-            markSelectedSeriesCard(data.series);
-            updateAmaOnlyHomeUi();
-          }
           return;
         }
 
         if (!data.next_race || !data.next_race.name) {
           throw new Error('race_countdown missing next_race');
-        }
-
-        if (data.series) {
-          homeSelectedSeries = data.series;
-          markSelectedSeriesCard(data.series);
-          updateAmaOnlyHomeUi();
         }
 
         // Update race name (hero + sidebar)
@@ -5679,12 +5813,16 @@
 
       } catch (error) {
         console.error('Error fetching real countdown data:', error);
+        if (gen !== _countdownFetchGen) return;
         // Keep last good countdown ticking (common during local Flask reload).
         // Only show hard error if we never synced successfully.
         if (_realCountdownSeconds.race == null) {
+          if (_paintCountdownFromSeriesCache(requestedSeries)) return;
           document.getElementById('real-countdown-race-name').textContent = 'Fel vid laddning';
-          document.getElementById('real-race-countdown').textContent = '--:--:--';
-          document.getElementById('real-deadline-countdown').textContent = '--:--:--';
+          const raceEl = document.getElementById('real-race-countdown');
+          const deadlineEl = document.getElementById('real-deadline-countdown');
+          if (raceEl) raceEl.textContent = '--:--:--';
+          if (deadlineEl) deadlineEl.textContent = '--:--:--';
           updateRaceHeroMeta(null);
           updateRaceDayWeather(null);
           setSidebarRaceVisibility(false);
@@ -5995,15 +6133,17 @@
       const label = document.getElementById('next-mx-days-label');
       if (!label || !data.next_race || !data.countdown || !data.countdown.race_start) return;
 
-      const expectedRaceName = (label.dataset.nextMxName || '').trim().toLowerCase();
-      const countdownRaceName = (data.next_race.name || '').trim().toLowerCase();
-      if (expectedRaceName && countdownRaceName && expectedRaceName !== countdownRaceName) return;
+      // Always follow the active countdown race (Paris/WSX/… must replace SSR AMA text).
+      const raceName = (data.next_race.name || '').trim();
+      if (raceName) label.dataset.nextMxName = raceName;
 
       const days = data.countdown.race_start.days;
       if (days > 0) {
         label.textContent = ` · om ${days} ${days === 1 ? 'dag' : 'dagar'}`;
       } else if (data.countdown.race_start.total_seconds > 0) {
         label.textContent = ' · idag';
+      } else {
+        label.textContent = '';
       }
     }
     
@@ -6012,6 +6152,10 @@
     }
     
     function renderRealCountdownsFromSeconds() {
+      // null = loading / no data — never paint "Nu" for that (was flashing on series switch).
+      if (_realCountdownSeconds.race == null && _realCountdownSeconds.deadline == null) {
+        return;
+      }
       const raceTotal = Number(_realCountdownSeconds.race || 0);
       const deadlineTotal = Number(_realCountdownSeconds.deadline || 0);
 
@@ -6218,6 +6362,189 @@
       </div>`;
     }
 
+    function _homeParisSlotHtml(rider, label, { variant } = {}) {
+      const empty = !rider;
+      const num = rider && rider.rider_number != null ? `#${_escHome(rider.rider_number)}` : '';
+      const name = rider ? _escHome(rider.rider_name || rider.name || '') : '—';
+      const rid = rider && (rider.rider_id || rider.id);
+      const src = rid
+        ? _escHome(rider.racerx_portrait_url || rider.image_url || rider.portrait_url || `/rider_portrait/${rid}`)
+        : '';
+      const portrait = rid
+        ? `<img class="wizard-summary-portrait" alt="" loading="eager" decoding="async" data-rider-id="${rid}" src="${src}">`
+        : '<div class="wizard-summary-portrait"></div>';
+      let extraClass = 'wizard-summary-extra';
+      let mark = '';
+      if (variant === 'king') {
+        extraClass += ' wizard-summary-extra--paris-king';
+        mark = '<span class="wizard-summary-extra--paris-crown-mark" aria-hidden="true">♛</span>';
+      } else if (variant === 'prince') {
+        extraClass += ' wizard-summary-extra--paris-prince';
+        mark = '<span class="wizard-summary-extra--paris-crown-mark" aria-hidden="true">♚</span>';
+      }
+      if (empty) extraClass += ' wizard-summary-extra--empty';
+      return `<div class="${extraClass}">
+        ${portrait}
+        <div class="wizard-summary-extra__body">
+          <div class="wizard-summary-extra__label">${_escHome(label)}</div>
+          <div class="wizard-summary-extra__name">${num ? `${num} ` : ''}${name}</div>
+        </div>
+        ${mark}
+      </div>`;
+    }
+
+    function _homeParisCollectPortraits(ui, portraits) {
+      if (!ui) return;
+      ['superpole_sx1', 'superpole_sx2', 'final_sx1', 'final_sx2', 'overall_sx1', 'overall_sx2'].forEach((k) => {
+        const p = ui[k];
+        const rid = p && (p.rider_id || p.id);
+        if (!rid) return;
+        portraits[String(rid)] = {
+          portrait_url: p.portrait_url || `/rider_portrait/${rid}`,
+          image_url: p.image_url || '',
+          racerx_portrait_url: p.racerx_portrait_url || '',
+          bike_brand: p.bike_brand || '',
+        };
+      });
+    }
+
+    function _homeParisDayBlock(ui, dayKeys, dayLabel, doneLabel, { crownKeys } = {}) {
+      if (!ui) return '';
+      const extras = dayKeys
+        .map(([k, label, variant]) => _homeParisSlotHtml(ui[k], label, { variant }))
+        .join('');
+      const crowns = Array.isArray(crownKeys) && crownKeys.length
+        ? `<div class="home-paris-crowns">${crownKeys
+            .map(([k, label, variant]) => _homeParisSlotHtml(ui[k], label, { variant }))
+            .join('')}</div>`
+        : '';
+      const done = !!ui.complete;
+      return `<section class="home-paris-day">
+        <div class="home-paris-day__label">
+          <span>${_escHome(dayLabel)}</span>
+          ${done ? `<span class="is-done">${_escHome(doneLabel)}</span>` : ''}
+        </div>
+        <div class="wizard-summary-extras">${extras}</div>
+        ${crowns}
+      </section>`;
+    }
+
+    function renderHomeParisPicksBoard(payload, { openHref }) {
+      const panel = document.getElementById('home-sidebar-picks-status');
+      if (!panel) return;
+      const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+      // Weekend payload from /paris_picks/weekend/mine — or legacy single-evening
+      const satUi = payload?.saturday || (payload?.picks_ui?.saturday === true ? payload.picks_ui : null);
+      const sunUi = payload?.sunday || (payload?.picks_ui?.saturday === false ? payload.picks_ui : null);
+      const hasSat = !!(satUi && ['superpole_sx1', 'superpole_sx2', 'final_sx1', 'final_sx2']
+        .some((k) => satUi[k] && (satUi[k].rider_id || satUi[k].id)));
+      const hasSun = !!(sunUi && ['final_sx1', 'final_sx2', 'overall_sx1', 'overall_sx2']
+        .some((k) => sunUi[k] && (sunUi[k].rider_id || sunUi[k].id)));
+
+      const editId = payload?.open_competition_id
+        || (hasSun ? payload?.sunday_competition_id : null)
+        || payload?.saturday_competition_id
+        || satUi?.competition_id
+        || sunUi?.competition_id;
+      const href = editId ? `/race_picks/${editId}` : openHref;
+
+      if (!hasSat && !hasSun) {
+        panel.innerHTML = `
+          <div class="mb-4">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-orange-300">${typeof mxIcon === 'function' ? mxIcon('alert', { className: 'mx-icon--lg' }) : ''}</span>
+              <span class="text-orange-200 font-semibold">${isEn ? 'No picks made yet' : 'Inga val gjorda än'}</span>
+            </div>
+            <p class="text-sm text-gray-200 mb-3">${isEn ? 'Pick Saturday Superpole + finals — Sunday opens next.' : 'Tippa lördagens Superpole + final — söndag tippas separat.'}</p>
+            <a href="${_escHome(href)}" class="text-cyan-300 underline text-sm font-semibold">${isEn ? 'Set picks →' : 'Sätt picks →'}</a>
+          </div>`;
+        return;
+      }
+
+      const satComplete = !!(payload?.saturday_complete || satUi?.complete);
+      const sunComplete = !!(payload?.sunday_complete || sunUi?.complete);
+      const weekendComplete = !!(payload?.weekend_complete || (satComplete && sunComplete && hasSun));
+      const complete = weekendComplete || (satComplete && !hasSun);
+
+      let bannerText;
+      if (weekendComplete) {
+        bannerText = isEn ? 'Weekend picks done!' : 'Alla val klara — helg!';
+      } else if (satComplete && !hasSun) {
+        bannerText = isEn ? 'Saturday done!' : 'Lördag klar!';
+      } else if (satComplete && hasSun && !sunComplete) {
+        bannerText = isEn ? 'Finish Sunday picks' : 'Komplettera söndag';
+      } else {
+        bannerText = isEn ? 'In progress — complete your picks' : 'Påbörjat — komplettera dina val';
+      }
+
+      const satKeys = [
+        ['superpole_sx1', 'SX1 Superpole'],
+        ['superpole_sx2', 'SX2 Superpole'],
+        ['final_sx1', isEn ? 'SX1 final' : 'SX1 final'],
+        ['final_sx2', isEn ? 'SX2 final' : 'SX2 final'],
+      ];
+      const sunFinalKeys = [
+        ['final_sx1', isEn ? 'SX1 Sunday final' : 'SX1 söndagsfinal'],
+        ['final_sx2', isEn ? 'SX2 Sunday final' : 'SX2 söndagsfinal'],
+      ];
+      const sunCrownKeys = [
+        ['overall_sx1', 'King of Paris', 'king'],
+        ['overall_sx2', 'Prince of Paris', 'prince'],
+      ];
+
+      const daysHtml = [
+        hasSat
+          ? _homeParisDayBlock(
+              satUi,
+              satKeys,
+              isEn ? 'Saturday' : 'Lördag',
+              isEn ? 'Done' : 'Klart'
+            )
+          : '',
+        hasSun
+          ? _homeParisDayBlock(
+              sunUi,
+              sunFinalKeys,
+              isEn ? 'Sunday' : 'Söndag',
+              isEn ? 'Done' : 'Klart',
+              { crownKeys: sunCrownKeys }
+            )
+          : '',
+      ].join('');
+
+      const statusNote = complete
+        ? (weekendComplete
+          ? (isEn ? 'Saturday + Sunday submitted.' : 'Lördag + söndag inlämnat.')
+          : (isEn ? 'Saturday submitted — tip Sunday when ready.' : 'Lördag inlämnad — tippa söndag när du vill.'))
+        : (isEn ? 'Incomplete — finish here' : 'Ofullständigt — komplettera här');
+
+      panel.innerHTML = `
+        <div class="mb-3">
+          <div class="wizard-picks-summary home-paris-weekend${complete ? ' is-complete' : ''} picks-summary--on-home">
+            <div class="wizard-summary-banner${complete ? '' : ' is-pending'}">
+              <span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon(complete ? 'check-circle' : 'alert', { className: complete ? 'mx-icon--ok' : 'mx-icon--warn' }) : ''}<span>${bannerText}</span></span>
+            </div>
+            <div class="wizard-summary-body">
+              ${daysHtml}
+              <p class="mt-1 text-center sm:text-left">
+                <a href="${_escHome(href)}" class="text-cyan-300 underline text-sm font-semibold">${isEn ? 'View / edit picks →' : 'Visa / redigera picks →'}</a>
+              </p>
+            </div>
+          </div>
+          <p class="text-xs text-gray-300 mt-2 text-center sm:text-left">
+            ${complete
+              ? `${typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : ''} ${statusNote}`
+              : `${typeof mxIcon === 'function' ? mxIcon('alert', { className: 'mx-icon--warn' }) : ''} ${statusNote} — <a href="${_escHome(href)}" class="text-cyan-300 underline">${isEn ? 'finish here' : 'komplettera här'}</a>`}
+          </p>
+        </div>`;
+
+      const portraits = {};
+      if (hasSat) _homeParisCollectPortraits(satUi, portraits);
+      if (hasSun) _homeParisCollectPortraits(sunUi, portraits);
+      window.HOME_PICK_PORTRAITS = portraits;
+      if (window.hydrateHomePickPortraits) window.hydrateHomePickPortraits();
+    }
+
     function renderHomeMxonPicksBoard(myPicks, { picksStatus, openHref }) {
       const panel = document.getElementById('home-sidebar-picks-status');
       if (!panel) return;
@@ -6299,7 +6626,7 @@
 
     function _homeSeasonTeamStripHtml(seriesCode) {
       const seriesU = String(seriesCode || '').toUpperCase();
-      if (['WSX', 'MXON', 'MXGP', 'MXSM'].includes(seriesU)) return '';
+      if (['WSX', 'MXON', 'MXGP', 'MXSM', 'PARIS'].includes(seriesU)) return '';
       const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
       const st = window.__HOME_SEASON_TEAM__;
       const riders = Array.isArray(st?.riders) ? st.riders : [];
@@ -6502,6 +6829,7 @@
       const compId = data?.picks_competition_id || data?.next_race?.id;
       const seriesHint = String(data?.series || data?.next_race?.series || homeSelectedSeries || '').toUpperCase();
       const isMXON = seriesHint === 'MXON';
+      const isParis = seriesHint === 'PARIS';
       const isMXGP = seriesHint === 'MXGP';
       const isMXSM = seriesHint === 'MXSM';
       const openHref =
@@ -6520,7 +6848,24 @@
       }
 
       try {
-        const picksUrl = isMXON ? `/mxon_picks/${compId}/mine` : `/get_my_picks/${compId}`;
+        if (isParis) {
+          // Prefer stable /get_paris_my_picks (mirrors leaderboard); fall back to weekend path.
+          let myPicks = null;
+          for (const url of ['/get_paris_my_picks?year=2026', '/paris_picks/weekend/mine?year=2026']) {
+            try {
+              const res = await fetch(url, { credentials: 'same-origin' });
+              if (!res.ok) continue;
+              myPicks = await res.json();
+              if (myPicks && !myPicks.error) break;
+            } catch (_) {}
+          }
+          if (!myPicks) throw new Error('paris picks fetch failed');
+          renderHomeParisPicksBoard(myPicks, { openHref });
+          return;
+        }
+        const picksUrl = isMXON
+          ? `/mxon_picks/${compId}/mine`
+          : `/get_my_picks/${compId}`;
         const res = await fetch(picksUrl, { credentials: 'same-origin' });
         if (!res.ok) throw new Error('picks fetch failed');
         const myPicks = await res.json();
@@ -7461,7 +7806,11 @@
         const seriesHTML = orderedSeries.map(serie => {
           const isActive = serie.is_active;
           const nextRace = serie.next_race;
-          const daysFromNextRace = Number.isFinite(serie.days_until_next_race) ? serie.days_until_next_race : null;
+          // Prefer days from the shown next-race date (avoids stale/wrong server day counts).
+          const daysFromDate = nextRace && nextRace.date ? daysUntilIsoDate(nextRace.date) : null;
+          const daysFromNextRace = Number.isFinite(daysFromDate)
+            ? daysFromDate
+            : (Number.isFinite(serie.days_until_next_race) ? serie.days_until_next_race : null);
           const daysFromSeriesStart = Number.isFinite(serie.days_until_start) ? serie.days_until_start : null;
           const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
           // Matcha serverns countdown: föredra nästa tävlings datum, annars seriens startdatum.
@@ -7479,10 +7828,16 @@
           let isClickable = false;
 
           if (serie.under_construction) {
-            statusText = isEn ? 'Under construction · 2027' : 'Under construction · 2027';
+            const isParisUc = String(serie.series_code || '').toUpperCase() === 'PARIS'
+              || String(serie.name || '').toLowerCase().includes('paris');
+            statusText = isParisUc
+              ? (isEn ? 'Picks open soon · entry list TBA' : 'Picks öppnar snart · startlista TBA')
+              : (isEn ? 'Under construction · 2027' : 'Under construction · 2027');
             statusColor = 'text-amber-300';
             buttonClass = 'bg-amber-600 hover:bg-amber-700';
-            buttonText = isEn ? 'Preview schedule' : 'Förhandsgranska schema';
+            buttonText = isParisUc
+              ? (isEn ? 'Picks open soon' : 'Picks öppnar snart')
+              : (isEn ? 'Preview schedule' : 'Förhandsgranska schema');
             isClickable = true;
           } else if (serie.picks_preseason_locked) {
             const daysOpen = Number.isFinite(serie.days_until_picks_open) ? serie.days_until_picks_open : null;
@@ -7563,6 +7918,8 @@
             backgroundClass = 'bg-supercross';
           } else if (nameLower.includes('wsx') || codeLower === 'wsx') {
             backgroundClass = 'bg-wsx';
+          } else if (codeLower === 'paris' || nameLower.includes('paris')) {
+            backgroundClass = 'bg-wsx';
           } else if (nameLower.includes('mxgp') || codeLower === 'mxgp') {
             backgroundClass = 'bg-mxgp';
           } else if (codeLower === 'mxsm' || nameLower.includes('mxsm')) {
@@ -7612,7 +7969,7 @@
               <p class="home-series-card__compact-meta">${compactMeta}</p>
               <div class="home-series-card__details">
                 ${amaChain ? `<p class="text-[11px] font-semibold uppercase tracking-wide text-slate-300 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${amaChain}</p>` : ''}
-                ${serie.under_construction ? `<p class="text-xs font-semibold uppercase tracking-wide text-amber-200 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Coming 2027' : 'Kommer 2027'}</p>` : ''}
+                ${serie.under_construction ? `<p class="text-xs font-semibold uppercase tracking-wide text-amber-200 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${(String(serie.series_code || '').toUpperCase() === 'PARIS' || String(serie.name || '').toLowerCase().includes('paris')) ? (isEn ? 'Paris SX · Coming soon' : 'Paris SX · Coming soon') : (isEn ? 'Coming 2027' : 'Kommer 2027')}</p>` : ''}
                 <p class="text-sm ${statusColor} mb-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${statusForCard}</p>
                 ${picksBadge}
                 ${nextRace ? `<p class="text-xs text-gray-200 mb-3" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Next' : 'Nästa'}: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
@@ -8173,18 +8530,12 @@
 
       // SSR power ranking is AMA-default — skip paint for tippa-only series
       if (
-        homeSelectedSeries !== 'WSX'
-        && homeSelectedSeries !== 'MXON'
-        && homeSelectedSeries !== 'MXGP'
+        !isTippaOnlyHomeSeries(homeSelectedSeries)
         && window.__MX_POWER_RANKING__
         && window.__MX_POWER_RANKING__.ok
       ) {
         applyPowerRankingData(window.__MX_POWER_RANKING__);
-      } else if (
-        homeSelectedSeries !== 'WSX'
-        && homeSelectedSeries !== 'MXON'
-        && homeSelectedSeries !== 'MXGP'
-      ) {
+      } else if (!isTippaOnlyHomeSeries(homeSelectedSeries)) {
         setTimeout(fetchPowerRanking, 2500);
       }
 

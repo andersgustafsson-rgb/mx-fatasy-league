@@ -351,6 +351,14 @@ def save_picks():
         return jsonify({"error": "competition_not_found"}), 404
 
     series_u = (getattr(comp, "series", None) or "").strip().upper()
+    if series_u == "PARIS" or (getattr(comp, "phase", None) or "") in (
+        "paris_sat",
+        "paris_sun",
+    ):
+        return jsonify({
+            "error": "Paris sparas via /paris_picks/<id>/save (inte top-6 save_picks).",
+        }), 400
+
     if series_u == "MXGP":
         try:
             from mxgp_fantasy import mxgp_user_can_play
@@ -404,7 +412,7 @@ def save_picks():
     # --- VALIDERA ALLT FÖRST (inga raderingar) så att vi inte tömmer användarens picks vid valideringsfel ---
     wc_pick = data.get("wildcard_pick")
     wc_pos = data.get("wildcard_pos")
-    skips_wildcard = series_u in ("WSX", "MXGP", "MXSM")
+    skips_wildcard = series_u in ("WSX", "MXGP", "MXSM", "PARIS")
     if skips_wildcard:
         wc_pick = None
         wc_pos = None

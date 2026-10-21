@@ -87,6 +87,7 @@ def build_series_status_list() -> list[dict]:
         "Motocross": 2,
         "SMX Finals": 3,
         "WSX": 4,
+        "PARIS": 4,
         "MXGP": 5,
         "MXON": 6,
         "MXoN": 6,
@@ -135,6 +136,8 @@ def build_series_status_list() -> list[dict]:
             series_code = "SMX"
         elif s.name == "WSX":
             series_code = "WSX"
+        elif s.name == "Paris SX":
+            series_code = "PARIS"
         elif s.name in ("MXON", "MXoN"):
             series_code = "MXON"
         elif s.name == "MXGP":
@@ -230,6 +233,13 @@ def build_series_status_list() -> list[dict]:
                 from mxsm_fantasy import mxsm_public_play_enabled
 
                 under_construction = not mxsm_public_play_enabled()
+            except Exception:
+                under_construction = True
+        elif series_code == "PARIS":
+            try:
+                from paris_fantasy import paris_public_play_enabled
+
+                under_construction = not paris_public_play_enabled()
             except Exception:
                 under_construction = True
 

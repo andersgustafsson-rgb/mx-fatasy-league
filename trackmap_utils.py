@@ -669,6 +669,33 @@ def get_picks_good_to_know(competition) -> list[str]:
             tips.insert(0, venue)
         return tips
 
+    phase = (getattr(competition, "phase", None) or "").strip().lower()
+    name_l = (getattr(competition, "name", None) or "").strip().lower()
+    is_paris = (
+        series.upper() == "PARIS"
+        or phase in ("paris_sat", "paris_sun")
+        or "paris supercross" in name_l
+        or name_l.startswith("paris sx")
+    )
+    if is_paris:
+        if phase == "paris_sun" or "söndag" in name_l or "sunday" in name_l:
+            tips.extend(
+                [
+                    "Söndag: tippa finalvinnare SX1 + SX2 samt King of Paris och Prince of Paris.",
+                    "Poäng: final proximity max 40/klass · King/Prince 50p vardera (hit/miss). Max ~180.",
+                    "Leaderboard summerar lördag + söndag. Deadline 2 h före showstart (Paris-tid).",
+                ]
+            )
+        else:
+            tips.extend(
+                [
+                    "Lördag: tippa Superpole (SX1 + SX2) och finalvinnare i varje klass.",
+                    "Poäng: Superpole 20+20 (+10 om båda) · final proximity max 40/klass. Max ~130.",
+                    "Efter lördag syns delställning — söndag läggs på. Deadline 2 h före showstart.",
+                ]
+            )
+        return tips
+
     if series == "WSX":
         name = (getattr(competition, "name", None) or "").strip()
         tips.extend(

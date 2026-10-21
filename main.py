@@ -652,6 +652,123 @@ except Exception as e:
     print(f"MXoN picks blueprint not loaded: {e}")
 
 try:
+    from app.routes.paris_picks import bp as paris_picks_bp  # type: ignore
+    app.register_blueprint(paris_picks_bp)
+    for _alias, _rule, _methods in (
+        ("paris_hub_page", "/paris-sx", None),
+        ("paris_picks_page", "/paris_picks/<int:competition_id>", None),
+    ):
+        bp_ep = f"paris_picks.{_alias}"
+        if bp_ep in app.view_functions and _alias not in app.view_functions:
+            kw = {"endpoint": _alias, "view_func": app.view_functions[bp_ep]}
+            if _methods:
+                kw["methods"] = _methods
+            app.add_url_rule(_rule, **kw)
+except Exception as e:
+    import traceback
+
+    traceback.print_exc()
+    print(f"Paris picks blueprint not loaded: {e}")
+
+
+def _ensure_paris_pick_routes() -> None:
+    """Wire Paris URLs even if blueprint registration failed (local dev safety net)."""
+    try:
+        from app.routes.paris_picks import (  # type: ignore
+            paris_hub_page,
+            paris_mine_api,
+            paris_picks_page,
+            paris_roster_api,
+            paris_save_api,
+            paris_weekend_mine_api,
+        )
+    except Exception as imp_err:
+        print(f"Paris picks views not importable: {imp_err}")
+        return
+
+    existing = {rule.rule for rule in app.url_map.iter_rules()}
+
+    if "/paris-sx" not in existing:
+        app.add_url_rule("/paris-sx", "paris_hub_page", paris_hub_page, methods=["GET"])
+    if "/paris_picks/<int:competition_id>" not in existing:
+        app.add_url_rule(
+            "/paris_picks/<int:competition_id>",
+            "paris_picks_page",
+            paris_picks_page,
+            methods=["GET"],
+        )
+    if "/paris_picks/<int:competition_id>/roster" not in existing:
+        app.add_url_rule(
+            "/paris_picks/<int:competition_id>/roster",
+            "paris_roster_api",
+            paris_roster_api,
+            methods=["GET"],
+        )
+    if "/paris_picks/weekend/mine" not in existing:
+        app.add_url_rule(
+            "/paris_picks/weekend/mine",
+            "paris_weekend_mine_api",
+            paris_weekend_mine_api,
+            methods=["GET"],
+        )
+    if "/get_paris_my_picks" not in existing:
+        app.add_url_rule(
+            "/get_paris_my_picks",
+            "get_paris_my_picks",
+            paris_weekend_mine_api,
+            methods=["GET"],
+        )
+    if "/paris_picks/<int:competition_id>/mine" not in existing:
+        app.add_url_rule(
+            "/paris_picks/<int:competition_id>/mine",
+            "paris_mine_api",
+            paris_mine_api,
+            methods=["GET"],
+        )
+    if "/paris_picks/<int:competition_id>/save" not in existing:
+        app.add_url_rule(
+            "/paris_picks/<int:competition_id>/save",
+            "paris_save_api",
+            paris_save_api,
+            methods=["POST"],
+        )
+
+    try:
+        from app.routes.paris_admin import (  # type: ignore
+            admin_paris_results,
+            admin_paris_roster_api,
+            admin_seed_paris,
+        )
+    except Exception as adm_err:
+        print(f"Paris admin views not importable: {adm_err}")
+        return
+
+    if "/admin/seed_paris" not in existing:
+        app.add_url_rule(
+            "/admin/seed_paris",
+            "admin_seed_paris",
+            admin_seed_paris,
+            methods=["GET", "POST"],
+        )
+    if "/admin/api/paris_roster/<int:competition_id>" not in existing:
+        app.add_url_rule(
+            "/admin/api/paris_roster/<int:competition_id>",
+            "admin_paris_roster_api",
+            admin_paris_roster_api,
+            methods=["GET"],
+        )
+    if "/admin/paris_results" not in existing:
+        app.add_url_rule(
+            "/admin/paris_results",
+            "admin_paris_results",
+            admin_paris_results,
+            methods=["POST"],
+        )
+
+
+_ensure_paris_pick_routes()
+
+try:
     from app.routes.leagues import bp as leagues_bp  # type: ignore
     app.register_blueprint(leagues_bp)
     for _alias, _rule, _methods in (
@@ -1186,7 +1303,7 @@ def _home_primary_competition(*, require_open: bool = False) -> Competition | No
 
 
 # Tippa-only series (no season team; excluded from AMA fantasy totals)
-TIPPA_ONLY_SERIES = frozenset({"WSX", "MXON", "MXGP", "MXSM"})
+TIPPA_ONLY_SERIES = frozenset({"WSX", "MXON", "MXGP", "MXSM", "PARIS"})
 
 
 def is_tippa_only_series(series: str | None) -> bool:
@@ -1282,6 +1399,9 @@ def _normalize_countdown_series(raw: str | None) -> str | None:
         "MOTOCROSSOFNATIONS": "MXON",
         "MXSM": "MXSM",
         "MOTOCROSSSM": "MXSM",
+        "PARIS": "PARIS",
+        "PARISSX": "PARIS",
+        "PARISSUPERCROSS": "PARIS",
     }
     return aliases.get(key)
 
@@ -3677,6 +3797,43 @@ def get_mxsm_leaderboard():
         print(f"ERROR in get_mxsm_leaderboard: {e}")
         db.session.rollback()
         return jsonify({"error": str(e), "leaderboard": []}), 500
+
+
+@app.get("/get_paris_leaderboard")
+def get_paris_leaderboard():
+    """Paris SX fantasy leaderboard (lördag + söndag, med delställning)."""
+    try:
+        from paris_fantasy import fantasy_paris_leaderboard_payload, get_active_paris_year
+
+        year_raw = request.args.get("year")
+        year = int(year_raw) if year_raw else get_active_paris_year()
+        payload = fantasy_paris_leaderboard_payload(year)
+        return jsonify({
+            "series": "PARIS",
+            "year": payload.get("year", year),
+            "saturday_scored": bool(payload.get("saturday_scored")),
+            "sunday_scored": bool(payload.get("sunday_scored")),
+            "label_sv": payload.get("label_sv") or "",
+            "label_en": payload.get("label_en") or "",
+            "leaderboard": payload.get("leaderboard") or [],
+        })
+    except Exception as e:
+        print(f"ERROR in get_paris_leaderboard: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e), "leaderboard": []}), 500
+
+
+@app.get("/get_paris_my_picks")
+def get_paris_my_picks():
+    """Homepage: combined Paris lör+sön picks for the logged-in user."""
+    try:
+        from app.routes.paris_picks import paris_weekend_mine_api
+
+        return paris_weekend_mine_api()
+    except Exception as e:
+        print(f"ERROR in get_paris_my_picks: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e), "ok": False}), 500
 
 
 @app.get("/supercross/sasong/<int:year>")
@@ -7468,7 +7625,17 @@ def create_season_team():
 def _parse_my_scores_series_scope() -> tuple[str, int | None]:
     """Series scope for Mina poäng. WSX defaults to active season year (not all years)."""
     series_filter = (request.args.get("series") or "").strip().upper()
-    if series_filter not in ("WSX", "MXON", "MXGP", "MXSM", "SX", "MX", "SMX", "AMA"):
+    if series_filter not in (
+        "WSX",
+        "MXON",
+        "MXGP",
+        "MXSM",
+        "PARIS",
+        "SX",
+        "MX",
+        "SMX",
+        "AMA",
+    ):
         series_filter = ""
     wsx_year: int | None = None
     if series_filter == "WSX":
@@ -7542,6 +7709,18 @@ def _my_scores_payload(uid: int, series_filter: str, wsx_year: int | None) -> tu
                 from mxon_fantasy import mxon_has_official_results
 
                 has_results = mxon_has_official_results(int(r.competition_id))
+            except Exception:
+                has_results = bool(r.total_points)
+        if series_u == "PARIS" and not has_results:
+            try:
+                from models import HoleshotResult, QualifyingResult
+
+                cid = int(r.competition_id)
+                has_results = bool(
+                    HoleshotResult.query.filter_by(competition_id=cid).first()
+                    or QualifyingResult.query.filter_by(competition_id=cid).first()
+                    or (r.total_points or 0)
+                )
             except Exception:
                 has_results = bool(r.total_points)
         scores.append({
@@ -8190,9 +8369,11 @@ def series_page(series_id):
             if comp.id not in competition_results:
                 competition_results[comp.id] = []
             
-            # Check if picks are locked for this competition - OPTIMIZED
-            # Use simple date comparison instead of complex is_picks_locked function
-            if comp.event_date and comp.event_date <= current_time.date():
+            # Tippa-only (Paris m.fl.): riktig deadline. AMA: event_date-heuristik (snabb).
+            series_u_lock = (comp.series or "").upper()
+            if series_u_lock in TIPPA_ONLY_SERIES:
+                picks_locked = is_picks_locked(comp)
+            elif comp.event_date and comp.event_date <= current_time.date():
                 picks_locked = True
             else:
                 picks_locked = False
@@ -8211,6 +8392,23 @@ def series_page(series_id):
                         "has_picks": n >= 5 and c >= 3,
                         "race_picks_count": n,
                         "holeshot_picks_count": c,
+                        "has_wildcard": False,
+                    }
+                    continue
+
+                if (comp.series or "").upper() == "PARIS":
+                    try:
+                        from paris_fantasy import paris_picks_complete
+
+                        complete = paris_picks_complete(
+                            int(session["user_id"]), comp
+                        )
+                    except Exception:
+                        complete = False
+                    user_picks_status[comp.id] = {
+                        "has_picks": complete,
+                        "race_picks_count": 0,
+                        "holeshot_picks_count": 0,
                         "has_wildcard": False,
                     }
                     continue
@@ -8306,6 +8504,8 @@ def series_page(series_id):
             series_code = "MXGP"
         elif series.name == "MXSM":
             series_code = "MXSM"
+        elif series.name == "Paris SX":
+            series_code = "PARIS"
 
         next_race = None
         if ama_chain:
@@ -8617,6 +8817,58 @@ def race_picks_page(competition_id):
     if (getattr(comp, "series", None) or "").upper() == "MXON":
         return redirect(url_for("mxon_picks_page", competition_id=comp.id))
 
+    is_paris = False
+    paris_saturday = False
+    paris_other_evening_url = None
+    paris_other_evening_label = None
+    try:
+        from paris_fantasy import (
+            get_active_paris_year,
+            get_paris_series,
+            get_paris_weekend,
+            heal_paris_competition_tags,
+            paris_is_saturday,
+            paris_is_weekend_comp,
+        )
+
+        # Heal legacy SX-tagged Paris rows so UI and save agree
+        year = int(comp.event_date.year) if comp.event_date else get_active_paris_year()
+        ser = get_paris_series(year)
+        if ser and heal_paris_competition_tags(ser):
+            db.session.commit()
+            comp = Competition.query.get_or_404(competition_id)
+
+        is_paris = paris_is_weekend_comp(comp)
+        if is_paris:
+            paris_saturday = paris_is_saturday(comp)
+            wk = get_paris_weekend(year)
+            other = wk.get("sunday") if paris_saturday else wk.get("saturday")
+            if other and int(other.id) != int(comp.id):
+                paris_other_evening_url = url_for(
+                    "race_picks_page", competition_id=other.id
+                )
+                paris_other_evening_label = (
+                    "Söndag" if paris_saturday else "Lördag"
+                )
+    except Exception:
+        is_paris = (getattr(comp, "series", None) or "").upper() == "PARIS"
+
+    if is_paris:
+        try:
+            from paris_fantasy import paris_user_can_play
+
+            if not paris_user_can_play(is_admin=is_admin_user()):
+                flash(
+                    "Paris Supercross — picks öppnar snart. Vi släpper tippan när "
+                    "officiell startlista och banlayout är ute.",
+                    "info",
+                )
+                return redirect(url_for("index"))
+        except Exception:
+            if not is_admin_user():
+                flash("Paris Supercross — picks öppnar snart.", "info")
+                return redirect(url_for("index"))
+
     if (getattr(comp, "series", None) or "").upper() == "MXGP":
         try:
             from mxgp_fantasy import mxgp_user_can_play
@@ -8683,14 +8935,33 @@ def race_picks_page(competition_id):
     out_ids = set(rid for (rid,) in out_rows)
 
     # 2) Bygg listor per serie
-    is_wsx = (getattr(comp, 'series', None) == 'WSX')
+    is_wsx = (getattr(comp, 'series', None) == 'WSX') and not is_paris
     is_mxgp = (getattr(comp, 'series', None) or '').upper() == 'MXGP'
     is_mxsm = (getattr(comp, 'series', None) or '').upper() == 'MXSM'
     has_u17 = False
     riders_u17: list = []
     mxsm_tippa_classes: tuple = ()
 
-    if is_wsx:
+    if is_paris:
+        from paris_fantasy import paris_allowed_rider_ids
+
+        allowed = paris_allowed_rider_ids(int(comp.id))
+        riders_450 = (
+            rider_query_for_list_ui()
+            .filter(Rider.id.in_(allowed), Rider.class_name == "wsx_sx1")
+            .order_by(Rider.rider_number)
+            .all()
+        )
+        riders_250 = (
+            rider_query_for_list_ui()
+            .filter(Rider.id.in_(allowed), Rider.class_name == "wsx_sx2")
+            .order_by(Rider.rider_number)
+            .all()
+        )
+        riders_u17 = []
+        has_u17 = False
+        mxsm_tippa_classes = ()
+    elif is_wsx:
         # WSX använder egna klasser och separata förare
         try:
             prune_off_roster_wsx_picks(int(comp.id))
@@ -8881,7 +9152,7 @@ def race_picks_page(competition_id):
     }
 
     # Only OUT riders in this series' classes (hide WSX twins on SMX/SX/MX etc.)
-    if is_wsx:
+    if is_paris or is_wsx:
         allowed_out_classes = ("wsx_sx1", "wsx_sx2")
     elif is_mxgp:
         allowed_out_classes = ("mxgp", "mx2")
@@ -8972,6 +9243,21 @@ def race_picks_page(competition_id):
                 "Deadline är 2 timmar före start.",
             ]
 
+    # Paris: never fall through to AMA holeshot/wildcard copy (stale module / series drift).
+    if is_paris:
+        if paris_saturday:
+            picks_good_to_know = [
+                "Lördag: tippa Superpole (SX1 + SX2) och finalvinnare i varje klass.",
+                "Poäng: Superpole 20+20 (+10 om båda) · final proximity max 40/klass. Max ~130.",
+                "Efter lördag syns delställning — söndag läggs på. Deadline 2 h före showstart.",
+            ]
+        else:
+            picks_good_to_know = [
+                "Söndag: tippa finalvinnare SX1 + SX2 samt King of Paris och Prince of Paris.",
+                "Poäng: final proximity max 40/klass · King/Prince 50p vardera. Max ~180.",
+                "Leaderboard summerar lördag + söndag. Deadline 2 h före showstart.",
+            ]
+
     try:
         from track_weather import build_picks_weather_tips, get_weather_for_competition
 
@@ -8980,7 +9266,7 @@ def race_picks_page(competition_id):
             picks_weather, series=getattr(comp, "series", None)
         )
         if weather_tips:
-            # Weather first in «Bra att veta», then keep a few generic tips
+            # Weather first in «Bra att veta», then keep a few series tips
             generic = [t for t in picks_good_to_know if t not in weather_tips]
             picks_good_to_know = weather_tips + generic[:3]
     except Exception:
@@ -9001,24 +9287,68 @@ def race_picks_page(competition_id):
         user_id = int(session["user_id"])
         pick_suggestions = _build_pick_suggestions_for_user(user_id, comp, out_ids)
         try:
-            initial_my_picks = _my_picks_api_dict(user_id, comp)
-            initial_picks_status = _picks_status_summary(
-                initial_my_picks,
-                is_wsx=is_wsx,
-                is_mxgp=is_mxgp,
-                is_mxsm=is_mxsm,
-                has_u17=has_u17,
-                tippa_classes=mxsm_tippa_classes,
-                picks_locked=picks_locked,
-            )
-            initial_wizard_step = _initial_wizard_step(
-                initial_my_picks,
-                is_wsx=is_wsx,
-                is_mxgp=is_mxgp,
-                is_mxsm=is_mxsm,
-                has_u17=has_u17,
-                tippa_classes=mxsm_tippa_classes,
-            )
+            if is_paris:
+                from paris_fantasy import (
+                    get_user_paris_picks,
+                    get_user_paris_picks_ui,
+                    paris_picks_complete,
+                )
+
+                paris_initial = get_user_paris_picks(user_id, comp)
+                paris_ui = get_user_paris_picks_ui(user_id, comp)
+                initial_my_picks = {"paris": paris_initial, "paris_ui": paris_ui}
+                complete = paris_picks_complete(user_id, comp)
+                if complete:
+                    initial_picks_status = {
+                        "icon": "✅",
+                        "title": "Inlämnat!",
+                        "message": "Dina Paris-val är registrerade för denna kväll.",
+                        "container_class": "mb-4 p-4 rounded-lg border-2 border-emerald-500/50 bg-emerald-950/20",
+                    }
+                elif any(paris_initial.get(k) for k in paris_initial):
+                    initial_picks_status = {
+                        "icon": "⚠️",
+                        "title": "Delvis klart",
+                        "message": "Fyll i resten av Paris-valen.",
+                        "container_class": (
+                            "mb-4 p-4 rounded-lg border-2 border-dashed "
+                            "border-orange-400 bg-orange-900/30"
+                        ),
+                    }
+                else:
+                    initial_picks_status = {
+                        "icon": "📝",
+                        "title": "Inga val gjorda än",
+                        "message": (
+                            "Tippa Superpole + lördagsfinal (SX1 & SX2)."
+                            if paris_saturday
+                            else "Tippa söndagsfinal + King/Prince of Paris."
+                        ),
+                        "container_class": (
+                            "mb-4 p-4 rounded-lg border-2 border-dashed "
+                            "border-yellow-400 bg-yellow-900/30"
+                        ),
+                    }
+                initial_wizard_step = 1
+            else:
+                initial_my_picks = _my_picks_api_dict(user_id, comp)
+                initial_picks_status = _picks_status_summary(
+                    initial_my_picks,
+                    is_wsx=is_wsx,
+                    is_mxgp=is_mxgp,
+                    is_mxsm=is_mxsm,
+                    has_u17=has_u17,
+                    tippa_classes=mxsm_tippa_classes,
+                    picks_locked=picks_locked,
+                )
+                initial_wizard_step = _initial_wizard_step(
+                    initial_my_picks,
+                    is_wsx=is_wsx,
+                    is_mxgp=is_mxgp,
+                    is_mxsm=is_mxsm,
+                    has_u17=has_u17,
+                    tippa_classes=mxsm_tippa_classes,
+                )
         except Exception:
             app.logger.exception(
                 "race_picks initial_my_picks failed for competition_id=%s", competition_id
@@ -9028,6 +9358,8 @@ def race_picks_page(competition_id):
             guest_msg = "Registrera dig på ~20 sek — sedan topp 6 & holeshot"
         elif is_mxgp:
             guest_msg = "Registrera dig på ~20 sek — sedan topp 6, holeshot & kval"
+        elif is_paris:
+            guest_msg = "Registrera dig på ~20 sek — sedan Paris-tippan för denna kväll"
         elif is_wsx:
             guest_msg = "Registrera dig på ~20 sek — sedan topp 6 & holeshot"
         else:
@@ -9057,12 +9389,21 @@ def race_picks_page(competition_id):
             season_team_riders = []
             season_team_meta = None
 
+    paris_meta: dict = {}
+    if is_paris:
+        try:
+            from services.race_theme import paris_theme_meta
+
+            paris_meta = paris_theme_meta(comp) or {}
+        except Exception:
+            paris_meta = {}
+
     military_appreciation = False
     military_meta = {}
     try:
         from services.race_theme import is_military_appreciation_race
 
-        military_appreciation = bool(is_military_appreciation_race(comp))
+        military_appreciation = bool(is_military_appreciation_race(comp)) and not is_paris
     except Exception:
         military_appreciation = False
     if military_appreciation:
@@ -9075,7 +9416,7 @@ def race_picks_page(competition_id):
 
     st_jude_love_moto = False
     st_jude_meta = {}
-    if not military_appreciation:
+    if not military_appreciation and not is_paris:
         try:
             from services.race_theme import is_st_jude_love_moto_race
 
@@ -9092,7 +9433,7 @@ def race_picks_page(competition_id):
 
     sx_format = ""
     sx_format_meta: dict = {}
-    if not military_appreciation and not st_jude_love_moto:
+    if not military_appreciation and not st_jude_love_moto and not is_paris:
         try:
             from services.race_theme import sx_format_kind, sx_format_theme_meta
 
@@ -9114,6 +9455,7 @@ def race_picks_page(competition_id):
         military_meta=military_meta,
         st_jude_love_moto=st_jude_love_moto,
         st_jude_meta=st_jude_meta,
+        paris_meta=paris_meta,
         sx_format=sx_format,
         sx_format_meta=sx_format_meta,
         picks_local_unlock=picks_local_unlock,
@@ -9158,6 +9500,10 @@ def race_picks_page(competition_id):
             if is_logged_in
             else None
         ),
+        is_paris=is_paris,
+        paris_saturday=paris_saturday,
+        paris_other_evening_url=paris_other_evening_url,
+        paris_other_evening_label=paris_other_evening_label,
     )
 
 
@@ -11533,6 +11879,20 @@ def admin_get_results(competition_id):
             .all()
         )
 
+        from models import QualifyingResult
+
+        quals = (
+            db.session.query(
+                QualifyingResult.rider_id,
+                QualifyingResult.class_name,
+                Rider.name.label("rider_name"),
+                Rider.rider_number.label("rider_number"),
+            )
+            .join(Rider, Rider.id == QualifyingResult.rider_id)
+            .filter(QualifyingResult.competition_id == competition_id)
+            .all()
+        )
+
         # Get competition to determine series
         competition = Competition.query.get(competition_id)
         is_wsx = competition and competition.series == 'WSX'
@@ -11576,6 +11936,15 @@ def admin_get_results(competition_id):
                         "rider_number": h.rider_number
                     }
                     for h in holos
+                ],
+                "qualifying_results": [
+                    {
+                        "rider_id": q.rider_id,
+                        "class": q.class_name,
+                        "rider_name": q.rider_name,
+                        "rider_number": q.rider_number,
+                    }
+                    for q in quals
                 ],
             }
         )
@@ -12656,7 +13025,8 @@ def submit_results():
     series_u = (getattr(competition, "series", None) or "").strip().upper() if competition else ""
     is_wsx = series_u == "WSX"
     is_mxgp = series_u == "MXGP"
-    if is_wsx:
+    is_paris = series_u == "PARIS"
+    if is_wsx or is_paris:
         hs_class_450, hs_class_250 = "wsx_sx1", "wsx_sx2"
         hs_aliases_450 = ["450cc", "wsx_sx1"]
         hs_aliases_250 = ["250cc", "wsx_sx2"]
@@ -12999,6 +13369,8 @@ def update_holeshot():
         redirect_url = url_for("admin_page", section="mxgp-scaffold")
     elif next_section == "mxsm-scaffold":
         redirect_url = url_for("admin_page", section="mxsm-scaffold")
+    elif next_section == "paris-sx":
+        redirect_url = url_for("admin_page", section="paris-sx")
 
     if not comp_id:
         flash("Du måste välja tävling.", "error")
@@ -13013,6 +13385,7 @@ def update_holeshot():
     is_wsx = series_u == "WSX"
     is_mxgp = series_u == "MXGP"
     is_mxsm = series_u == "MXSM"
+    is_paris = series_u == "PARIS"
 
     def _upsert_hs(rider_id: int | None, class_name: str, aliases: list[str]) -> None:
         if rider_id:
@@ -13042,7 +13415,7 @@ def update_holeshot():
             _upsert_hs(hs_250, "mxsm_mx2", ["mxsm_mx2", "250cc"])
             _upsert_hs(hs_u17, "mxsm_u17", ["mxsm_u17", "u17"])
         else:
-            if is_wsx:
+            if is_wsx or is_paris:
                 hs_class_450, hs_class_250 = "wsx_sx1", "wsx_sx2"
                 hs_aliases_450 = ["450cc", "wsx_sx1"]
                 hs_aliases_250 = ["250cc", "wsx_sx2"]
@@ -20650,8 +21023,11 @@ def _race_hero_meta(comp, schedule: dict) -> dict:
         time_label = f"{m_time.group(1)} ({m_time.group(2)})"
 
     tz = schedule.get("timezone") or ""
+    series_u = (getattr(comp, "series", None) or "").strip().upper()
     flag = "🇺🇸"
-    if "Argentina" in tz:
+    if series_u == "PARIS" or "Paris" in tz:
+        flag = "🇫🇷"
+    elif "Argentina" in tz:
         flag = "🇦🇷"
     elif "Australia" in tz or "Brisbane" in tz:
         flag = "🇦🇺"
@@ -20662,10 +21038,14 @@ def _race_hero_meta(comp, schedule: dict) -> dict:
     elif "Toronto" in tz or "Canada" in tz or "Vancouver" in (geo.get("city") or ""):
         flag = "🇨🇦"
 
+    location = geo.get("city") or ""
+    if series_u == "PARIS" and not location:
+        location = "Paris — Plénitude Arena"
+
     return {
         "date_label": date_label,
         "time_label": time_label,
-        "location": geo.get("city") or "",
+        "location": location,
         "flag": flag,
     }
 
@@ -20777,29 +21157,70 @@ def race_countdown():
             # Real mode - use actual race dates
             # Skip competitions that already have results (completed races)
             today = get_today()
-            series_filter = _normalize_countdown_series(request.args.get("series"))
-            if series_filter is None:
+            series_raw = request.args.get("series")
+            series_filter = _normalize_countdown_series(series_raw)
+            # Hard aliases (belt + suspenders if normalize map drifts)
+            if series_filter is None and series_raw:
+                raw_u = str(series_raw).strip().upper().replace(" ", "")
+                if raw_u in ("PARIS", "PARISSX", "PARISSUPERCROSS"):
+                    series_filter = "PARIS"
+            comp_id_raw = request.args.get("competition_id", type=int)
+
+            next_race_obj = None
+            if comp_id_raw:
+                cand = Competition.query.get(int(comp_id_raw))
+                if cand and not getattr(cand, "is_cancelled", False):
+                    # Prefer explicit competition when it matches requested series (or no series)
+                    cand_series = (getattr(cand, "series", None) or "").strip().upper()
+                    ama = {"SX", "MX", "SMX"}
+                    series_ok = (
+                        not series_filter
+                        or cand_series == series_filter
+                        or (series_filter in ama and cand_series in ama)
+                    )
+                    if series_ok:
+                        has_results = (
+                            CompetitionResult.query.filter_by(
+                                competition_id=cand.id
+                            ).first()
+                            is not None
+                        )
+                        if not has_results:
+                            next_race_obj = cand
+                            if not series_filter:
+                                series_filter = cand_series or None
+
+            if series_filter is None and next_race_obj is None:
+                if series_raw and str(series_raw).strip():
+                    # Explicit series the client asked for — never silently fall back to AMA
+                    return jsonify({
+                        "error": "No upcoming races",
+                        "series": str(series_raw).strip().upper(),
+                    })
                 # Homepage default: AMA chain, never auto-hijack to WSX
                 series_filter = _home_default_countdown_series()
 
-            all_upcoming = (
-                Competition.query
-                .filter(Competition.event_date >= today)
-                .filter(Competition.series == series_filter)
-                .order_by(Competition.event_date.asc())
-                .all()
-            )
-            
-            next_race_obj = None
-            for comp in all_upcoming:
-                if getattr(comp, "is_cancelled", False):
-                    continue
-                # Check if this competition has results (is completed)
-                has_results = CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
-                if not has_results:
-                    next_race_obj = comp
-                    break
-            
+            if next_race_obj is None:
+                all_upcoming = (
+                    Competition.query
+                    .filter(Competition.event_date >= today)
+                    .filter(Competition.series == series_filter)
+                    .order_by(Competition.event_date.asc())
+                    .all()
+                )
+                for comp in all_upcoming:
+                    if getattr(comp, "is_cancelled", False):
+                        continue
+                    has_results = (
+                        CompetitionResult.query.filter_by(
+                            competition_id=comp.id
+                        ).first()
+                        is not None
+                    )
+                    if not has_results:
+                        next_race_obj = comp
+                        break
+
             if not next_race_obj:
                 return jsonify({
                     "error": "No upcoming races",

@@ -84,6 +84,12 @@ def create_app() -> Flask:
 		pass
 
 	try:
+		from .routes.paris_picks import bp as paris_picks_bp  # noqa: F401
+		app.register_blueprint(paris_picks_bp)
+	except Exception:
+		pass
+
+	try:
 		from .routes.pit_lane import bp as pit_lane_bp  # noqa: F401
 		app.register_blueprint(pit_lane_bp)
 	except Exception:

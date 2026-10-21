@@ -24,7 +24,7 @@ from models import (
 )
 
 # Keep in sync with main.TIPPA_ONLY_SERIES (skiva 2: duplicate on purpose).
-TIPPA_ONLY_SERIES = frozenset({"WSX", "MXON", "MXGP", "MXSM"})
+TIPPA_ONLY_SERIES = frozenset({"WSX", "MXON", "MXGP", "MXSM", "PARIS"})
 
 
 def calculate_rider_points_for_position(position) -> int:
@@ -82,6 +82,24 @@ def calculate_race_pick_points(predicted_position, actual_position) -> int:
     if diff == 4:
         return 6
     return 3
+
+
+def calculate_paris_final_points(predicted_position, actual_position) -> int:
+    """Paris final tip (usually predict P1): juicier proximity scale than AMA tippa."""
+    if actual_position is None:
+        return 0
+    if predicted_position == actual_position:
+        return 40
+    diff = abs(int(predicted_position) - int(actual_position))
+    if diff == 1:
+        return 28
+    if diff == 2:
+        return 20
+    if diff == 3:
+        return 14
+    if diff == 4:
+        return 10
+    return 5
 
 
 def holeshot_result_class_bucket(raw_class: str | None) -> str:
@@ -214,6 +232,7 @@ def calculate_scores(comp_id: int):
 
         # Use only unique picks for scoring
         unique_picks = list(seen_picks.values())
+        series_u = (series_name or "").strip().upper()
 
         for pick in unique_picks:
             actual_pos_for_pick = (
@@ -221,10 +240,22 @@ def calculate_scores(comp_id: int):
                 if pick.rider_id in actual_results_dict
                 else None
             )
-            # Use new scoring system based on position difference
-            race_points += calculate_race_pick_points(
-                pick.predicted_position, actual_pos_for_pick
-            )
+            if series_u == "PARIS":
+                # Admin often only stores final winners (P1). Wrong tip → no row for
+                # that rider; use proximity floor (5) so a miss is not 0.
+                if (
+                    actual_pos_for_pick is None
+                    and int(pick.predicted_position or 0) == 1
+                ):
+                    race_points += 5
+                else:
+                    race_points += calculate_paris_final_points(
+                        pick.predicted_position, actual_pos_for_pick
+                    )
+            else:
+                race_points += calculate_race_pick_points(
+                    pick.predicted_position, actual_pos_for_pick
+                )
 
         holeshot_picks = HoleshotPick.query.filter_by(
             user_id=user.id, competition_id=comp_id
@@ -258,8 +289,6 @@ def calculate_scores(comp_id: int):
         # Use only unique holeshot picks for scoring
         unique_holeshot_picks = list(seen_holeshots.values())
 
-        series_u = (series_name or "").strip().upper()
-
         if series_u == "MXSM":
             # Exact class_name match (mxsm_mx1 / mxsm_mx2 / mxsm_u17) — no 450/250 buckets.
             try:
@@ -284,6 +313,22 @@ def calculate_scores(comp_id: int):
             # All tippa HS correct (and at least 2 classes): +5 bonus → 2→25, 3→35
             if tippa_hs and correct_classes >= tippa_hs and len(tippa_hs) >= 2:
                 holeshot_points = 10 * len(tippa_hs) + 5
+        elif series_u == "PARIS":
+            # Superpole SX1/SX2: 20 each, +10 if both correct (max 50).
+            sp_sx1 = False
+            sp_sx2 = False
+            for hp in unique_holeshot_picks:
+                bucket = holeshot_pick_class_for_result(hp.class_name)
+                actual_hs = actual_holeshots_dict.get(bucket)
+                if actual_hs and actual_hs.rider_id == hp.rider_id:
+                    if bucket == "450cc":
+                        sp_sx1 = True
+                        holeshot_points += 20
+                    elif bucket == "250cc":
+                        sp_sx2 = True
+                        holeshot_points += 20
+            if sp_sx1 and sp_sx2:
+                holeshot_points = 50
         else:
             holeshot_450_correct = False
             holeshot_250_correct = False
@@ -338,6 +383,20 @@ def calculate_scores(comp_id: int):
                 actual_q = qual_results.get(cls)
                 if actual_q and actual_q.rider_id == qp.rider_id:
                     wildcard_points += 10
+
+        # Paris söndag: King / Prince (overall) — QualifyingPick ps_ov1 / ps_ov2
+        if series_u == "PARIS":
+            qual_results = {
+                (q.class_name or "").strip().lower(): q
+                for q in QualifyingResult.query.filter_by(competition_id=comp_id).all()
+            }
+            for qp in QualifyingPick.query.filter_by(
+                user_id=user.id, competition_id=comp_id
+            ).all():
+                cls = (qp.class_name or "").strip().lower()
+                actual_q = qual_results.get(cls)
+                if actual_q and actual_q.rider_id == qp.rider_id:
+                    wildcard_points += 50
 
         total_points = race_points + holeshot_points + wildcard_points
 

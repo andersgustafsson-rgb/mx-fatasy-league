@@ -886,6 +886,27 @@ def admin_page():
 		return f"<h1>Database Error</h1><p>{e}</p>"
 
 
+@bp.route("/admin/seed_paris", methods=["GET", "POST"])
+def admin_seed_paris():
+	from app.routes.paris_admin import admin_seed_paris as _view
+
+	return _view()
+
+
+@bp.get("/admin/api/paris_roster/<int:competition_id>")
+def admin_paris_roster_api(competition_id: int):
+	from app.routes.paris_admin import admin_paris_roster_api as _view
+
+	return _view(competition_id)
+
+
+@bp.post("/admin/paris_results")
+def admin_paris_results():
+	from app.routes.paris_admin import admin_paris_results as _view
+
+	return _view()
+
+
 def _last_completed_tippa_competition() -> Competition | None:
 	"""Newest finished tippa race (AMA / WSX / MXON / MXGP) with official results."""
 	today = get_today()

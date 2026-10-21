@@ -1,9 +1,10 @@
 {# Shared "Inför racet" panel for race_picks.html / mxon_picks.html #}
 {% from 'includes/mx_icon.html' import mx_icon %}
-{% set _is_wsx_hdr = competition.series == 'WSX' %}
+{% set _is_paris_hdr = (competition.series or '')|upper == 'PARIS' or (is_paris | default(false)) %}
+{% set _is_wsx_hdr = competition.series == 'WSX' and not _is_paris_hdr %}
 {% set _is_mxon = (competition.series or '')|upper == 'MXON' %}
-{% set _class_450_hdr = 'SX1' if _is_wsx_hdr else '450cc' %}
-{% set _class_250_hdr = 'SX2' if _is_wsx_hdr else '250cc' %}
+{% set _class_450_hdr = 'SX1' if (_is_wsx_hdr or _is_paris_hdr) else '450cc' %}
+{% set _class_250_hdr = 'SX2' if (_is_wsx_hdr or _is_paris_hdr) else '250cc' %}
 {% set _trackmap_urls = trackmap_urls | default([]) %}
 {% set _good_to_know = picks_good_to_know | default([]) %}
 {% set _is_mx = is_mx_race | default(competition.series == 'MX') %}
@@ -14,7 +15,7 @@
 {% set _out_count = (out_ids | default([])) | length %}
 {% set _wc_names = race_prep_wildcard_names | default([]) %}
 {% set _has_weather = picks_weather and picks_weather.get('available') %}
-{% set _open_know = _has_weather or (_good_to_know | length > 0) or _is_wsx_hdr or _is_mxon %}
+{% set _open_know = _has_weather or (_good_to_know | length > 0) or _is_wsx_hdr or _is_paris_hdr or _is_mxon %}
 {% set _riders_450 = riders_450_json | default([]) %}
 {% set _riders_250 = riders_250_json | default([]) %}
 {% set _active_n = race_prep_active_count | default(_riders_450|length + _riders_250|length) %}
@@ -64,7 +65,9 @@
           {% if _start_label %}
           <div class="race-prep-kv"><span data-i18n="prep.start">Start</span><span>{{ _start_label }}{% if _is_mxon %} (kval){% endif %}</span></div>
           {% endif %}
-          {% if _is_wsx_hdr %}
+          {% if _is_paris_hdr %}
+          <div class="race-prep-kv"><span data-i18n="prep.series">Serie</span><span>Paris SX · SX1 + SX2</span></div>
+          {% elif _is_wsx_hdr %}
           <div class="race-prep-kv"><span data-i18n="prep.series">Serie</span><span>WSX · SX1 + SX2</span></div>
           {% elif _is_mxon %}
           <div class="race-prep-kv"><span data-i18n="prep.series">Serie</span><span>Motocross of Nations</span></div>
@@ -76,7 +79,7 @@
           {% if _out_count > 0 %}
           <div class="race-prep-kv"><span>OUT</span><span>{{ _out_count }} <span data-i18n="prep.out_hidden">förare syns inte i listorna</span></span></div>
           {% endif %}
-          {% if _wc_names %}
+          {% if _wc_names and not _is_paris_hdr %}
           <div class="race-prep-kv"><span>WC / fill-in</span><span>{{ _wc_names | join(', ') }}</span></div>
           {% endif %}
         </div>
@@ -107,6 +110,9 @@
             {% for tip in _good_to_know %}
             <div class="race-prep-tip">{{ tip }}</div>
             {% endfor %}
+          {% elif _is_paris_hdr %}
+            <div class="race-prep-tip">Paris: tippa vinnare per moment — ingen topp 6.</div>
+            <div class="race-prep-tip">Deadline är 2 timmar före showstart.</div>
           {% else %}
             <div class="race-prep-tip">Kolla förares form från senaste racen</div>
             <div class="race-prep-tip">Holeshot är ofta avgörande</div>
@@ -128,7 +134,7 @@
           {% if _out_count > 0 %}
           <div class="race-prep-kv"><span>OUT</span><span>{{ _out_count }}</span></div>
           {% endif %}
-          {% if _wc_names %}
+          {% if _wc_names and not _is_paris_hdr %}
           <div class="race-prep-kv"><span data-i18n="prep.wc_this_round">WC denna runda</span><span>{{ _wc_names | length }}</span></div>
           {% endif %}
           {% endif %}

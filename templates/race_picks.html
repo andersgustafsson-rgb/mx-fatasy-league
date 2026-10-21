@@ -814,6 +814,241 @@
       text-transform: uppercase; color: rgba(253, 164, 175, 0.75);
     }
 
+    /* —— Paris Supercross (Ville Lumière) —— */
+    body.theme-paris {
+      --paris-gold: #d4a84b;
+      --paris-gold-soft: #f5e6a8;
+      --paris-navy: #070b16;
+      --paris-blue: #1d4ed8;
+      background:
+        radial-gradient(ellipse 70% 42% at 88% 8%, rgba(212, 168, 75, 0.16), transparent 55%),
+        radial-gradient(ellipse 55% 40% at 8% 20%, rgba(37, 99, 235, 0.18), transparent 50%),
+        linear-gradient(180deg, #0a1020 0%, #070b16 48%, #05070f 100%) !important;
+    }
+    body.theme-paris::before {
+      content: '';
+      position: fixed;
+      inset: 0 0 auto 0;
+      height: 3px;
+      z-index: 80;
+      pointer-events: none;
+      background: linear-gradient(90deg, #0055a4 0 33%, #f4f4f4 33% 66%, #ef4135 66% 100%);
+    }
+    body.theme-paris::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 560px;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(7, 11, 22, 0.35) 0%, rgba(7, 11, 22, 0.72) 70%, #070b16 100%),
+        url("{{ url_for('static', filename='images/paris_eiffel_hero.jpg') }}") right top / cover no-repeat;
+      opacity: 0.55;
+    }
+    body.theme-paris .mx-lang-btn--active,
+    body.theme-paris .mx-lang-btn[aria-pressed="true"] {
+      background: rgba(212, 168, 75, 0.28) !important;
+      border-color: rgba(245, 230, 168, 0.65) !important;
+      color: #fff !important;
+    }
+    body.theme-paris h1.text-blue-500 { color: var(--paris-gold-soft) !important; }
+    body.theme-paris .text-cyan-400,
+    body.theme-paris .text-cyan-300 { color: var(--paris-gold-soft) !important; }
+    body.theme-paris .border-cyan-500 { border-color: rgba(212, 168, 75, 0.5) !important; }
+    body.theme-paris .bg-gray-800.border.border-cyan-500 {
+      border-color: rgba(212, 168, 75, 0.35) !important;
+      box-shadow: 0 0 0 1px rgba(212, 168, 75, 0.08);
+    }
+    body.theme-paris .rp-btn--primary {
+      background: linear-gradient(180deg, #e8c872, #d4a84b 48%, #a67c2a) !important;
+      border-color: #f5e6a8 !important;
+      color: #1a1206 !important;
+    }
+    body.theme-paris .rp-btn--primary:hover:not(:disabled) { filter: brightness(1.06); }
+    body.theme-paris .rp-btn--warm {
+      border-color: rgba(239, 65, 53, 0.45) !important;
+    }
+    body.theme-paris .picks-wizard-progress__seg.is-done {
+      background: rgba(29, 78, 216, 0.55) !important;
+    }
+    body.theme-paris .picks-wizard-progress__seg.is-active {
+      background: linear-gradient(90deg, #0055a4, #d4a84b) !important;
+    }
+    body.theme-paris .wizard-step-hero--450,
+    body.theme-paris .wizard-step-hero--bonus {
+      border-color: rgba(212, 168, 75, 0.4) !important;
+    }
+    body.theme-paris .wizard-overview-toolbar {
+      border-color: rgba(212, 168, 75, 0.25) !important;
+    }
+    body.theme-paris .race-prep-head--sx h2,
+    body.theme-paris .race-prep-mobile-fold > summary {
+      color: var(--paris-gold) !important;
+    }
+    body.theme-paris .wizard-summary-extra--paris-king {
+      border-color: rgba(212, 168, 75, 0.65) !important;
+    }
+
+    .paris-stage {
+      position: relative;
+      margin: -0.75rem -0.75rem 1.35rem;
+      padding: 1.15rem 0.9rem 1.35rem;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    @media (min-width: 640px) {
+      .paris-stage { margin: -1rem -1rem 1.5rem; padding: 1.35rem 1.15rem 1.6rem; }
+    }
+    @media (min-width: 768px) {
+      .paris-stage { margin: -1.5rem -1.5rem 1.75rem; padding: 1.5rem 1.5rem 1.85rem; }
+    }
+    .paris-stage > * { position: relative; z-index: 1; }
+    .paris-stage__bar {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 0.75rem; margin-bottom: 1.05rem;
+    }
+    .paris-stage__brand {
+      font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 0.7rem;
+      letter-spacing: 0.2em; text-transform: uppercase; color: #e8eefc;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+    }
+    .paris-stage__brand span { color: var(--paris-gold); }
+    .paris-stage__venue h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.85rem, 5.5vw, 2.75rem);
+      font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase;
+      color: #fff; margin: 0 0 0.25rem; line-height: 1;
+      text-shadow: 0 4px 28px rgba(0, 0, 0, 0.5);
+    }
+    .paris-stage__venue p {
+      margin: 0 0 1.05rem;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.16em;
+      text-transform: uppercase; color: rgba(245, 230, 168, 0.88);
+    }
+
+    .paris-plaque {
+      position: relative;
+      display: block;
+      min-height: clamp(11.5rem, 28vw, 16.5rem);
+      padding: 1.35rem 1.25rem 1.35rem;
+      border: 1px solid rgba(212, 168, 75, 0.5);
+      background-color: #0a1020;
+      background-image:
+        linear-gradient(105deg, rgba(7, 11, 22, 0.94) 0%, rgba(7, 11, 22, 0.78) 38%, rgba(7, 11, 22, 0.28) 62%, rgba(7, 11, 22, 0.45) 100%),
+        url("{{ url_for('static', filename='images/paris_eiffel_hero.jpg') }}");
+      background-size: cover;
+      background-position: right center;
+      background-repeat: no-repeat;
+      box-shadow:
+        0 0 0 1px rgba(212, 168, 75, 0.1),
+        0 18px 40px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+    }
+    .paris-plaque::before {
+      content: '';
+      position: absolute;
+      inset: 7px;
+      border: 1px solid rgba(212, 168, 75, 0.22);
+      pointer-events: none;
+    }
+    .paris-plaque__copy {
+      position: relative;
+      z-index: 1;
+      max-width: min(28rem, 68%);
+    }
+    .paris-plaque__pill {
+      display: inline-block;
+      background: linear-gradient(180deg, #f5e6a8, #d4a84b);
+      color: #1a1206;
+      font-size: 0.58rem; font-weight: 800; letter-spacing: 0.16em;
+      text-transform: uppercase;
+      padding: 0.32rem 0.85rem 0.32rem 0.7rem;
+      clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 100%, 0 100%);
+      margin-bottom: 0.65rem;
+    }
+    .paris-plaque__city {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.35rem, 3.8vw, 2.05rem);
+      font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase;
+      color: #fff; margin: 0 0 0.35rem; line-height: 1.05;
+      text-shadow: 0 2px 18px rgba(0, 0, 0, 0.55);
+    }
+    .paris-plaque__tag {
+      margin: 0 0 0.65rem;
+      font-size: 0.92rem; color: rgba(214, 224, 245, 0.9); line-height: 1.35;
+      text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
+    }
+    .paris-plaque__meta {
+      margin: 0;
+      font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--paris-gold);
+    }
+    @media (min-width: 640px) {
+      .paris-plaque { padding: 1.55rem 1.6rem 1.5rem; }
+    }
+    @media (max-width: 520px) {
+      .paris-plaque {
+        min-height: 12.5rem;
+        background-position: 72% center;
+      }
+      .paris-plaque__copy {
+        max-width: 100%;
+        background: linear-gradient(180deg, rgba(7, 11, 22, 0.55), rgba(7, 11, 22, 0.15));
+        padding: 0.35rem 0.15rem;
+        border-radius: 0.35rem;
+      }
+      .paris-plaque__pill { clip-path: none; border-radius: 999px; padding: 0.3rem 0.75rem; }
+    }
+
+    .paris-quote {
+      display: grid;
+      grid-template-columns: 5px 1fr;
+      grid-template-rows: auto auto;
+      column-gap: 0.85rem;
+      row-gap: 0.25rem;
+      align-items: start;
+      margin-top: 0.8rem;
+      padding: 0.75rem 1rem 0.75rem 0.8rem;
+      border: 1px solid rgba(212, 168, 75, 0.4);
+      background: rgba(8, 12, 24, 0.82);
+    }
+    .paris-quote__bar {
+      grid-row: 1 / span 2;
+      width: 5px; align-self: stretch; min-height: 2.5rem; border-radius: 1px;
+      background: linear-gradient(180deg, #0055a4, #f4f4f4 48%, #ef4135);
+    }
+    .paris-quote blockquote {
+      margin: 0;
+      font-family: 'Cinzel', Georgia, serif;
+      font-style: italic;
+      font-size: clamp(0.88rem, 2.2vw, 1.05rem);
+      color: #f0e6c8;
+      line-height: 1.35;
+    }
+    .paris-quote cite {
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 0.16em;
+      text-transform: uppercase; color: rgba(212, 168, 75, 0.8); font-style: normal;
+    }
+    .paris-chips {
+      display: flex; flex-wrap: wrap; gap: 0.45rem;
+      margin-top: 0.85rem; justify-content: center;
+    }
+    .paris-chip {
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.28rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.65);
+    }
+    .paris-chip--gold {
+      border-color: rgba(212, 168, 75, 0.55);
+      color: #f5e6a8;
+      background: rgba(212, 168, 75, 0.12);
+    }
+
     /* —— SX format heroes (Triple Crown, Showdown, coast) —— */
     body.theme-sx-triple-crown,
     body.theme-sx-triple-showdown {
@@ -1939,9 +2174,9 @@
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
   <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=12"></script>
   <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=st-missing-cta-1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=paris-crowns-2">
 </head>
-<body class="text-gray-200 font-sans min-h-screen{% if (competition.series or '')|upper == 'MXSM' %} theme-mxsm{% elif military_appreciation|default(false) %} theme-military{% elif st_jude_love_moto|default(false) %} theme-stjude{% elif sx_format == 'triple_showdown' %} theme-sx-triple-showdown{% elif sx_format == 'triple_crown' %} theme-sx-triple-crown{% elif sx_format == 'showdown' %} theme-sx-showdown{% elif sx_format == 'coast_west' %} theme-sx-west{% elif sx_format == 'coast_east' %} theme-sx-east{% endif %}">
+<body class="text-gray-200 font-sans min-h-screen{% if (competition.series or '')|upper == 'MXSM' %} theme-mxsm{% elif is_paris|default(false) %} theme-paris{% elif military_appreciation|default(false) %} theme-military{% elif st_jude_love_moto|default(false) %} theme-stjude{% elif sx_format == 'triple_showdown' %} theme-sx-triple-showdown{% elif sx_format == 'triple_crown' %} theme-sx-triple-crown{% elif sx_format == 'showdown' %} theme-sx-showdown{% elif sx_format == 'coast_west' %} theme-sx-west{% elif sx_format == 'coast_east' %} theme-sx-east{% endif %}">
   <div class="race-picks-shell mx-auto p-3 sm:p-4 md:p-6 max-w-7xl">
     {% if picks_local_unlock|default(false) %}
     <p class="picks-local-unlock-banner" role="status">Lokal dev: alla picks öppna (PICKS_UNLOCK_ALL_LOCAL=1) — prod använder normal kö</p>
@@ -1957,7 +2192,23 @@
       date_long=mm.date_long or (competition.event_date.strftime('%d %B %Y') if competition.event_date else '')
     ) %}
     {% if not mad.round and (competition.name or '')|lower == 'seattle' %}{% set mad.round = 11 %}{% endif %}
-    {% if military_appreciation|default(false) %}
+    {% if is_paris|default(false) %}
+    {% set _pm = paris_meta | default({}) %}
+    {% set _sat = paris_saturday|default(false) %}
+    {% set pm = namespace(
+      year=_pm.year or (competition.event_date.year if competition.event_date else none),
+      date_short=_pm.date_short or (competition.event_date.strftime('%d %b %Y') if competition.event_date else ''),
+      date_long=_pm.date_long or (competition.event_date.strftime('%d %B %Y') if competition.event_date else ''),
+      evening_sv=_pm.evening_sv or ('Lördag' if _sat else 'Söndag'),
+      evening_en=_pm.evening_en or ('Saturday' if _sat else 'Sunday'),
+      evening_tag=_pm.evening_tag or ('NIGHT 1' if _sat else 'NIGHT 2'),
+      motto=_pm.motto or 'VILLE LUMIÈRE · SUPERCROSS',
+      venue_short=_pm.venue_short or 'La Défense Arena',
+      is_saturday=_sat,
+      is_sunday=(not _sat)
+    ) %}
+    {% include 'includes/paris_stage.html' %}
+    {% elif military_appreciation|default(false) %}
     <section class="mad-stage" aria-label="Military Appreciation Day">
       <div class="mad-stage__bar">
         <div class="mad-stage__brand">PICK <span>★</span> THE <span>★</span> WINNER</div>
@@ -2191,11 +2442,12 @@
 
     {% if not actual_results %}
     {% set outset = out_ids | default([]) %}
-    {% set is_wsx = competition.series == 'WSX' %}
+    {% set is_paris = is_paris | default(false) %}
+    {% set is_wsx = competition.series == 'WSX' and not is_paris %}
     {% set is_mxgp = (competition.series or '')|upper == 'MXGP' %}
     {% set is_mxsm = is_mxsm | default((competition.series or '')|upper == 'MXSM') %}
     {% set has_u17 = has_u17 | default(false) %}
-    {% set skips_wildcard = is_wsx or is_mxgp or is_mxsm %}
+    {% set skips_wildcard = is_wsx or is_mxgp or is_mxsm or is_paris %}
     {% if is_wsx %}
     {% set class_450_label = 'SX1' %}
     {% set class_250_label = 'SX2' %}
@@ -2300,8 +2552,8 @@
       </div>
     </div>
     {% if out_ids %}
-    {% set _out_label_450 = 'SX1' if competition.series == 'WSX' else ('MXGP' if (competition.series or '')|upper == 'MXGP' else '450cc') %}
-    {% set _out_label_250 = 'SX2' if competition.series == 'WSX' else ('MX2' if (competition.series or '')|upper == 'MXGP' else '250cc') %}
+    {% set _out_label_450 = 'SX1' if (is_paris or competition.series == 'WSX') else ('MXGP' if (competition.series or '')|upper == 'MXGP' else '450cc') %}
+    {% set _out_label_250 = 'SX2' if (is_paris or competition.series == 'WSX') else ('MX2' if (competition.series or '')|upper == 'MXGP' else '250cc') %}
     <details class="race-picks-out-details mb-3">
       <summary>
         {{ out_ids|length }} <span data-i18n="picks.out_riders" data-i18n-sv="förare är OUT för detta race (syns inte i listorna)" data-i18n-en="riders are OUT for this race (hidden from lists)">förare är OUT för detta race (syns inte i listorna)</span>
@@ -2331,7 +2583,7 @@
     </details>
     {% endif %}
 
-    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2"{% if competition.series == 'WSX' or (competition.series or '')|upper == 'MXGP' %} data-i18n="picks.guess_title_wsx"{% elif is_mxsm %} data-i18n="{% if wizard_u17_only %}picks.guess_title_mxsm_u17{% elif has_u17 %}picks.guess_title_mxsm_u17_full{% else %}picks.guess_title_mxsm{% endif %}"{% else %} data-i18n="picks.guess_title"{% endif %}>{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% elif (competition.series or '')|upper == 'MXGP' %}Gissa topp 6, Holeshot & Kvalvinnare{% elif wizard_u17_only %}Gissa U17 topp 6 & Holeshot{% elif is_mxsm and has_u17 %}Gissa topp 6 (MX1/MX2/U17) & Holeshot{% elif is_mxsm %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
+    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2"{% if is_paris %}{% elif competition.series == 'WSX' or (competition.series or '')|upper == 'MXGP' %} data-i18n="picks.guess_title_wsx"{% elif is_mxsm %} data-i18n="{% if wizard_u17_only %}picks.guess_title_mxsm_u17{% elif has_u17 %}picks.guess_title_mxsm_u17_full{% else %}picks.guess_title_mxsm{% endif %}"{% else %} data-i18n="picks.guess_title"{% endif %}>{% if is_paris %}{% if paris_saturday %}Tippa Superpole &amp; lördagsfinal{% else %}Tippa söndagsfinal &amp; King/Prince{% endif %}{% elif competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% elif (competition.series or '')|upper == 'MXGP' %}Gissa topp 6, Holeshot & Kvalvinnare{% elif wizard_u17_only %}Gissa U17 topp 6 & Holeshot{% elif is_mxsm and has_u17 %}Gissa topp 6 (MX1/MX2/U17) & Holeshot{% elif is_mxsm %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
     {% if competition.series == 'SMX' %}
     <p class="mb-4 text-sm text-slate-300 bg-slate-900/70 border border-slate-600/50 rounded-lg px-3 py-2">
       Startlista = SMX Combined <strong class="text-white">topp 30</strong>:
@@ -2343,6 +2595,9 @@
 
     {% if _show_prep %}<div class="race-picks-bonus-layout"><aside class="race-picks-bonus-layout__prep"><details class="race-prep-mobile-fold" id="race-prep-mobile-fold"><summary><span class="race-prep-mobile-fold__text"><span class="race-prep-mobile-fold__title" data-i18n="prep.title">Inför racet</span><span class="race-prep-mobile-fold__sub">{{ competition.name }}{% if race_prep_venue %} · {{ race_prep_venue }}{% endif %}</span></span></summary>{% include 'includes/race_prep_panel.html' %}</details></aside><div class="race-picks-bonus-layout__forms">{% endif %}
 
+{% if is_paris %}
+{% include 'includes/paris_race_picks_wizard.html' %}
+{% else %}
 <div id="picks-wizard-shell" class="picks-wizard-shell is-loading">
   <div id="picks-wizard-loader" class="picks-wizard-loader" role="status" aria-live="polite" aria-busy="true">
     <div class="picks-wizard-loader__inner">
@@ -2690,6 +2945,7 @@
   <p class="wizard-draft-note">{% if initial_picks_status and initial_picks_status.icon == '✅' %}Dina val är registrerade hos tävlingen. Redigera och uppdatera om du vill ändra innan deadline.{% else %}Utkast sparas automatiskt på den här enheten. Lämna in för att registrera hos tävlingen.{% endif %}</p>
 </div>
 </div><!-- /picks-wizard-shell -->
+{% endif %}
 
 {% if _show_prep %}</div></div><!-- /.race-picks-bonus-layout -->{% endif %}
 
@@ -2744,6 +3000,10 @@
   const competitionId = {{ competition.id|tojson }};
   const competitionName = {{ competition.name|tojson }};
   const competitionSeries = {{ competition.series|tojson }};
+  const isParisTippa = {{ is_paris | default(false) | tojson }};
+  const parisSaturday = {{ paris_saturday | default(false) | tojson }};
+  const parisInitialPicks = {{ (initial_my_picks.paris if initial_my_picks and initial_my_picks.paris else {}) | tojson }};
+  const parisInitialPicksUi = {{ (initial_my_picks.paris_ui if initial_my_picks and initial_my_picks.paris_ui else {}) | tojson }};
   // Remember series so homepage Aktuellt Race shows these picks after tippa
   try {
     const _homeCode = (function (s) {
@@ -2775,7 +3035,7 @@
     && !['MXON', 'MXGP', 'MXSM'].includes(String(competitionSeries || '').toUpperCase());
   const hasSeasonTeam = {{ has_season_team | default(false) | tojson }};
   window.__HAS_SEASON_TEAM__ = hasSeasonTeam;
-  const skipsWildcard = isWSXSeries || isMXGPSeries || isMXSMSeries;
+  const skipsWildcard = isParisTippa || isWSXSeries || isMXGPSeries || isMXSMSeries;
   const tippaClass450 = isWSXSeries ? 'wsx_sx1' : (isMXGPSeries ? 'mxgp' : (isMXSMSeries ? 'mxsm_mx1' : '450cc'));
   const tippaClass250 = isWSXSeries ? 'wsx_sx2' : (isMXGPSeries ? 'mx2' : (isMXSMSeries ? 'mxsm_mx2' : '250cc'));
   const tippaClassU17 = 'mxsm_u17';
@@ -2999,6 +3259,10 @@
   }
 
   function ridersForDropdownDataClass(dc) {
+    if (isParisTippa && typeof dc === 'string' && dc.indexOf('paris_') === 0) {
+      if (dc.indexOf('sx2') >= 0 || dc.indexOf('_sx2') >= 0) return pickColumn250List();
+      return pickColumn450List();
+    }
     if (
       dc === tippaClass450 ||
       dc === '450cc' ||
@@ -4594,6 +4858,53 @@ function updatePicksStatus(myPicks) {
   const statusContainer = document.getElementById('picks-status');
   
   if (!statusIcon || !statusTitle || !statusMessage) return;
+
+  const _en = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+
+  // Paris: same banner shell, Paris copy only (no topp-6 / holeshot / wildcard).
+  if (isParisTippa) {
+    const paris =
+      (myPicks && myPicks.paris && typeof myPicks.paris === 'object')
+        ? myPicks.paris
+        : (myPicks && typeof myPicks === 'object' ? myPicks : {});
+    const requiredKeys = parisSaturday
+      ? ['superpole_sx1', 'superpole_sx2', 'final_sx1', 'final_sx2']
+      : ['final_sx1', 'final_sx2', 'overall_sx1', 'overall_sx2'];
+    const filled = requiredKeys.filter((k) => paris[k]).length;
+    const totalRequired = requiredKeys.length;
+    if (filled === 0) {
+      statusIcon.innerHTML = mxIcon('note', { className: 'mx-icon--xl' });
+      statusTitle.textContent = _en ? 'No picks yet' : 'Inga val gjorda än';
+      statusMessage.textContent = parisSaturday
+        ? (_en
+          ? 'Pick Superpole + Saturday finals (SX1 & SX2).'
+          : 'Tippa Superpole + lördagsfinal (SX1 & SX2).')
+        : (_en
+          ? 'Pick Sunday finals + King/Prince of Paris.'
+          : 'Tippa söndagsfinal + King/Prince of Paris.');
+      statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-yellow-400 bg-yellow-900/30';
+    } else if (filled < totalRequired) {
+      statusIcon.innerHTML = mxIcon('alert', { className: 'mx-icon--xl mx-icon--warn' });
+      statusTitle.textContent = _en
+        ? `Partially done (${filled}/${totalRequired})`
+        : `Delvis klart (${filled}/${totalRequired} val)`;
+      statusMessage.textContent = _en
+        ? 'Complete the remaining Paris picks.'
+        : 'Fyll i resten av Paris-valen.';
+      statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-orange-400 bg-orange-900/30';
+    } else {
+      statusIcon.innerHTML = mxIcon('check-circle', { className: 'mx-icon--xl mx-icon--ok' });
+      const submitted = Boolean(window._picksSubmittedOnServer);
+      statusTitle.textContent = submitted
+        ? (_en ? 'Submitted!' : 'Inlämnat!')
+        : (_en ? 'All picks done!' : 'Alla val gjorda!');
+      statusMessage.textContent = submitted
+        ? (_en ? 'Your Paris picks are registered for this session.' : 'Dina Paris-val är registrerade för denna kväll.')
+        : (_en ? 'Draft complete — submit to register.' : 'Utkast klart — lämna in för att registrera.');
+      statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-green-400 bg-green-900/30';
+    }
+    return;
+  }
   
   const hasTop6Picks = myPicks.top6_picks && myPicks.top6_picks.length > 0;
   // Check for holeshot picks - backend may return '450cc'/'250cc' or 'wsx_sx1'/'wsx_sx2'
@@ -4613,7 +4924,6 @@ function updatePicksStatus(myPicks) {
   // Required picks: 12 top picks (6+6) + 2 holeshots + (0 for WSX, 1 wildcard for others) = 14 for WSX, 15 for others
   const totalRequired = tippaRequiredCount;
   
-  const _en = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
   if (totalPicks === 0) {
     statusIcon.innerHTML = mxIcon('note', { className: 'mx-icon--xl' });
     statusTitle.textContent = _en ? 'No picks made yet' : 'Inga val gjorda än';
@@ -5640,9 +5950,12 @@ function onPickChange(cls, pos, riderId = null) {
     }
   }
 
-  // Rensa alla mina val för denna tävling (topp 6, holeshot, wildcard)
+  // Rensa alla mina val för denna tävling
   async function clearMyPicks() {
-    if (!confirm("Är du säker på att du vill rensa ALLA dina val (topp 6, holeshots och wildcard) för detta race?")) {
+    const clearConfirm = isParisTippa
+      ? "Är du säker på att du vill rensa ALLA dina Paris-val för detta race?"
+      : "Är du säker på att du vill rensa ALLA dina val (topp 6, holeshots och wildcard) för detta race?";
+    if (!confirm(clearConfirm)) {
       return;
     }
 
@@ -6000,7 +6313,7 @@ function onPickChange(cls, pos, riderId = null) {
         deferLoadPickPortraits(initialMyPicks);
       }
 
-      if (wizardRoot && window.PicksWizard) {
+      if (!isParisTippa && wizardRoot && window.PicksWizard) {
         const ps = pickSuggestions || {};
         if (serverPicksComplete) {
           window._picksSubmittedOnServer = true;
@@ -6030,12 +6343,24 @@ function onPickChange(cls, pos, riderId = null) {
         loadSavedPicksFromStorage();
       }
 
-      if (wizardRoot && window.PicksWizard) {
+      if (!isParisTippa && wizardRoot && window.PicksWizard) {
         if (typeof window.PicksWizard.initAfterDraftLoad === 'function') {
           window.PicksWizard.initAfterDraftLoad();
         } else if (typeof window.PicksWizard.refresh === 'function') {
           window.PicksWizard.refresh();
         }
+      }
+
+      if (isParisTippa && typeof window.initParisRacePicks === 'function') {
+        const parisComplete = !!(parisInitialPicksUi && parisInitialPicksUi.complete);
+        if (parisComplete) window._picksSubmittedOnServer = true;
+        window.initParisRacePicks({
+          competitionId,
+          saturday: parisSaturday,
+          initialParis: parisInitialPicks,
+          initialParisUi: parisInitialPicksUi,
+          picksComplete: parisComplete,
+        });
       }
 
       finishWizardBoot();
@@ -6045,7 +6370,7 @@ function onPickChange(cls, pos, riderId = null) {
       }
 
       // Background refresh (status already shown from server on first paint)
-      void fetchAndDisplayMyPicks();
+      if (!isParisTippa) void fetchAndDisplayMyPicks();
       
       // Mark picks as saved after loading — skip if user already edited (undvik att "spara" knappen blinkar bort)
       setTimeout(() => {
@@ -6095,6 +6420,9 @@ function setMainTrackmap(src, thumbEl) {
 
 </script>
 <script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=mxsm-edit-brands-1"></script>
+{% if is_paris | default(false) %}
+<script src="{{ url_for('static', filename='paris_race_picks.js') }}?v=3"></script>
+{% endif %}
 
 {% if not is_logged_in %}
 {% set pit_pass_race_name = competition.name %}

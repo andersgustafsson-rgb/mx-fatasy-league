@@ -128,6 +128,13 @@ def _competition_race_schedule(comp) -> dict:
     # MXoN: lock against Saturday MXGP Qual (~14:30), not Sunday Race 1
     if not start_time and (getattr(comp, "series", None) or "").upper() == "MXON":
         start_time = datetime.min.time().replace(hour=14, minute=30)
+    # Paris SX: show start lördag 19:00 / söndag 14:00 (Europe/Paris)
+    if not start_time and (getattr(comp, "series", None) or "").upper() == "PARIS":
+        phase = (getattr(comp, "phase", None) or "").strip().lower()
+        if phase == "paris_sun":
+            start_time = datetime.min.time().replace(hour=14, minute=0)
+        else:
+            start_time = datetime.min.time().replace(hour=19, minute=0)
 
     if start_time:
         race_local_naive = datetime.combine(event_date, start_time)
@@ -388,16 +395,19 @@ def is_picks_preseason_locked(competition) -> bool:
     return _is_series_preseason_locked(competition)
 
 
+_TIPPA_SERIES_NEXT_COMP = frozenset({"WSX", "MXGP", "MXSM", "PARIS", "MXON"})
+
+
 def _current_pick_round_for_series(series_code: str) -> Competition | None:
-    """First AMA round in calendar order without results (next race to tip)."""
+    """Next tippable competition for AMA sequential rounds or tippa-only series."""
     code = (series_code or "").strip().upper()
-    if code not in _AMA_SEQUENTIAL_ROUND_SERIES:
+    if code not in _AMA_SEQUENTIAL_ROUND_SERIES and code not in _TIPPA_SERIES_NEXT_COMP:
         return None
     try:
         comps = (
             Competition.query.filter(Competition.series == code)
             .filter(Competition.event_date.isnot(None))
-            .order_by(Competition.event_date.asc())
+            .order_by(Competition.event_date.asc(), Competition.id.asc())
             .all()
         )
     except Exception:
@@ -408,6 +418,7 @@ def _current_pick_round_for_series(series_code: str) -> Competition | None:
             continue
         if CompetitionResult.query.filter_by(competition_id=comp.id).first():
             continue
+        # Paris/MXGP overall may live only in QualifyingResult — still "open" until finals exist
         return comp
     return None
 
