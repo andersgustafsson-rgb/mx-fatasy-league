@@ -1049,6 +1049,173 @@
       background: rgba(212, 168, 75, 0.12);
     }
 
+    .paris-weekend-bridge {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 0.85rem 1rem;
+      align-items: center;
+      margin: 0 0 1.15rem;
+      padding: 0.95rem 1.05rem;
+      text-decoration: none;
+      border: 1px solid rgba(212, 168, 75, 0.55);
+      background:
+        linear-gradient(120deg, rgba(212, 168, 75, 0.16), rgba(7, 11, 22, 0.55) 55%),
+        rgba(10, 16, 32, 0.92);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+      transition: border-color 0.15s ease, transform 0.15s ease, filter 0.15s ease;
+    }
+    .paris-weekend-bridge:hover {
+      border-color: rgba(245, 230, 168, 0.85);
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+    .paris-weekend-bridge--back {
+      grid-template-columns: 1fr;
+      border-color: rgba(148, 163, 184, 0.35);
+      background: rgba(15, 23, 42, 0.55);
+    }
+    .paris-weekend-bridge__days {
+      display: flex; align-items: center; gap: 0.35rem;
+    }
+    .paris-weekend-bridge__day {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.4rem 0.55rem;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      color: #94a3b8;
+      background: rgba(15, 23, 42, 0.65);
+    }
+    .paris-weekend-bridge__day.is-done {
+      border-color: rgba(74, 222, 128, 0.45);
+      color: #bbf7d0;
+      background: rgba(22, 101, 52, 0.35);
+    }
+    .paris-weekend-bridge__day.is-next {
+      border-color: rgba(212, 168, 75, 0.7);
+      color: #1a1206;
+      background: linear-gradient(180deg, #f5e6a8, #d4a84b);
+      box-shadow: 0 0 0 1px rgba(212, 168, 75, 0.25), 0 0 18px rgba(212, 168, 75, 0.25);
+      animation: paris-bridge-pulse 1.8s ease-in-out infinite;
+    }
+    .paris-weekend-bridge__arrow {
+      color: var(--paris-gold); font-weight: 800; font-size: 0.95rem;
+    }
+    .paris-weekend-bridge__copy {
+      display: flex; flex-direction: column; gap: 0.2rem; min-width: 0;
+    }
+    .paris-weekend-bridge__copy strong {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(0.92rem, 2.4vw, 1.05rem);
+      font-weight: 800; letter-spacing: 0.04em;
+      color: #fff; line-height: 1.2;
+    }
+    .paris-weekend-bridge__copy span {
+      font-size: 0.82rem; color: rgba(214, 224, 245, 0.85); line-height: 1.35;
+    }
+    .paris-weekend-bridge__cta {
+      font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em;
+      text-transform: uppercase; white-space: nowrap;
+      padding: 0.55rem 0.75rem;
+      color: #1a1206;
+      background: linear-gradient(180deg, #f5e6a8, #d4a84b);
+      border: 1px solid rgba(245, 230, 168, 0.5);
+    }
+    .paris-next-evening {
+      display: grid;
+      gap: 0.85rem;
+      margin: 0 0 1rem;
+      padding: 1.05rem 1.1rem;
+      border: 2px solid rgba(212, 168, 75, 0.7);
+      background:
+        linear-gradient(135deg, rgba(212, 168, 75, 0.22), rgba(29, 78, 216, 0.12) 50%, rgba(7, 11, 22, 0.75));
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+      animation: paris-bridge-in 0.45s ease-out;
+    }
+    .paris-next-evening__days {
+      margin-bottom: 0.15rem;
+    }
+    .paris-weekend-done {
+      display: grid;
+      gap: 0.85rem;
+      margin: 0 0 1rem;
+      padding: 1.05rem 1.1rem;
+      border: 2px solid rgba(74, 222, 128, 0.55);
+      background:
+        linear-gradient(135deg, rgba(22, 101, 52, 0.45), rgba(7, 11, 22, 0.8));
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+      animation: paris-bridge-in 0.45s ease-out;
+    }
+    .paris-weekend-done.is-complete .paris-weekend-bridge__day.is-done {
+      border-color: rgba(74, 222, 128, 0.65);
+      color: #052e16;
+      background: linear-gradient(180deg, #bbf7d0, #4ade80);
+      box-shadow: none;
+      animation: none;
+    }
+    .paris-overview-weekend {
+      display: grid;
+      gap: 1.15rem;
+    }
+    .paris-overview-day__label {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 0.5rem; margin-bottom: 0.55rem;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em;
+      text-transform: uppercase; color: rgba(245, 230, 168, 0.9);
+    }
+    .paris-overview-day__label .is-done {
+      font-family: inherit;
+      font-size: 0.62rem; letter-spacing: 0.12em;
+      color: #052e16;
+      background: linear-gradient(180deg, #bbf7d0, #4ade80);
+      padding: 0.22rem 0.5rem;
+      border: 1px solid rgba(74, 222, 128, 0.55);
+    }
+    .paris-overview-day__empty {
+      margin: 0;
+      font-size: 0.88rem; color: rgba(226, 232, 240, 0.75);
+    }
+    .paris-summary-banner--weekend {
+      border-color: rgba(74, 222, 128, 0.45) !important;
+    }
+    .paris-next-evening__eyebrow {
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 0.16em;
+      text-transform: uppercase; color: var(--paris-gold);
+    }
+    .paris-weekend-done .paris-next-evening__eyebrow {
+      color: #86efac;
+    }
+    .paris-next-evening__title {
+      margin: 0.15rem 0 0.25rem;
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.05rem, 3vw, 1.35rem);
+      font-weight: 900; letter-spacing: 0.04em;
+      color: #fff; line-height: 1.15;
+    }
+    .paris-next-evening__text {
+      margin: 0;
+      font-size: 0.9rem; color: rgba(226, 232, 240, 0.9); line-height: 1.4;
+    }
+    .paris-next-evening__actions {
+      display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 0.15rem;
+    }
+    @keyframes paris-bridge-pulse {
+      0%, 100% { box-shadow: 0 0 0 1px rgba(212, 168, 75, 0.25), 0 0 12px rgba(212, 168, 75, 0.18); }
+      50% { box-shadow: 0 0 0 1px rgba(245, 230, 168, 0.45), 0 0 22px rgba(212, 168, 75, 0.4); }
+    }
+    @keyframes paris-bridge-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+    @media (max-width: 560px) {
+      .paris-weekend-bridge {
+        grid-template-columns: 1fr;
+        text-align: left;
+      }
+      .paris-weekend-bridge__cta { justify-self: start; }
+    }
+
     /* —— SX format heroes (Triple Crown, Showdown, coast) —— */
     body.theme-sx-triple-crown,
     body.theme-sx-triple-showdown {
@@ -3002,6 +3169,8 @@
   const competitionSeries = {{ competition.series|tojson }};
   const isParisTippa = {{ is_paris | default(false) | tojson }};
   const parisSaturday = {{ paris_saturday | default(false) | tojson }};
+  const parisOtherEveningUrl = {{ paris_other_evening_url | default(none) | tojson }};
+  const parisOtherEveningLabel = {{ paris_other_evening_label | default(none) | tojson }};
   const parisInitialPicks = {{ (initial_my_picks.paris if initial_my_picks and initial_my_picks.paris else {}) | tojson }};
   const parisInitialPicksUi = {{ (initial_my_picks.paris_ui if initial_my_picks and initial_my_picks.paris_ui else {}) | tojson }};
   // Remember series so homepage Aktuellt Race shows these picks after tippa
@@ -4898,9 +5067,20 @@ function updatePicksStatus(myPicks) {
       statusTitle.textContent = submitted
         ? (_en ? 'Submitted!' : 'Inlämnat!')
         : (_en ? 'All picks done!' : 'Alla val gjorda!');
-      statusMessage.textContent = submitted
-        ? (_en ? 'Your Paris picks are registered for this session.' : 'Dina Paris-val är registrerade för denna kväll.')
-        : (_en ? 'Draft complete — submit to register.' : 'Utkast klart — lämna in för att registrera.');
+      if (submitted && ((myPicks && myPicks._weekendComplete) || window._parisWeekendComplete)) {
+        statusTitle.textContent = _en ? 'Weekend done!' : 'Helgen klar!';
+        statusMessage.textContent = _en
+          ? 'Saturday + Sunday picks are registered.'
+          : 'Lördag + söndag är inlämnade — se översikten nedan.';
+      } else if (submitted && parisSaturday && parisOtherEveningUrl) {
+        statusMessage.textContent = _en
+          ? 'Saturday locked in — tip Sunday too (finals + King/Prince).'
+          : 'Lördagen är inne — tippa söndagen också (final + King/Prince).';
+      } else {
+        statusMessage.textContent = submitted
+          ? (_en ? 'Your Paris picks are registered for this session.' : 'Dina Paris-val är registrerade för denna kväll.')
+          : (_en ? 'Draft complete — submit to register.' : 'Utkast klart — lämna in för att registrera.');
+      }
       statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-green-400 bg-green-900/30';
     }
     return;
@@ -6357,6 +6537,8 @@ function onPickChange(cls, pos, riderId = null) {
         window.initParisRacePicks({
           competitionId,
           saturday: parisSaturday,
+          otherEveningUrl: parisOtherEveningUrl,
+          otherEveningLabel: parisOtherEveningLabel,
           initialParis: parisInitialPicks,
           initialParisUi: parisInitialPicksUi,
           picksComplete: parisComplete,
@@ -6421,7 +6603,7 @@ function setMainTrackmap(src, thumbEl) {
 </script>
 <script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=mxsm-edit-brands-1"></script>
 {% if is_paris | default(false) %}
-<script src="{{ url_for('static', filename='paris_race_picks.js') }}?v=3"></script>
+<script src="{{ url_for('static', filename='paris_race_picks.js') }}?v=6"></script>
 {% endif %}
 
 {% if not is_logged_in %}

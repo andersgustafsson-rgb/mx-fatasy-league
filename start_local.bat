@@ -14,6 +14,7 @@ set PYTHONUTF8=1
 set FLASK_ENV=development
 set HOST=127.0.0.1
 set PORT=5000
+REM Flask-SQLAlchemy maps sqlite:///NAME -> instance/NAME (do not prefix instance/)
 set DATABASE_URL=sqlite:///fantasy_mx_local.db
 set RENDER=
 REM Prod-liknande pick-las lokalt. Satt =1 tillfalligt for att testa alla omgangar:

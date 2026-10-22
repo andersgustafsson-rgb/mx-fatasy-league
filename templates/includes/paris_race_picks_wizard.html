@@ -1,10 +1,11 @@
 {% set paris_steps = 3 if paris_saturday else 4 %}
-{% if paris_other_evening_url and paris_other_evening_label %}
-<p class="mb-3 text-sm">
-  <a href="{{ paris_other_evening_url }}" class="text-cyan-400 hover:underline">
-    {% if paris_saturday %}Fortsätt till {{ paris_other_evening_label }} →{% else %}← {{ paris_other_evening_label }}{% endif %}
-  </a>
-</p>
+{% if paris_other_evening_url and not paris_saturday %}
+<a href="{{ paris_other_evening_url }}" class="paris-weekend-bridge paris-weekend-bridge--back">
+  <div class="paris-weekend-bridge__copy">
+    <strong>← Tillbaka till lördagen</strong>
+    <span>Superpole + lördagsfinal</span>
+  </div>
+</a>
 {% endif %}
 
 <div id="picks-wizard-shell" class="picks-wizard-shell is-loading">

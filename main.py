@@ -1310,12 +1310,18 @@ def is_tippa_only_series(series: str | None) -> bool:
     return (series or "").strip().upper() in TIPPA_ONLY_SERIES
 
 
+# Live AMA highscore allow-list only (never tippa-only WSX/MXON/MXGP/MXSM/PARIS).
+AMA_LIVE_SERIES_CODES = frozenset({"SX", "MX", "SMX"})
+
+
 def ama_competition_clause():
-    """SQLAlchemy filter: competitions that count on AMA / global boards."""
-    return db.or_(
-        Competition.series.is_(None),
-        ~Competition.series.in_(tuple(TIPPA_ONLY_SERIES)),
-    )
+    """SQLAlchemy filter: competitions that count on AMA / global boards.
+
+    Allow-list SX/MX/SMX only. A denylist previously let NULL-series rows (and any
+    forgotten tippa series) bleed into the homepage AMA standings — e.g. WSX+MXoN
+    totals showing under \"AMA / SMX\".
+    """
+    return Competition.series.in_(tuple(AMA_LIVE_SERIES_CODES))
 
 
 def _season_team_target_year() -> int:
@@ -3924,12 +3930,22 @@ def _user_pick_total_points(user_id: int) -> int:
 
 
 def _user_ama_competition_scores(user_id: int) -> list:
-    """Live AMA tippa CompetitionScore rows for user (one per competition / NULL penalty)."""
+    """Live AMA tippa CompetitionScore rows for user (one per competition / NULL penalty).
+
+    Only the active AMA calendar year (upcoming SX/MX/SMX season) — finished years
+    belong in Fantasy-arkiv, not the homepage AMA board.
+    """
+    try:
+        season_year = int(_season_team_target_year())
+    except Exception:
+        season_year = int(get_today().year)
     all_scores = (
         db.session.query(CompetitionScore)
-        .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
+        .join(Competition, Competition.id == CompetitionScore.competition_id)
         .filter(CompetitionScore.user_id == int(user_id))
         .filter(ama_competition_clause())
+        .filter(Competition.event_date.isnot(None))
+        .filter(db.extract("year", Competition.event_date) == season_year)
         .all()
     )
     scores_by_comp: dict[int | None, CompetitionScore] = {}
