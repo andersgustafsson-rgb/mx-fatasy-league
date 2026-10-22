@@ -20893,38 +20893,71 @@ def delete_user(user_id):
         # 2. Delete competition scores
         CompetitionScore.query.filter_by(user_id=user_id).delete()
         
-        # 3. Delete race picks
-        RacePick.query.filter_by(user_id=user_id).delete()
-        
-        # 4. Delete holeshot picks
-        HoleshotPick.query.filter_by(user_id=user_id).delete()
-        
-        # 5. Delete wildcard picks
-        WildcardPick.query.filter_by(user_id=user_id).delete()
-        
+        # 3. Delete race picks / snapshots / extras
+        RacePick.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        PicksSnapshot.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        HoleshotPick.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        WildcardPick.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        QualifyingPick.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        MxonNationPick.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        MxonClassPick.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        FinishedSeriesStats.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        UserLeagueChallengeBadge.query.filter_by(user_id=user_id).delete(
+            synchronize_session=False
+        )
+        InboxNotification.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        try:
+            UserRaceRecapDismissal.query.filter_by(user_id=user_id).delete(
+                synchronize_session=False
+            )
+        except Exception:
+            pass
+        try:
+            PushSubscription.query.filter_by(user_id=user_id).delete(
+                synchronize_session=False
+            )
+        except Exception:
+            pass
+
         # 6. Delete bulletin reactions (must be before bulletin posts if they have foreign keys)
-        BulletinReaction.query.filter_by(user_id=user_id).delete()
-        
+        BulletinReaction.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
         # 7. Delete bulletin posts (user's own posts)
-        BulletinPost.query.filter_by(user_id=user_id).delete()
-        
+        BulletinPost.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
         # 8. Delete league requests
-        LeagueRequest.query.filter_by(user_id=user_id).delete()
-        
+        LeagueRequest.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
         # 9. Delete league memberships
-        LeagueMembership.query.filter_by(user_id=user_id).delete()
-        
-        # 10. Delete leagues where user is creator (handle carefully - might want to transfer ownership)
-        # For now, we'll delete them but you might want to handle this differently
-        League.query.filter_by(creator_id=user_id).delete()
-        
-        # 11. Delete season team (cascade should handle riders, but let's be explicit)
-        SeasonTeam.query.filter_by(user_id=user_id).delete()
-        
+        LeagueMembership.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+        # Challenges where user is challenger/challenged (null winner if needed)
+        try:
+            LeagueChallenge.query.filter(
+                db.or_(
+                    LeagueChallenge.challenger_id == user_id,
+                    LeagueChallenge.challenged_id == user_id,
+                )
+            ).delete(synchronize_session=False)
+        except Exception:
+            pass
+
+        # 10. Delete leagues where user is creator
+        League.query.filter_by(creator_id=user_id).delete(synchronize_session=False)
+
+        # 11. Season team: bulk DELETE bypasses ORM cascade — remove riders first
+        team = SeasonTeam.query.filter_by(user_id=user_id).first()
+        if team:
+            SeasonTeamRider.query.filter_by(season_team_id=team.id).delete(
+                synchronize_session=False
+            )
+            db.session.delete(team)
+
         # 12. Delete high scores - CrossDinoHighScore uses player_name, not user_id
-        # Match by username since player_name is used instead of user_id
-        CrossDinoHighScore.query.filter_by(player_name=username).delete()
-        
+        CrossDinoHighScore.query.filter_by(player_name=username).delete(
+            synchronize_session=False
+        )
+
         # 13. Finally, delete the user
         db.session.delete(user)
         db.session.commit()
