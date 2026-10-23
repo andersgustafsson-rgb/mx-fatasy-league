@@ -4452,24 +4452,43 @@
         // Load competitions for simulation
         async function loadSimulationCompetitions() {
             try {
-                const data = await fetchCompetitionsForImportShared();
-                
-                if (data.success) {
-                    const select = document.getElementById('simulation-competition');
-                    select.innerHTML = '<option value="">Välj tävling...</option>';
-                    
-                    data.competitions.forEach(comp => {
-                        const option = document.createElement('option');
-                        option.value = comp.id;
-                        option.textContent = comp.name;
-                        select.appendChild(option);
-                    });
-                } else {
-                    document.getElementById('simulation-competition').innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+                const [allData, parisData] = await Promise.all([
+                    fetchCompetitionsForImportShared(),
+                    fetchCompetitionsForImportShared('PARIS').catch(() => null),
+                ]);
+
+                if (!allData || !allData.success) {
+                    document.getElementById('simulation-competition').innerHTML =
+                        '<option value="">Fel vid laddning av tävlingar</option>';
+                    return;
                 }
+
+                const byId = new Map();
+                for (const list of [
+                    allData.competitions || [],
+                    (parisData && parisData.competitions) || [],
+                ]) {
+                    for (const c of list) {
+                        if (c && c.id != null) byId.set(Number(c.id), c);
+                    }
+                }
+                const competitions = Array.from(byId.values()).sort((a, b) =>
+                    String(b.event_date || '').localeCompare(String(a.event_date || ''))
+                );
+
+                const select = document.getElementById('simulation-competition');
+                select.innerHTML = '<option value="">Välj tävling...</option>';
+                competitions.forEach((comp) => {
+                    const option = document.createElement('option');
+                    option.value = comp.id;
+                    const series = comp.series ? ` · ${comp.series}` : '';
+                    option.textContent = `${comp.name}${series}`;
+                    select.appendChild(option);
+                });
             } catch (error) {
                 console.error('Error loading competitions:', error);
-                document.getElementById('simulation-competition').innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+                document.getElementById('simulation-competition').innerHTML =
+                    '<option value="">Fel vid laddning av tävlingar</option>';
             }
         }
 
@@ -4524,7 +4543,11 @@
 
             updatePicksStatsBanner(data);
 
-            document.getElementById('picks-stats-subtitle').textContent = data.is_mxon
+            document.getElementById('picks-stats-subtitle').textContent = data.is_paris
+                ? (data.is_paris_saturday
+                    ? 'Paris lördag: komplett = Superpole SX1+SX2 + final SX1+SX2'
+                    : 'Paris söndag: komplett = final SX1+SX2 + King + Prince of Paris')
+                : data.is_mxon
                 ? 'Komplett = topp 5 nationer + klassfavoriter MXGP / MX2 / OPEN'
                 : data.is_wsx
                 ? 'Komplett = 6+6 topp 6 och båda holeshots (WSX, ingen wildcard)'
@@ -4532,7 +4555,15 @@
 
             const partialHead = document.querySelector('#picks-stats-partial-section thead tr');
             if (partialHead) {
-                if (data.is_mxon) {
+                if (data.is_paris) {
+                    partialHead.innerHTML = `
+                        <th class="px-3 py-2">Användare</th>
+                        <th class="px-3 py-2">SX1 final</th>
+                        <th class="px-3 py-2">SX2 final</th>
+                        <th class="px-3 py-2">Bonus</th>
+                        <th class="px-3 py-2 hidden sm:table-cell">Fyllt</th>
+                        <th class="px-3 py-2">Saknas</th>`;
+                } else if (data.is_mxon) {
                     partialHead.innerHTML = `
                         <th class="px-3 py-2">Användare</th>
                         <th class="px-3 py-2">Nationer</th>
@@ -4567,6 +4598,20 @@
                 partialBody.innerHTML = data.users_partial_list.map((u) => {
                     const name = u.display_name || u.username;
                     const missing = (u.missing || []).join(', ');
+                    if (data.is_paris) {
+                        const bonus = data.is_paris_saturday
+                            ? `${u.holeshot_450 ? 'SP1✓' : 'SP1—'} ${u.holeshot_250 ? 'SP2✓' : 'SP2—'}`
+                            : `${u.holeshot_450 ? 'King✓' : 'King—'} ${u.holeshot_250 ? 'Prince✓' : 'Prince—'}`;
+                        const filled = `${u.paris_filled || 0}/${u.paris_required || 4}`;
+                        return `<tr>
+                            <td class="px-3 py-2 whitespace-nowrap">${name} <span class="text-gray-500 text-xs">(${u.username})</span></td>
+                            <td class="px-3 py-2">${u.race_450 ? '✓' : '—'}</td>
+                            <td class="px-3 py-2">${u.race_250 ? '✓' : '—'}</td>
+                            <td class="px-3 py-2">${bonus}</td>
+                            <td class="px-3 py-2 hidden sm:table-cell">${filled}</td>
+                            <td class="px-3 py-2 text-amber-300 text-xs">${missing || '—'}</td>
+                        </tr>`;
+                    }
                     if (data.is_mxon) {
                         const cls = [
                             u.holeshot_450 ? 'MXGP✓' : 'MXGP—',
@@ -4600,6 +4645,21 @@
                     partialCards.innerHTML = data.users_partial_list.map((u) => {
                         const name = u.display_name || u.username;
                         const missing = (u.missing || []).join(', ');
+                        if (data.is_paris) {
+                            const b1 = data.is_paris_saturday ? 'SP1' : 'King';
+                            const b2 = data.is_paris_saturday ? 'SP2' : 'Prince';
+                            return `<article class="picks-stats-partial-card">
+                                <div class="picks-stats-partial-card__name">${name} <span class="text-gray-500 text-xs font-normal">(${u.username})</span></div>
+                                <div class="picks-stats-partial-card__grid">
+                                    <div><span>SX1</span><strong>${u.race_450 ? '✓' : '—'}</strong></div>
+                                    <div><span>SX2</span><strong>${u.race_250 ? '✓' : '—'}</strong></div>
+                                    <div><span>${b1}</span><strong>${u.holeshot_450 ? '✓' : '—'}</strong></div>
+                                    <div><span>${b2}</span><strong>${u.holeshot_250 ? '✓' : '—'}</strong></div>
+                                    <div><span>Fyllt</span><strong>${u.paris_filled || 0}/${u.paris_required || 4}</strong></div>
+                                </div>
+                                <div class="picks-stats-partial-card__missing">Saknas: ${missing || '—'}</div>
+                            </article>`;
+                        }
                         if (data.is_mxon) {
                             return `<article class="picks-stats-partial-card">
                                 <div class="picks-stats-partial-card__name">${name} <span class="text-gray-500 text-xs font-normal">(${u.username})</span></div>
@@ -4711,19 +4771,35 @@
         // Load competitions for picks statistics (auto-selects current race)
         async function loadPicksStatsCompetitions(autoLoadStats = false) {
             try {
-                const [compData, currentRes] = await Promise.all([
+                // Merge all + tippa-only series so Paris/WSX always appear even if
+                // a scoped cache or AMA-only list was used elsewhere.
+                const [allData, parisData, wsxData, currentRes] = await Promise.all([
                     fetchCompetitionsForImportShared(),
+                    fetchCompetitionsForImportShared('PARIS').catch(() => null),
+                    fetchCompetitionsForImportShared('WSX').catch(() => null),
                     fetch('/admin/picks_stats/current').then((r) => r.json()).catch(() => null),
                 ]);
 
-                if (!compData.success) {
+                if (!allData || !allData.success) {
                     document.getElementById('picks-stats-competition').innerHTML =
                         '<option value="">Fel vid laddning av tävlingar</option>';
                     return;
                 }
 
+                const byId = new Map();
+                for (const list of [
+                    allData.competitions || [],
+                    (parisData && parisData.competitions) || [],
+                    (wsxData && wsxData.competitions) || [],
+                ]) {
+                    for (const c of list) {
+                        if (c && c.id != null) byId.set(Number(c.id), c);
+                    }
+                }
+                const competitions = Array.from(byId.values());
+
                 const recommendedId = currentRes?.success ? currentRes.competition_id : null;
-                _populatePicksStatsSelect(compData.competitions || [], recommendedId);
+                _populatePicksStatsSelect(competitions, recommendedId);
 
                 if (autoLoadStats) {
                     if (currentRes?.success) {

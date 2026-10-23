@@ -1489,6 +1489,27 @@ def get_competitions_for_import():
                 has_results_ids |= mxon_ids
             except Exception:
                 pass
+            # Paris: Superpole / King-Prince may exist without CompetitionResult yet
+            try:
+                from models import HoleshotResult, QualifyingResult
+
+                hs_ids = {
+                    row[0]
+                    for row in db.session.query(HoleshotResult.competition_id)
+                    .filter(HoleshotResult.competition_id.in_(cids))
+                    .distinct()
+                    .all()
+                }
+                q_ids = {
+                    row[0]
+                    for row in db.session.query(QualifyingResult.competition_id)
+                    .filter(QualifyingResult.competition_id.in_(cids))
+                    .distinct()
+                    .all()
+                }
+                has_results_ids |= hs_ids | q_ids
+            except Exception:
+                pass
 
         competition_list = [
             {

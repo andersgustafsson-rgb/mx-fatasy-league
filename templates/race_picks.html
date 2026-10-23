@@ -5032,10 +5032,29 @@ function updatePicksStatus(myPicks) {
 
   // Paris: same banner shell, Paris copy only (no topp-6 / holeshot / wildcard).
   if (isParisTippa) {
-    const paris =
-      (myPicks && myPicks.paris && typeof myPicks.paris === 'object')
-        ? myPicks.paris
-        : (myPicks && typeof myPicks === 'object' ? myPicks : {});
+    // Bare updatePicksStatus() (lang boot) must not wipe to "Inga val".
+    // Explicit { paris: {} } from clear still resets.
+    let paris;
+    if (myPicks == null) {
+      paris = window._parisStatusPicks || parisInitialPicks || {};
+    } else if (myPicks.paris && typeof myPicks.paris === 'object') {
+      paris = myPicks.paris;
+      window._parisStatusPicks = paris;
+    } else if (
+      typeof myPicks === 'object'
+      && !Array.isArray(myPicks)
+      && (myPicks.superpole_sx1 || myPicks.final_sx1 || myPicks.overall_sx1
+          || myPicks.superpole_sx2 || myPicks.final_sx2 || myPicks.overall_sx2)
+    ) {
+      paris = myPicks;
+      window._parisStatusPicks = paris;
+    } else {
+      paris = {};
+      window._parisStatusPicks = paris;
+    }
+    if (myPicks && myPicks._weekendComplete) {
+      window._parisWeekendComplete = true;
+    }
     const requiredKeys = parisSaturday
       ? ['superpole_sx1', 'superpole_sx2', 'final_sx1', 'final_sx2']
       : ['final_sx1', 'final_sx2', 'overall_sx1', 'overall_sx2'];
@@ -6603,7 +6622,7 @@ function setMainTrackmap(src, thumbEl) {
 </script>
 <script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=mxsm-edit-brands-1"></script>
 {% if is_paris | default(false) %}
-<script src="{{ url_for('static', filename='paris_race_picks.js') }}?v=6"></script>
+<script src="{{ url_for('static', filename='paris_race_picks.js') }}?v=8"></script>
 {% endif %}
 
 {% if not is_logged_in %}
@@ -6640,7 +6659,16 @@ function setMainTrackmap(src, thumbEl) {
         window.PicksWizard.renderSummary();
       }
       if (typeof updatePicksStatus === 'function') {
-        try { updatePicksStatus(); } catch (_) {}
+        try {
+          if (typeof isParisTippa !== 'undefined' && isParisTippa) {
+            updatePicksStatus({
+              paris: window._parisStatusPicks || parisInitialPicks || {},
+              _weekendComplete: !!window._parisWeekendComplete,
+            });
+          } else if (typeof initialMyPicks !== 'undefined' && initialMyPicks) {
+            updatePicksStatus(initialMyPicks);
+          }
+        } catch (_) {}
       }
     }
     window.mxApplyRacePicksLang = applyBilingual;

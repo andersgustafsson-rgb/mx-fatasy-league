@@ -146,6 +146,11 @@ static/              # JS/CSS + assets (.cursorignore skips bulk images)
 | Admin results / imports | `app/routes/results_admin.py`, `services/results_import.py` |
 | MXoN | `app/routes/mxon_picks.py`, `Mxon*` models in `models.py` |
 | Leagues | `app/routes/leagues.py`, `services/official_leagues.py` |
+| **New / changed series** | `.cursor/rules/series-playbook.mdc` (checklist — follow end-to-end) |
+
+### Series playbook
+
+Adding Paris, MXSM, MXGP, or any new series: follow **Series playbook** (`.cursor/rules/series-playbook.mdc`). Same DB skeleton (`Series` + `Competition.series` + `series_id`), idempotent seed, then wire status → lock → scoring → tippa → admin → prod sync. Tick the checklist in the PR. Do not half-register a series code.
 
 Bulk assets and `tools/gs` are listed in `.cursorignore` so search/index stays on application code.
 

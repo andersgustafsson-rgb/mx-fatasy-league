@@ -1,0 +1,112 @@
+---
+description: How to add or change a racing series — shared skeleton, checklist, anti-tokigt rules
+alwaysApply: true
+---
+
+# Series playbook (MX Fantasy League)
+
+Every series shares one skeleton. Special rules are allowed, but they must be **named and wired end-to-end** — not half-registered.
+
+Canonical reference: this rule. Short pointer: `AGENTS.md` → Series playbook.
+
+## Skeleton (required for every series)
+
+| Piece | Convention |
+|-------|------------|
+| **Code** | Uppercase short code on `Competition.series` — e.g. `SX`, `WSX`, `PARIS`, `MXSM` (≤10 chars). |
+| **Series row** | `Series.name` (display / card key), `year`, dates, `is_active`, `points_system`. |
+| **Competitions** | Always set **both** `series` (code) and `series_id` (FK). Never only one. |
+| **Seed** | Idempotent upsert: match existing row, then update — do **not** insert a second row for the same logical event. |
+| **Match key** | Prefer `(series_id, stable_key)` where `stable_key` is `phase` (Paris) or `name` within a **year window**. Avoid bare `name` alone across years. |
+| **IDs** | Treat competition IDs as prod-owned after first deploy. Re-seed must **update in place**. If IDs can churn, ship a remount helper (see Paris). |
+| **Module** | One `*_fantasy.py` (or AMA seed module) + optional `seed_*.py` + admin seed route. |
+| **Tippa-only?** | No season team → add code to `TIPPA_ONLY_SERIES` in **both** `services/scoring.py` and `main.py` (kept in sync on purpose). |
+
+### Series types
+
+1. **AMA-like** — season team + race/HS/wildcard; codes `SX` / `MX` / `SMX`.
+2. **Tippa-only single event/round** — WSX, MXGP, MXSM; shared pick tables.
+3. **Tippa-only special schema** — MXON (nation/class tables + own scorer).
+4. **Multi-comp event** — Paris: one `Series`, **N** competitions distinguished by `phase` (`paris_sat` / `paris_sun`).
+
+## Checklist — new series (do in order)
+
+Copy this list into the PR description and tick every box.
+
+### A. Data & seed
+
+- [ ] `Series` upsert (name, year, active, points_system)
+- [ ] `Competition` upsert with `series` + `series_id` (+ `phase` if multi-comp)
+- [ ] `timezone` + `start_time` (string `HH:MM:SS` in DB; never rely on raw `datetime.time` in SQLite sync)
+- [ ] Roster / outs (`CompetitionRiderStatus` or series-specific tables)
+- [ ] `ensure_*` is idempotent; safe to run twice
+- [ ] Decide **boot vs admin-only**: boot = always in `main.py` init; admin-only = documented (Paris today)
+
+### B. Product wiring (all must know the code)
+
+- [ ] `services/series_status.py` — map `Series.name` → card code; sort order; next-race filter by `series_id`
+- [ ] `services/picks_lock.py` — lock semantics (date + tz + start_time)
+- [ ] `services/scoring.py` — tippa-only set and any series-specific points rules
+- [ ] Homepage / aktuellt race — same completeness rules as tippa UI
+- [ ] Tippa routes: reuse `race_picks` **or** dedicated blueprint registered in `main.py`
+- [ ] Admin: results entry + **picks-statistik** completeness rules for this series
+- [ ] `get_competitions_for_import?series=CODE` works (and admin UI merges CODE if tippa-only)
+
+### C. Sync & local
+
+- [ ] Tables used by the series are in `scripts/sync_production_to_local.py` → `SYNC_TABLES`
+- [ ] No Postgres-only types written raw to SQLite (`date` / `time` / `datetime` adapted)
+- [ ] After sync: competitions for the series exist with **same IDs as prod**; picks not orphaned
+- [ ] If seed can change IDs: remount orphans (pattern: `remount_orphan_paris_picks`)
+
+### D. Flags & rollout
+
+- [ ] Public gate constant if needed (`*_PUBLIC_PLAY`) — admin can still test
+- [ ] Dual-year (2026 sandbox + 2027 live): document which year is the card; upsert must not steal the other year
+
+## Anti-patterns (causes “tokigt”)
+
+1. Creating a **new** competition row on every seed instead of updating by stable key.
+2. Setting `series` code but leaving `series_id` null (or the reverse).
+3. Adding the code to scoring but **not** series_status / admin picks-stats / import dropdown.
+4. Paris-style dual night **without** `phase` on every related query.
+5. Matching competitions by **name only** across years (MXSM/MXGP trap).
+6. Assuming local IDs match prod after a failed `competitions` sync.
+7. Half tippa-only lists (`api.py` vs `scoring.py` vs `main.py`) — grep the code when adding a code.
+
+## Name map (keep aligned)
+
+| `Competition.series` | Typical `Series.name` | Module |
+|----------------------|----------------------|--------|
+| `SX` / `MX` / `SMX` | Supercross / Motocross / SMX Finals | `ama_series_seed.py`, `ama_2027_calendar.py` |
+| `WSX` | WSX | `wsx_fantasy.py` |
+| `MXON` | MXON | `mxon_fantasy.py` |
+| `PARIS` | Paris SX | `paris_fantasy.py` |
+| `MXGP` | MXGP | `mxgp_fantasy.py` |
+| `MXSM` | MXSM | `mxsm_fantasy.py` |
+
+When `Series.name` ≠ code (Paris), **always** teach `series_status` the mapping.
+
+## File touch list (minimum)
+
+```
+models.py                    # only if new columns/tables
+{code}_fantasy.py            # ensure_*, roster, helpers
+seed_{code}_*.py             # optional CLI
+app/routes/…                 # picks / admin if not generic
+main.py                      # register blueprint + TIPPA_ONLY if needed
+services/series_status.py
+services/picks_lock.py
+services/scoring.py
+scripts/sync_production_to_local.py   # if new tables
+templates/admin_organized.html        # if admin UI special-case
+```
+
+## Verify locally (after seed or prod sync)
+
+```text
+1. Series row exists; competitions have correct series + series_id (+ phase).
+2. Tippa opens for admin (or public if flag on); save picks; reload shows same IDs.
+3. Admin → Picks-statistik → series competitions listed; completeness matches tippa rules.
+4. Sync prod → local: competition IDs match prod; pick counts match for that series.
+```

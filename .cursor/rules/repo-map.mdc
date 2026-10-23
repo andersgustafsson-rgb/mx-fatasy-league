@@ -6,6 +6,7 @@ alwaysApply: true
 # Repository map (MX Fantasy League)
 
 Use this index before broad searches. Full conventions: `AGENTS.md`.
+New or changed series: follow **Series playbook** (`.cursor/rules/series-playbook.mdc`) end-to-end.
 
 ## Entry points
 
@@ -46,6 +47,8 @@ Business rules live here when extracted from routes: `scoring.py`, `race_picks.p
 ## Root-level modules (grep by feature name)
 
 Poster/social/ops scripts often sit at repo root: `*_poster_service.py`, `pit_lane_service.py`, `reminder_service.py`, `push_service.py`, `trojtryck_service.py`, plus fetch/import `*_fetch.py`, `seed_*.py`, `scoring.py`.
+
+Series domain modules: `wsx_fantasy.py`, `mxon_fantasy.py`, `paris_fantasy.py`, `mxgp_fantasy.py`, `mxsm_fantasy.py`, `ama_series_seed.py`, `ama_2027_calendar.py`. Playbook: `series-playbook.mdc`.
 
 ## Front-end
 

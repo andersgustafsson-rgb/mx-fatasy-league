@@ -212,14 +212,14 @@ def fantasy_paris_leaderboard_payload(year: int = 2026) -> dict[str, Any]:
         }
 
     users = {
-        int(u.id): u.username
+        int(u.id): u
         for u in User.query.filter(User.id.in_(list(by_user.keys()))).all()
     }
     ranked = sorted(
         by_user.items(),
         key=lambda kv: (
             -(kv[1]["saturday_points"] + kv[1]["sunday_points"]),
-            (users.get(kv[0]) or "").lower(),
+            (users.get(kv[0]).username if users.get(kv[0]) else "").lower(),
         ),
     )
     leaderboard: list[dict[str, Any]] = []
@@ -227,11 +227,14 @@ def fantasy_paris_leaderboard_payload(year: int = 2026) -> dict[str, Any]:
         sat_p = int(pts["saturday_points"])
         sun_p = int(pts["sunday_points"])
         total = sat_p + sun_p
+        u = users.get(uid)
         leaderboard.append(
             {
                 "rank": i,
                 "user_id": uid,
-                "username": users.get(uid) or "?",
+                "username": u.username if u else "?",
+                "display_name": (u.display_name if u else None)
+                or (u.username if u else "?"),
                 "saturday_points": sat_p,
                 "sunday_points": sun_p,
                 "total_points": total,
@@ -251,6 +254,280 @@ def fantasy_paris_leaderboard_payload(year: int = 2026) -> dict[str, Any]:
 def fantasy_paris_leaderboard_for_year(year: int = 2026) -> list[dict[str, Any]]:
     """Back-compat: list rows only (total ranked). Prefer fantasy_paris_leaderboard_payload."""
     return fantasy_paris_leaderboard_payload(year).get("leaderboard") or []
+
+
+def _paris_rider_label(rider: Rider | None) -> str:
+    if not rider:
+        return "—"
+    num = getattr(rider, "rider_number", None)
+    name = (rider.name or "Förare").strip()
+    return f"#{num} {name}" if num is not None else name
+
+
+def _paris_final_winner(competition_id: int, class_names: tuple[str, ...]) -> Rider | None:
+    row = (
+        CompetitionResult.query.filter(
+            CompetitionResult.competition_id == int(competition_id),
+            CompetitionResult.position == 1,
+            CompetitionResult.rider_id.in_(
+                db.session.query(Rider.id).filter(Rider.class_name.in_(class_names))
+            ),
+        )
+        .first()
+    )
+    return Rider.query.get(row.rider_id) if row else None
+
+
+def _paris_holeshot_winner(competition_id: int, aliases: list[str]) -> Rider | None:
+    row = HoleshotResult.query.filter(
+        HoleshotResult.competition_id == int(competition_id),
+        HoleshotResult.class_name.in_(aliases),
+    ).first()
+    return Rider.query.get(row.rider_id) if row else None
+
+
+def _paris_overall_winner(competition_id: int, class_name: str) -> Rider | None:
+    row = QualifyingResult.query.filter_by(
+        competition_id=int(competition_id), class_name=class_name
+    ).first()
+    return Rider.query.get(row.rider_id) if row else None
+
+
+def build_paris_results_detail(user_id: int, competition_id: int) -> dict[str, Any]:
+    """Score breakdown for one Paris evening (Mina poäng / topplista modal)."""
+    from services.scoring import calculate_paris_final_points
+
+    comp = Competition.query.get(int(competition_id))
+    if not comp or not paris_is_weekend_comp(comp):
+        return {"ok": False, "error": "not_paris"}
+
+    uid = int(user_id)
+    cid = int(competition_id)
+    sat = paris_is_saturday(comp)
+    picks = get_user_paris_picks(uid, comp)
+
+    race_points = 0
+    holeshot_points = 0
+    wildcard_points = 0
+    picks_450: list[dict[str, Any]] = []
+    picks_250: list[dict[str, Any]] = []
+    bonus_rows: list[dict[str, Any]] = []
+    special_rows: list[dict[str, Any]] = []
+
+    def final_row(label: str, pick_id: int | None, winner: Rider | None) -> dict[str, Any]:
+        nonlocal race_points
+        picked = Rider.query.get(int(pick_id)) if pick_id else None
+        actual_pos = 1 if winner else None
+        # Tip is always P1; miss with no row for that rider → proximity floor (5).
+        if pick_id and winner and int(pick_id) == int(winner.id):
+            pts = calculate_paris_final_points(1, 1)
+            status = "perfect"
+            hint = "Rätt finalvinnare → +40p"
+            diff = 0
+        elif pick_id and winner:
+            # Mirror scoring.py: wrong P1 tip with only winners stored → 5p floor
+            pts = 5
+            status = "miss"
+            hint = f"Fel finalvinnare → +{pts}p (rätt: {_paris_rider_label(winner)})"
+            diff = 99
+        elif pick_id and not winner:
+            pts = 0
+            status = "miss"
+            hint = "Resultat saknas → 0p"
+            diff = 0
+        else:
+            pts = 0
+            status = "miss"
+            hint = "Ingen tipp → 0p"
+            diff = 0
+        race_points += int(pts)
+        return {
+            "kind": "pick",
+            "status": status,
+            "rider_name": _paris_rider_label(picked),
+            "predicted": 1 if pick_id else 0,
+            "actual": int(actual_pos or 0),
+            "points": int(pts),
+            "diff": int(diff),
+            "hint": hint,
+            "label": label,
+        }
+
+    def exact_row(
+        label: str,
+        pick_id: int | None,
+        winner: Rider | None,
+        *,
+        points_if_correct: int,
+        bucket: str,
+    ) -> dict[str, Any]:
+        nonlocal holeshot_points, wildcard_points
+        picked = Rider.query.get(int(pick_id)) if pick_id else None
+        ok = bool(pick_id and winner and int(pick_id) == int(winner.id))
+        pts = points_if_correct if ok else 0
+        if bucket == "holeshot":
+            holeshot_points += pts
+        else:
+            wildcard_points += pts
+        return {
+            "kind": "class_favorite",
+            "status": "correct" if ok else "wrong",
+            "label": label,
+            "picked_name": _paris_rider_label(picked),
+            "rider_name": _paris_rider_label(picked),
+            "actual_name": _paris_rider_label(winner) if winner else "",
+            "points": int(pts),
+            "hint": (
+                f"Rätt → +{points_if_correct}p"
+                if ok
+                else (
+                    f"Fel → 0p (rätt: {_paris_rider_label(winner)})"
+                    if winner
+                    else ("Ingen tipp → 0p" if not pick_id else "Resultat saknas → 0p")
+                )
+            ),
+        }
+
+    win_sx1 = _paris_final_winner(cid, ("wsx_sx1", "450cc", "mxgp"))
+    win_sx2 = _paris_final_winner(cid, ("wsx_sx2", "250cc"))
+    picks_450.append(final_row("SX1 final", picks.get("final_sx1"), win_sx1))
+    picks_250.append(final_row("SX2 final", picks.get("final_sx2"), win_sx2))
+
+    if sat:
+        sp1 = _paris_holeshot_winner(cid, ["wsx_sx1", "450cc"])
+        sp2 = _paris_holeshot_winner(cid, ["wsx_sx2", "250cc"])
+        r1 = exact_row(
+            "SX1 Superpole",
+            picks.get("superpole_sx1"),
+            sp1,
+            points_if_correct=20,
+            bucket="holeshot",
+        )
+        r2 = exact_row(
+            "SX2 Superpole",
+            picks.get("superpole_sx2"),
+            sp2,
+            points_if_correct=20,
+            bucket="holeshot",
+        )
+        special_rows.extend([r1, r2])
+        if r1["status"] == "correct" and r2["status"] == "correct":
+            # Scoring stores 50 total for both SP (= 20+20+10)
+            holeshot_points = 50
+            bonus_rows.append(
+                {
+                    "kind": "bonus",
+                    "text": "Båda Superpole rätt → +10p bonus (50p totalt)",
+                    "hint": "Båda Superpole rätt → +10p bonus (50p totalt)",
+                }
+            )
+        labels = {
+            "primary": "SX1 final",
+            "secondary": "SX2 final",
+            "special": "Superpole",
+            "hide_wildcard": True,
+        }
+        evening = "saturday"
+    else:
+        king = _paris_overall_winner(cid, OVERALL_CLASS_SX1)
+        prince = _paris_overall_winner(cid, OVERALL_CLASS_SX2)
+        k_row = exact_row(
+            "King of Paris",
+            picks.get("overall_sx1"),
+            king,
+            points_if_correct=50,
+            bucket="overall",
+        )
+        p_row = exact_row(
+            "Prince of Paris",
+            picks.get("overall_sx2"),
+            prince,
+            points_if_correct=50,
+            bucket="overall",
+        )
+        special_rows.extend([k_row, p_row])
+        if k_row["status"] == "correct" and p_row["status"] == "correct":
+            # Scoring: 50+50+25 = 125 when both crowns are right
+            wildcard_points = 125
+            bonus_rows.append(
+                {
+                    "kind": "bonus",
+                    "text": "Båda King & Prince rätt → +25p bonus (125p totalt)",
+                    "hint": "Båda King & Prince rätt → +25p bonus (125p totalt)",
+                }
+            )
+        labels = {
+            "primary": "SX1 söndagsfinal",
+            "secondary": "SX2 söndagsfinal",
+            "special": "King & Prince",
+            "hide_wildcard": True,
+        }
+        evening = "sunday"
+
+    total = int(race_points) + int(holeshot_points) + int(wildcard_points)
+    return {
+        "ok": True,
+        "kind": "paris",
+        "evening": evening,
+        "competition": {
+            "id": cid,
+            "name": comp.name if comp else None,
+            "series": "PARIS",
+            "event_date": comp.event_date.isoformat() if comp and comp.event_date else None,
+            "phase": getattr(comp, "phase", None),
+        },
+        "total": total,
+        "summary": {
+            "race_points": int(race_points),
+            "holeshot_points": int(holeshot_points),
+            "wildcard_points": int(wildcard_points),
+        },
+        "labels": labels,
+        "sections": {
+            "picks_450": picks_450,
+            "picks_250": picks_250,
+            "holeshot": special_rows,
+            "other": bonus_rows,
+            "wildcard": [],
+        },
+    }
+
+
+def build_paris_weekend_results_detail(
+    user_id: int, year: int | None = None
+) -> dict[str, Any]:
+    """Combined lör+sön breakdown for homepage topplista click."""
+    from models import User
+
+    y = int(year or get_active_paris_year())
+    wk = get_paris_weekend(y)
+    sat = wk.get("saturday")
+    sun = wk.get("sunday")
+    user = User.query.get(int(user_id))
+    sat_detail = (
+        build_paris_results_detail(int(user_id), int(sat.id)) if sat else None
+    )
+    sun_detail = (
+        build_paris_results_detail(int(user_id), int(sun.id)) if sun else None
+    )
+    sat_total = int((sat_detail or {}).get("total") or 0)
+    sun_total = int((sun_detail or {}).get("total") or 0)
+    return {
+        "ok": True,
+        "kind": "paris_weekend",
+        "year": y,
+        "user_id": int(user_id),
+        "username": user.username if user else None,
+        "display_name": (user.display_name if user else None)
+        or (user.username if user else None),
+        "saturday_competition_id": int(sat.id) if sat else None,
+        "sunday_competition_id": int(sun.id) if sun else None,
+        "saturday": sat_detail,
+        "sunday": sun_detail,
+        "saturday_points": sat_total,
+        "sunday_points": sun_total,
+        "total": sat_total + sun_total,
+    }
 
 
 def _find_riders_by_names(names: tuple[str, ...], class_name: str) -> list[Rider]:
@@ -621,6 +898,42 @@ def save_user_paris_picks(user_id: int, comp: Competition, data: dict) -> None:
     db.session.commit()
 
 
+def clear_user_paris_picks(user_id: int, comp: Competition) -> dict[str, int]:
+    """Remove all Paris tippa rows for one user + evening (and that night's score).
+
+    Used so testers can go back to «no picks» (e.g. tip Saturday only, clear Sunday).
+    """
+    from models import CompetitionScore
+    from services.picks_lock import is_picks_locked
+
+    if not paris_is_weekend_comp(comp):
+        raise ValueError("Inte en Paris-kväll")
+    if is_picks_locked(comp):
+        raise PermissionError("Picks är låsta")
+
+    cid = int(comp.id)
+    uid = int(user_id)
+    n_race = RacePick.query.filter_by(user_id=uid, competition_id=cid).delete(
+        synchronize_session=False
+    )
+    n_hs = HoleshotPick.query.filter_by(user_id=uid, competition_id=cid).delete(
+        synchronize_session=False
+    )
+    n_qual = QualifyingPick.query.filter_by(user_id=uid, competition_id=cid).delete(
+        synchronize_session=False
+    )
+    n_score = CompetitionScore.query.filter_by(user_id=uid, competition_id=cid).delete(
+        synchronize_session=False
+    )
+    db.session.commit()
+    return {
+        "race_picks": int(n_race or 0),
+        "holeshot_picks": int(n_hs or 0),
+        "qualifying_picks": int(n_qual or 0),
+        "scores": int(n_score or 0),
+    }
+
+
 def get_paris_official_results(comp: Competition) -> dict[str, int | None]:
     """Current official rows for admin UI."""
     cid = int(comp.id)
@@ -840,6 +1153,96 @@ def heal_paris_competition_tags(series: Series) -> int:
     return fixed
 
 
+def remount_orphan_paris_picks(saturday_id: int | None, sunday_id: int | None) -> dict[str, int]:
+    """Move tippa rows that still point at deleted Paris competition ids onto sat/sun.
+
+    Local re-seeds have left RacePick/QualifyingPick on dead ids (e.g. 157) while
+    live Paris comps are 90/91 — admin picks-statistik then shows zero tippare.
+    """
+    moved = {"race": 0, "qual": 0, "holeshot": 0, "scores": 0}
+    if not saturday_id and not sunday_id:
+        return moved
+
+    live = {int(x) for x in (saturday_id, sunday_id) if x}
+    orphan_ids: set[int] = set()
+    for table in ("race_picks", "qualifying_picks", "holeshot_picks", "competition_scores"):
+        try:
+            rows = db.session.execute(
+                db.text(
+                    f"SELECT DISTINCT competition_id FROM {table} "
+                    "WHERE competition_id NOT IN (SELECT id FROM competitions)"
+                )
+            ).fetchall()
+            orphan_ids.update(int(r[0]) for r in rows if r[0] is not None)
+        except Exception:
+            continue
+    orphan_ids -= live
+    if not orphan_ids:
+        return moved
+
+    for oid in sorted(orphan_ids):
+        # Sunday marker: King/Prince overall tips (ps_ov1 / ps_ov2)
+        has_overall = False
+        try:
+            has_overall = (
+                db.session.execute(
+                    db.text(
+                        "SELECT 1 FROM qualifying_picks WHERE competition_id = :c "
+                        "AND lower(class) IN ('ps_ov1','ps_ov2') LIMIT 1"
+                    ),
+                    {"c": oid},
+                ).first()
+                is not None
+            )
+        except Exception:
+            has_overall = False
+
+        # Saturday marker: Superpole holeshot on that orphan id
+        has_superpole = False
+        try:
+            has_superpole = (
+                db.session.execute(
+                    db.text(
+                        "SELECT 1 FROM holeshot_picks WHERE competition_id = :c LIMIT 1"
+                    ),
+                    {"c": oid},
+                ).first()
+                is not None
+            )
+        except Exception:
+            has_superpole = False
+
+        if has_overall and sunday_id:
+            target = int(sunday_id)
+        elif has_superpole and saturday_id:
+            target = int(saturday_id)
+        elif sunday_id:
+            target = int(sunday_id)
+        elif saturday_id:
+            target = int(saturday_id)
+        else:
+            continue
+
+        for table, key in (
+            ("race_picks", "race"),
+            ("qualifying_picks", "qual"),
+            ("holeshot_picks", "holeshot"),
+            ("competition_scores", "scores"),
+        ):
+            try:
+                n = db.session.execute(
+                    db.text(
+                        f"UPDATE {table} SET competition_id = :t "
+                        "WHERE competition_id = :o"
+                    ),
+                    {"t": target, "o": oid},
+                ).rowcount
+                moved[key] += int(n or 0)
+            except Exception as err:
+                print(f"[PARIS-SEED] remount {table} {oid}->{target} failed: {err}")
+    return moved
+
+
 def ensure_paris_2026() -> dict[str, Any]:
     """Upsert Paris SX 2026 — två competitions, samma serie."""
     try:
@@ -929,6 +1332,10 @@ def ensure_paris_2026() -> dict[str, Any]:
     ).all():
         roster_n += _sync_competition_roster(comp, sx1 + sx2)
 
+    sat_id = int(comp_ids[0]) if len(comp_ids) > 0 else None
+    sun_id = int(comp_ids[1]) if len(comp_ids) > 1 else None
+    remounted = remount_orphan_paris_picks(sat_id, sun_id)
+
     db.session.commit()
     _invalidate_series_status_cache()
     wk = get_paris_weekend(2026)
@@ -938,6 +1345,7 @@ def ensure_paris_2026() -> dict[str, Any]:
         "sunday_id": wk["sunday"].id if wk["sunday"] else None,
         "roster_links": roster_n,
         "healed_competitions": healed,
+        "remounted_orphan_picks": remounted,
         "sx1_riders": len(sx1),
         "sx2_riders": len(sx2),
     }

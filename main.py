@@ -675,6 +675,7 @@ def _ensure_paris_pick_routes() -> None:
     """Wire Paris URLs even if blueprint registration failed (local dev safety net)."""
     try:
         from app.routes.paris_picks import (  # type: ignore
+            paris_clear_api,
             paris_hub_page,
             paris_mine_api,
             paris_picks_page,
@@ -730,6 +731,13 @@ def _ensure_paris_pick_routes() -> None:
             "/paris_picks/<int:competition_id>/save",
             "paris_save_api",
             paris_save_api,
+            methods=["POST"],
+        )
+    if "/paris_picks/<int:competition_id>/clear" not in existing:
+        app.add_url_rule(
+            "/paris_picks/<int:competition_id>/clear",
+            "paris_clear_api",
+            paris_clear_api,
             methods=["POST"],
         )
 
@@ -11975,7 +11983,123 @@ def _competition_picks_assessment(comp: Competition) -> dict:
     series_u = (comp.series or "").upper()
     is_wsx = series_u == "WSX"
     is_mxon = series_u == "MXON"
+    is_paris = False
+    try:
+        from paris_fantasy import paris_is_weekend_comp
+
+        is_paris = paris_is_weekend_comp(comp)
+    except Exception:
+        is_paris = series_u == "PARIS"
     comp_id = int(comp.id)
+
+    if is_paris:
+        from paris_fantasy import (
+            get_user_paris_picks,
+            paris_is_saturday,
+            paris_picks_complete,
+            paris_required_pick_keys,
+        )
+
+        sat = paris_is_saturday(comp)
+        required = paris_required_pick_keys(comp)
+        # Users who touched any Paris tippa row for this evening
+        user_ids: set[int] = set()
+        for uid in (
+            db.session.query(RacePick.user_id)
+            .filter_by(competition_id=comp_id)
+            .distinct()
+            .all()
+        ):
+            user_ids.add(int(uid[0]))
+        for uid in (
+            db.session.query(HoleshotPick.user_id)
+            .filter_by(competition_id=comp_id)
+            .distinct()
+            .all()
+        ):
+            user_ids.add(int(uid[0]))
+        for uid in (
+            db.session.query(QualifyingPick.user_id)
+            .filter_by(competition_id=comp_id)
+            .distinct()
+            .all()
+        ):
+            user_ids.add(int(uid[0]))
+
+        users_by_id = {}
+        if user_ids:
+            users_by_id = {
+                u.id: u for u in User.query.filter(User.id.in_(list(user_ids))).all()
+            }
+
+        label_map = {
+            "superpole_sx1": "SX1 Superpole",
+            "superpole_sx2": "SX2 Superpole",
+            "final_sx1": "SX1 final",
+            "final_sx2": "SX2 final",
+            "overall_sx1": "King of Paris",
+            "overall_sx2": "Prince of Paris",
+        }
+        rows = []
+        for uid in sorted(user_ids):
+            user = users_by_id.get(uid)
+            picks = get_user_paris_picks(uid, comp)
+            filled = sum(1 for k in required if picks.get(k))
+            missing = [label_map.get(k, k) for k in required if not picks.get(k)]
+            complete = paris_picks_complete(uid, comp)
+            if complete:
+                status = "complete"
+            elif filled:
+                status = "partial"
+            else:
+                status = "none"
+            rows.append(
+                {
+                    "user_id": uid,
+                    "username": user.username if user else f"#{uid}",
+                    "display_name": (user.display_name if user else None)
+                    or (user.username if user else f"#{uid}"),
+                    "status": status,
+                    "race_450": 1 if picks.get("final_sx1") else 0,
+                    "race_250": 1 if picks.get("final_sx2") else 0,
+                    "holeshot_450": bool(
+                        picks.get("superpole_sx1") or picks.get("overall_sx1")
+                    ),
+                    "holeshot_250": bool(
+                        picks.get("superpole_sx2") or picks.get("overall_sx2")
+                    ),
+                    "wildcard_position": True,
+                    "wildcard_rider": True,
+                    "paris_filled": filled,
+                    "paris_required": len(required),
+                    "missing": missing,
+                }
+            )
+
+        complete = [r for r in rows if r["status"] == "complete"]
+        partial = [r for r in rows if r["status"] == "partial"]
+        total_users = User.query.count()
+        return {
+            "is_wsx": False,
+            "is_mxon": False,
+            "is_paris": True,
+            "is_paris_saturday": sat,
+            "label_450": "SX1",
+            "label_250": "SX2",
+            "users_complete": len(complete),
+            "users_partial": len(partial),
+            "users_started": len(rows),
+            "users_not_started": max(0, total_users - len(rows)),
+            "total_users": total_users,
+            "complete_pct": round(
+                (len(complete) / total_users * 100) if total_users > 0 else 0, 1
+            ),
+            "started_pct": round(
+                (len(rows) / total_users * 100) if total_users > 0 else 0, 1
+            ),
+            "users_complete_list": complete,
+            "users_partial_list": partial,
+        }
 
     if is_mxon:
         nation_rows = MxonNationPick.query.filter_by(competition_id=comp_id).all()
@@ -12191,6 +12315,14 @@ def _admin_picks_stats_payload(comp: Competition) -> dict:
     has_results = (
         CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
     )
+    # Paris: results may live in holeshot/qualifying rows, not only CompetitionResult
+    if assessment.get("is_paris") and not has_results:
+        has_results = (
+            HoleshotResult.query.filter_by(competition_id=comp.id).first() is not None
+            or QualifyingResult.query.filter_by(competition_id=comp.id).first()
+            is not None
+        )
+
     return {
         "success": True,
         "competition_id": comp.id,
@@ -12203,6 +12335,8 @@ def _admin_picks_stats_payload(comp: Competition) -> dict:
         "race_display": sched.get("race_display") or sched.get("start_display"),
         "is_wsx": assessment["is_wsx"],
         "is_mxon": assessment.get("is_mxon", False),
+        "is_paris": assessment.get("is_paris", False),
+        "is_paris_saturday": assessment.get("is_paris_saturday", False),
         "label_450": assessment.get("label_450"),
         "label_250": assessment.get("label_250"),
         "total_users": assessment["total_users"],
@@ -16772,6 +16906,10 @@ def get_my_race_results(competition_id):
             from mxon_fantasy import build_mxon_results_detail
 
             return jsonify(build_mxon_results_detail(uid, competition_id))
+        if comp and (comp.series or "").upper() == "PARIS":
+            from paris_fantasy import build_paris_results_detail
+
+            return jsonify(build_paris_results_detail(uid, competition_id))
         return jsonify(_build_race_results_detail(uid, competition_id, dedupe_picks=False))
     except Exception as e:
         db.session.rollback()
@@ -16792,10 +16930,40 @@ def get_user_race_results(username: str, competition_id: int):
             from mxon_fantasy import build_mxon_results_detail
 
             return jsonify(build_mxon_results_detail(user.id, competition_id))
+        if comp and (comp.series or "").upper() == "PARIS":
+            from paris_fantasy import build_paris_results_detail
+
+            return jsonify(build_paris_results_detail(user.id, competition_id))
         return jsonify(_build_race_results_detail(user.id, competition_id, dedupe_picks=True))
     except Exception as e:
         db.session.rollback()
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+def _paris_user_weekend_results_response(username: str):
+    """Homepage topplista: detaljerad Paris-helg (lör + sön) för en användare."""
+    user = User.query.filter_by(username=username).first_or_404()
+    db.session.rollback()
+    try:
+        from paris_fantasy import build_paris_weekend_results_detail, get_active_paris_year
+
+        year_raw = request.args.get("year")
+        year = int(year_raw) if year_raw else get_active_paris_year()
+        return jsonify(build_paris_weekend_results_detail(user.id, year))
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.get("/get_paris_user_weekend_results/<string:username>")
+def get_paris_user_weekend_results(username: str):
+    return _paris_user_weekend_results_response(username)
+
+
+# Alias (older client typos / cached HTML)
+@app.get("/get_paris_sx_weekend_results/<string:username>")
+def get_paris_sx_weekend_results(username: str):
+    return _paris_user_weekend_results_response(username)
 
 
 # calculate_scores + scoring helpers → services.scoring (skiva 1–2 docs/REFACTOR.md)

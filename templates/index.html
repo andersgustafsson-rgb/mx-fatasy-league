@@ -2444,8 +2444,176 @@
         gap: 0.85rem;
       }
     }
-    .home-standings-card {
-      border-radius: 0.55rem;
+    .home-standings-row__name-btn {
+      background: none;
+      border: 0;
+      padding: 0;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-color: rgba(34, 211, 238, 0.35);
+      text-underline-offset: 2px;
+    }
+    .paris-lb-detail-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0;
+    }
+    .paris-lb-detail-modal.is-open,
+    .paris-lb-detail-modal:not([hidden]) {
+      display: flex;
+    }
+    @media (min-width: 640px) {
+      .paris-lb-detail-modal { align-items: center; padding: 1.5rem; }
+    }
+    .paris-lb-detail-modal__backdrop {
+      position: absolute;
+      inset: 0;
+      border: 0;
+      background: rgba(2, 6, 23, 0.72);
+      cursor: pointer;
+    }
+    .paris-lb-detail-modal__panel {
+      position: relative;
+      z-index: 1;
+      width: min(32rem, 100%);
+      max-height: min(88vh, 40rem);
+      overflow: auto;
+      background: #0b1220;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 1rem 1rem 0 0;
+      box-shadow: 0 -12px 40px rgba(0,0,0,.45);
+    }
+    @media (min-width: 640px) {
+      .paris-lb-detail-modal__panel {
+        border-radius: 1rem;
+        box-shadow: 0 20px 50px rgba(0,0,0,.5);
+      }
+    }
+    .paris-lb-detail-modal__head {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.1rem 0.75rem;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.7);
+      position: sticky;
+      top: 0;
+      background: #0b1220;
+    }
+    .paris-lb-detail-modal__head h3 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+    .paris-lb-detail-modal__sub {
+      margin: 0.2rem 0 0;
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+    .paris-lb-detail-modal__close {
+      border: 0;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0.15rem 0.35rem;
+    }
+    .paris-lb-detail-modal__body { padding: 0.85rem 1.1rem 1.25rem; }
+    .paris-lb-detail__evening { margin-bottom: 1.1rem; }
+    .paris-lb-detail__evening-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.4rem;
+    }
+    .paris-lb-detail__evening-head h4 {
+      margin: 0;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      font-weight: 700;
+    }
+    .paris-lb-detail__evening-total {
+      font-weight: 800;
+      color: #6ee7b7;
+      font-variant-numeric: tabular-nums;
+    }
+    .paris-lb-detail__chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.55rem;
+    }
+    .paris-lb-detail__chips span {
+      font-size: 0.65rem;
+      padding: 0.2rem 0.45rem;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(71, 85, 105, 0.6);
+      color: #cbd5e1;
+    }
+    .paris-lb-detail__row {
+      border: 1px solid rgba(51, 65, 85, 0.65);
+      background: rgba(15, 23, 42, 0.55);
+      border-radius: 0.65rem;
+      padding: 0.55rem 0.7rem;
+      margin-bottom: 0.4rem;
+    }
+    .paris-lb-detail__row.is-ok { border-color: rgba(16, 185, 129, 0.35); }
+    .paris-lb-detail__row.is-miss { border-color: rgba(71, 85, 105, 0.55); }
+    .paris-lb-detail__row--bonus {
+      border-color: rgba(245, 158, 11, 0.35);
+      background: rgba(69, 26, 3, 0.25);
+      color: #fde68a;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .paris-lb-detail__row-main {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem 0.5rem;
+      align-items: baseline;
+      font-size: 0.85rem;
+      color: #e2e8f0;
+    }
+    .paris-lb-detail__label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #64748b;
+      font-weight: 700;
+      width: 100%;
+    }
+    .paris-lb-detail__actual { color: #fbbf24; font-size: 0.8rem; }
+    .paris-lb-detail__pts {
+      float: right;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: #6ee7b7;
+      font-size: 0.85rem;
+    }
+    .paris-lb-detail__hint {
+      clear: both;
+      margin: 0.35rem 0 0;
+      font-size: 0.65rem;
+      color: #94a3b8;
+    }
+    .paris-lb-detail__footer {
+      margin: 0.75rem 0 0;
+      text-align: center;
+      font-size: 0.8rem;
+    }
+    .paris-lb-detail__footer a { color: #22d3ee; text-decoration: underline; text-underline-offset: 2px; }
+
+    .home-standings-card {      border-radius: 0.55rem;
       border: 1px solid rgba(71, 85, 105, 0.45);
       background: #1a2436;
       padding: 0;
@@ -4592,12 +4760,20 @@
       }
     }
 
-    function _standingsRowHtml(row, rank) {
+    function _standingsRowHtml(row, rank, boardId) {
       const name = row.display_name || row.username || '?';
       const uid = row.user_id;
-      const nameHtml = uid
-        ? `<a href="/profile/${uid}" class="hover:text-cyan-200 transition-colors">${_escHome(name)}</a>`
-        : _escHome(name);
+      const uname = row.username || '';
+      let nameHtml;
+      if (boardId === 'paris' && uname) {
+        nameHtml = `<button type="button" class="home-standings-row__name-btn hover:text-cyan-200 transition-colors text-left truncate max-w-full"
+          data-paris-detail-user="${_escHome(uname)}"
+          title="Visa poängdetaljer">${_escHome(name)}</button>`;
+      } else if (uid) {
+        nameHtml = `<a href="/profile/${uid}" class="hover:text-cyan-200 transition-colors">${_escHome(name)}</a>`;
+      } else {
+        nameHtml = _escHome(name);
+      }
       const pts = Number(row.total_points || 0);
       let sub = '';
       if (row.paris_split) {
@@ -4653,8 +4829,8 @@
       if (!rows.length) {
         bodyInner = `<p class="home-standings-card__empty">${_escHome(board.empty || 'Inga poäng ännu.')}</p>`;
       } else {
-        const topHtml = top.map((r, i) => _standingsRowHtml(r, i + 1)).join('');
-        const restHtml = rest.map((r, i) => _standingsRowHtml(r, i + n + 1)).join('');
+        const topHtml = top.map((r, i) => _standingsRowHtml(r, i + 1, board.id)).join('');
+        const restHtml = rest.map((r, i) => _standingsRowHtml(r, i + n + 1, board.id)).join('');
         const expand = rest.length
           ? `<button type="button" class="home-standings-card__expand" data-standings-expand data-standings-topn="${n}">${
               isEn ? `Show all (${rows.length})` : `Visa alla (${rows.length})`
@@ -4701,6 +4877,108 @@
         });
       });
     }
+
+    function _parisDetailEveningHtml(evening, title) {
+      if (!evening || !evening.ok) {
+        return `<section class="paris-lb-detail__evening"><h4>${_escHome(title)}</h4><p class="text-slate-400 text-sm">Inga poäng / inga picks.</p></section>`;
+      }
+      const sum = evening.summary || {};
+      const sec = evening.sections || {};
+      const labels = evening.labels || {};
+      const rows = []
+        .concat(sec.picks_450 || [])
+        .concat(sec.picks_250 || [])
+        .concat(sec.holeshot || [])
+        .concat(sec.other || []);
+      const specialPts = evening.evening === 'saturday'
+        ? (sum.holeshot_points || 0)
+        : (sum.wildcard_points || 0);
+      const specialLabel = labels.special || (evening.evening === 'saturday' ? 'Superpole' : 'King/Prince');
+      let body = rows.map((r) => {
+        if (r.kind === 'bonus') {
+          return `<div class="paris-lb-detail__row paris-lb-detail__row--bonus">${_escHome(r.text || r.hint || '')}</div>`;
+        }
+        const ok = r.status === 'perfect' || r.status === 'correct' || r.status === 'close';
+        const name = r.rider_name || r.picked_name || '—';
+        const actual = r.actual_name || (r.actual ? `P${r.actual}` : '');
+        const pts = Number(r.points || 0);
+        return `<div class="paris-lb-detail__row ${ok ? 'is-ok' : 'is-miss'}">
+          <div class="paris-lb-detail__row-main">
+            <span class="paris-lb-detail__label">${_escHome(r.label || '')}</span>
+            <strong>${_escHome(name)}</strong>
+            ${actual ? `<span class="paris-lb-detail__actual">→ ${_escHome(actual)}</span>` : ''}
+          </div>
+          <span class="paris-lb-detail__pts">${pts > 0 ? '+' : ''}${pts}p</span>
+          ${r.hint ? `<p class="paris-lb-detail__hint">${_escHome(r.hint)}</p>` : ''}
+        </div>`;
+      }).join('');
+      if (!body) body = '<p class="text-slate-400 text-sm">Inga picks.</p>';
+      return `<section class="paris-lb-detail__evening">
+        <div class="paris-lb-detail__evening-head">
+          <h4>${_escHome(title)}</h4>
+          <span class="paris-lb-detail__evening-total">${Number(evening.total || 0)}p</span>
+        </div>
+        <div class="paris-lb-detail__chips">
+          <span>Finaler ${Number(sum.race_points || 0)}p</span>
+          <span>${_escHome(specialLabel)} ${specialPts}p</span>
+        </div>
+        <div class="paris-lb-detail__rows">${body}</div>
+      </section>`;
+    }
+
+    async function openParisWeekendDetailModal(username) {
+      const modal = document.getElementById('paris-lb-detail-modal');
+      const body = document.getElementById('paris-lb-detail-body');
+      const title = document.getElementById('paris-lb-detail-title');
+      const sub = document.getElementById('paris-lb-detail-sub');
+      if (!modal || !body) {
+        console.warn('Paris detail modal missing in DOM');
+        return;
+      }
+      // Ensure not trapped inside a hidden .tab-panel
+      if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
+      modal.hidden = false;
+      modal.removeAttribute('hidden');
+      modal.classList.add('is-open');
+      modal.style.display = 'flex';
+      document.body.classList.add('overflow-hidden');
+      if (title) title.textContent = 'Paris SX — poängdetaljer';
+      if (sub) sub.textContent = username;
+      body.innerHTML = '<p class="text-slate-400 text-sm p-4">Laddar…</p>';
+      try {
+        const res = await fetch(`/get_paris_user_weekend_results/${encodeURIComponent(username)}?year=2026`);
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          body.innerHTML = `<p class="text-rose-300 text-sm p-4">${_escHome(data.error || 'Kunde inte hämta')}</p>`;
+          return;
+        }
+        const disp = data.display_name || data.username || username;
+        if (title) title.textContent = disp;
+        if (sub) {
+          sub.textContent = `Helg totalt ${Number(data.total || 0)}p · Lör ${Number(data.saturday_points || 0)} · Sön ${Number(data.sunday_points || 0)}`;
+        }
+        body.innerHTML =
+          _parisDetailEveningHtml(data.saturday, 'Lördag')
+          + _parisDetailEveningHtml(data.sunday, 'Söndag')
+          + `<p class="paris-lb-detail__footer"><a href="/user/${encodeURIComponent(data.username || username)}/scores?series=PARIS">Öppna alla Paris-poäng →</a></p>`;
+      } catch (e) {
+        console.error(e);
+        body.innerHTML = '<p class="text-rose-300 text-sm p-4">Nätverksfel</p>';
+      }
+    }
+
+    function closeParisWeekendDetailModal() {
+      const modal = document.getElementById('paris-lb-detail-modal');
+      if (!modal) return;
+      modal.hidden = true;
+      modal.setAttribute('hidden', '');
+      modal.classList.remove('is-open');
+      modal.style.display = 'none';
+      document.body.classList.remove('overflow-hidden');
+    }
+    window.openParisWeekendDetailModal = openParisWeekendDetailModal;
 
     function bindHomeStandingsAccordion(root) {
       if (!root) return;
@@ -4829,6 +5107,25 @@
           )
           .join('');
         bindHomeStandingsExpand(root);
+        if (!window._parisLbDetailBound) {
+          window._parisLbDetailBound = true;
+          document.addEventListener('click', (e) => {
+            const detailBtn = e.target && e.target.closest && e.target.closest('[data-paris-detail-user]');
+            if (detailBtn) {
+              e.preventDefault();
+              e.stopPropagation();
+              const uname = detailBtn.getAttribute('data-paris-detail-user');
+              if (uname) void openParisWeekendDetailModal(uname);
+              return;
+            }
+            if (e.target && e.target.closest && e.target.closest('[data-paris-lb-close]')) {
+              closeParisWeekendDetailModal();
+            }
+          });
+          document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeParisWeekendDetailModal();
+          });
+        }
         bindHomeStandingsAccordion(root);
         return settled;
       } catch (e) {
@@ -9557,5 +9854,19 @@
       });
     })();
   </script>
+{# Outside all tab-panels — otherwise modal is display:none when Topplista-fliken är dold #}
+<div id="paris-lb-detail-modal" class="paris-lb-detail-modal" hidden>
+  <button type="button" class="paris-lb-detail-modal__backdrop" data-paris-lb-close aria-label="Stäng"></button>
+  <div class="paris-lb-detail-modal__panel" role="dialog" aria-modal="true" aria-labelledby="paris-lb-detail-title">
+    <div class="paris-lb-detail-modal__head">
+      <div>
+        <h3 id="paris-lb-detail-title">Paris SX</h3>
+        <p id="paris-lb-detail-sub" class="paris-lb-detail-modal__sub"></p>
+      </div>
+      <button type="button" class="paris-lb-detail-modal__close" data-paris-lb-close aria-label="Stäng">×</button>
+    </div>
+    <div id="paris-lb-detail-body" class="paris-lb-detail-modal__body"></div>
+  </div>
+</div>
 </body>
 </html>

@@ -169,6 +169,8 @@
     function nextEveningCtaHtml() {
       const url = opts.otherEveningUrl;
       if (!saturday || !url) return '';
+      // Don't nudge Sunday tippa if that evening is already complete.
+      if (window._parisWeekendComplete || window._parisSundayComplete) return '';
       return `
         <aside class="paris-next-evening" role="region" aria-label="Tippa söndagen">
           <div class="paris-weekend-bridge__days paris-next-evening__days" aria-hidden="true">
@@ -227,6 +229,53 @@
         </aside>`;
     }
 
+    async function doClearPicks() {
+      const evening = saturday ? 'lördagen' : 'söndagen';
+      if (!window.confirm(
+        `Rensa alla dina tipp för ${evening}?\n\nDu blir som om du aldrig tippat den kvällen (bra för test: tippa bara lördag).`
+      )) {
+        return;
+      }
+      try {
+        const res = await fetch(`/paris_picks/${opts.competitionId}/clear`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          alert(data.error || 'Kunde inte rensa');
+          return;
+        }
+        window._picksSubmittedOnServer = false;
+        window._parisWeekendComplete = false;
+        try {
+          localStorage.removeItem(`race_picks_${opts.competitionId}`);
+          localStorage.removeItem(`race_picks_wizard_step_${opts.competitionId}`);
+        } catch (_) {}
+        root.querySelectorAll('[data-paris-field]').forEach((el) => {
+          const span = el.querySelector('.selected-rider');
+          if (span) span.textContent = '-- välj förare --';
+          delete el.dataset.selectedRiderId;
+        });
+        if (typeof window.updatePicksStatus === 'function') {
+          window.updatePicksStatus({ paris: {} });
+        }
+        if (typeof window.markPicksAsSaved === 'function') window.markPicksAsSaved();
+        showStep(1);
+        const saveBtn = document.getElementById('save-picks-btn');
+        if (saveBtn) saveBtn.textContent = 'Lämna in mina val';
+        if (draftNote) {
+          draftNote.hidden = false;
+          draftNote.textContent = 'Valen är rensade. Tippa om du vill, eller lämna tomt.';
+        }
+        overviewEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) {
+        console.error(e);
+        alert('Nätverksfel vid rensning');
+      }
+    }
+
     function bindOverviewChrome() {
       overviewEl.classList.add('is-complete', 'is-overview');
       overviewEl.hidden = false;
@@ -244,6 +293,9 @@
           document.querySelector('.paris-weekend-bridge--back')?.removeAttribute('hidden');
         });
       });
+      overviewEl.querySelectorAll('[data-paris-clear]').forEach((btn) => {
+        btn.addEventListener('click', () => { void doClearPicks(); });
+      });
     }
 
     function renderSaturdayOverview(ui) {
@@ -259,6 +311,7 @@
         </div>
         <div class="wizard-overview-toolbar">
           <button type="button" class="rp-btn wizard-btn-edit-picks" data-paris-edit>Redigera mina val</button>
+          <button type="button" class="rp-btn rp-btn--secondary" data-paris-clear>Rensa mina val</button>
           <button type="button" class="rp-btn rp-btn--primary" data-paris-resave disabled>Inlämnat ✓</button>
         </div>
         <div class="wizard-summary-body">${extrasHtml}</div>`;
@@ -288,6 +341,7 @@
         </div>
         <div class="wizard-overview-toolbar">
           <button type="button" class="rp-btn wizard-btn-edit-picks" data-paris-edit>Redigera söndagen</button>
+          <button type="button" class="rp-btn rp-btn--secondary" data-paris-clear>Rensa söndagen</button>
           <button type="button" class="rp-btn rp-btn--primary" data-paris-resave disabled>Inlämnat ✓</button>
         </div>
         <div class="wizard-summary-body">
@@ -339,6 +393,7 @@
         </div>
         <div class="wizard-overview-toolbar">
           <button type="button" class="rp-btn wizard-btn-edit-picks" data-paris-edit>Redigera söndagen</button>
+          <button type="button" class="rp-btn rp-btn--secondary" data-paris-clear>Rensa söndagen</button>
           ${satUrl
             ? `<a class="rp-btn rp-btn--secondary" href="${escapeHtml(satUrl)}">Redigera lördagen</a>`
             : ''}
@@ -366,11 +421,20 @@
       }
     }
 
+    async function fetchWeekendPayload() {
+      const res = await fetch('/paris_picks/weekend/mine', { credentials: 'same-origin' });
+      const data = await res.json();
+      if (!data || !data.ok) return null;
+      window._parisSundayComplete = !!data.sunday_complete;
+      window._parisWeekendComplete = !!data.weekend_complete
+        || (!!data.saturday_complete && !!data.sunday_complete);
+      return data;
+    }
+
     async function fetchWeekendAndRender(sunUi) {
       try {
-        const res = await fetch('/paris_picks/weekend/mine', { credentials: 'same-origin' });
-        const data = await res.json();
-        if (!data || !data.ok) {
+        const data = await fetchWeekendPayload();
+        if (!data) {
           renderSundayLocalOverview(sunUi);
           if (draftNote) {
             draftNote.textContent = 'Dina söndagsval är registrerade. Redigera om du vill ändra innan deadline.';
@@ -387,14 +451,46 @@
       }
     }
 
+    /** Saturday page: if Sunday already tipped, show full weekend — not "tippa söndagen". */
+    async function fetchWeekendAndUpgradeSaturday(satUi) {
+      try {
+        const data = await fetchWeekendPayload();
+        if (!data) return;
+        if (data.sunday_complete || data.weekend_complete) {
+          renderWeekendOverview(data, data.sunday || satUi);
+          if (typeof window.updatePicksStatus === 'function') {
+            window.updatePicksStatus({
+              paris: (data.saturday && data.saturday.ids) || opts.initialParis || {},
+              _weekendComplete: true,
+            });
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     function renderOverview(ui) {
       if (!overviewEl) return;
       if (saturday) {
         renderSaturdayOverview(ui);
+        void fetchWeekendAndUpgradeSaturday(ui || lastUi);
         return;
       }
-      renderSundayLocalOverview(ui);
-      void fetchWeekendAndRender(ui || lastUi);
+      // Avoid flash: wait for weekend payload when Sunday is already complete.
+      void (async () => {
+        try {
+          const data = await fetchWeekendPayload();
+          if (data && (data.sunday_complete || data.weekend_complete)) {
+            renderWeekendOverview(data, ui || data.sunday || lastUi);
+            return;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+        renderSundayLocalOverview(ui);
+        void fetchWeekendAndRender(ui || lastUi);
+      })();
     }
 
     function applyParisPicks(picks) {
@@ -460,6 +556,7 @@
     });
 
     const initialIds = opts.initialParis || {};
+    window._parisStatusPicks = initialIds;
     applyParisPicks(initialIds);
     if (typeof window.updatePicksStatus === 'function') {
       window.updatePicksStatus({ paris: initialIds });

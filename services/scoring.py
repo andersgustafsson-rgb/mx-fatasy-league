@@ -385,18 +385,30 @@ def calculate_scores(comp_id: int):
                     wildcard_points += 10
 
         # Paris söndag: King / Prince (overall) — QualifyingPick ps_ov1 / ps_ov2
+        # 50 each; +25 if both correct (max 125) — same pair-bonus idea as Superpole.
         if series_u == "PARIS":
+            from paris_fantasy import OVERALL_CLASS_SX1, OVERALL_CLASS_SX2
+
             qual_results = {
                 (q.class_name or "").strip().lower(): q
                 for q in QualifyingResult.query.filter_by(competition_id=comp_id).all()
             }
+            king_ok = False
+            prince_ok = False
             for qp in QualifyingPick.query.filter_by(
                 user_id=user.id, competition_id=comp_id
             ).all():
                 cls = (qp.class_name or "").strip().lower()
                 actual_q = qual_results.get(cls)
                 if actual_q and actual_q.rider_id == qp.rider_id:
-                    wildcard_points += 50
+                    if cls == OVERALL_CLASS_SX1:
+                        king_ok = True
+                        wildcard_points += 50
+                    elif cls == OVERALL_CLASS_SX2:
+                        prince_ok = True
+                        wildcard_points += 50
+            if king_ok and prince_ok:
+                wildcard_points = 125
 
         total_points = race_points + holeshot_points + wildcard_points
 

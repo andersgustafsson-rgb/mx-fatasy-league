@@ -121,6 +121,32 @@ def _quote_col(name: str) -> str:
     return f'"{name}"' if name == "class" else name
 
 
+def _sqlite_adapt_value(value: Any) -> Any:
+    """Postgres drivers return date/time objects SQLite's default binder rejects.
+
+    Notably competitions.start_time is datetime.time — without this, the whole
+    competitions INSERT fails, Paris ids stay local (90/91) while picks arrive
+    for prod ids (156/157) and tippa looks empty after sync.
+    """
+    import datetime as _dt
+
+    if value is None:
+        return None
+    if isinstance(value, _dt.datetime):
+        return value.isoformat(sep=" ", timespec="seconds")
+    if isinstance(value, _dt.date):
+        return value.isoformat()
+    if isinstance(value, _dt.time):
+        return value.strftime("%H:%M:%S")
+    if isinstance(value, memoryview):
+        return bytes(value)
+    return value
+
+
+def _sqlite_adapt_row(row: dict) -> dict:
+    return {k: _sqlite_adapt_value(v) for k, v in row.items()}
+
+
 def _table_columns(bind, table: str) -> set[str]:
     from sqlalchemy import inspect
 
@@ -146,7 +172,7 @@ def _copy_table(prod_engine, local_engine, table: str, *, skip_blobs: bool) -> i
     col_list = ", ".join(_quote_col(c) for c in cols)
     with prod_engine.connect() as conn_prod:
         rows = conn_prod.execute(text(f"SELECT {col_list} FROM {table}")).mappings().all()
-    rows = _dedupe_rows(table, [dict(r) for r in rows])
+    rows = [_sqlite_adapt_row(r) for r in _dedupe_rows(table, [dict(r) for r in rows])]
 
     with local_engine.begin() as conn_local:
         conn_local.execute(text("PRAGMA foreign_keys=OFF"))
@@ -157,7 +183,7 @@ def _copy_table(prod_engine, local_engine, table: str, *, skip_blobs: bool) -> i
 
         placeholders = ", ".join(f":{c}" for c in cols)
         insert_sql = f"INSERT INTO {table} ({col_list}) VALUES ({placeholders})"
-        conn_local.execute(text(insert_sql), [dict(r) for r in rows])
+        conn_local.execute(text(insert_sql), rows)
     return len(rows)
 
 
@@ -273,6 +299,22 @@ def run_sync(
                     if log:
                         print(f"  {table}: FEL - {exc}")
 
+            # If an older sync left picks on dead Paris ids, remount onto live rows.
+            try:
+                from paris_fantasy import get_paris_weekend, remount_orphan_paris_picks
+
+                wk = get_paris_weekend(2026)
+                sat = wk["saturday"].id if wk.get("saturday") else None
+                sun = wk["sunday"].id if wk.get("sunday") else None
+                remounted = remount_orphan_paris_picks(sat, sun)
+                if any(remounted.values()):
+                    db.session.commit()
+                    if log:
+                        print(f"  remounted orphan Paris picks: {remounted}")
+            except Exception as remount_err:
+                if log:
+                    print(f"  Paris remount skipped: {remount_err}")
+
             comps = db.session.execute(text("SELECT COUNT(*) FROM competitions")).scalar() or 0
             results = (
                 db.session.execute(text("SELECT COUNT(*) FROM competition_results")).scalar()
@@ -283,6 +325,16 @@ def run_sync(
                 or 0
             )
             users = db.session.execute(text("SELECT COUNT(*) FROM users")).scalar() or 0
+            paris_n = (
+                db.session.execute(
+                    text(
+                        "SELECT COUNT(*) FROM competitions WHERE upper(series) = 'PARIS'"
+                    )
+                ).scalar()
+                or 0
+            )
+            if log and paris_n:
+                print(f"  Paris competitions after sync: {paris_n}")
     finally:
         try:
             prod_engine.dispose()

@@ -5,11 +5,13 @@ from flask import Blueprint, flash, jsonify, redirect, request, session, url_for
 
 from models import Competition, User, db
 from paris_fantasy import (
+    clear_user_paris_picks,
     get_active_paris_year,
     get_paris_series,
     get_paris_weekend,
     get_user_paris_picks_ui,
     get_user_paris_weekend_picks_ui,
+    paris_is_saturday,
     paris_is_weekend_comp,
     paris_roster_payload,
     paris_user_can_play,
@@ -145,3 +147,36 @@ def paris_save_api(competition_id: int):
         db.session.rollback()
         print(f"Paris save error: {e}")
         return jsonify({"error": "Kunde inte spara"}), 500
+
+
+@bp.post("/paris_picks/<int:competition_id>/clear")
+def paris_clear_api(competition_id: int):
+    """Clear own Paris picks for this evening (back to empty tippa)."""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    if not paris_user_can_play(is_admin=_is_admin_user()):
+        return jsonify({
+            "error": "Paris Supercross — picks öppnar snart."
+        }), 403
+    comp = Competition.query.get_or_404(competition_id)
+    if not paris_is_weekend_comp(comp):
+        return jsonify({"error": "not_paris"}), 400
+    try:
+        deleted = clear_user_paris_picks(int(session["user_id"]), comp)
+        return jsonify({
+            "ok": True,
+            "cleared": True,
+            "deleted": deleted,
+            "saturday": paris_is_saturday(comp),
+            "picks": {},
+            "complete": False,
+        })
+    except PermissionError as e:
+        return jsonify({"error": str(e)}), 403
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        print(f"Paris clear error: {e}")
+        return jsonify({"error": "Kunde inte rensa"}), 500
