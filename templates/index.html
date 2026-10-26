@@ -3353,11 +3353,12 @@
             </div>
           </div>
 
-          <div id="desktop-widget-banner" class="max-w-md mx-auto w-full">
+          <div id="desktop-widget-banner" class="hidden max-w-md mx-auto w-full">
             <div class="relative rounded-xl border border-cyan-400/30 bg-gray-900/60 backdrop-blur-sm shadow-lg p-4">
+              <button type="button" id="desktop-widget-close" class="absolute top-2 right-2 text-gray-300 hover:text-white text-lg leading-none" aria-label="Dölj">×</button>
               <div class="flex items-start gap-3">
                 <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-400/25 flex items-center justify-center text-cyan-300 text-lg font-black" aria-hidden="true">M</div>
-                <div class="flex-1 min-w-0">
+                <div class="flex-1 min-w-0 pr-4">
                   <div class="text-sm font-extrabold text-white">Skrivbordswidget (Windows)</div>
                   <div class="text-xs text-gray-200 mt-1">Nedräkning, tippstatus och din placering i ett hörn — utan Lively.</div>
                   <div class="mt-3 flex flex-wrap gap-2">
@@ -9433,6 +9434,24 @@
         if (icon) icon.innerHTML = typeof mxIcon==='function' ? mxIcon(showing ? 'eye' : 'eye-off') : (showing ? '' : '');
         btn.setAttribute('aria-label', showing ? 'Visa lösenord' : 'Dölj lösenord');
       });
+    })();
+
+    // Windows desktop widget banner — dismissible (still available under Settings)
+    (function () {
+      const banner = document.getElementById('desktop-widget-banner');
+      const closeBtn = document.getElementById('desktop-widget-close');
+      if (!banner) return;
+      const KEY = 'mx_desktop_widget_banner_dismissed_v1';
+      const isWin = /windows/i.test(navigator.userAgent || '');
+      if (isWin && localStorage.getItem(KEY) !== '1') {
+        banner.classList.remove('hidden');
+      }
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+          localStorage.setItem(KEY, '1');
+          banner.classList.add('hidden');
+        });
+      }
     })();
 
     // PWA install: homepage banner + permanent Settings card
