@@ -830,6 +830,8 @@
           {% endif %}
         {% elif race_series == "MXON" %}
           {% set bg_image = "images/mxon/ernee_aerial.jpg" %}
+        {% elif race_series == "PARIS" %}
+          {% set bg_image = "trackmaps/paris/paris_ladefense_aerial_1.jpg" %}
         {% else %}
           {% set race_name_slug = race_name_lower.replace(" ", "").replace("national", "").replace("classic", "") %}
           {% set bg_image = "trackmaps/compressed/" + race_name_slug + ".jpg" %}

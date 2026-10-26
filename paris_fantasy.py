@@ -6,10 +6,12 @@ Admin: can open tippa / roster for testing before official lists drop.
 from __future__ import annotations
 
 from datetime import date, time
+from pathlib import Path
 from typing import Any
 
 from models import (
     Competition,
+    CompetitionImage,
     CompetitionResult,
     CompetitionRiderStatus,
     HoleshotPick,
@@ -1243,6 +1245,44 @@ def remount_orphan_paris_picks(saturday_id: int | None, sunday_id: int | None) -
     return moved
 
 
+def _sync_paris_trackmap_images(comp: Competition | None) -> int:
+    """Attach La Défense aerials to CompetitionImage (idempotent)."""
+    if comp is None:
+        return 0
+    from trackmap_utils import resolve_paris_trackmap_urls
+
+    urls = resolve_paris_trackmap_urls(comp)
+    if not urls:
+        return 0
+
+    rows = (
+        CompetitionImage.query.filter_by(competition_id=comp.id)
+        .order_by(CompetitionImage.sort_order)
+        .all()
+    )
+    touched = 0
+    for idx, url in enumerate(urls):
+        if idx < len(rows):
+            row = rows[idx]
+            if (row.image_url or "").strip() != url or row.sort_order != idx:
+                row.image_url = url
+                row.sort_order = idx
+                touched += 1
+        else:
+            db.session.add(
+                CompetitionImage(
+                    competition_id=comp.id,
+                    image_url=url,
+                    sort_order=idx,
+                )
+            )
+            touched += 1
+    for extra in rows[len(urls) :]:
+        db.session.delete(extra)
+        touched += 1
+    return touched
+
+
 def ensure_paris_2026() -> dict[str, Any]:
     """Upsert Paris SX 2026 — två competitions, samma serie."""
     try:
@@ -1324,8 +1364,11 @@ def ensure_paris_2026() -> dict[str, Any]:
     sx1 = _find_riders_by_names(PARIS_2026_SX1_NAMES, "wsx_sx1")
     sx2 = _find_riders_by_names(PARIS_2026_SX2_NAMES, "wsx_sx2")
     roster_n = 0
+    trackmap_images = 0
     for cid in comp_ids:
-        roster_n += _sync_competition_roster(Competition.query.get(cid), sx1 + sx2)
+        comp_row = Competition.query.get(cid)
+        roster_n += _sync_competition_roster(comp_row, sx1 + sx2)
+        trackmap_images += _sync_paris_trackmap_images(comp_row)
     # Same startlist on any healed Paris rows (e.g. old SX-tagged duplicates).
     for comp in Competition.query.filter(
         db.func.lower(Competition.name).like("paris supercross%")
@@ -1346,6 +1389,13 @@ def ensure_paris_2026() -> dict[str, Any]:
         "roster_links": roster_n,
         "healed_competitions": healed,
         "remounted_orphan_picks": remounted,
+        "trackmap_images": trackmap_images,
+        "trackmap_files_ok": all(
+            (Path("static") / rel).is_file() for rel in (
+                "trackmaps/paris/paris_ladefense_aerial_1.jpg",
+                "trackmaps/paris/paris_ladefense_aerial_2.jpg",
+            )
+        ),
         "sx1_riders": len(sx1),
         "sx2_riders": len(sx2),
     }

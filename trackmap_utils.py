@@ -108,6 +108,22 @@ def ensure_sx_2027_trackmap_images() -> dict[str, Any]:
 
 
 # Official 2026 SMX playoff maps from supermotocross.com/playoffs/
+# Paris La Défense Arena — aerial layout photos (lördag / söndag, same build).
+PARIS_TRACKMAP_FILES: dict[str, list[str]] = {
+    "paris_sat": [
+        "trackmaps/paris/paris_ladefense_aerial_1.jpg",
+        "trackmaps/paris/paris_ladefense_aerial_2.jpg",
+    ],
+    "paris_sun": [
+        "trackmaps/paris/paris_ladefense_aerial_2.jpg",
+        "trackmaps/paris/paris_ladefense_aerial_1.jpg",
+    ],
+}
+PARIS_TRACKMAP_DEFAULT: list[str] = [
+    "trackmaps/paris/paris_ladefense_aerial_1.jpg",
+    "trackmaps/paris/paris_ladefense_aerial_2.jpg",
+]
+
 SMX_TRACKMAP_FILES: dict[str, list[str]] = {
     "SMX Playoff 1": [
         "trackmaps/smx/smx_playoff1_columbus.jpg",
@@ -304,6 +320,34 @@ def _score_file(fname: str, tokens: Sequence[str]) -> int:
     return best
 
 
+def is_paris_competition(competition) -> bool:
+    series = (getattr(competition, "series", None) or "").strip().upper()
+    if series == "PARIS":
+        return True
+    phase = (getattr(competition, "phase", None) or "").strip().lower()
+    if phase in PARIS_TRACKMAP_FILES:
+        return True
+    name_l = (getattr(competition, "name", None) or "").strip().lower()
+    return "paris supercross" in name_l or name_l.startswith("paris sx")
+
+
+def resolve_paris_trackmap_urls(competition) -> list[str]:
+    """Static-relative paths for Paris SX weekend (La Défense Arena aerials)."""
+    phase = (getattr(competition, "phase", None) or "").strip().lower()
+    name_l = (getattr(competition, "name", None) or "").strip().lower()
+    if not phase:
+        if "söndag" in name_l or "sunday" in name_l:
+            phase = "paris_sun"
+        elif "lördag" in name_l or "saturday" in name_l:
+            phase = "paris_sat"
+    rels = PARIS_TRACKMAP_FILES.get(phase) or PARIS_TRACKMAP_DEFAULT
+    out: list[str] = []
+    for rel in rels:
+        if (Path("static") / rel).is_file():
+            out.append(rel)
+    return out
+
+
 def is_smx_competition(competition) -> bool:
     series = (getattr(competition, "series", None) or "").strip().upper()
     if series == "SMX":
@@ -487,6 +531,10 @@ def race_background_static_url(competition) -> Optional[str]:
                 return rel
         return None
 
+    if is_paris_competition(competition):
+        urls = resolve_paris_trackmap_urls(competition)
+        return urls[0] if urls else None
+
     base = Path("static/trackmaps/compressed")
     seen: set[str] = set()
     for cand in candidates:
@@ -607,6 +655,20 @@ def get_trackmaps_for_competition(competition) -> list:
     if is_mx_competition(competition):
         urls = resolve_mx_trackmap_urls(competition.name or "")
         return as_trackmap_image_objects(urls)
+
+    if is_paris_competition(competition):
+        urls: list[str] = []
+        seen: set[str] = set()
+        for i in valid_db:
+            url = (getattr(i, "image_url", None) or "").strip()
+            if url and url not in seen:
+                urls.append(url)
+                seen.add(url)
+        for rel in resolve_paris_trackmap_urls(competition):
+            if rel not in seen:
+                urls.append(rel)
+                seen.add(rel)
+        return as_trackmap_image_objects(urls) if urls else []
 
     # SX / WSX (and other stadium series): use compressed venue heroes until
     # official track maps exist — keeps series schedule cards from looking empty.
