@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="theme-color" content="#06101f" />
+  <title>Widget — MX Fantasy League</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Saira+Extra+Condensed:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='tv_widget.css') }}?v=w2" />
+</head>
+<body class="w-pos-{{ corner }}{% if widget_user %} is-personal{% endif %}"
+      data-token="{{ token }}"
+      data-scale="{{ scale }}"
+>
+  <div class="w-bg" aria-hidden="true"></div>
+  <img class="w-rider" src="{{ url_for('static', filename='images/stjude_rider.png') }}" alt="" aria-hidden="true" />
+  <div class="w-shade" aria-hidden="true"></div>
+
+  <div class="w-anchor">
+    <div id="w-card" class="w-card">
+      <div class="w-card__inner">
+        <a class="w-hdr" href="{{ url_for('index') }}" target="_blank" rel="noopener">
+          <span class="w-hdr__slashes" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="w-hdr__brand">MX FANTASY LEAGUE</span>
+          <span id="w-upd" class="w-hdr__upd">--:--</span>
+        </a>
+
+        <a id="w-race" class="w-race" href="{{ url_for('index') }}" target="_blank" rel="noopener">
+          <span class="w-eyebrow">NÄSTA RACE <span class="w-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></span>
+          <span id="w-race-name" class="w-race__name">…</span>
+          <span id="w-race-meta" class="w-race__meta"></span>
+        </a>
+
+        <div class="w-cd" aria-live="polite">
+          <div class="w-cd__grp"><span id="w-cd-a" class="w-cd__num">00</span><span id="w-cd-a-l" class="w-cd__lbl">DAG</span></div>
+          <div class="w-cd__colon" aria-hidden="true"><i></i><i></i></div>
+          <div class="w-cd__grp"><span id="w-cd-b" class="w-cd__num">00</span><span id="w-cd-b-l" class="w-cd__lbl">TIM</span></div>
+          <div class="w-cd__colon" aria-hidden="true"><i></i><i></i></div>
+          <div class="w-cd__grp"><span id="w-cd-c" class="w-cd__num">00</span><span id="w-cd-c-l" class="w-cd__lbl">MIN</span></div>
+        </div>
+
+        {% if widget_user %}
+        <a id="w-status" class="w-status is-loading" href="{{ url_for('index') }}" target="_blank" rel="noopener">
+          <span class="w-status__icon" aria-hidden="true"></span>
+          <span class="w-status__text">
+            <span id="w-status-title" class="w-status__title">KOLLAR DIN TIPPNING…</span>
+            <span id="w-status-sub" class="w-status__sub"></span>
+          </span>
+          <span class="w-status__chev" aria-hidden="true">›</span>
+        </a>
+
+        <div id="w-me" class="w-me" hidden>
+          <div class="w-me__rank"><small>#</small><span id="w-me-rank">–</span></div>
+          <div class="w-me__info">
+            <span class="w-eyebrow">DIN PLACERING</span>
+            <span id="w-me-name" class="w-me__name"></span>
+            <span id="w-me-sub" class="w-me__sub"></span>
+          </div>
+          <div class="w-me__pts"><span id="w-me-pts">0</span><small>pts</small><span id="w-me-delta" class="w-me__delta"></span></div>
+        </div>
+        {% endif %}
+
+        <div class="w-top">
+          <span class="w-eyebrow">AMA TOPPLISTA</span>
+          <ol id="w-top" class="w-top__list"><li class="w-top__empty">Hämtar…</li></ol>
+        </div>
+
+        {% if not widget_user %}
+        <a class="w-cta" href="{{ url_for('index') }}" target="_blank" rel="noopener">
+          {% if bad_token %}Länken har gått ut — logga in och skapa en ny{% else %}Logga in på mx-fantasy.se för din egen widget{% endif %} ›
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if widget_url %}
+  <div id="w-setup" class="w-setup">
+    <h2>Din personliga widget</h2>
+    <p>Kopiera länken och klistra in den i <strong>Lively Wallpaper</strong> (<em>+</em> → URL). Den visar din placering och om du har tippat — utan att du behöver logga in där.</p>
+    <div class="w-setup__row">
+      <input id="w-setup-url" type="text" readonly value="{{ widget_url }}" />
+      <button type="button" id="w-setup-copy">Kopiera</button>
+    </div>
+    <div class="w-setup__opts">
+      <span>Hörn:</span>
+      {% for c, label in [('tl','↖'),('tr','↗'),('bl','↙'),('br','↘')] %}
+        <button type="button" class="w-opt{% if c == corner %} is-on{% endif %}" data-opt="pos" data-val="{{ c }}">{{ label }}</button>
+      {% endfor %}
+      <span>Storlek:</span>
+      {% for s, label in [('s','S'),('m','M'),('l','L')] %}
+        <button type="button" class="w-opt{% if s == size_key %} is-on{% endif %}" data-opt="size" data-val="{{ s }}">{{ label }}</button>
+      {% endfor %}
+    </div>
+    <p class="w-setup__note">Länken är personlig — dela den inte. Byter du lösenord slutar den gälla.</p>
+    <button type="button" id="w-setup-hide" class="w-setup__hide">Dölj</button>
+  </div>
+  {% endif %}
+
+  <script src="{{ url_for('static', filename='tv_widget.js') }}?v=w2" defer></script>
+</body>
+</html>
