@@ -308,12 +308,20 @@ function openWidget(cfgIn) {
     return;
   }
 
+  const iconPath = [
+    path.join(__dirname, "assets", "icon.ico"),
+    path.join(__dirname, "assets", "icon.png"),
+  ].find((p) => fs.existsSync(p));
+
   widgetWin = new BrowserWindow({
     ...bounds,
     frame: false,
     transparent: true,
     resizable: true,
-    skipTaskbar: true,
+    // Show in the Windows taskbar so the app is easy to find/focus.
+    skipTaskbar: false,
+    title: "MX Fantasy Widget",
+    icon: iconPath || undefined,
     alwaysOnTop: !!cfg.alwaysOnTop,
     backgroundColor: "#00000000",
     hasShadow: true,
@@ -331,6 +339,8 @@ function openWidget(cfgIn) {
     widgetWin = null;
     rebuildTrayMenu();
   });
+  // Clicking the taskbar button should bring the card back if it was hidden.
+  widgetWin.on("show", () => rebuildTrayMenu());
   rebuildTrayMenu();
 }
 
