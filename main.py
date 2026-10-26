@@ -958,6 +958,15 @@ def _mark_local_dev_html(response):
     ctype = (response.headers.get("Content-Type") or "").lower()
     if "text/html" not in ctype:
         return response
+    # Desktop widget / embedded TV surfaces — keep chrome clean (no LOKAL panel).
+    try:
+        path = (request.path or "").rstrip("/")
+        if path in ("/tv", "/tv/widget") or "embedded=1" in (request.query_string or b"").decode(
+            "utf-8", "ignore"
+        ):
+            return response
+    except Exception:
+        pass
     # Always try — skip only when body cannot be read/rewritten.
     try:
         if getattr(response, "direct_passthrough", False):

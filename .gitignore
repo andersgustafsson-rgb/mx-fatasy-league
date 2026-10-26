@@ -50,6 +50,10 @@ tmp/
 temp/
 *.tmp
 
+# Desktop widget (Electron)
+desktop_widget/node_modules/
+desktop_widget/dist/
+
 # Coverage reports
 htmlcov/
 .coverage

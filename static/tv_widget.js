@@ -19,6 +19,7 @@
   var token = body.getAttribute("data-token") || "";
   var userScale = parseFloat(body.getAttribute("data-scale") || "1") || 1;
   var personal = body.classList.contains("is-personal");
+  var embedded = body.classList.contains("is-embedded");
 
   function $(id) { return document.getElementById(id); }
 
@@ -52,6 +53,10 @@
   };
 
   function fit() {
+    if (embedded) {
+      document.documentElement.style.setProperty("--k", "1");
+      return;
+    }
     var k = Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H) * CARD_SCALE * userScale;
     document.documentElement.style.setProperty("--k", k.toFixed(4));
   }
@@ -350,11 +355,61 @@
     hide.addEventListener("click", function () { panel.hidden = true; });
   }
 
+  function paintChromeState(alwaysOnTop) {
+    var topBtn = $("w-chrome-top");
+    var deskBtn = $("w-chrome-desk");
+    if (topBtn) topBtn.classList.toggle("is-on", !!alwaysOnTop);
+    if (deskBtn) deskBtn.classList.toggle("is-on", !alwaysOnTop);
+  }
+
+  function bindChrome() {
+    var api = window.mxWidget;
+    var chrome = $("w-chrome");
+    var btn = $("w-chrome-btn");
+    var menu = $("w-chrome-menu");
+    if (!api || !api.isDesktopApp || !chrome || !btn || !menu) return;
+    chrome.hidden = false;
+
+    api.getConfig().then(function (cfg) {
+      paintChromeState(cfg && cfg.alwaysOnTop);
+    });
+
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      menu.hidden = !menu.hidden;
+    });
+
+    menu.addEventListener("click", function (e) {
+      var t = e.target.closest ? e.target.closest("[data-act]") : null;
+      if (!t) return;
+      var act = t.getAttribute("data-act");
+      menu.hidden = true;
+      if (act === "hide") api.hideWidget();
+      if (act === "settings") api.openSettings();
+      if (act === "top") {
+        api.setAlwaysOnTop(true).then(function (r) {
+          paintChromeState(r && r.alwaysOnTop);
+        });
+      }
+      if (act === "desk") {
+        api.setAlwaysOnTop(false).then(function (r) {
+          paintChromeState(r && r.alwaysOnTop);
+        });
+      }
+    });
+
+    document.addEventListener("click", function () {
+      menu.hidden = true;
+    });
+  }
+
   function boot() {
     fit();
     window.addEventListener("resize", fit);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitRaceName);
     bindSetup();
+    bindChrome();
     refreshAll();
     setInterval(refreshAll, POLL_MS);
     setInterval(tick, TICK_MS);

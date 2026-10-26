@@ -175,9 +175,14 @@ def tv_widget_page():
         corner = "tr"
     size_key = (request.args.get("size") or "m").strip().lower()
     scale = WIDGET_SIZES.get(size_key, 1.0)
+    embedded = (request.args.get("embedded") or "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
     widget_url = None
-    if user and not via_token:
+    if user and not via_token and not embedded:
         widget_url = url_for(
             "tv_display.tv_widget_page", t=make_widget_token(user), _external=True
         )
@@ -194,6 +199,7 @@ def tv_widget_page():
         scale=scale,
         widget_url=widget_url,
         bad_token=via_token and user is None,
+        embedded=embedded,
     )
 
 

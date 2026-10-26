@@ -1,0 +1,34 @@
+{
+  "name": "mx-fantasy-widget",
+  "version": "0.1.0",
+  "description": "MX Fantasy League desktop widget for Windows",
+  "main": "main.js",
+  "private": true,
+  "author": "MX Fantasy League",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --win --dir",
+    "dist": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "se.mxfantasy.widget",
+    "productName": "MX Fantasy Widget",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": ["portable"],
+      "icon": "assets/icon.ico"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "settings.html",
+      "assets/**/*"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}

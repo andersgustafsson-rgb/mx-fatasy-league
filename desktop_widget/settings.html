@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MX Fantasy Widget — Inställningar</title>
+  <style>
+    :root {
+      --bg: #06101f;
+      --panel: #0a1a2e;
+      --cyan: #19c3ff;
+      --text: #eef3f9;
+      --muted: #8fa3bd;
+      --err: #ff5a5f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(ellipse at 70% 0%, #0d2a44 0%, var(--bg) 55%);
+      color: var(--text);
+      padding: 28px 32px 24px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      letter-spacing: 0.5px;
+    }
+    .sub { margin: 0 0 22px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+    label {
+      display: block;
+      margin: 0 0 6px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--cyan);
+    }
+    textarea, select {
+      width: 100%;
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      font: inherit;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--panel);
+      border: 1px solid rgba(25, 195, 255, 0.35);
+      border-radius: 10px;
+      outline: none;
+    }
+    textarea { min-height: 72px; resize: vertical; }
+    textarea:focus, select:focus { border-color: var(--cyan); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .checks { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 20px; }
+    .checks label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .checks input { width: 16px; height: 16px; accent-color: var(--cyan); }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    button {
+      font: inherit;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 11px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 0;
+    }
+    .primary { background: var(--cyan); color: #041018; }
+    .ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid rgba(143, 163, 189, 0.45);
+    }
+    .msg { margin-top: 14px; font-size: 13px; color: var(--muted); min-height: 1.2em; }
+    .msg.err { color: var(--err); }
+    .msg.ok { color: #3ee08f; }
+    a.help {
+      display: inline-block;
+      margin-top: 8px;
+      color: var(--cyan);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h1>MX Fantasy Widget</h1>
+  <p class="sub">
+    Klistra in din personliga widget-länk från
+    <strong>mx-fantasy.se/tv/widget</strong> (när du är inloggad).
+    För lokal test: använd länken från din lokala sajt.
+  </p>
+
+  <label for="url">Widget-länk</label>
+  <textarea id="url" placeholder="https://mx-fantasy.se/tv/widget?t=...&pos=tr&size=m" spellcheck="false"></textarea>
+
+  <div class="row">
+    <div>
+      <label for="corner">Hörn</label>
+      <select id="corner">
+        <option value="tr">Höger upp</option>
+        <option value="tl">Vänster upp</option>
+        <option value="br">Höger ner</option>
+        <option value="bl">Vänster ner</option>
+      </select>
+    </div>
+    <div>
+      <label for="size">Storlek</label>
+      <select id="size">
+        <option value="s">S — liten</option>
+        <option value="m" selected>M — medium</option>
+        <option value="l">L — stor</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="checks">
+    <label><input type="checkbox" id="alwaysOnTop" /> Alltid överst (ligger ovanpå webbsidor)</label>
+    <label><input type="checkbox" id="autostart" /> Starta med Windows</label>
+    <p style="margin:-8px 0 16px;font-size:12px;color:var(--muted)">
+      Av = fäst bakom andra fönster (rekommenderas). Dölj via tray-ikonen eller knappen ⋯ på kortet.
+    </p>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="primary" id="save">Spara &amp; visa widget</button>
+    <button type="button" class="ghost" id="getLink">Hämta länk på sajten</button>
+  </div>
+  <p class="msg" id="msg"></p>
+  <a class="help" id="helpLocal" href="#">Tips för lokal test →</a>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const msg = $("msg");
+
+    function show(text, kind) {
+      msg.textContent = text || "";
+      msg.className = "msg" + (kind ? " " + kind : "");
+    }
+
+    function applyToForm(cfg) {
+      $("url").value = cfg.url || "";
+      $("corner").value = cfg.corner || "tr";
+      $("size").value = cfg.size || "m";
+      $("alwaysOnTop").checked = !!cfg.alwaysOnTop;
+      $("autostart").checked = !!cfg.autostart;
+    }
+
+    function readForm() {
+      return {
+        url: ($("url").value || "").trim(),
+        corner: $("corner").value,
+        size: $("size").value,
+        alwaysOnTop: $("alwaysOnTop").checked,
+        autostart: $("autostart").checked,
+      };
+    }
+
+    $("save").addEventListener("click", async () => {
+      const cfg = readForm();
+      if (!cfg.url) {
+        show("Klistra in widget-länken först.", "err");
+        return;
+      }
+      if (!/^https?:\/\//i.test(cfg.url)) {
+        show("Länken måste börja med http:// eller https://", "err");
+        return;
+      }
+      const res = await window.mxWidget.saveConfig(cfg);
+      if (res && res.ok) {
+        show("Sparat. Widgeten öppnas…", "ok");
+        await window.mxWidget.openWidget();
+      } else {
+        show((res && res.error) || "Kunde inte spara.", "err");
+      }
+    });
+
+    $("getLink").addEventListener("click", () => {
+      window.mxWidget.openExternal("https://mx-fantasy.se/tv/widget");
+    });
+
+    $("helpLocal").addEventListener("click", (e) => {
+      e.preventDefault();
+      show(
+        "1) Starta sajten lokalt. 2) Öppna /tv/widget inloggad. 3) Kopiera länken. 4) Klistra in här. Byt gärna mx-fantasy.se mot 127.0.0.1:5000 i länken.",
+        ""
+      );
+    });
+
+    window.mxWidget.getConfig().then(applyToForm);
+  </script>
+</body>
+</html>

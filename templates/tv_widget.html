@@ -10,9 +10,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Saira+Extra+Condensed:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='tv_widget.css') }}?v=w2" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='tv_widget.css') }}?v=w4" />
 </head>
-<body class="w-pos-{{ corner }}{% if widget_user %} is-personal{% endif %}"
+<body class="w-pos-{{ corner }}{% if widget_user %} is-personal{% endif %}{% if embedded %} is-embedded{% endif %}"
       data-token="{{ token }}"
       data-scale="{{ scale }}"
 >
@@ -23,6 +23,15 @@
   <div class="w-anchor">
     <div id="w-card" class="w-card">
       <div class="w-card__inner">
+        <div id="w-chrome" class="w-chrome" hidden>
+          <button type="button" id="w-chrome-btn" class="w-chrome__btn" aria-label="Widget-meny" title="Widget-meny">⋯</button>
+          <div id="w-chrome-menu" class="w-chrome__menu" hidden>
+            <button type="button" data-act="hide">Dölj</button>
+            <button type="button" data-act="top" id="w-chrome-top">Alltid överst</button>
+            <button type="button" data-act="desk" id="w-chrome-desk">Fäst bakom fönster</button>
+            <button type="button" data-act="settings">Inställningar</button>
+          </div>
+        </div>
         <a class="w-hdr" href="{{ url_for('index') }}" target="_blank" rel="noopener">
           <span class="w-hdr__slashes" aria-hidden="true"><i></i><i></i><i></i></span>
           <span class="w-hdr__brand">MX FANTASY LEAGUE</span>
@@ -101,6 +110,6 @@
   </div>
   {% endif %}
 
-  <script src="{{ url_for('static', filename='tv_widget.js') }}?v=w2" defer></script>
+  <script src="{{ url_for('static', filename='tv_widget.js') }}?v=w4" defer></script>
 </body>
 </html>

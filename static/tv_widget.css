@@ -453,3 +453,115 @@ a { color: inherit; text-decoration: none; }
   background: transparent;
   border: 1px solid rgba(143, 163, 189, 0.4);
 }
+
+/* ---------- Embedded (desktop app window) ---------- */
+html:has(body.is-embedded),
+body.is-embedded {
+  background: transparent !important;
+}
+body.is-embedded .w-bg,
+body.is-embedded .w-rider,
+body.is-embedded .w-shade,
+body.is-embedded .w-setup,
+body.is-embedded .mx-local-dev-badge {
+  display: none !important;
+}
+body.is-embedded .w-anchor {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: auto;
+  min-height: 100%;
+  transform: none !important;
+  display: block;
+}
+body.is-embedded .w-card {
+  width: 100%;
+  height: auto;
+  min-height: 100%;
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.55));
+}
+body.is-embedded .w-card__inner {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 22px 20px;
+  position: relative;
+}
+body.is-embedded .w-race__name {
+  font-size: clamp(42px, 12vw, 84px);
+}
+body.is-embedded .w-cd__num {
+  font-size: clamp(36px, 10vw, 68px);
+}
+body.is-embedded .w-hdr__brand {
+  font-size: clamp(20px, 5.5vw, 30px);
+}
+body.is-embedded .w-me__rank {
+  font-size: clamp(44px, 11vw, 64px);
+  min-width: 72px;
+}
+body.is-embedded .w-status { margin-top: 14px; padding: 12px 14px; }
+body.is-embedded .w-status__title {
+  font-size: clamp(16px, 4vw, 22px);
+}
+body.is-embedded .w-me { margin-top: 12px; padding-top: 10px; }
+body.is-embedded .w-top { margin-top: 12px; padding-top: 10px; }
+body.is-embedded .w-top__list li {
+  height: 34px;
+  font-size: 18px;
+}
+
+/* Desktop app chrome (⋯ menu) */
+.w-chrome {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 30;
+}
+.w-chrome__btn {
+  width: 34px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(25, 195, 255, 0.45);
+  border-radius: 8px;
+  background: rgba(6, 18, 34, 0.85);
+  color: #19c3ff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.w-chrome__btn:hover { background: rgba(25, 195, 255, 0.18); }
+.w-chrome__menu {
+  position: absolute;
+  top: 34px;
+  right: 0;
+  min-width: 190px;
+  padding: 6px;
+  background: #0a1a2e;
+  border: 1px solid rgba(25, 195, 255, 0.4);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.w-chrome__menu[hidden] { display: none; }
+.w-chrome__menu button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #eef3f9;
+  text-align: left;
+  padding: 9px 11px;
+  border-radius: 7px;
+  font: 600 13px/1.2 system-ui, "Segoe UI", sans-serif;
+  cursor: pointer;
+}
+.w-chrome__menu button:hover { background: rgba(25, 195, 255, 0.15); }
+.w-chrome__menu button.is-on {
+  color: #19c3ff;
+}
+body.is-embedded .w-hdr__upd { margin-right: 40px; }
