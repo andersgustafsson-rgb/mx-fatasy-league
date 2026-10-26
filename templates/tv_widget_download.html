@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,follow" />
+  <title>Ladda ner skrivbordswidget — MX Fantasy League</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="mx-auto max-w-lg px-4 py-10">
+    <p class="text-cyan-400 text-xs font-bold tracking-widest uppercase mb-2">Windows</p>
+    <h1 class="text-3xl font-extrabold tracking-tight mb-3">MX Fantasy Widget</h1>
+    <p class="text-slate-300 text-sm leading-relaxed mb-6">
+      En liten skrivbordsapp med nedräkning, tippstatus och din placering.
+      Ingen Lively Wallpaper behövs.
+    </p>
+
+    {% if exe_ready %}
+    <a href="{{ exe_url }}"
+       class="inline-flex w-full items-center justify-center rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-extrabold px-4 py-3.5 mb-4">
+      Ladda ner MX-Fantasy-Widget.exe
+    </a>
+    {% else %}
+    <div class="rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 mb-4">
+      Installationsfilen är inte uppladdad till servern ännu. Använd den lokala
+      <code class="text-amber-50">desktop_widget\start.bat</code> under tiden, eller kom tillbaka snart.
+    </div>
+    {% endif %}
+
+    <ol class="space-y-3 text-sm text-slate-300 list-decimal list-inside mb-8">
+      <li>Ladda ner och öppna <strong class="text-white">MX-Fantasy-Widget.exe</strong>.</li>
+      <li>Gå till <a class="text-cyan-300 underline" href="{{ widget_page }}">din widget-sida</a> (inloggad) och klicka <strong class="text-white">Kopiera</strong>.</li>
+      <li>Klistra in länken i appen → <strong class="text-white">Spara &amp; visa widget</strong>.</li>
+      <li>Klick på tippstatus / race öppnas i din <strong class="text-white">standardwebbläsare</strong>.</li>
+    </ol>
+
+    <a href="{{ url_for('index') }}" class="text-sm text-cyan-300 underline">← Tillbaka till startsidan</a>
+  </main>
+</body>
+</html>

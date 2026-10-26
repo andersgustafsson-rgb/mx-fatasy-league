@@ -4,7 +4,16 @@ from __future__ import annotations
 import hashlib
 from datetime import date, datetime
 
-from flask import Blueprint, current_app, jsonify, render_template, request, session, url_for
+from flask import (
+    Blueprint,
+    current_app,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from itsdangerous import BadSignature, URLSafeSerializer
 
 bp = Blueprint("tv_display", __name__)
@@ -200,6 +209,45 @@ def tv_widget_page():
         widget_url=widget_url,
         bad_token=via_token and user is None,
         embedded=embedded,
+    )
+
+
+# Hosted on GitHub Releases (binary is ~75MB — not committed to the repo).
+WIDGET_EXE_RELEASE_URL = (
+    "https://github.com/andersgustafsson-rgb/mx-fatasy-league/releases/"
+    "latest/download/MX-Fantasy-Widget.exe"
+)
+
+
+@bp.get("/tv/widget/download")
+def tv_widget_download():
+    """Download page + optional local/static binary for the Windows desktop widget."""
+    from pathlib import Path
+
+    from flask import current_app, send_from_directory
+
+    downloads = Path(current_app.root_path) / "static" / "downloads"
+    exe_name = "MX-Fantasy-Widget.exe"
+    exe_path = downloads / exe_name
+    # ?file=1 → raw download when a local copy exists (dev / manual upload).
+    if (request.args.get("file") or "").strip() in ("1", "true", "yes"):
+        if exe_path.is_file():
+            return send_from_directory(
+                downloads,
+                exe_name,
+                as_attachment=True,
+                download_name=exe_name,
+            )
+        return redirect(WIDGET_EXE_RELEASE_URL)
+
+    local_url = (
+        url_for("tv_display.tv_widget_download", file=1) if exe_path.is_file() else None
+    )
+    return render_template(
+        "tv_widget_download.html",
+        exe_ready=True,
+        exe_url=local_url or WIDGET_EXE_RELEASE_URL,
+        widget_page=url_for("tv_display.tv_widget_page"),
     )
 
 

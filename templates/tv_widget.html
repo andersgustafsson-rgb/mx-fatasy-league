@@ -90,7 +90,9 @@
   {% if widget_url %}
   <div id="w-setup" class="w-setup">
     <h2>Din personliga widget</h2>
-    <p>Kopiera länken och klistra in den i <strong>Lively Wallpaper</strong> (<em>+</em> → URL). Den visar din placering och om du har tippat — utan att du behöver logga in där.</p>
+    <p>Kopiera länken och klistra in den i <strong>MX Fantasy Widget</strong> för Windows
+      (<a href="{{ url_for('tv_display.tv_widget_download') }}" class="text-cyan-300 underline">ladda ner här</a>).
+      Den visar din placering och om du har tippat — utan att du behöver logga in i appen.</p>
     <div class="w-setup__row">
       <input id="w-setup-url" type="text" readonly value="{{ widget_url }}" />
       <button type="button" id="w-setup-copy">Kopiera</button>

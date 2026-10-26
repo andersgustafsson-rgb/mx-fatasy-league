@@ -3353,6 +3353,22 @@
             </div>
           </div>
 
+          <div id="desktop-widget-banner" class="max-w-md mx-auto w-full">
+            <div class="relative rounded-xl border border-cyan-400/30 bg-gray-900/60 backdrop-blur-sm shadow-lg p-4">
+              <div class="flex items-start gap-3">
+                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-400/25 flex items-center justify-center text-cyan-300 text-lg font-black" aria-hidden="true">M</div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-extrabold text-white">Skrivbordswidget (Windows)</div>
+                  <div class="text-xs text-gray-200 mt-1">Nedräkning, tippstatus och din placering i ett hörn — utan Lively.</div>
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    <a href="{{ url_for('tv_display.tv_widget_download') }}" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-gray-950 text-xs font-extrabold">Ladda ner för Windows</a>
+                    <a href="{{ url_for('tv_display.tv_widget_page') }}" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-500/30 bg-gray-500/10 text-gray-100 text-xs font-bold">Hämta din länk</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {% if not is_logged_in %}
           <div class="flex justify-center px-1">
             <button type="button" onclick="openGuestSignup();" class="group w-full max-w-xl rounded-2xl border-2 border-cyan-400/50 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 px-5 py-5 text-left shadow-2xl shadow-cyan-950/50 transition hover:border-cyan-300 hover:shadow-cyan-500/20">
@@ -4166,6 +4182,16 @@
                 </div>
                 <div id="settings-pwa-steps" class="hidden mt-4 rounded-lg border border-slate-600/50 bg-slate-900/50 p-3.5 text-sm text-slate-300 leading-relaxed">
                   <div id="settings-pwa-steps-body" class="space-y-3"></div>
+                </div>
+                <div class="mt-5 pt-5 border-t border-slate-700/80">
+                  <h3 class="text-sm font-bold text-cyan-300 mb-1">Windows-skrivbord</h3>
+                  <p class="text-sm text-slate-300 mb-3 leading-relaxed">
+                    Ladda ner skrivbordswidgeten för PC. Klistra sedan in din personliga länk från
+                    <a href="{{ url_for('tv_display.tv_widget_page') }}" class="text-cyan-300 underline">TV-widget</a>.
+                  </p>
+                  <div class="rp-btn-stack">
+                    <a href="{{ url_for('tv_display.tv_widget_download') }}" class="rp-btn rp-btn--block rp-btn--accent">Ladda ner för Windows</a>
+                  </div>
                 </div>
                 {% if is_logged_in %}
                 <div class="mt-5 pt-5 border-t border-slate-700/80">

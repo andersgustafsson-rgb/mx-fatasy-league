@@ -253,7 +253,25 @@ async function fitWidgetToContent() {
   }
 }
 
+function openInDefaultBrowser(url) {
+  if (!url || !/^https?:\/\//i.test(url)) return false;
+  shell.openExternal(url);
+  return true;
+}
+
 function wireWidget(win) {
+  // Links like "DU HAR TIPPAT" must open in the user's default browser, not Electron.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    openInDefaultBrowser(url);
+    return { action: "deny" };
+  });
+  win.webContents.on("will-navigate", (event, url) => {
+    try {
+      if (new URL(url).pathname.includes("/tv/widget")) return;
+    } catch (_) {}
+    event.preventDefault();
+    openInDefaultBrowser(url);
+  });
   win.webContents.on("did-finish-load", () => {
     setTimeout(fitWidgetToContent, 400);
     setTimeout(fitWidgetToContent, 1200);

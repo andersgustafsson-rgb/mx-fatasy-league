@@ -53,6 +53,8 @@ temp/
 # Desktop widget (Electron)
 desktop_widget/node_modules/
 desktop_widget/dist/
+# Large widget builds — prefer GitHub Releases; allow a tracked copy when needed for Render.
+# static/downloads/*.exe
 
 # Coverage reports
 htmlcov/
