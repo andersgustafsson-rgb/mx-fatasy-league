@@ -23,6 +23,8 @@ const DEFAULTS = {
   url: "",
   corner: "tr",
   size: "m",
+  // corner = big card in a screen corner; bar = thin strip above the taskbar (weather-widget style)
+  displayMode: "corner",
   alwaysOnTop: false,
   autostart: false,
 };
@@ -103,6 +105,33 @@ function cornerBounds(corner, sizeKey, width, height) {
   return { x: Math.round(x), y: Math.round(y), width: Math.round(w), height: Math.round(h) };
 }
 
+/** Thin chip just above the taskbar (right side), similar vibe to the weather widget. */
+function barBounds() {
+  const display = screen.getPrimaryDisplay();
+  const wa = display.workArea;
+  const width = Math.min(520, Math.max(360, Math.floor(wa.width * 0.32)));
+  const height = 44;
+  const margin = 8;
+  return {
+    x: Math.round(wa.x + wa.width - width - margin),
+    y: Math.round(wa.y + wa.height - height - margin),
+    width,
+    height,
+  };
+}
+
+function parseWidgetOriginToken(cfg) {
+  try {
+    const u = new URL((cfg.url || "").trim());
+    return {
+      origin: u.origin,
+      token: u.searchParams.get("t") || "",
+    };
+  } catch {
+    return { origin: "https://mx-fantasy.se", token: "" };
+  }
+}
+
 function trayIcon() {
   // Windows tray does not reliably render SVG data-URLs — use PNG files.
   const candidates = [
@@ -160,7 +189,25 @@ function rebuildTrayMenu() {
     { label: "Inställningar", click: () => openSettings() },
     { type: "separator" },
     {
+      label: "Visningsläge",
+      submenu: [
+        {
+          label: "Hörnkort (stort)",
+          type: "radio",
+          checked: (cfg.displayMode || "corner") === "corner",
+          click: () => openWidget(saveConfig({ ...cfg, displayMode: "corner" })),
+        },
+        {
+          label: "Bottenlist (som väder-widget)",
+          type: "radio",
+          checked: cfg.displayMode === "bar",
+          click: () => openWidget(saveConfig({ ...cfg, displayMode: "bar" })),
+        },
+      ],
+    },
+    {
       label: "Hörn",
+      enabled: (cfg.displayMode || "corner") === "corner",
       submenu: ["tr", "tl", "br", "bl"].map((c) => ({
         label: { tr: "Höger upp", tl: "Vänster upp", br: "Höger ner", bl: "Vänster ner" }[c],
         type: "radio",
@@ -170,6 +217,7 @@ function rebuildTrayMenu() {
     },
     {
       label: "Storlek",
+      enabled: (cfg.displayMode || "corner") === "corner",
       submenu: ["s", "m", "l"].map((s) => ({
         label: s.toUpperCase(),
         type: "radio",
@@ -283,26 +331,48 @@ function wireWidget(win) {
     openInDefaultBrowser(url);
   });
   win.webContents.on("did-finish-load", () => {
-    setTimeout(fitWidgetToContent, 400);
-    setTimeout(fitWidgetToContent, 1200);
+    const cfg = loadConfig();
+    if ((cfg.displayMode || "corner") === "corner") {
+      setTimeout(fitWidgetToContent, 400);
+      setTimeout(fitWidgetToContent, 1200);
+    }
   });
   win.on("hide", () => rebuildTrayMenu());
   win.on("show", () => rebuildTrayMenu());
 }
 
+function loadWidgetContent(win, cfg) {
+  const mode = cfg.displayMode || "corner";
+  if (mode === "bar") {
+    const { origin, token } = parseWidgetOriginToken(cfg);
+    win.loadFile(path.join(__dirname, "bar.html"), {
+      query: { origin, token },
+    });
+    return;
+  }
+  const url = buildWidgetUrl(cfg);
+  win.loadURL(url);
+}
+
 function openWidget(cfgIn) {
   const cfg = cfgIn || loadConfig();
-  const url = buildWidgetUrl(cfg);
-  if (!url) {
+  if (!(cfg.url || "").trim()) {
     openSettings();
     return;
   }
 
-  const bounds = cornerBounds(cfg.corner || "tr", cfg.size || "m");
+  const mode = cfg.displayMode || "corner";
+  const isBar = mode === "bar";
+  const bounds = isBar ? barBounds() : cornerBounds(cfg.corner || "tr", cfg.size || "m");
+  // Bar sits above the taskbar — keep it visible like the weather chip.
+  const onTop = isBar ? true : !!cfg.alwaysOnTop;
+
   if (widgetWin && !widgetWin.isDestroyed()) {
     widgetWin.setBounds(bounds);
-    widgetWin.setAlwaysOnTop(!!cfg.alwaysOnTop);
-    widgetWin.loadURL(url);
+    widgetWin.setAlwaysOnTop(onTop);
+    widgetWin.setSkipTaskbar(true);
+    widgetWin.setResizable(!isBar);
+    loadWidgetContent(widgetWin, cfg);
     widgetWin.show();
     rebuildTrayMenu();
     return;
@@ -317,12 +387,11 @@ function openWidget(cfgIn) {
     ...bounds,
     frame: false,
     transparent: true,
-    resizable: true,
-    // Show in the Windows taskbar so the app is easy to find/focus.
-    skipTaskbar: false,
+    resizable: !isBar,
+    skipTaskbar: true,
     title: "MX Fantasy Widget",
     icon: iconPath || undefined,
-    alwaysOnTop: !!cfg.alwaysOnTop,
+    alwaysOnTop: onTop,
     backgroundColor: "#00000000",
     hasShadow: true,
     webPreferences: {
@@ -334,13 +403,11 @@ function openWidget(cfgIn) {
   });
   widgetWin.setMenuBarVisibility(false);
   wireWidget(widgetWin);
-  widgetWin.loadURL(url);
+  loadWidgetContent(widgetWin, cfg);
   widgetWin.on("closed", () => {
     widgetWin = null;
     rebuildTrayMenu();
   });
-  // Clicking the taskbar button should bring the card back if it was hidden.
-  widgetWin.on("show", () => rebuildTrayMenu());
   rebuildTrayMenu();
 }
 

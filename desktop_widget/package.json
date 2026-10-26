@@ -1,6 +1,6 @@
 {
   "name": "mx-fantasy-widget",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MX Fantasy League desktop widget for Windows",
   "main": "main.js",
   "private": true,
@@ -25,6 +25,7 @@
       "main.js",
       "preload.js",
       "settings.html",
+      "bar.html",
       "assets/**/*"
     ]
   },

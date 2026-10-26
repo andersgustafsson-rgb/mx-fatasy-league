@@ -104,7 +104,17 @@
   <label for="url">Widget-länk</label>
   <textarea id="url" placeholder="https://mx-fantasy.se/tv/widget?t=...&pos=tr&size=m" spellcheck="false"></textarea>
 
-  <div class="row">
+  <label for="displayMode">Visningsläge</label>
+  <select id="displayMode">
+    <option value="corner">Hörnkort — stort kort i ett hörn</option>
+    <option value="bar">Bottenlist — tunn list ovanför aktivitetsfältet (som väder-widgeten)</option>
+  </select>
+  <p style="margin:-8px 0 16px;font-size:12px;color:var(--muted)">
+    Windows tillåter tyvärr inte egna appar <em>inne i</em> aktivitetsfältet som Microsofts väder.
+    Bottenlisten är närmaste känslan: liten live-rad precis ovanför listen.
+  </p>
+
+  <div class="row" id="cornerRow">
     <div>
       <label for="corner">Hörn</label>
       <select id="corner">
@@ -125,10 +135,11 @@
   </div>
 
   <div class="checks">
-    <label><input type="checkbox" id="alwaysOnTop" /> Alltid överst (ligger ovanpå webbsidor)</label>
+    <label id="alwaysOnTopWrap"><input type="checkbox" id="alwaysOnTop" /> Alltid överst (ligger ovanpå webbsidor)</label>
     <label><input type="checkbox" id="autostart" /> Starta med Windows</label>
     <p style="margin:-8px 0 16px;font-size:12px;color:var(--muted)">
-      Av = fäst bakom andra fönster (rekommenderas). Dölj via tray-ikonen eller knappen ⋯ på kortet.
+      Appen syns i systemfältet (tray) bakom ^ — inte som vanlig app nere i listen.
+      Dölj via tray-ikonen eller ⋯ på kortet/listen.
     </p>
   </div>
 
@@ -148,23 +159,35 @@
       msg.className = "msg" + (kind ? " " + kind : "");
     }
 
+    function syncModeUi() {
+      const bar = $("displayMode").value === "bar";
+      $("cornerRow").style.opacity = bar ? "0.45" : "1";
+      $("cornerRow").style.pointerEvents = bar ? "none" : "";
+      $("alwaysOnTopWrap").style.display = bar ? "none" : "";
+    }
+
     function applyToForm(cfg) {
       $("url").value = cfg.url || "";
+      $("displayMode").value = cfg.displayMode === "bar" ? "bar" : "corner";
       $("corner").value = cfg.corner || "tr";
       $("size").value = cfg.size || "m";
       $("alwaysOnTop").checked = !!cfg.alwaysOnTop;
       $("autostart").checked = !!cfg.autostart;
+      syncModeUi();
     }
 
     function readForm() {
       return {
         url: ($("url").value || "").trim(),
+        displayMode: $("displayMode").value,
         corner: $("corner").value,
         size: $("size").value,
         alwaysOnTop: $("alwaysOnTop").checked,
         autostart: $("autostart").checked,
       };
     }
+
+    $("displayMode").addEventListener("change", syncModeUi);
 
     $("save").addEventListener("click", async () => {
       const cfg = readForm();

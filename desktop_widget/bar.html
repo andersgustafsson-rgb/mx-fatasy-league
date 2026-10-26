@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MX Fantasy</title>
+  <style>
+    :root {
+      --bg: #0a1524;
+      --cyan: #19c3ff;
+      --text: #eef3f9;
+      --muted: #8fa3bd;
+      --ok: #3ee08f;
+      --warn: #ffb547;
+      --bad: #ff5a5f;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+    .bar {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 12px 0 10px;
+      background: linear-gradient(180deg, #0d2138 0%, var(--bg) 100%);
+      border: 1px solid rgba(25, 195, 255, 0.45);
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+      color: var(--text);
+    }
+    .mark {
+      flex: 0 0 auto;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background: var(--cyan);
+      color: #041018;
+      font-weight: 900;
+      font-size: 14px;
+      display: grid;
+      place-items: center;
+    }
+    .race {
+      min-width: 0;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.05;
+    }
+    .race strong {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .race span {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cd {
+      flex: 0 0 auto;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+      font-size: 16px;
+      color: var(--cyan);
+      letter-spacing: 0.5px;
+    }
+    .status {
+      flex: 0 0 auto;
+      max-width: 150px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      -webkit-app-region: no-drag;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .status.is-ok { color: var(--ok); background: rgba(62, 224, 143, 0.12); border-color: rgba(62, 224, 143, 0.45); }
+    .status.is-none { color: var(--bad); background: rgba(255, 90, 95, 0.12); border-color: rgba(255, 90, 95, 0.45); }
+    .status.is-partial { color: var(--warn); background: rgba(255, 181, 71, 0.12); border-color: rgba(255, 181, 71, 0.45); }
+    .status.is-locked, .status.is-loading { color: var(--muted); background: rgba(143, 163, 189, 0.1); border-color: rgba(143, 163, 189, 0.35); }
+    .btn {
+      -webkit-app-region: no-drag;
+      flex: 0 0 auto;
+      width: 28px;
+      height: 28px;
+      border: 1px solid rgba(25, 195, 255, 0.35);
+      border-radius: 7px;
+      background: transparent;
+      color: var(--cyan);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .btn:hover { background: rgba(25, 195, 255, 0.15); }
+  </style>
+</head>
+<body>
+  <div class="bar" title="MX Fantasy Widget">
+    <div class="mark" aria-hidden="true">M</div>
+    <div class="race">
+      <strong id="race">…</strong>
+      <span id="meta">Hämtar…</span>
+    </div>
+    <div class="cd" id="cd">--:--:--</div>
+    <button type="button" class="status is-loading" id="status">…</button>
+    <button type="button" class="btn" id="menu" title="Meny">⋯</button>
+  </div>
+  <script>
+    (function () {
+      const params = new URLSearchParams(location.search);
+      const origin = (params.get("origin") || "https://mx-fantasy.se").replace(/\/$/, "");
+      const token = params.get("token") || "";
+      let remain = null;
+      let raceId = null;
+      let locked = false;
+      let picks = null;
+
+      const $ = (id) => document.getElementById(id);
+
+      function pad(n) {
+        n = Math.max(0, Math.floor(n));
+        return n < 10 ? "0" + n : String(n);
+      }
+
+      function withToken(path) {
+        const join = path.indexOf("?") >= 0 ? "&" : "?";
+        return origin + path + (token ? join + "t=" + encodeURIComponent(token) : "");
+      }
+
+      function paintCd() {
+        const s = remain == null ? 0 : Math.max(0, remain);
+        const d = Math.floor(s / 86400);
+        const h = Math.floor((s % 86400) / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        $("cd").textContent = d > 0 ? d + "d " + pad(h) + "h" : pad(h) + ":" + pad(m) + ":" + pad(s % 60);
+      }
+
+      function paintStatus() {
+        const el = $("status");
+        let cls = "is-loading";
+        let text = "…";
+        if (!raceId) {
+          cls = "is-locked";
+          text = "Inget race";
+        } else if (locked) {
+          cls = picks === "has_picks" ? "is-ok" : "is-locked";
+          text = picks === "has_picks" ? "Tippat" : "Låst";
+        } else if (picks === "has_picks") {
+          cls = "is-ok";
+          text = "Tippat";
+        } else if (picks === "partial_picks") {
+          cls = "is-partial";
+          text = "Nästan klart";
+        } else if (picks === "no_picks") {
+          cls = "is-none";
+          text = "Ej tippat";
+        }
+        el.className = "status " + cls;
+        el.textContent = text;
+      }
+
+      async function refresh() {
+        try {
+          const race = await fetch(origin + "/race_countdown?mode=real", { cache: "no-store" }).then((r) => r.json());
+          const nr = (race && race.next_race) || {};
+          raceId = nr.id || null;
+          locked = !!(race && race.picks_locked);
+          $("race").textContent = String(nr.name || "Inget race").toUpperCase();
+          const meta = [];
+          if (nr.location) meta.push(String(nr.location));
+          $("meta").textContent = meta.join(" · ") || "MX Fantasy League";
+          const rs = (race.countdown && race.countdown.race_start) || {};
+          remain = typeof rs.total_seconds === "number" ? rs.total_seconds : 0;
+          paintCd();
+
+          if (token && raceId) {
+            const me = await fetch(withToken("/tv/me?competition_id=" + raceId), { cache: "no-store" }).then((r) => r.json());
+            picks = me && me.picks_status;
+          }
+          paintStatus();
+        } catch (e) {
+          $("meta").textContent = "Offline";
+        }
+      }
+
+      $("status").addEventListener("click", () => {
+        const url = raceId ? origin + "/race_picks/" + raceId : origin + "/";
+        if (window.mxWidget && window.mxWidget.openExternal) window.mxWidget.openExternal(url);
+      });
+      $("menu").addEventListener("click", () => {
+        if (window.mxWidget && window.mxWidget.openSettings) window.mxWidget.openSettings();
+      });
+
+      refresh();
+      setInterval(refresh, 60000);
+      setInterval(() => {
+        if (remain != null && remain > 0) {
+          remain -= 1;
+          paintCd();
+        }
+      }, 1000);
+    })();
+  </script>
+</body>
+</html>
