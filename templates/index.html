@@ -3215,6 +3215,7 @@
                 {% if is_logged_in and my_team %}Mitt säsongsteam{% else %}Skapa säsongsteam{% endif %}
               </button>
               <a href="{{ url_for('manual_page') }}" class="home-sidebar-foot__btn home-sidebar-foot__page" target="_blank" rel="noopener" data-i18n="tab.manual">Manual</a>
+              <a href="/tv" class="home-sidebar-foot__btn home-sidebar-foot__page" target="_blank" rel="noopener">TV-läge</a>
               <button type="button" class="tab-btn home-sidebar-foot__btn settings-btn" data-tab="settings" data-i18n="tab.settings">Inställningar</button>
               {% if is_admin %}
               <a href="{{ url_for('admin_page') }}" class="home-sidebar-foot__btn home-sidebar-foot__btn--admin">Admin</a>
@@ -3245,6 +3246,7 @@
                 {% if season_team_promo_live and season_team_promo_copy %}data-promo-hint="{{ season_team_promo_copy.tab_hint }}"{% endif %}
                 data-i18n="tab.team.create">Skapa säsongsteam</button>
               <a href="{{ url_for('manual_page') }}" class="home-sidebar-foot__btn home-sidebar-foot__page" target="_blank" rel="noopener" data-i18n="tab.manual">Manual</a>
+              <a href="/tv" class="home-sidebar-foot__btn home-sidebar-foot__page" target="_blank" rel="noopener">TV-läge</a>
               <button type="button" class="tab-btn home-sidebar-foot__btn settings-btn" data-tab="settings" data-i18n="tab.settings">Inställningar</button>
               <div class="mx-lang-toggle home-sidebar-lang" role="group" aria-label="Välj språk / Choose language">
                 <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>

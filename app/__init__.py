@@ -69,6 +69,12 @@ def create_app() -> Flask:
 		# Allow app to start even if blueprints are not present yet
 		pass
 
+	try:
+		from .routes.tv_display import bp as tv_display_bp  # noqa: F401
+		app.register_blueprint(tv_display_bp)
+	except Exception:
+		pass
+
 	# API blueprint (safe to register even before routes are fully migrated)
 	try:
 		from .routes.api import bp as api_bp  # noqa: F401

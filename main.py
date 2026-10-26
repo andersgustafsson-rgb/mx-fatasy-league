@@ -521,6 +521,12 @@ except Exception:
     pass
 
 try:
+    from app.routes.tv_display import bp as tv_display_bp  # type: ignore
+    app.register_blueprint(tv_display_bp)
+except Exception as e:
+    print(f"TV display blueprint not loaded: {e}")
+
+try:
     from app.routes.api import bp as api_bp  # type: ignore
     app.register_blueprint(api_bp)
 except Exception:
