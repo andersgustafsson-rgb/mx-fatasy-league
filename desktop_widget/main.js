@@ -104,17 +104,27 @@ function cornerBounds(corner, sizeKey, width, height) {
 }
 
 function trayIcon() {
-  // 32x32 cyan rounded square with white M — readable in the system tray.
-  const svg =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">' +
-    '<rect width="32" height="32" rx="7" fill="#0a1a2e"/>' +
-    '<rect x="2" y="2" width="28" height="28" rx="6" fill="none" stroke="#19c3ff" stroke-width="2"/>' +
-    '<text x="16" y="23" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" ' +
-    'font-size="16" font-weight="900" fill="#19c3ff">M</text></svg>';
-  const img = nativeImage.createFromDataURL(
-    "data:image/svg+xml;base64," + Buffer.from(svg).toString("base64")
-  );
-  return img.isEmpty() ? nativeImage.createEmpty() : img;
+  // Windows tray does not reliably render SVG data-URLs — use PNG files.
+  const candidates = [
+    path.join(__dirname, "assets", "tray32.png"),
+    path.join(__dirname, "assets", "icon.png"),
+    path.join(__dirname, "assets", "tray16.png"),
+  ];
+  for (const file of candidates) {
+    if (!fs.existsSync(file)) continue;
+    let img = nativeImage.createFromPath(file);
+    if (img.isEmpty()) continue;
+    // Tray icons on Windows look best around 16–32 px.
+    const size = img.getSize();
+    if (size.width > 32 || size.height > 32) {
+      img = img.resize({ width: 32, height: 32, quality: "best" });
+    }
+    return img;
+  }
+  // Last-resort embedded PNG (cyan square + dark M) so the slot is never blank.
+  const png =
+    "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAA1UlEQVR4nNWWzQ3CMAyFnSfEGaknTmUhpmUEFmEBZmhFpUrECmr8G/FurWK/z66bpJwv80Jfmh4vitT7fquekWne8kCmecsL2eYcolyfSzUD3t/7qLjSAuCDoulSbw7QYMFSUSqARBJYRCUOAYgQpAFHXZB2CTRY0AT9qlIzI6DBwt8ATGwb5e3W/qKgwYIleK/askFBsrj3RJScnCCjrNszpAHetye4ZlMAIsPEHcATDJlmLZ2sCawgJfJa3iNEXTZ79PHeZmAExO4J/iLTvALIguAeK6rMScMEEDC8AAAAAElFTkSuQmCC";
+  return nativeImage.createFromDataURL("data:image/png;base64," + png);
 }
 
 function createTray() {
