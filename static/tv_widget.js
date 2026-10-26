@@ -362,6 +362,29 @@
     if (deskBtn) deskBtn.classList.toggle("is-on", !alwaysOnTop);
   }
 
+  function bindDesktopClicks() {
+    var api = window.mxWidget;
+    if (!api || !api.isDesktopApp) return;
+
+    // Open all http(s) links in the OS default browser (not inside Electron).
+    document.addEventListener(
+      "click",
+      function (e) {
+        var a = e.target.closest ? e.target.closest("a[href]") : null;
+        if (!a) return;
+        var href = a.getAttribute("href") || "";
+        if (!/^https?:\/\//i.test(href) && href.charAt(0) === "/") {
+          href = window.location.origin + href;
+        }
+        if (!/^https?:\/\//i.test(href)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        api.openExternal(href);
+      },
+      true
+    );
+  }
+
   function bindChrome() {
     var api = window.mxWidget;
     var chrome = $("w-chrome");
@@ -381,6 +404,8 @@
     });
 
     menu.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
       var t = e.target.closest ? e.target.closest("[data-act]") : null;
       if (!t) return;
       var act = t.getAttribute("data-act");
@@ -399,8 +424,11 @@
       }
     });
 
+    // Close menu on outside click (next tick so the ⋯ click doesn't instantly close it).
     document.addEventListener("click", function () {
-      menu.hidden = true;
+      setTimeout(function () {
+        menu.hidden = true;
+      }, 0);
     });
   }
 
@@ -409,6 +437,7 @@
     window.addEventListener("resize", fit);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitRaceName);
     bindSetup();
+    bindDesktopClicks();
     bindChrome();
     refreshAll();
     setInterval(refreshAll, POLL_MS);

@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Saira+Extra+Condensed:wght@700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='tv_widget.css') }}?v=w4" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='tv_widget.css') }}?v=w5" />
 </head>
 <body class="w-pos-{{ corner }}{% if widget_user %} is-personal{% endif %}{% if embedded %} is-embedded{% endif %}"
       data-token="{{ token }}"
@@ -112,6 +112,6 @@
   </div>
   {% endif %}
 
-  <script src="{{ url_for('static', filename='tv_widget.js') }}?v=w4" defer></script>
+  <script src="{{ url_for('static', filename='tv_widget.js') }}?v=w5" defer></script>
 </body>
 </html>

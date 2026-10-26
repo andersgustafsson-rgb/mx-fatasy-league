@@ -264,15 +264,18 @@ function rebuildTrayMenu() {
 
 function openSettings() {
   if (settingsWin && !settingsWin.isDestroyed()) {
+    settingsWin.setAlwaysOnTop(true);
+    settingsWin.show();
     settingsWin.focus();
     return;
   }
   settingsWin = new BrowserWindow({
     width: 520,
-    height: 640,
+    height: 660,
     resizable: false,
     title: "MX Fantasy Widget — Inställningar",
     backgroundColor: "#06101f",
+    alwaysOnTop: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -281,6 +284,10 @@ function openSettings() {
   });
   settingsWin.setMenuBarVisibility(false);
   settingsWin.loadFile(path.join(__dirname, "settings.html"));
+  settingsWin.once("ready-to-show", () => {
+    settingsWin.show();
+    settingsWin.focus();
+  });
   settingsWin.on("closed", () => {
     settingsWin = null;
   });
@@ -367,15 +374,12 @@ function openWidget(cfgIn) {
   // Bar sits above the taskbar — keep it visible like the weather chip.
   const onTop = isBar ? true : !!cfg.alwaysOnTop;
 
+  // Recreate the window so click/hit-test flags always match current mode/build.
   if (widgetWin && !widgetWin.isDestroyed()) {
-    widgetWin.setBounds(bounds);
-    widgetWin.setAlwaysOnTop(onTop);
-    widgetWin.setSkipTaskbar(true);
-    widgetWin.setResizable(!isBar);
-    loadWidgetContent(widgetWin, cfg);
-    widgetWin.show();
-    rebuildTrayMenu();
-    return;
+    try {
+      widgetWin.destroy();
+    } catch (_) {}
+    widgetWin = null;
   }
 
   const iconPath = [
@@ -386,22 +390,27 @@ function openWidget(cfgIn) {
   widgetWin = new BrowserWindow({
     ...bounds,
     frame: false,
-    transparent: true,
+    // Fully transparent windows on Windows often swallow / miss clicks.
+    // Keep a dark opaque backdrop for reliable hit-testing; the page paints the UI.
+    transparent: false,
     resizable: !isBar,
     skipTaskbar: true,
     title: "MX Fantasy Widget",
     icon: iconPath || undefined,
     alwaysOnTop: onTop,
-    backgroundColor: "#00000000",
+    backgroundColor: "#06101f",
     hasShadow: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      sandbox: false,
     },
   });
   widgetWin.setMenuBarVisibility(false);
+  try {
+    widgetWin.setIgnoreMouseEvents(false);
+  } catch (_) {}
   wireWidget(widgetWin);
   loadWidgetContent(widgetWin, cfg);
   widgetWin.on("closed", () => {
