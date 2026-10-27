@@ -652,7 +652,7 @@ function wrapHtmlForClipboard(innerHtml) {
 
 async function copyRichContent(plain, html, btn) {
   const p = cleanStr(plain);
-  if (!p && !html?.includes("<img")) return;
+  if (!p && !html?.includes("<img")) return false;
   try {
     if (html && bodyHasImages() && navigator.clipboard?.write && window.ClipboardItem) {
       await navigator.clipboard.write([
@@ -672,10 +672,21 @@ async function copyRichContent(plain, html, btn) {
     document.execCommand("copy");
     document.body.removeChild(ta);
   }
-  if (!btn) return;
-  const old = btn.textContent;
-  btn.textContent = UI.copied;
-  setTimeout(() => { btn.textContent = old; }, 1400);
+  if (btn) {
+    const old = btn.textContent;
+    btn.textContent = UI.copied;
+    setTimeout(() => { btn.textContent = old; }, 1400);
+  }
+  return true;
+}
+
+/** Efter kopierat svar — minskar risk att nästa kund får föregående produkt/order. */
+function clearCustomerCaseFields() {
+  if (els.productName) els.productName.value = "";
+  if (els.customerName) els.customerName.value = "";
+  if (els.orderNumber) els.orderNumber.value = "";
+  forceGenerate();
+  els.productName?.focus();
 }
 
 function currentMailLang() {
@@ -2781,8 +2792,13 @@ function init() {
   });
 
   $("copySubject")?.addEventListener("click", (e) => copyText(els.subjectOut.value, e.currentTarget));
-  $("copyBody")?.addEventListener("click", (e) => {
-    copyRichContent(getBodyPlain(), els.bodyOut?.innerHTML || "", e.currentTarget);
+  $("copyBody")?.addEventListener("click", async (e) => {
+    const copied = await copyRichContent(
+      getBodyPlain(),
+      els.bodyOut?.innerHTML || "",
+      e.currentTarget,
+    );
+    if (copied) clearCustomerCaseFields();
   });
   $("copyAll")?.addEventListener("click", (e) => {
     const plain = `${UI.copyAllPrefix} ${els.subjectOut.value}\n\n${getBodyPlain()}`;
