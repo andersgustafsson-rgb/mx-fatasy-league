@@ -153,8 +153,8 @@ def paris_theme_meta(competition: Any) -> dict[str, Any]:
         "evening_en": evening_en,
         "evening_tag": evening_tag,
         "motto": "VILLE LUMIÈRE · SUPERCROSS",
-        "venue": "Paris La Défense Arena",
-        "venue_short": "La Défense Arena",
+        "venue": "Plenitude Arena",
+        "venue_short": "Plenitude Arena",
     }
 
 

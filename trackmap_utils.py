@@ -108,7 +108,7 @@ def ensure_sx_2027_trackmap_images() -> dict[str, Any]:
 
 
 # Official 2026 SMX playoff maps from supermotocross.com/playoffs/
-# Paris La Défense Arena — aerial layout photos (lördag / söndag, same build).
+# Paris Plenitude Arena — aerial layout photos (lördag / söndag, same build).
 PARIS_TRACKMAP_FILES: dict[str, list[str]] = {
     "paris_sat": [
         "trackmaps/paris/paris_ladefense_aerial_1.jpg",
@@ -332,7 +332,7 @@ def is_paris_competition(competition) -> bool:
 
 
 def resolve_paris_trackmap_urls(competition) -> list[str]:
-    """Static-relative paths for Paris SX weekend (La Défense Arena aerials)."""
+    """Static-relative paths for Paris SX weekend (Plenitude Arena aerials)."""
     phase = (getattr(competition, "phase", None) or "").strip().lower()
     name_l = (getattr(competition, "name", None) or "").strip().lower()
     if not phase:

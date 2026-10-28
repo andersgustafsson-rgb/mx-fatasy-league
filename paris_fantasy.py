@@ -1309,7 +1309,7 @@ def remount_orphan_paris_picks(saturday_id: int | None, sunday_id: int | None) -
 
 
 def _sync_paris_trackmap_images(comp: Competition | None) -> int:
-    """Attach La Défense aerials to CompetitionImage (idempotent)."""
+    """Attach Plenitude Arena aerials to CompetitionImage (idempotent)."""
     if comp is None:
         return 0
     from trackmap_utils import resolve_paris_trackmap_urls
