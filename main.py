@@ -1169,6 +1169,24 @@ def formlab_sync_put():
     )
 
 
+@app.delete("/api/formlab/sync")
+def formlab_sync_delete():
+    """Clear this user's FormLab cloud backup (local wipe is done in the SPA)."""
+    user, err = _formlab_require_api_user()
+    if err:
+        return err
+    _ensure_formlab_user_data_table()
+    row = FormLabUserData.query.filter_by(user_id=user.id).first()
+    if row is not None:
+        try:
+            db.session.delete(row)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": f"Kunde inte nolla: {type(e).__name__}"}), 500
+    return jsonify({"ok": True, "revision": 0, "updatedAt": None})
+
+
 # Force dark UI sitewide (Tailwind darkMode:class + CSS safety net).
 try:
     from force_dark import register_force_dark
