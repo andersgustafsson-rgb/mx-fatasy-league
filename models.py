@@ -840,3 +840,15 @@ class FormLabProduct(db.Model):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
 
+
+class FormLabUserData(db.Model):
+    """Per-user FormLab cloud backup (weigh-ins, food, training, …) for cross-device sync."""
+    __tablename__ = "formlab_user_data"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    payload_json = db.Column(db.Text, nullable=False, default="{}")
+    revision = db.Column(db.Integer, nullable=False, default=1)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import random
 import secrets
@@ -32,7 +33,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, SeasonTeamArchive, LeagueSeasonArchive, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, QualifyingPick, QualifyingResult, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, MxonCompetitionOut, BarnivaSchemaWorkspace, BarnivaSchemaWorkspaceVersion, FormLabProduct, rider_query_for_list_ui
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, SeasonTeamArchive, LeagueSeasonArchive, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, QualifyingPick, QualifyingResult, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, MxonCompetitionOut, BarnivaSchemaWorkspace, BarnivaSchemaWorkspaceVersion, FormLabProduct, FormLabUserData, rider_query_for_list_ui
 from services.scoring import (
     calculate_race_pick_points,
     calculate_rider_points_for_position,
@@ -99,6 +100,7 @@ from auth_helpers import (  # noqa: F401 — re-export for routes/decorators
     _reject_dev_bootstrap,
     _requested_next_path,
     _safe_next_url,
+    _session_user,
     _suggest_username_from_google,
     check_session_timeout,
     is_admin_user,
@@ -884,9 +886,13 @@ def formlab_redirect():
 
 @app.route("/formlab/")
 def formlab_index():
-    """FormLab fitness PWA (static build under static/formlab)."""
+    """FormLab fitness PWA — requires fantasy login (SPA also checks /api/formlab/me)."""
     from flask import send_from_directory, abort
 
+    if "user_id" not in session or not check_session_timeout():
+        return _redirect_to_login(
+            flash_msg="Logga in med ditt fantasy-konto för att använda FormLab."
+        )
     root = _formlab_root()
     index = os.path.join(root, "index.html")
     if not os.path.isfile(index):
@@ -896,7 +902,7 @@ def formlab_index():
 
 @app.route("/formlab/<path:filename>")
 def formlab_assets(filename):
-    """Serve FormLab assets; unknown paths fall back to index.html (HashRouter)."""
+    """Serve FormLab assets (public); app data still requires login via API."""
     from flask import send_from_directory, abort
 
     root = _formlab_root()
@@ -907,6 +913,9 @@ def formlab_assets(filename):
     target = os.path.join(root, safe)
     if os.path.isfile(target):
         return send_from_directory(root, safe)
+    # SPA fallback only when logged in — otherwise send to login
+    if "user_id" not in session or not check_session_timeout():
+        return _redirect_to_login()
     index = os.path.join(root, "index.html")
     if os.path.isfile(index):
         return send_from_directory(root, "index.html")
@@ -982,6 +991,9 @@ def formlab_product_by_barcode(code: str):
 @app.post("/api/formlab/products")
 def formlab_upsert_product():
     """Save/update a product for everyone (upsert by barcode when present)."""
+    user, err = _formlab_require_api_user()
+    if err:
+        return err
     _ensure_formlab_products_table()
     data = request.get_json(silent=True) or {}
     name = str(data.get("name") or "").strip()
@@ -1051,6 +1063,110 @@ def formlab_upsert_product():
         db.session.rollback()
         return jsonify({"error": f"Kunde inte spara: {type(e).__name__}"}), 500
     return jsonify({"ok": True, "product": _formlab_product_to_dict(row)})
+
+
+def _ensure_formlab_user_data_table() -> None:
+    try:
+        db.session.execute(db.text("SELECT 1 FROM formlab_user_data LIMIT 1"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        try:
+            FormLabUserData.__table__.create(db.engine, checkfirst=True)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"formlab_user_data ensure skip: {type(e).__name__}: {e}")
+
+
+def _formlab_require_api_user():
+    """Return (user, error_response). error_response is (json, status) or None."""
+    if "user_id" not in session or not check_session_timeout():
+        return None, (jsonify({"error": "Unauthorized", "login": "/login?next=/formlab/"}), 401)
+    user = _session_user()
+    if not user:
+        return None, (jsonify({"error": "Unauthorized", "login": "/login?next=/formlab/"}), 401)
+    return user, None
+
+
+@app.get("/api/formlab/me")
+def formlab_me():
+    user, err = _formlab_require_api_user()
+    if err:
+        return err
+    return jsonify(
+        {
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "displayName": getattr(user, "display_name", None) or user.username,
+            }
+        }
+    )
+
+
+@app.get("/api/formlab/sync")
+def formlab_sync_get():
+    """Download this user's FormLab cloud data."""
+    user, err = _formlab_require_api_user()
+    if err:
+        return err
+    _ensure_formlab_user_data_table()
+    row = FormLabUserData.query.filter_by(user_id=user.id).first()
+    if not row or not row.payload_json:
+        return jsonify({"data": None, "revision": 0, "updatedAt": None})
+    try:
+        payload = json.loads(row.payload_json)
+    except Exception:
+        payload = None
+    return jsonify(
+        {
+            "data": payload,
+            "revision": int(row.revision or 0),
+            "updatedAt": row.updated_at.isoformat() + "Z" if row.updated_at else None,
+        }
+    )
+
+
+@app.put("/api/formlab/sync")
+def formlab_sync_put():
+    """Upload FormLab cloud data for the logged-in fantasy user."""
+    user, err = _formlab_require_api_user()
+    if err:
+        return err
+    _ensure_formlab_user_data_table()
+    body = request.get_json(silent=True) or {}
+    data = body.get("data")
+    if not isinstance(data, dict) or data.get("app") != "FormLab":
+        return jsonify({"error": "Ogiltig FormLab-data."}), 400
+    # Soft size guard (~2 MB JSON)
+    try:
+        raw = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    except Exception:
+        return jsonify({"error": "Kunde inte serialisera data."}), 400
+    if len(raw) > 2_000_000:
+        return jsonify({"error": "Datan är för stor att synka."}), 413
+
+    row = FormLabUserData.query.filter_by(user_id=user.id).first()
+    if row is None:
+        row = FormLabUserData(user_id=user.id, payload_json=raw, revision=1)
+        db.session.add(row)
+    else:
+        row.payload_json = raw
+        row.revision = int(row.revision or 0) + 1
+        row.updated_at = datetime.utcnow()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Kunde inte synka: {type(e).__name__}"}), 500
+    return jsonify(
+        {
+            "ok": True,
+            "revision": int(row.revision),
+            "updatedAt": row.updated_at.isoformat() + "Z" if row.updated_at else None,
+        }
+    )
 
 
 # Force dark UI sitewide (Tailwind darkMode:class + CSS safety net).
