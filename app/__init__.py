@@ -152,6 +152,35 @@ def create_app() -> Flask:
 		resp.headers["Cache-Control"] = "public, max-age=604800"
 		return resp
 
+	def _formlab_root():
+		return os.path.join(app.static_folder or "static", "formlab")
+
+	@app.route("/formlab")
+	@app.route("/formlab/")
+	def formlab_index():
+		"""FormLab fitness PWA (static build under static/formlab)."""
+		from flask import send_from_directory, abort
+
+		root = _formlab_root()
+		if not os.path.isfile(os.path.join(root, "index.html")):
+			abort(404)
+		return send_from_directory(root, "index.html")
+
+	@app.route("/formlab/<path:filename>")
+	def formlab_assets(filename):
+		from flask import send_from_directory, abort
+
+		root = _formlab_root()
+		safe = os.path.normpath(filename).replace("\\", "/")
+		if safe.startswith("..") or os.path.isabs(safe):
+			abort(404)
+		target = os.path.join(root, safe)
+		if os.path.isfile(target):
+			return send_from_directory(root, safe)
+		if os.path.isfile(os.path.join(root, "index.html")):
+			return send_from_directory(root, "index.html")
+		abort(404)
+
 	@app.get("/sw.js")
 	def service_worker():
 		"""

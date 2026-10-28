@@ -872,6 +872,42 @@ def favicon():
     return resp
 
 
+def _formlab_root():
+    return os.path.join(app.static_folder or "static", "formlab")
+
+
+@app.route("/formlab")
+@app.route("/formlab/")
+def formlab_index():
+    """FormLab fitness PWA (static build under static/formlab)."""
+    from flask import send_from_directory, abort
+
+    root = _formlab_root()
+    index = os.path.join(root, "index.html")
+    if not os.path.isfile(index):
+        abort(404)
+    return send_from_directory(root, "index.html")
+
+
+@app.route("/formlab/<path:filename>")
+def formlab_assets(filename):
+    """Serve FormLab assets; unknown paths fall back to index.html (HashRouter)."""
+    from flask import send_from_directory, abort
+
+    root = _formlab_root()
+    # Prevent path traversal
+    safe = os.path.normpath(filename).replace("\\", "/")
+    if safe.startswith("..") or os.path.isabs(safe):
+        abort(404)
+    target = os.path.join(root, safe)
+    if os.path.isfile(target):
+        return send_from_directory(root, safe)
+    index = os.path.join(root, "index.html")
+    if os.path.isfile(index):
+        return send_from_directory(root, "index.html")
+    abort(404)
+
+
 # Force dark UI sitewide (Tailwind darkMode:class + CSS safety net).
 try:
     from force_dark import register_force_dark
