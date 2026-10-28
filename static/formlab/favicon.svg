@@ -1,5 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FormLab">
+  <defs>
+    <linearGradient id="bolt" x1="150" y1="40" x2="380" y2="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9afcff"/>
+      <stop offset="0.5" stop-color="#00e5ff"/>
+      <stop offset="1" stop-color="#3dffb5"/>
+    </linearGradient>
+  </defs>
   <rect width="512" height="512" rx="96" fill="#0b1528"/>
-  <circle cx="256" cy="256" r="168" fill="none" stroke="#00e5ff" stroke-width="36"/>
-  <path d="M256 128v128l96 56" fill="none" stroke="#3dffb5" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Solid lightning bolt -->
+  <path
+    fill="url(#bolt)"
+    d="M292 52
+       L176 254
+       H266
+       L206 460
+       L368 236
+       H278
+       L338 52
+       Z"
+  />
 </svg>
