@@ -2470,15 +2470,31 @@ def index():
             )
         except Exception as e2:
             print(f"index() degraded render failed: {e2}")
+            # Avoid infinite meta-refresh loops (stuck "Sidan laddas om…").
+            # One soft retry via ?recover=1, then stop with a manual reload hint.
+            recover = (request.args.get("recover") or "").strip() == "1"
+            if not recover:
+                return (
+                    "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                    "<meta http-equiv='refresh' content='2;url=/?recover=1'>"
+                    "<title>MX Fantasy</title></head><body style='background:#141c2c;color:#e2e8f0;"
+                    "font-family:system-ui;padding:2rem;text-align:center'>"
+                    "<h1>MX Fantasy League</h1>"
+                    "<p>Sidan laddas om…</p></body></html>",
+                    200,
+                    {"Content-Type": "text/html; charset=utf-8", "Retry-After": "2"},
+                )
             return (
                 "<!DOCTYPE html><html><head><meta charset='utf-8'>"
-                "<meta http-equiv='refresh' content='2'>"
                 "<title>MX Fantasy</title></head><body style='background:#141c2c;color:#e2e8f0;"
                 "font-family:system-ui;padding:2rem;text-align:center'>"
                 "<h1>MX Fantasy League</h1>"
-                "<p>Sidan laddas om…</p></body></html>",
-                200,
-                {"Content-Type": "text/html; charset=utf-8", "Retry-After": "2"},
+                "<p>Startsida kunde inte laddas. Starta om den lokala servern "
+                "(LOKAL → Stoppa / starta) och ladda om sidan.</p>"
+                "<p><a href='/' style='color:#93c5fd'>Försök igen</a></p>"
+                "</body></html>",
+                503,
+                {"Content-Type": "text/html; charset=utf-8"},
             )
 
 

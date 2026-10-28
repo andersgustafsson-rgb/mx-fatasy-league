@@ -8177,15 +8177,16 @@
           let buttonText = '';
           let isClickable = false;
 
+          const isParisSerie = String(serie.series_code || '').toUpperCase() === 'PARIS'
+            || String(serie.name || '').toLowerCase().includes('paris');
+
           if (serie.under_construction) {
-            const isParisUc = String(serie.series_code || '').toUpperCase() === 'PARIS'
-              || String(serie.name || '').toLowerCase().includes('paris');
-            statusText = isParisUc
+            statusText = isParisSerie
               ? (isEn ? 'Picks open soon · entry list TBA' : 'Picks öppnar snart · startlista TBA')
               : (isEn ? 'Under construction · 2027' : 'Under construction · 2027');
             statusColor = 'text-amber-300';
             buttonClass = 'bg-amber-600 hover:bg-amber-700';
-            buttonText = isParisUc
+            buttonText = isParisSerie
               ? (isEn ? 'Picks open soon' : 'Picks öppnar snart')
               : (isEn ? 'Preview schedule' : 'Förhandsgranska schema');
             isClickable = true;
@@ -8203,7 +8204,11 @@
             buttonText = isEn ? 'Show schedule' : 'Visa schema';
             isClickable = true;
           } else if (isActive) {
-            if (daysFromNextRace != null && daysFromNextRace > 0) {
+            if (isParisSerie) {
+              statusText = isEn
+                ? 'Tippa open · entry list updates as we go'
+                : 'Tippa öppet · förarlista uppdateras vartefter';
+            } else if (daysFromNextRace != null && daysFromNextRace > 0) {
               statusText = isEn
                 ? `Active · next race in ${daysFromNextRace} day${daysFromNextRace !== 1 ? 's' : ''}`
                 : `Aktiv · nästa race om ${daysFromNextRace} dag${daysFromNextRace !== 1 ? 'ar' : ''}`;
@@ -8319,7 +8324,8 @@
               <p class="home-series-card__compact-meta">${compactMeta}</p>
               <div class="home-series-card__details">
                 ${amaChain ? `<p class="text-[11px] font-semibold uppercase tracking-wide text-slate-300 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${amaChain}</p>` : ''}
-                ${serie.under_construction ? `<p class="text-xs font-semibold uppercase tracking-wide text-amber-200 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${(String(serie.series_code || '').toUpperCase() === 'PARIS' || String(serie.name || '').toLowerCase().includes('paris')) ? (isEn ? 'Paris SX · Coming soon' : 'Paris SX · Coming soon') : (isEn ? 'Coming 2027' : 'Kommer 2027')}</p>` : ''}
+                ${serie.under_construction ? `<p class="text-xs font-semibold uppercase tracking-wide text-amber-200 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isParisSerie ? (isEn ? 'Paris SX · Coming soon' : 'Paris SX · Coming soon') : (isEn ? 'Coming 2027' : 'Kommer 2027')}</p>` : ''}
+                ${(!serie.under_construction && isParisSerie) ? `<p class="text-xs font-semibold uppercase tracking-wide text-amber-200 mb-1" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Entry list · updates as we go' : 'Förarlista · uppdateras vartefter'}</p>` : ''}
                 <p class="text-sm ${statusColor} mb-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${statusForCard}</p>
                 ${picksBadge}
                 ${nextRace ? `<p class="text-xs text-gray-200 mb-3" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Next' : 'Nästa'}: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}

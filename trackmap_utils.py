@@ -740,6 +740,10 @@ def get_picks_good_to_know(competition) -> list[str]:
         or name_l.startswith("paris sx")
     )
     if is_paris:
+        tips.append(
+            "Förarlistan uppdateras vartefter — tippa gärna redan nu, "
+            "men kolla tillbaka om nya namn tillkommer."
+        )
         if phase == "paris_sun" or "söndag" in name_l or "sunday" in name_l:
             tips.extend(
                 [

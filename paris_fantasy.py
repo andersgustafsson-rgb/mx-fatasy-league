@@ -1,7 +1,7 @@
 """Paris Supercross weekend tippa (lördag + söndag, separata lås).
 
-Public: homepage card shows Coming soon until PARIS_PUBLIC_PLAY.
-Admin: can open tippa / roster for testing before official lists drop.
+Public tippa is open when PARIS_PUBLIC_PLAY; roster may still grow until the
+official entry list is final. Admins can always open tippa for testing.
 """
 from __future__ import annotations
 
@@ -25,8 +25,8 @@ from models import (
     rider_query_for_list_ui,
 )
 
-# Flip to True when official entry list / layout is out and tippa should open.
-PARIS_PUBLIC_PLAY = False
+# True = public tippa open (save allowed). Roster can still be updated via seed.
+PARIS_PUBLIC_PLAY = True
 
 SERIES_CODE = "PARIS"
 SERIES_DISPLAY = "Paris SX"
@@ -34,6 +34,12 @@ PHASE_SAT = "paris_sat"
 PHASE_SUN = "paris_sun"
 OVERALL_CLASS_SX1 = "ps_ov1"
 OVERALL_CLASS_SX2 = "ps_ov2"
+
+# Shown on tippa / roster until the official entry list is locked.
+PARIS_ROSTER_PROVISIONAL_MESSAGE = (
+    "Förarlistan uppdateras vartefter — tippa gärna redan nu, "
+    "men kolla tillbaka om nya namn tillkommer."
+)
 
 
 def paris_public_play_enabled() -> bool:
@@ -44,27 +50,31 @@ def paris_user_can_play(*, is_admin: bool) -> bool:
     """Public tippa locked until PARIS_PUBLIC_PLAY; admins can always test."""
     return bool(is_admin) or paris_public_play_enabled()
 
-# Bekräftade / listade namn (uppdateras närmare event — idempotent seed).
+# Bekräftade / nämnda namn (MX Vice 26 okt 2026 + organisatör). Idempotent seed.
+# Malcolm Stewart OUT → Jordon Smith. Jett/Hunter Lawrence kör inte.
 PARIS_2026_SX1_NAMES = (
     "Ken Roczen",
-    "Malcolm Stewart",
-    "Cooper Webb",
-    "Jett Lawrence",
-    "Hunter Lawrence",
-    "Tom Vialle",
     "Aaron Plessinger",
     "Jo Shimoda",
+    "Jordon Smith",
+    "Tom Vialle",
     "Lucas Coenen",
-    "Mitchell Harrison",
-    "Jess Pettis",
+    "Cedric Soubeyras",
+    "Hayden Mellross",
+    "Maxime Desprey",
+    "Jordi Tixier",
+    "Tom Guyon",
 )
 
 PARIS_2026_SX2_NAMES = (
     "Sacha Coenen",
-    "Luke Clout",
-    "Jake Cannon",
+    "Michael Harrison",
+    "Henry Miller",
+    "Reid Taylor",
+    "Hamden Hudson",
+    "Calvin Fonvieille",
+    "Michael Hicks",
     "Anthony Bourdon",
-    "Mathys Boisrame",
 )
 
 
@@ -533,30 +543,68 @@ def build_paris_weekend_results_detail(
 
 
 def _find_riders_by_names(names: tuple[str, ...], class_name: str) -> list[Rider]:
+    """Resolve roster names; create lightweight rider rows when missing (Paris tippa)."""
     out: list[Rider] = []
+    default_price = 200000 if class_name == "wsx_sx1" else 80000
     for raw in names:
         name = (raw or "").strip()
         if not name:
             continue
-        r = Rider.query.filter(db.func.lower(Rider.name) == name.lower()).first()
+        # Prefer the WSX/Paris class row so we don't steal AMA 450/250 duplicates.
+        r = (
+            Rider.query.filter(db.func.lower(Rider.name) == name.lower())
+            .filter(Rider.class_name == class_name)
+            .first()
+        )
+        if r is None:
+            r = Rider.query.filter(db.func.lower(Rider.name) == name.lower()).first()
+        if r is None:
+            r = (
+                Rider.query.filter(Rider.name.ilike(f"%{name}%"))
+                .filter(Rider.class_name == class_name)
+                .first()
+            )
         if r is None:
             r = Rider.query.filter(Rider.name.ilike(f"%{name}%")).first()
         if r is None:
-            print(f"[PARIS-SEED] rider not found: {name!r}")
-            continue
-        if (r.class_name or "") != class_name:
-            r.class_name = class_name
+            r = Rider(
+                name=name,
+                class_name=class_name,
+                price=default_price,
+                series_participation="paris",
+            )
+            db.session.add(r)
+            db.session.flush()
+            print(f"[PARIS-SEED] created rider: {name!r} ({class_name})")
+        elif (r.class_name or "") != class_name:
+            # Only reclass Paris stub rows — never flip AMA SX class rows.
+            if (r.series_participation or "").lower() == "paris" or (
+                r.class_name or ""
+            ).startswith("wsx_"):
+                r.class_name = class_name
+            else:
+                r = Rider(
+                    name=name,
+                    class_name=class_name,
+                    price=int(r.price or default_price),
+                    bike_brand=r.bike_brand,
+                    series_participation="paris",
+                )
+                db.session.add(r)
+                db.session.flush()
+                print(f"[PARIS-SEED] created class row: {name!r} ({class_name})")
         out.append(r)
     return out
 
 
 def _sync_competition_roster(comp: Competition, riders: list[Rider]) -> int:
-    seen = set()
+    """Set IN for current list; mark everyone else on this competition OUT."""
+    seen: set[int] = set()
     n = 0
     for r in riders:
         if r.id in seen:
             continue
-        seen.add(r.id)
+        seen.add(int(r.id))
         row = CompetitionRiderStatus.query.filter_by(
             competition_id=comp.id, rider_id=r.id
         ).first()
@@ -568,6 +616,14 @@ def _sync_competition_roster(comp: Competition, riders: list[Rider]) -> int:
             n += 1
         elif (row.status or "").upper() != "IN":
             row.status = "IN"
+            n += 1
+    # Drop riders no longer on the provisional entry list.
+    q = CompetitionRiderStatus.query.filter_by(competition_id=comp.id)
+    if seen:
+        q = q.filter(~CompetitionRiderStatus.rider_id.in_(list(seen)))
+    for row in q.all():
+        if (row.status or "").upper() != "OUT":
+            row.status = "OUT"
             n += 1
     db.session.flush()
     return n
@@ -589,13 +645,14 @@ def paris_allowed_rider_ids(competition_id: int) -> set[int]:
     }
 
 
-def paris_roster_payload(competition_id: int) -> dict[str, list[dict]]:
+def paris_roster_payload(competition_id: int) -> dict[str, Any]:
     allowed = paris_allowed_rider_ids(competition_id)
     if not allowed:
         return {
             "sx1": [],
             "sx2": [],
             "empty": True,
+            "provisional": True,
             "message": "Officiell startlista för Paris Supercross är inte publicerad än.",
         }
     riders = rider_query_for_list_ui().filter(Rider.id.in_(allowed)).all()
@@ -615,7 +672,13 @@ def paris_roster_payload(competition_id: int) -> dict[str, list[dict]]:
             sx1.append(item)
     sx1.sort(key=lambda x: (x.get("name") or "").lower())
     sx2.sort(key=lambda x: (x.get("name") or "").lower())
-    return {"sx1": sx1, "sx2": sx2, "empty": not (sx1 or sx2)}
+    return {
+        "sx1": sx1,
+        "sx2": sx2,
+        "empty": not (sx1 or sx2),
+        "provisional": True,
+        "message": PARIS_ROSTER_PROVISIONAL_MESSAGE,
+    }
 
 
 def paris_required_pick_keys(comp: Competition) -> tuple[str, ...]:
