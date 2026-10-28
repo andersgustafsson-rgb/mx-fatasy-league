@@ -156,6 +156,10 @@ def create_app() -> Flask:
 		return os.path.join(app.static_folder or "static", "formlab")
 
 	@app.route("/formlab")
+	def formlab_redirect():
+		"""Trailing slash so relative asset URLs resolve under /formlab/."""
+		return redirect("/formlab/", code=302)
+
 	@app.route("/formlab/")
 	def formlab_index():
 		"""FormLab fitness PWA (static build under static/formlab)."""

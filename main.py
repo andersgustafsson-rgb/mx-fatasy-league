@@ -877,6 +877,11 @@ def _formlab_root():
 
 
 @app.route("/formlab")
+def formlab_redirect():
+    """Trailing slash so relative asset URLs resolve under /formlab/."""
+    return redirect("/formlab/", code=302)
+
+
 @app.route("/formlab/")
 def formlab_index():
     """FormLab fitness PWA (static build under static/formlab)."""
