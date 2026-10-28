@@ -820,3 +820,23 @@ class BarnivaSchemaWorkspaceVersion(db.Model):
     edit_log_count = db.Column(db.Integer, nullable=False, default=0)
     week_count = db.Column(db.Integer, nullable=False, default=0)
 
+
+class FormLabProduct(db.Model):
+    """Shared FormLab nutrition products (barcode → macros), visible to all users."""
+    __tablename__ = "formlab_products"
+    id = db.Column(db.Integer, primary_key=True)
+    barcode = db.Column(db.String(32), unique=True, nullable=True, index=True)
+    name = db.Column(db.String(200), nullable=False, index=True)
+    brands = db.Column(db.String(120), nullable=True)
+    kcal = db.Column(db.Float, nullable=False, default=0)
+    protein = db.Column(db.Float, nullable=False, default=0)
+    carbs = db.Column(db.Float, nullable=False, default=0)
+    fat = db.Column(db.Float, nullable=False, default=0)
+    per = db.Column(db.String(16), nullable=False, default="100g")  # 100g | 100ml | unknown
+    default_grams = db.Column(db.Integer, nullable=True)
+    note = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+

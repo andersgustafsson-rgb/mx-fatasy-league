@@ -32,7 +32,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, SeasonTeamArchive, LeagueSeasonArchive, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, QualifyingPick, QualifyingResult, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, MxonCompetitionOut, BarnivaSchemaWorkspace, BarnivaSchemaWorkspaceVersion, rider_query_for_list_ui
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, SeasonTeamArchive, LeagueSeasonArchive, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, QualifyingPick, QualifyingResult, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, MxonNation, MxonNationPick, MxonNationResult, MxonClassPick, MxonClassResult, MxonCompetitionOut, BarnivaSchemaWorkspace, BarnivaSchemaWorkspaceVersion, FormLabProduct, rider_query_for_list_ui
 from services.scoring import (
     calculate_race_pick_points,
     calculate_rider_points_for_position,
@@ -911,6 +911,146 @@ def formlab_assets(filename):
     if os.path.isfile(index):
         return send_from_directory(root, "index.html")
     abort(404)
+
+
+def _formlab_normalize_barcode(raw: str | None) -> str:
+    digits = re.sub(r"\D", "", raw or "")
+    return digits
+
+
+def _formlab_product_to_dict(row: FormLabProduct) -> dict:
+    return {
+        "id": row.id,
+        "barcode": row.barcode or None,
+        "name": row.name,
+        "brands": row.brands or None,
+        "kcal": float(row.kcal or 0),
+        "protein": float(row.protein or 0),
+        "carbs": float(row.carbs or 0),
+        "fat": float(row.fat or 0),
+        "per": row.per or "unknown",
+        "defaultGrams": row.default_grams,
+        "note": row.note or None,
+        "updatedAt": row.updated_at.isoformat() + "Z" if row.updated_at else None,
+    }
+
+
+def _ensure_formlab_products_table() -> None:
+    """Create shared product table if missing (no full migration needed)."""
+    try:
+        db.session.execute(db.text("SELECT 1 FROM formlab_products LIMIT 1"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        try:
+            FormLabProduct.__table__.create(db.engine, checkfirst=True)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"formlab_products ensure skip: {type(e).__name__}: {e}")
+
+
+@app.get("/api/formlab/products")
+def formlab_list_products():
+    """Shared FormLab products for all users."""
+    _ensure_formlab_products_table()
+    q = (request.args.get("q") or "").strip().lower()
+    rows = FormLabProduct.query.order_by(FormLabProduct.name.asc()).limit(500).all()
+    if q:
+        rows = [
+            r
+            for r in rows
+            if q in (r.name or "").lower()
+            or q in (r.brands or "").lower()
+            or q in (r.barcode or "")
+        ]
+    return jsonify({"products": [_formlab_product_to_dict(r) for r in rows]})
+
+
+@app.get("/api/formlab/products/barcode/<code>")
+def formlab_product_by_barcode(code: str):
+    _ensure_formlab_products_table()
+    barcode = _formlab_normalize_barcode(code)
+    if len(barcode) < 8 or len(barcode) > 14:
+        return jsonify({"error": "Ogiltig streckkod"}), 400
+    row = FormLabProduct.query.filter_by(barcode=barcode).first()
+    if not row:
+        return jsonify({"error": "Ingen delad produkt"}), 404
+    return jsonify({"product": _formlab_product_to_dict(row)})
+
+
+@app.post("/api/formlab/products")
+def formlab_upsert_product():
+    """Save/update a product for everyone (upsert by barcode when present)."""
+    _ensure_formlab_products_table()
+    data = request.get_json(silent=True) or {}
+    name = str(data.get("name") or "").strip()
+    if len(name) < 2 or len(name) > 200:
+        return jsonify({"error": "Ange ett produktnamn (2–200 tecken)."}), 400
+
+    barcode = _formlab_normalize_barcode(data.get("barcode"))
+    if barcode and (len(barcode) < 8 or len(barcode) > 14):
+        return jsonify({"error": "Streckkod måste vara 8–14 siffror."}), 400
+    if not barcode:
+        barcode = None
+
+    def _num(key: str, lo: float, hi: float) -> float:
+        try:
+            n = float(data.get(key, 0))
+        except (TypeError, ValueError):
+            n = 0.0
+        if not math.isfinite(n):
+            n = 0.0
+        return max(lo, min(hi, n))
+
+    kcal = _num("kcal", 0, 900)
+    protein = _num("protein", 0, 100)
+    carbs = _num("carbs", 0, 100)
+    fat = _num("fat", 0, 100)
+    per = str(data.get("per") or "unknown")
+    if per not in ("100g", "100ml", "unknown"):
+        per = "unknown"
+    brands = str(data.get("brands") or "").strip()[:120] or None
+    note = str(data.get("note") or "").strip()[:500] or None
+    default_grams = data.get("defaultGrams")
+    try:
+        default_grams = int(default_grams) if default_grams is not None else None
+    except (TypeError, ValueError):
+        default_grams = None
+    if default_grams is not None:
+        default_grams = max(1, min(5000, default_grams))
+
+    row = None
+    if barcode:
+        row = FormLabProduct.query.filter_by(barcode=barcode).first()
+    if row is None and not barcode:
+        # Name-only: update existing same name (case-insensitive) if any
+        row = FormLabProduct.query.filter(
+            db.func.lower(FormLabProduct.name) == name.lower(),
+            FormLabProduct.barcode.is_(None),
+        ).first()
+
+    if row is None:
+        row = FormLabProduct(name=name)
+        db.session.add(row)
+
+    row.name = name
+    row.barcode = barcode
+    row.brands = brands
+    row.kcal = kcal
+    row.protein = protein
+    row.carbs = carbs
+    row.fat = fat
+    row.per = per
+    row.default_grams = default_grams
+    row.note = note
+    row.updated_at = datetime.utcnow()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Kunde inte spara: {type(e).__name__}"}), 500
+    return jsonify({"ok": True, "product": _formlab_product_to_dict(row)})
 
 
 # Force dark UI sitewide (Tailwind darkMode:class + CSS safety net).
