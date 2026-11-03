@@ -237,6 +237,25 @@ const els = {
   btnOvertimePasteClear: document.getElementById("btnOvertimePasteClear"),
   overtimeChartMode: document.getElementById("overtimeChartMode"),
 
+  // Övertid årskista (per person)
+  otVaultYear: document.getElementById("otVaultYear"),
+  otVaultMonth: document.getElementById("otVaultMonth"),
+  otVaultChartScope: document.getElementById("otVaultChartScope"),
+  otVaultPaste: document.getElementById("otVaultPaste"),
+  btnOtVaultMerge: document.getElementById("btnOtVaultMerge"),
+  btnOtVaultRefresh: document.getElementById("btnOtVaultRefresh"),
+  btnOtVaultExportExcel: document.getElementById("btnOtVaultExportExcel"),
+  btnOtVaultClearYear: document.getElementById("btnOtVaultClearYear"),
+  btnOtVaultDownload: document.getElementById("btnOtVaultDownload"),
+  otVaultStatusText: document.getElementById("otVaultStatusText"),
+  otVaultMeta: document.getElementById("otVaultMeta"),
+  otVaultHeadRow: document.getElementById("otVaultHeadRow"),
+  otVaultTableBody: document.getElementById("otVaultTableBody"),
+  otVaultChartCanvas: document.getElementById("otVaultChartCanvas"),
+  otVaultChartSizeBox: document.getElementById("otVaultChartSizeBox"),
+  otVaultTitlePreview: document.getElementById("otVaultTitlePreview"),
+  otVaultChartBgSelect: document.getElementById("otVaultChartBgSelect"),
+
   // Sick hours (manual) tab
   sickManualName: document.getElementById("sickManualName"),
   sickManualHours: document.getElementById("sickManualHours"),
@@ -827,6 +846,466 @@ function applyOvertimePaste() {
 }
 
 // ------------------------------
+// Övertid årskista (per person) — sparas lokalt, fylls på månadsvis
+// ------------------------------
+
+const OT_VAULT_LS_KEY = "mx_overtime_people_v1";
+/** @type {{ years: Record<string, Record<string, Record<string, number>>> }} */
+let otVault = { years: {} };
+let otVaultChart = null;
+
+function loadOtVault() {
+  try {
+    const raw = localStorage.getItem(OT_VAULT_LS_KEY);
+    if (!raw) return { years: {} };
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj !== "object") return { years: {} };
+    return { years: obj.years && typeof obj.years === "object" ? obj.years : {} };
+  } catch {
+    return { years: {} };
+  }
+}
+
+function saveOtVault() {
+  try {
+    localStorage.setItem(OT_VAULT_LS_KEY, JSON.stringify(otVault));
+  } catch (e) {
+    console.warn("Kunde inte spara övertidskista", e);
+  }
+}
+
+function getOtVaultYear() {
+  const y = parseInt(cleanStr(els.otVaultYear?.value), 10);
+  if (Number.isFinite(y) && y >= 2000 && y <= 2100) return y;
+  return new Date().getFullYear();
+}
+
+function getOtVaultMonth1to12() {
+  const mIdx = SWEDISH_MONTHS.indexOf(cleanStr(els.otVaultMonth?.value));
+  return mIdx >= 0 ? mIdx + 1 : new Date().getMonth() + 1;
+}
+
+function ensureOtVaultYear(year) {
+  const key = String(year);
+  if (!otVault.years[key]) otVault.years[key] = {};
+  return otVault.years[key];
+}
+
+function setOtVaultStatus(msg) {
+  if (els.otVaultStatusText) els.otVaultStatusText.textContent = msg || "";
+}
+
+function otVaultPeopleSorted(yearMap) {
+  return Object.keys(yearMap || {}).sort((a, b) => a.localeCompare(b, "sv"));
+}
+
+function otVaultPersonTotal(monthsMap) {
+  let t = 0;
+  for (let m = 1; m <= 12; m += 1) {
+    const v = Number(monthsMap?.[String(m)]);
+    if (Number.isFinite(v)) t += v;
+  }
+  return t;
+}
+
+function otVaultActiveMonths(yearMap) {
+  const has = new Array(12).fill(false);
+  for (const name of Object.keys(yearMap || {})) {
+    const mm = yearMap[name] || {};
+    for (let m = 1; m <= 12; m += 1) {
+      const v = Number(mm[String(m)]);
+      if (Number.isFinite(v) && v !== 0) has[m - 1] = true;
+    }
+  }
+  // Visa även vald månad även om 0, så kunden ser kolumnen
+  const sel = getOtVaultMonth1to12();
+  if (sel >= 1 && sel <= 12) has[sel - 1] = true;
+  return has;
+}
+
+function mergeOtVaultMonthHours(year, month1to12, pairs) {
+  const yMap = ensureOtVaultYear(year);
+  let updated = 0;
+  for (const { name, hours } of pairs) {
+    const nm = cleanStr(name);
+    if (!nm || hours == null || !Number.isFinite(hours)) continue;
+    if (!yMap[nm]) yMap[nm] = {};
+    yMap[nm][String(month1to12)] = round2(hours);
+    updated += 1;
+  }
+  saveOtVault();
+  return updated;
+}
+
+function mergeOtVaultMatrix(year, byNameMonths) {
+  const yMap = ensureOtVaultYear(year);
+  let people = 0;
+  let cells = 0;
+  for (const [name, months] of Object.entries(byNameMonths || {})) {
+    const nm = cleanStr(name);
+    if (!nm) continue;
+    if (!yMap[nm]) yMap[nm] = {};
+    people += 1;
+    for (const [m, h] of Object.entries(months || {})) {
+      if (!Number.isFinite(Number(h))) continue;
+      yMap[nm][String(m)] = round2(Number(h));
+      cells += 1;
+    }
+  }
+  saveOtVault();
+  return { people, cells };
+}
+
+/** Tolka klistring: antingen Namn+Summa (en månad) eller Namn+månadskolumner. */
+function parseOtVaultPaste(raw) {
+  const text = normalizePastedTableString(raw || "");
+  if (!text.trim()) return { kind: "empty" };
+
+  const lines = splitRows(text);
+  if (lines.length < 2) return { kind: "empty" };
+
+  const delims = ["\t", ";", ","];
+  for (let start = 0; start < Math.min(lines.length, 6); start += 1) {
+    for (const delim of delims) {
+      const headers = trimTrailingEmptyCells(splitCellsForTable(lines[start], delim));
+      if (headers.length < 2) continue;
+      const colName = pickCol(headers, ["Namn", "Name"]);
+      if (!colName) continue;
+
+      const monthCols = [];
+      const used = new Set();
+      for (const h of headers) {
+        if (normHeader(h) === normHeader(colName)) continue;
+        if (["totalt", "total", "summa", "summa (h)", "summa h", "år", "year"].includes(normHeader(h))) {
+          continue;
+        }
+        const m = monthHeaderToNumber(h);
+        if (m == null || used.has(m)) continue;
+        used.add(m);
+        monthCols.push({ header: h, month: m });
+      }
+
+      if (monthCols.length >= 2) {
+        const byName = {};
+        for (let i = start + 1; i < lines.length; i += 1) {
+          const cells = splitCellsForTable(lines[i], delim);
+          if (!cells.length) continue;
+          const row = {};
+          headers.forEach((h, idx) => {
+            row[h] = cells[idx] ?? "";
+          });
+          const name = cleanStr(row[colName]);
+          if (!name || /^totalt$/i.test(name)) continue;
+          if (!byName[name]) byName[name] = {};
+          for (const mc of monthCols) {
+            const h = parseOvertimeHours(row[mc.header]);
+            if (h == null) continue;
+            byName[name][String(mc.month)] = h;
+          }
+        }
+        return { kind: "matrix", byName };
+      }
+
+      // En månad: Namn + Summa / Timmar / värde
+      const colHours =
+        pickCol(headers, [
+          "Summa (h)",
+          "Summa",
+          "Timmar",
+          "Övertid",
+          "Overtid",
+          "Hours",
+          "Totalt",
+          "Total",
+        ]) || (headers.length === 2 ? headers.find((h) => normHeader(h) !== normHeader(colName)) : null);
+      if (!colHours) continue;
+
+      const pairs = [];
+      for (let i = start + 1; i < lines.length; i += 1) {
+        const cells = splitCellsForTable(lines[i], delim);
+        if (!cells.length) continue;
+        const row = {};
+        headers.forEach((h, idx) => {
+          row[h] = cells[idx] ?? "";
+        });
+        const name = cleanStr(row[colName]);
+        if (!name || /^totalt$/i.test(name)) continue;
+        const hours = parseOvertimeHours(row[colHours]);
+        if (hours == null) continue;
+        pairs.push({ name, hours });
+      }
+      if (pairs.length) return { kind: "month", pairs };
+    }
+  }
+
+  // Fallback: två kolumner utan rubrik
+  const pairs = [];
+  for (const line of lines) {
+    const parts = line.split(/\t|;|,|\s{2,}/).map((p) => p.trim()).filter(Boolean);
+    if (parts.length < 2) continue;
+    if (/^namn$/i.test(parts[0])) continue;
+    const hours = parseOvertimeHours(parts[parts.length - 1]);
+    if (hours == null) continue;
+    const name = parts.slice(0, -1).join(" ");
+    if (!name || /^totalt$/i.test(name)) continue;
+    pairs.push({ name, hours });
+  }
+  if (pairs.length) return { kind: "month", pairs };
+  return { kind: "unknown" };
+}
+
+function applyOtVaultPaste() {
+  const year = getOtVaultYear();
+  if (els.otVaultYear) els.otVaultYear.value = String(year);
+  const parsed = parseOtVaultPaste(els.otVaultPaste?.value || "");
+  if (parsed.kind === "empty") {
+    setOtVaultStatus("Klistringsrutan är tom.");
+    return;
+  }
+  if (parsed.kind === "matrix") {
+    const { people, cells } = mergeOtVaultMatrix(year, parsed.byName);
+    setOtVaultStatus(`Matris sparad: ${people} personer, ${cells} månadsvärden (${year}).`);
+    refreshOtVaultUi();
+    return;
+  }
+  if (parsed.kind === "month") {
+    const month = getOtVaultMonth1to12();
+    const n = mergeOtVaultMonthHours(year, month, parsed.pairs);
+    const mName = SWEDISH_MONTHS[month - 1] || "?";
+    setOtVaultStatus(`Fyllde på ${mName} ${year}: ${n} personer. Övriga månader orörda.`);
+    refreshOtVaultUi();
+    return;
+  }
+  setOtVaultStatus("Kände inte igen formatet. Klistra Namn+Summa eller Namn+månadskolumner.");
+}
+
+function renderOtVaultTable() {
+  if (!els.otVaultHeadRow || !els.otVaultTableBody) return;
+  const year = getOtVaultYear();
+  const yMap = otVault.years[String(year)] || {};
+  const names = otVaultPeopleSorted(yMap);
+  const active = otVaultActiveMonths(yMap);
+  const months = active
+    .map((on, idx) => (on ? idx + 1 : null))
+    .filter(Boolean);
+
+  els.otVaultHeadRow.innerHTML = "";
+  const hr = document.createElement("tr");
+  const thName = document.createElement("th");
+  thName.className = "text-left px-2 py-2 sticky left-0 bg-slate-950";
+  thName.textContent = "Namn";
+  hr.appendChild(thName);
+  for (const m of months) {
+    const th = document.createElement("th");
+    th.className = "text-right px-2 py-2 whitespace-nowrap";
+    th.textContent = overtimeMonthAbbr(m);
+    hr.appendChild(th);
+  }
+  const thTot = document.createElement("th");
+  thTot.className = "text-right px-2 py-2";
+  thTot.textContent = "Totalt";
+  hr.appendChild(thTot);
+  els.otVaultHeadRow.appendChild(hr);
+
+  els.otVaultTableBody.innerHTML = "";
+  const ranked = names
+    .map((name) => ({ name, total: otVaultPersonTotal(yMap[name]) }))
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, "sv"));
+
+  for (const { name, total } of ranked) {
+    const tr = document.createElement("tr");
+    tr.className = "border-b border-slate-800/80";
+    const tdN = document.createElement("td");
+    tdN.className = "text-left px-2 py-1.5 sticky left-0 bg-slate-950 whitespace-nowrap";
+    tdN.textContent = name;
+    tr.appendChild(tdN);
+    for (const m of months) {
+      const td = document.createElement("td");
+      td.className = "text-right px-2 py-1.5 tabular-nums";
+      const v = Number(yMap[name]?.[String(m)] || 0);
+      td.textContent = v ? String(round2(v)).replace(".", ",") : "0";
+      tr.appendChild(td);
+    }
+    const tdT = document.createElement("td");
+    tdT.className = "text-right px-2 py-1.5 font-semibold tabular-nums";
+    tdT.textContent = String(round2(total)).replace(".", ",");
+    tr.appendChild(tdT);
+    els.otVaultTableBody.appendChild(tr);
+  }
+
+  if (els.otVaultMeta) {
+    els.otVaultMeta.textContent = names.length
+      ? `${year} · ${names.length} personer · sparat i webbläsaren`
+      : `${year} · tomt — klistra första månaden`;
+  }
+}
+
+function ensureOtVaultChart() {
+  if (!els.otVaultChartCanvas || typeof Chart === "undefined") return null;
+  if (otVaultChart) return otVaultChart;
+  otVaultChart = new Chart(els.otVaultChartCanvas.getContext("2d"), {
+    type: "bar",
+    data: { labels: [], datasets: [] },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: "Övertid per person", color: "#e2e8f0", font: { size: 14 } },
+        tidrapportValueLabels: {
+          enabled: true,
+          mode: "each",
+          integerLabels: false,
+          fontSize: 11,
+          pad: 6,
+          color: "#f8fafc",
+          strokeColor: "rgba(15, 23, 42, 0.85)",
+        },
+      },
+      scales: {
+        x: { beginAtZero: true, ticks: { color: "#cbd5e1" }, grid: { color: "rgba(148,163,184,0.12)" } },
+        y: { ticks: { color: "#cbd5e1", font: { size: 11 } }, grid: { display: false } },
+      },
+    },
+  });
+  return otVaultChart;
+}
+
+function renderOtVaultChart() {
+  const c = ensureOtVaultChart();
+  if (!c) return;
+  const year = getOtVaultYear();
+  const yMap = otVault.years[String(year)] || {};
+  const scope = cleanStr(els.otVaultChartScope?.value) === "month" ? "month" : "ytd";
+  const month = getOtVaultMonth1to12();
+
+  const rows = otVaultPeopleSorted(yMap)
+    .map((name) => {
+      const hours =
+        scope === "month"
+          ? Number(yMap[name]?.[String(month)] || 0)
+          : otVaultPersonTotal(yMap[name]);
+      return { name, hours: round2(hours) };
+    })
+    .filter((r) => r.hours > 0)
+    .sort((a, b) => b.hours - a.hours);
+
+  const limit = 40;
+  const shown = rows.slice(0, limit);
+  c.data.labels = shown.map((r) => r.name);
+  const colors = shown.map((_, i) => palette(i));
+  c.data.datasets = [
+    {
+      label: "Övertid",
+      data: shown.map((r) => r.hours),
+      backgroundColor: colors.map((hex) => rgbaFromHex(hex, 0.78)),
+      borderColor: colors.map((hex) => rgbaFromHex(hex, 1)),
+      borderWidth: 1,
+    },
+  ];
+
+  const scopeLabel =
+    scope === "month"
+      ? `${SWEDISH_MONTHS[month - 1] || "?"} ${year}`
+      : `Hittills ${year}`;
+  const ttl = shown.length
+    ? `Övertid per person — ${scopeLabel} · ${shown.length}${rows.length > limit ? `/${rows.length}` : ""}`
+    : `Övertid per person — ${scopeLabel}`;
+  c.options.plugins.title.text = ttl;
+  if (els.otVaultTitlePreview) els.otVaultTitlePreview.textContent = ttl;
+
+  // Höjd efter antal namn
+  if (els.otVaultChartSizeBox) {
+    const h = Math.max(320, 28 * shown.length + 80);
+    els.otVaultChartSizeBox.style.height = `${h}px`;
+  }
+  applyChartThemeToInstance(c);
+  c.update();
+}
+
+function refreshOtVaultUi() {
+  renderOtVaultTable();
+  renderOtVaultChart();
+}
+
+function clearOtVaultYear() {
+  const year = getOtVaultYear();
+  const ok = window.confirm(`Töm hela övertidskistan för ${year}? Detta går inte att ångra.`);
+  if (!ok) return;
+  delete otVault.years[String(year)];
+  saveOtVault();
+  setOtVaultStatus(`Tömde ${year}.`);
+  refreshOtVaultUi();
+}
+
+function exportOtVaultExcel() {
+  const year = getOtVaultYear();
+  const yMap = otVault.years[String(year)] || {};
+  const names = otVaultPeopleSorted(yMap);
+  if (!names.length) {
+    alert("Inget sparat för året ännu.");
+    return;
+  }
+  const active = otVaultActiveMonths(yMap);
+  const months = active.map((on, idx) => (on ? idx + 1 : null)).filter(Boolean);
+  const headers = ["Namn", ...months.map((m) => SWEDISH_MONTHS[m - 1]), "Totalt (h)"];
+  const ranked = names
+    .map((name) => ({ name, total: otVaultPersonTotal(yMap[name]) }))
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, "sv"));
+
+  const rows = ranked.map(({ name, total }) => {
+    const cells = [name];
+    for (const m of months) {
+      const v = Number(yMap[name]?.[String(m)] || 0);
+      cells.push(String(round2(v)).replace(".", ","));
+    }
+    cells.push(String(round2(total)).replace(".", ","));
+    return cells;
+  });
+
+  // TOTALT-rad
+  const totRow = ["TOTALT"];
+  for (const m of months) {
+    let s = 0;
+    for (const name of names) s += Number(yMap[name]?.[String(m)] || 0);
+    totRow.push(String(round2(s)).replace(".", ","));
+  }
+  let grand = 0;
+  for (const name of names) grand += otVaultPersonTotal(yMap[name]);
+  totRow.push(String(round2(grand)).replace(".", ","));
+  rows.push(totRow);
+
+  renderOtVaultChart();
+  let pngUrl = "";
+  try {
+    const c = ensureOtVaultChart();
+    if (c) pngUrl = c.toBase64Image("image/png", 1);
+  } catch (e) {
+    console.warn("Övertid vault PNG failed", e);
+  }
+
+  const title = `Övertid ${year}`;
+  downloadMhtmlExcel({
+    title,
+    headers,
+    rows,
+    pngDataUrl: pngUrl,
+    filenameBase: title,
+  });
+  setOtVaultStatus(`Excel sparad för ${year} (${names.length} personer).`);
+}
+
+otVault = loadOtVault();
+if (els.otVaultYear && !els.otVaultYear.value) {
+  els.otVaultYear.value = String(new Date().getFullYear());
+}
+if (els.otVaultMonth && !els.otVaultMonth.value) {
+  els.otVaultMonth.value = SWEDISH_MONTHS[new Date().getMonth()] || "Januari";
+}
+
+// ------------------------------
 // Sick hours (manual calculation)
 // ------------------------------
 
@@ -1333,8 +1812,7 @@ function addSickManualAbsenceRowsFromText(raw) {
   if (!headers.length || !rows.length) return addSickManualLooseAbsenceRowsFromText(raw);
 
   const colName = pickCol(headers, ["Namn", "Name"]);
-  const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum", "Datum"]);
-  const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum", "Datum"]);
+  const { colDatumFom, colDatumTom } = resolveDatumCols(headers);
   const colOmf = pickCol(headers, ["Omf", "Omfattning"]);
   const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
   if (!colName || !colDatumFom || !colOmf) return addSickManualLooseAbsenceRowsFromText(raw);
@@ -1667,15 +2145,30 @@ function getChartGroupMode() {
   return v === "month" ? "month" : "person";
 }
 
-/** yyyy-mm-dd → lokalt datum (midnatt) */
+/** yyyy-mm-dd (eller vanliga Visma/Excel-varianter) → lokalt datum (midnatt) */
 function parseIsoDate(raw) {
-  const s = cleanStr(raw);
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (!m) return null;
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
+  const s0 = cleanStr(raw);
+  if (!s0) return null;
+  // Tillåt tidstämpel: 2026-09-01 00:00:00 / 2026-09-01T00:00:00
+  const s = s0.split(/[T\s]/)[0];
+  let y;
+  let mo;
+  let d;
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
+  if (m) {
+    y = Number(m[1]);
+    mo = Number(m[2]);
+    d = Number(m[3]);
+  } else {
+    // 1/9/2026, 01.09.2026, 1-9-2026
+    m = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(s);
+    if (!m) return null;
+    d = Number(m[1]);
+    mo = Number(m[2]);
+    y = Number(m[3]);
+  }
   if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return null;
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
   const dt = new Date(y, mo - 1, d);
   if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
   return dt;
@@ -1775,7 +2268,8 @@ function perDayHoursFromRow(row, hourCols) {
 
 /**
  * En rad ger timmar, kalenderdagar (inom vald månad / intervall) och antal tillfällen (1 om raden räknas).
- * Klockrader: 1 dag + 1 tillfälle när timmar räknas in.
+ * Klockrader: 1 dag + 1 tillfälle när timmar räknas in — men flerdygnsperioder (t.ex. sjuk 1/9–31/12)
+ * klipps mot vald månad via överlapp, inte «startdatum måste ligga i månaden».
  */
 function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, filtOverride) {
   // Viktigt: explicit null betyder «ingen månadsfilter» (månadsmall Jan–Jul).
@@ -1784,8 +2278,17 @@ function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, filtO
 
   let d0 = colDatumFom ? parseIsoDate(row[colDatumFom]) : null;
   let d1 = colDatumTom ? parseIsoDate(row[colDatumTom]) : null;
+  // Öppen period (Tom saknas): vid månadsfilter anta pågående t.o.m. månadens sista dag
+  // om starten redan har inträffat (vanligt vid tillsvidare / långtidssjuk).
+  if (d0 && !d1 && filt) {
+    const monthEnd = dateAtMidnight(filt.year, filt.month + 1, 0);
+    if (d0.getTime() <= monthEnd.getTime()) d1 = monthEnd;
+  }
   if (d0 && !d1) d1 = d0;
   if (!d0 && d1) d0 = d1;
+
+  const spanDays = d0 && d1 ? daysInclusiveUtc(d0, d1) : 0;
+  const isMultiDay = spanDays > 1;
 
   const tf = hourCols.colFom ? parseTimeToHours(row[hourCols.colFom]) : null;
   const tt = hourCols.colTom ? parseTimeToHours(row[hourCols.colTom]) : null;
@@ -1793,6 +2296,21 @@ function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, filtO
   if (tf != null && tt != null) {
     const h = resolveRowNetHours(row, hourCols);
     if (!(Number(h) > 0)) return { hours: null, days: 0, occ: 0 };
+
+    // Flerdygnsperiod med klockslag (schema/sjuk över månader): räkna per arbetsdag i överlapp.
+    if (isMultiDay) {
+      const pd = perDayHoursFromRow(row, hourCols);
+      const dayHours = Number(pd) > 0 ? pd : h;
+      if (!filt) {
+        const workSpan = Math.max(1, workdaysInclusive(d0, d1));
+        return { hours: dayHours * workSpan, days: spanDays, occ: 1 };
+      }
+      const ov = overlapDaysInMonth(d0, d1, filt.year, filt.month);
+      if (ov <= 0) return { hours: 0, days: 0, occ: 0 };
+      const workOv = overlapWorkdaysInMonth(d0, d1, filt.year, filt.month);
+      return { hours: dayHours * workOv, days: ov, occ: 1 };
+    }
+
     if (!filt || !d0) return { hours: h, days: 1, occ: 1 };
     return dateInSelectedMonth(d0, filt.year, filt.month)
       ? { hours: h, days: 1, occ: 1 }
@@ -2247,6 +2765,32 @@ function pickCol(headers, wanted) {
   return null;
 }
 
+/** Som pickCol men hoppar över en redan vald kolumn (t.ex. Datum Tom ≠ Datum Fom). */
+function pickColExcept(headers, wanted, exceptHeader) {
+  if (!exceptHeader) return pickCol(headers, wanted);
+  return pickCol(
+    headers.filter((h) => h !== exceptHeader),
+    wanted,
+  );
+}
+
+function resolveDatumCols(headers) {
+  const colDatumFom = pickCol(headers, [
+    "Datum Fom",
+    "Datum Från",
+    "Datum From",
+    "Från datum",
+    "Startdatum",
+    "Datum",
+  ]);
+  const colDatumTom = pickColExcept(
+    headers,
+    ["Datum Tom", "Datum Till", "Datum To", "Till datum", "Slutdatum", "T.o.m", "Tom"],
+    colDatumFom,
+  );
+  return { colDatumFom, colDatumTom };
+}
+
 function validateHeadersForAggregate(headers) {
   const errors = [];
   if (!headers.length) {
@@ -2295,8 +2839,7 @@ function aggregateParsed(headers, rows, opts = null) {
   const colOmf = pickCol(headers, ["Omf", "Omfattning"]);
   const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
   const colMerge = pickCol(headers, [MERGE_SOURCE_COL, MERGE_SOURCE_COL_FALLBACK]);
-  const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum", "Datum"]);
-  const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum", "Datum"]);
+  const { colDatumFom, colDatumTom } = resolveDatumCols(headers);
   const colFirstSickDay = pickCol(headers, ["1:a Sjdag", "1:a sjukdag", "Första sjukdag", "Forsta sjukdag", "1a sjdag"]);
   const hourCols = { colFom, colTom, colRast, colTimDag, colOmf };
 
@@ -3263,8 +3806,7 @@ function computeHoursByMonthFromPaste(text) {
   try {
     const { headers, rows } = parseTable(text);
     if (!headers?.length || !rows?.length) return byMonth;
-    const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum", "Datum"]);
-    const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum"]);
+    const { colDatumFom, colDatumTom } = resolveDatumCols(headers);
     const colTimDag = pickCol(headers, ["Tim/dag", "Tim dag", "Timmar/dag", "Hours/day", "Hours per day"]);
     const colOmf = pickCol(headers, ["Omf", "Omfattning"]);
     const colFom = pickCol(headers, ["Kl Fom", "Kl. Fom", "Från", "From", "Fom", "F.o.m"]);
@@ -3401,6 +3943,7 @@ const CHART_THEMES = {
 function getChartThemeId() {
   const raw = (
     els.chartBgSelect?.value ||
+    els.otVaultChartBgSelect?.value ||
     els.overtimeChartBgSelect?.value ||
     els.sickManualChartBgSelect?.value ||
     localStorage.getItem(CHART_BG_KEY) ||
@@ -3443,13 +3986,20 @@ function applyChartBackgroundUi() {
   try {
     localStorage.setItem(CHART_BG_KEY, id);
   } catch (_) {}
-  for (const sel of [els.chartBgSelect, els.overtimeChartBgSelect, els.sickManualChartBgSelect]) {
+  for (const sel of [
+    els.chartBgSelect,
+    els.otVaultChartBgSelect,
+    els.overtimeChartBgSelect,
+    els.sickManualChartBgSelect,
+  ]) {
     if (sel && sel.value !== id) sel.value = id;
   }
   _setChartBoxTheme(els.chartSizeBox, id, t);
+  _setChartBoxTheme(els.otVaultChartSizeBox, id, t);
   _setChartBoxTheme(els.overtimeChartSizeBox, id, t);
   _setChartBoxTheme(els.sickManualChartSizeBox, id, t);
   if (chart) applyChartThemeToInstance(chart);
+  if (otVaultChart) applyChartThemeToInstance(otVaultChart);
   if (overtimeChart) applyChartThemeToInstance(overtimeChart);
   if (sickManualChart) applyChartThemeToInstance(sickManualChart);
 }
@@ -4326,8 +4876,7 @@ function renderAll(state) {
     const colTimDag = pickCol(headers, ["Tim/dag", "Tim dag", "Timmar/dag", "Hours/day", "Hours per day"]);
     const colOmf = pickCol(headers, ["Omf", "Omfattning"]);
     const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
-    const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum", "Datum"]);
-    const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum", "Datum"]);
+    const { colDatumFom, colDatumTom } = resolveDatumCols(headers);
     const colFirstSickDay = pickCol(headers, ["1:a Sjdag", "1:a sjukdag", "Första sjukdag", "Forsta sjukdag", "1a sjdag"]);
     const hourCols = { colFom, colTom, colRast, colTimDag, colOmf };
 
@@ -4817,6 +5366,7 @@ els.chartGroupSelect?.addEventListener("change", () => {
 els.tabTidrapport?.addEventListener("click", () => setActiveTab("tidrapport"));
 els.tabOvertime?.addEventListener("click", () => {
   setActiveTab("overtime");
+  refreshOtVaultUi();
   renderOvertimeTable();
   renderOvertimeChart();
 });
@@ -4831,6 +5381,27 @@ els.overtimeChartMode?.addEventListener("change", () => {
   saveOvertimeSettings();
   renderOvertimeChart();
 });
+els.btnOtVaultMerge?.addEventListener("click", applyOtVaultPaste);
+els.btnOtVaultRefresh?.addEventListener("click", () => {
+  refreshOtVaultUi();
+  setOtVaultStatus("Uppdaterade diagram och tabell.");
+});
+els.btnOtVaultExportExcel?.addEventListener("click", exportOtVaultExcel);
+els.btnOtVaultClearYear?.addEventListener("click", clearOtVaultYear);
+els.btnOtVaultDownload?.addEventListener("click", () => {
+  const c = ensureOtVaultChart();
+  if (!c) return;
+  renderOtVaultChart();
+  const url = c.toBase64Image("image/png", 1);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `overtid_personer_${getOtVaultYear()}.png`;
+  a.click();
+});
+els.otVaultYear?.addEventListener("change", refreshOtVaultUi);
+els.otVaultMonth?.addEventListener("change", refreshOtVaultUi);
+els.otVaultChartScope?.addEventListener("change", renderOtVaultChart);
+
 els.btnOvertimeAdd?.addEventListener("click", addOvertimeRowFromInputs);
 els.btnOvertimeGenerate?.addEventListener("click", () => {
   renderOvertimeTable();
@@ -5157,6 +5728,11 @@ els.overtimeChartBgSelect?.addEventListener("change", () => {
   applyChartBackgroundUi();
   scheduleDraftSave();
 });
+els.otVaultChartBgSelect?.addEventListener("change", () => {
+  if (els.chartBgSelect) els.chartBgSelect.value = els.otVaultChartBgSelect.value;
+  applyChartBackgroundUi();
+  scheduleDraftSave();
+});
 els.sickManualChartBgSelect?.addEventListener("change", () => {
   if (els.chartBgSelect) els.chartBgSelect.value = els.sickManualChartBgSelect.value;
   applyChartBackgroundUi();
@@ -5166,7 +5742,12 @@ els.sickManualChartBgSelect?.addEventListener("change", () => {
 try {
   const savedBg = localStorage.getItem(CHART_BG_KEY);
   if (savedBg && CHART_THEMES[savedBg]) {
-    for (const sel of [els.chartBgSelect, els.overtimeChartBgSelect, els.sickManualChartBgSelect]) {
+    for (const sel of [
+      els.chartBgSelect,
+      els.otVaultChartBgSelect,
+      els.overtimeChartBgSelect,
+      els.sickManualChartBgSelect,
+    ]) {
       if (sel) sel.value = savedBg;
     }
   }

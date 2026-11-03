@@ -61,7 +61,16 @@
             </section>
 
             <section>
-              <h3 class="font-semibold text-slate-100 mb-1">C. Prognos för hel månad</h3>
+              <h3 class="font-semibold text-slate-100 mb-1">C. Långtidssjuk över månadsgräns</h3>
+              <p class="text-slate-400 mb-1">
+                Poster som sträcker sig över flera månader (t.ex. sjuk 25&nbsp;% 1/9–31/12) räknas in i
+                <strong class="text-slate-200 font-medium">vald månad</strong> via överlapp — du behöver inte
+                klippa raden manuellt. Tomt slutdatum behandlas som pågående t.o.m. månadens sista dag.
+              </p>
+            </section>
+
+            <section>
+              <h3 class="font-semibold text-slate-100 mb-1">D. Prognos för hel månad</h3>
               <ol class="list-decimal ml-4 space-y-1 text-slate-300">
                 <li>Skapa först ett diagram från den data du har (ofta ofull månad), som i A.</li>
                 <li>Välj <strong class="text-slate-200 font-medium">Vy-läge → Prognos för hel månad</strong>.</li>
@@ -113,7 +122,7 @@
           aria-selected="false"
           aria-controls="panelOvertime"
         >
-          Övertid (manuell)
+          Övertid
         </button>
         <button
           type="button"
@@ -506,29 +515,32 @@
       </div>
     </div>
 
-    <!-- Panel: Övertid (manuell) -->
+    <!-- Panel: Övertid (årskista per person) -->
     <div id="panelOvertime" class="hidden" role="tabpanel" aria-labelledby="tabOvertime">
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 space-y-4">
           <div class="rounded-xl border-2 border-amber-900/40 bg-slate-950/50 p-4 shadow-lg shadow-amber-950/10">
             <div class="flex items-start justify-between gap-3">
               <div>
-                <h2 class="text-lg font-semibold text-amber-50 tracking-tight">Övertid — mata in och jämför</h2>
-                <p class="text-xs text-slate-400 mt-1 max-w-md">
-                  Skriv in timmar per månad (t.ex. från summeringen du får i andra diagram). Varje rad blir en stapel.
+                <h2 class="text-lg font-semibold text-amber-50 tracking-tight">Övertid — sparas på MX</h2>
+                <p class="text-xs text-slate-400 mt-1 max-w-lg">
+                  Fyll på <strong class="text-slate-200 font-medium">en månad i taget</strong> (eller klistra hela matrisen).
+                  Tidigare månader ligger kvar i webbläsaren. Exportera Excel när du vill — utan att räkna om allt.
                 </p>
               </div>
-              <div class="flex flex-wrap gap-2 shrink-0">
-                <button type="button" id="btnOvertimeClear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600">
-                  Rensa
-                </button>
-              </div>
+              <button type="button" id="btnOtVaultClearYear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600" title="Töm bara valt år">
+                Töm år
+              </button>
             </div>
 
             <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label class="block text-xs text-slate-300 mb-1" for="overtimeMonth">Månad</label>
-                <select id="overtimeMonth" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <label class="block text-xs text-slate-300 mb-1" for="otVaultYear">År</label>
+                <input id="otVaultYear" type="number" inputmode="numeric" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="2026" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-300 mb-1" for="otVaultMonth">Månad att fylla på</label>
+                <select id="otVaultMonth" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
                   <option>Januari</option>
                   <option>Februari</option>
                   <option>Mars</option>
@@ -544,110 +556,129 @@
                 </select>
               </div>
               <div>
-                <label class="block text-xs text-slate-300 mb-1" for="overtimeYear">År</label>
-                <input id="overtimeYear" type="number" inputmode="numeric" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="2026" />
-              </div>
-              <div>
-                <label class="block text-xs text-slate-300 mb-1" for="overtimeHours">Timmar</label>
-                <input id="overtimeHours" type="text" inputmode="decimal" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="t.ex. 170" autocomplete="off" />
+                <label class="block text-xs text-slate-300 mb-1" for="otVaultChartScope">Diagram visar</label>
+                <select id="otVaultChartScope" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                  <option value="month">Vald månad (per namn)</option>
+                  <option value="ytd">Hittills i år (totalt per namn)</option>
+                </select>
               </div>
             </div>
 
-            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs text-slate-300 mb-1" for="overtimeChartMode">Diagramläge</label>
-                <select id="overtimeChartMode" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
-                  <option value="timeline">Kronologiskt (en stapel per rad)</option>
-                  <option value="compare_years_by_month">Jämför år per månad (staplar bredvid varandra)</option>
-                </select>
-              </div>
-              <div class="flex items-end">
-                <p class="text-[11px] text-slate-500 leading-snug">
-                  Tips: använd jämförelseläget för att se t.ex. Januari 2025 vs Januari 2026 bredvid varandra.
-                </p>
-              </div>
+            <div class="mt-3">
+              <label class="block text-xs text-slate-300 mb-1" for="otVaultPaste">Klistra in</label>
+              <textarea
+                id="otVaultPaste"
+                class="w-full h-44 rounded-lg bg-slate-950 border border-slate-800 p-3 text-sm font-mono"
+                placeholder="Antingen:&#10;Namn&#9;Summa (h)&#10;Abdelli, Zaied&#9;8,15&#10;&#10;Eller hela matrisen:&#10;Namn&#9;Januari&#9;Februari&#9;…&#9;Totalt"
+              ></textarea>
+              <p class="text-[11px] text-slate-500 mt-1.5">
+                <strong class="text-slate-400 font-medium">En månad:</strong> klistra personlista med timmar → sparas i vald månad (andra månader orörda).
+                <strong class="text-slate-400 font-medium">Hel matris:</strong> Namn + månadskolumner → fyller/uppdaterar flera månader på en gång.
+              </p>
             </div>
 
             <div class="mt-3 flex flex-wrap items-center gap-2">
-              <button type="button" id="btnOvertimeAdd" class="px-5 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-base font-semibold shadow-md shadow-amber-900/30">
-                Lägg till stapel
+              <button type="button" id="btnOtVaultMerge" class="px-5 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-base font-semibold shadow-md shadow-amber-900/30">
+                Spara / fyll på
               </button>
-              <button type="button" id="btnOvertimeGenerate" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-medium border border-slate-600">
-                Skapa / uppdatera diagram
+              <button type="button" id="btnOtVaultRefresh" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-medium border border-slate-600">
+                Uppdatera diagram
               </button>
-              <div id="overtimeStatusText" class="text-sm text-slate-300 flex-1 min-w-[12rem]"></div>
+              <button type="button" id="btnOtVaultExportExcel" class="px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold">
+                Exportera Excel
+              </button>
+              <div id="otVaultStatusText" class="text-sm text-slate-300 flex-1 min-w-[12rem]"></div>
             </div>
-
-            <details class="group mt-4 rounded-xl border border-slate-800 bg-slate-950/30">
-              <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/40 marker:content-none [&::-webkit-details-marker]:hidden">
-                <span>
-                  <span class="block text-sm font-semibold text-slate-100">Snabbklistra (valfritt)</span>
-                  <span class="block text-xs text-slate-500 mt-0.5">En rad per stapel: <span class="font-mono">YYYY-MM[TAB]timmar</span></span>
-                </span>
-                <span class="shrink-0 text-slate-500 text-xs transition-transform duration-200 group-open:rotate-180" aria-hidden="true">▼</span>
-              </summary>
-              <div class="px-4 pb-4 pt-0 border-t border-slate-800/80">
-                <textarea
-                  id="overtimePaste"
-                  class="mt-3 w-full h-40 rounded-lg bg-slate-950 border border-slate-800 p-3 text-sm font-mono"
-                  placeholder="2025-01\t220\n2026-01\t356\n2025-02\t110"
-                ></textarea>
-                <div class="mt-3 flex flex-wrap gap-2">
-                  <button type="button" id="btnOvertimePasteApply" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Lägg in rader från klistring
-                  </button>
-                  <button type="button" id="btnOvertimePasteClear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Töm klistringsruta
-                  </button>
-                </div>
-                <p class="text-[11px] text-slate-500 mt-2">
-                  Tips: du kan klistra direkt från Excel om du har två kolumner: datum (YYYY-MM) och timmar.
-                </p>
-              </div>
-            </details>
           </div>
 
           <div class="bg-slate-950/40 border border-slate-800 rounded-xl p-3">
-            <div class="flex items-center justify-between gap-3">
-              <h3 class="text-sm font-semibold text-slate-200">Inmatade staplar</h3>
-              <button type="button" id="btnOvertimeRemoveSelected" class="px-3 py-2 rounded-lg bg-red-950/40 hover:bg-red-900/40 text-sm border border-red-900/40">
-                Ta bort markerade
-              </button>
+            <div class="flex items-center justify-between gap-3 mb-2">
+              <h3 class="text-sm font-semibold text-slate-200">Årskista (sparad)</h3>
+              <span id="otVaultMeta" class="text-[11px] text-slate-500"></span>
             </div>
-            <div class="mt-2 overflow-auto max-h-72 border border-slate-800 rounded-xl">
-              <table class="min-w-full text-sm">
-                <thead class="sticky top-0 bg-slate-950 border-b border-slate-800">
-                  <tr>
-                    <th class="text-left px-3 py-2">Välj</th>
-                    <th class="text-left px-3 py-2">Period</th>
-                    <th class="text-right px-3 py-2">Timmar</th>
-                  </tr>
-                </thead>
-                <tbody id="overtimeTableBody"></tbody>
+            <div class="overflow-auto max-h-80 border border-slate-800 rounded-xl">
+              <table class="min-w-full text-xs">
+                <thead class="sticky top-0 bg-slate-950 border-b border-slate-800" id="otVaultHeadRow"></thead>
+                <tbody id="otVaultTableBody"></tbody>
               </table>
             </div>
           </div>
+
+          <!-- Behåll gamla avdelningstotaler ihopfällda -->
+          <details class="rounded-xl border border-slate-800 bg-slate-950/30">
+            <summary class="cursor-pointer list-none px-4 py-3 text-sm text-slate-300 hover:bg-slate-800/40 marker:content-none [&::-webkit-details-marker]:hidden">
+              Avdelningens total per månad (gammalt läge) — klicka för att visa
+            </summary>
+            <div class="px-4 pb-4 border-t border-slate-800 space-y-3">
+              <p class="text-[11px] text-slate-500">En stapel = hela avdelningens övertid den månaden (inte per person).</p>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-xs text-slate-300 mb-1" for="overtimeMonth">Månad</label>
+                  <select id="overtimeMonth" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                    <option>Januari</option><option>Februari</option><option>Mars</option><option>April</option>
+                    <option>Maj</option><option>Juni</option><option>Juli</option><option>Augusti</option>
+                    <option>September</option><option>Oktober</option><option>November</option><option>December</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-300 mb-1" for="overtimeYear">År</label>
+                  <input id="overtimeYear" type="number" inputmode="numeric" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="2026" />
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-300 mb-1" for="overtimeHours">Timmar</label>
+                  <input id="overtimeHours" type="text" inputmode="decimal" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="t.ex. 170" />
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" id="btnOvertimeAdd" class="px-3 py-2 rounded-lg bg-amber-800/80 hover:bg-amber-700 text-sm font-semibold">Lägg till stapel</button>
+                <button type="button" id="btnOvertimeGenerate" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600">Uppdatera</button>
+                <button type="button" id="btnOvertimeClear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600">Rensa</button>
+                <select id="overtimeChartMode" class="rounded-lg bg-slate-950 border border-slate-800 px-2 py-2 text-sm">
+                  <option value="timeline">Kronologiskt</option>
+                  <option value="compare_years_by_month">Jämför år</option>
+                </select>
+              </div>
+              <textarea id="overtimePaste" class="w-full h-24 rounded-lg bg-slate-950 border border-slate-800 p-2 text-xs font-mono" placeholder="2026-01&#9;220"></textarea>
+              <div class="flex gap-2">
+                <button type="button" id="btnOvertimePasteApply" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs border border-slate-700">Klistra rader</button>
+                <button type="button" id="btnOvertimePasteClear" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs border border-slate-700">Töm</button>
+                <button type="button" id="btnOvertimeRemoveSelected" class="px-3 py-1.5 rounded-lg bg-red-950/40 text-xs border border-red-900/40">Ta bort markerade</button>
+                <button type="button" id="btnOvertimeDownload" class="px-3 py-1.5 rounded-lg bg-cyan-800 text-xs">PNG</button>
+                <button type="button" id="btnOvertimeExportExcel" class="px-3 py-1.5 rounded-lg bg-emerald-800 text-xs">Excel</button>
+              </div>
+              <div id="overtimeStatusText" class="text-xs text-slate-400"></div>
+              <div class="overflow-auto max-h-40 border border-slate-800 rounded-lg">
+                <table class="min-w-full text-xs">
+                  <thead class="bg-slate-950 border-b border-slate-800"><tr><th class="text-left px-2 py-1">Välj</th><th class="text-left px-2 py-1">Period</th><th class="text-right px-2 py-1">Timmar</th></tr></thead>
+                  <tbody id="overtimeTableBody"></tbody>
+                </table>
+              </div>
+              <canvas id="overtimeChartCanvas" height="200" class="hidden"></canvas>
+              <div id="overtimeTitlePreview" class="hidden"></div>
+              <select id="overtimeChartBgSelect" class="hidden"><option value="dark">Mörk</option><option value="light">Vit</option><option value="soft">Ljusgrå</option></select>
+              <div id="overtimeChartSizeBox" class="hidden"></div>
+            </div>
+          </details>
         </section>
 
         <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
           <div class="flex items-center justify-between gap-3 flex-wrap">
-            <h2 class="text-lg font-semibold">Diagram</h2>
+            <h2 class="text-lg font-semibold">Diagram (per namn)</h2>
             <div class="flex items-center gap-2 flex-wrap">
               <label class="flex items-center gap-1.5 text-xs text-slate-400">
                 Bakgrund
-                <select id="overtimeChartBgSelect" class="rounded-lg bg-slate-800 border border-slate-600 text-slate-100 text-sm px-2 py-1.5" title="Byt diagrammets bakgrund (påverkar skärm + PNG/Excel)">
+                <select id="otVaultChartBgSelect" class="rounded-lg bg-slate-800 border border-slate-600 text-slate-100 text-sm px-2 py-1.5">
                   <option value="dark">Mörk</option>
                   <option value="light">Vit (bra till Excel)</option>
                   <option value="soft">Ljusgrå</option>
                 </select>
               </label>
-              <button id="btnOvertimeDownload" class="px-3 py-2 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-sm font-semibold">Spara PNG</button>
-              <button id="btnOvertimeExportExcel" class="px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold" title="Tabell + diagram i en Excel-fil">Exportera Excel + diagram</button>
+              <button type="button" id="btnOtVaultDownload" class="px-3 py-2 rounded-lg bg-cyan-700 hover:bg-cyan-600 text-sm font-semibold">Spara PNG</button>
             </div>
           </div>
-          <div class="mt-2 text-xs text-slate-400" id="overtimeTitlePreview"></div>
-          <div class="mt-3 bg-slate-950 border border-slate-800 rounded-xl p-3" id="overtimeChartSizeBox">
-            <canvas id="overtimeChartCanvas" height="360"></canvas>
+          <div class="mt-2 text-xs text-slate-400" id="otVaultTitlePreview"></div>
+          <div class="mt-3 bg-slate-950 border border-slate-800 rounded-xl p-3" id="otVaultChartSizeBox">
+            <canvas id="otVaultChartCanvas" height="520"></canvas>
           </div>
         </section>
       </div>
@@ -807,7 +838,7 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=draft-autosave-v3"></script>
+  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=overtime-vault-sick-span-v1"></script>
 </body>
 </html>
 
