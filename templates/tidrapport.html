@@ -61,12 +61,12 @@
             </section>
 
             <section>
-              <h3 class="font-semibold text-slate-100 mb-1">C. Långtidssjuk över månadsgräns</h3>
-              <p class="text-slate-400 mb-1">
-                Poster som sträcker sig över flera månader (t.ex. sjuk 25&nbsp;% 1/9–31/12) räknas in i
-                <strong class="text-slate-200 font-medium">vald månad</strong> via överlapp — du behöver inte
-                klippa raden manuellt. Tomt slutdatum behandlas som pågående t.o.m. månadens sista dag.
-              </p>
+              <h3 class="font-semibold text-slate-100 mb-1">C. Långtidssjuk / TV / helg &amp; natt</h3>
+              <ul class="list-disc ml-4 space-y-1 text-slate-300">
+                <li><strong class="text-slate-200 font-medium">TV / tillsvidare</strong> och perioder över månadsgräns räknas in i vald månad automatiskt.</li>
+                <li><strong class="text-slate-200 font-medium">Helg/natt</strong> (t.ex. lördag) räknas även om det inte är mån–fre.</li>
+                <li>Saknas Tim/dag i exporten: fyll <strong class="text-slate-200 font-medium">Timmar vid Omf=1</strong> med t.ex. <span class="font-mono">10,25</span> för nattpass (annars blir det ≈7,27 från 36,33÷5).</li>
+              </ul>
             </section>
 
             <section>
@@ -207,7 +207,7 @@
             </div>
           </div>
 
-          <div class="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3 rounded-lg border border-slate-800/80 bg-slate-900/40 px-3 py-3">
+          <div class="mt-2 grid grid-cols-1 md:grid-cols-4 gap-3 rounded-lg border border-slate-800/80 bg-slate-900/40 px-3 py-3">
             <div>
               <label class="block text-xs text-slate-300 mb-1" for="fullTimeWeekHoursInput">Heltid tim/vecka</label>
               <input
@@ -230,6 +230,18 @@
                 max="7"
                 class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm"
                 value="5"
+              />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-300 mb-1" for="omfFullDayHoursInput">Timmar vid Omf=1</label>
+              <input
+                id="omfFullDayHoursInput"
+                type="text"
+                inputmode="decimal"
+                class="w-full rounded-lg bg-slate-950 border border-amber-800/50 px-3 py-2 text-sm"
+                placeholder="Tom = 36,33÷5 · natt: 10,25"
+                autocomplete="off"
+                title="Om Visma saknar Tim/dag: sätt 10,25 för nattpass så Omf 1,0 ger 10,25 h i stället för 7,27"
               />
             </div>
             <div class="flex flex-col justify-end">
@@ -838,7 +850,7 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=overtime-vault-sick-span-v1"></script>
+  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=sick-tv-weekend-natt-v2"></script>
 </body>
 </html>
 

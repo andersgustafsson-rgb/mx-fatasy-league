@@ -183,6 +183,7 @@ const els = {
   chartGroupSelect: document.getElementById("chartGroupSelect"),
   fullTimeWeekHoursInput: document.getElementById("fullTimeWeekHoursInput"),
   workdaysPerWeekInput: document.getElementById("workdaysPerWeekInput"),
+  omfFullDayHoursInput: document.getElementById("omfFullDayHoursInput"),
   nominalDayHoursHint: document.getElementById("nominalDayHoursHint"),
   titlePreview: document.getElementById("titlePreview"),
   colorLegend: document.getElementById("colorLegend"),
@@ -303,6 +304,7 @@ function collectDraftSnapshot() {
     chartMeasure: els.chartMeasureSelect?.value || "",
     chartGroup: els.chartGroupSelect?.value || "",
     fullTimeWeekHours: els.fullTimeWeekHoursInput?.value || "",
+    omfFullDayHours: els.omfFullDayHoursInput?.value || "",
     workdaysPerWeek: els.workdaysPerWeekInput?.value || "",
     orientation: els.orientationSelect?.value || "",
     verticalNames: els.verticalNamesSelect?.value || "",
@@ -406,6 +408,7 @@ function applyDraftSnapshot(draft) {
     setVal(els.chartMeasureSelect, draft.chartMeasure);
     setVal(els.chartGroupSelect, draft.chartGroup);
     setVal(els.fullTimeWeekHoursInput, draft.fullTimeWeekHours);
+    setVal(els.omfFullDayHoursInput, draft.omfFullDayHours);
     setVal(els.workdaysPerWeekInput, draft.workdaysPerWeek);
     setVal(els.orientationSelect, draft.orientation);
     setVal(els.verticalNamesSelect, draft.verticalNames);
@@ -2098,9 +2101,12 @@ const FALLBACK_HOURS_PER_WORKDAY = 8;
 
 /**
  * Timmar per «heltidsarbetsdag» när Omf tolkas som dagdel (inte när Omf = rena timmar).
- * Standard: veckoarvode heltid ÷ arbetsdagar (t.ex. 36,33 / 5 ≈ 7,27 h), i linje med många kollektivavtal.
+ * Om «Timmar vid Omf=1» är ifyllt (t.ex. 10,25 för natt) används det.
+ * Annars: veckoarvode heltid ÷ arbetsdagar (t.ex. 36,33 / 5 ≈ 7,27 h).
  */
 function getNominalHoursPerWorkday() {
+  const override = parseHourNumber(els.omfFullDayHoursInput?.value);
+  if (override != null && override > 0 && override <= 24) return override;
   const rawW = cleanStr(els.fullTimeWeekHoursInput?.value).replace(",", ".");
   const w = parseFloat(rawW);
   const d = getConfiguredWorkdaysPerWeek();
@@ -2116,16 +2122,37 @@ function getConfiguredWorkdaysPerWeek() {
 function updateNominalDayHoursHint() {
   const el = els.nominalDayHoursHint;
   if (!el) return;
+  const h = getNominalHoursPerWorkday();
+  const override = parseHourNumber(els.omfFullDayHoursInput?.value);
+  if (override != null && override > 0) {
+    el.textContent = `Omf=1 räknas som ${round2(h)} h/dag (manuell heldag — bra för nattpass 10,25).`;
+    return;
+  }
   const rawW = cleanStr(els.fullTimeWeekHoursInput?.value).replace(",", ".");
   const ww = parseFloat(rawW);
   const dd = parseInt(cleanStr(els.workdaysPerWeekInput?.value), 10);
-  const h = getNominalHoursPerWorkday();
   if (Number.isFinite(ww) && ww > 0 && Number.isFinite(dd) && dd >= 1 && dd <= 7) {
     const wLabel = String(ww).replace(".", ",");
-    el.textContent = `Heltidsdag ≈ ${round2(h)} h (${wLabel} ÷ ${dd} dgr/vecka). Gäller «Omf = dagdel».`;
+    el.textContent = `Heltidsdag ≈ ${round2(h)} h (${wLabel} ÷ ${dd} dgr/vecka). Natt? Fyll «Timmar vid Omf=1».`;
   } else {
     el.textContent = `Ogiltig veckoarvode/dagar — använder ${FALLBACK_HOURS_PER_WORKDAY} h/dag tills vidare.`;
   }
+}
+
+/** Visma «TV» / tillsvidare / tomt slutdatum. */
+function isOpenEndedTomToken(raw) {
+  const s = cleanStr(raw).toLowerCase().replace(/\.$/, "");
+  if (!s) return true;
+  return /^(tv|t\s*\.?\s*v\.?|tillsvidare|tills\s*vidare|pågående|pagaende|pagående|open|ongoing|-|–|—)$/i.test(
+    s,
+  );
+}
+
+/** Antal dagar att multiplicera Omf-timmar med: arbetsdagar, men helg om det är enda överlappet. */
+function countedDaysForOmfHours(workOv, calendarOv) {
+  if (workOv > 0) return workOv;
+  if (calendarOv > 0) return calendarOv;
+  return 0;
 }
 
 function getOmfMode() {
@@ -2277,18 +2304,27 @@ function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, filtO
   const filt = arguments.length >= 5 ? filtOverride : getUiMonthYearFilter();
 
   let d0 = colDatumFom ? parseIsoDate(row[colDatumFom]) : null;
-  let d1 = colDatumTom ? parseIsoDate(row[colDatumTom]) : null;
-  // Öppen period (Tom saknas): vid månadsfilter anta pågående t.o.m. månadens sista dag
-  // om starten redan har inträffat (vanligt vid tillsvidare / långtidssjuk).
-  if (d0 && !d1 && filt) {
-    const monthEnd = dateAtMidnight(filt.year, filt.month + 1, 0);
-    if (d0.getTime() <= monthEnd.getTime()) d1 = monthEnd;
+  const tomRaw = colDatumTom ? row[colDatumTom] : "";
+  const openEnded = !colDatumTom || isOpenEndedTomToken(tomRaw);
+  let d1 = openEnded ? null : parseIsoDate(tomRaw);
+
+  // Öppen period (TV / tillsvidare / tom Tom): räkna t.o.m. vald månads slut (eller årets slut).
+  if (d0 && !d1) {
+    if (filt) {
+      const monthEnd = dateAtMidnight(filt.year, filt.month + 1, 0);
+      if (d0.getTime() <= monthEnd.getTime()) d1 = monthEnd;
+    } else {
+      const yHint = parseInt(cleanStr(els.yearInput?.value), 10);
+      const y = Number.isFinite(yHint) ? yHint : Math.max(d0.getFullYear(), new Date().getFullYear());
+      d1 = new Date(y, 11, 31);
+      if (d1.getTime() < d0.getTime()) d1 = new Date(d0.getFullYear(), 11, 31);
+    }
   }
   if (d0 && !d1) d1 = d0;
   if (!d0 && d1) d0 = d1;
 
   const spanDays = d0 && d1 ? daysInclusiveUtc(d0, d1) : 0;
-  const isMultiDay = spanDays > 1;
+  const isMultiDay = spanDays > 1 || openEnded;
 
   const tf = hourCols.colFom ? parseTimeToHours(row[hourCols.colFom]) : null;
   const tt = hourCols.colTom ? parseTimeToHours(row[hourCols.colTom]) : null;
@@ -2297,18 +2333,27 @@ function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, filtO
     const h = resolveRowNetHours(row, hourCols);
     if (!(Number(h) > 0)) return { hours: null, days: 0, occ: 0 };
 
-    // Flerdygnsperiod med klockslag (schema/sjuk över månader): räkna per arbetsdag i överlapp.
+    // Flerdygnsperiod med klockslag (schema/sjuk över månader): räkna per dag i överlapp.
     if (isMultiDay) {
       const pd = perDayHoursFromRow(row, hourCols);
       const dayHours = Number(pd) > 0 ? pd : h;
       if (!filt) {
         const workSpan = Math.max(1, workdaysInclusive(d0, d1));
-        return { hours: dayHours * workSpan, days: spanDays, occ: 1 };
+        const calSpan = Math.max(1, spanDays);
+        return {
+          hours: dayHours * countedDaysForOmfHours(workSpan, calSpan),
+          days: calSpan,
+          occ: 1,
+        };
       }
       const ov = overlapDaysInMonth(d0, d1, filt.year, filt.month);
       if (ov <= 0) return { hours: 0, days: 0, occ: 0 };
       const workOv = overlapWorkdaysInMonth(d0, d1, filt.year, filt.month);
-      return { hours: dayHours * workOv, days: ov, occ: 1 };
+      return {
+        hours: dayHours * countedDaysForOmfHours(workOv, ov),
+        days: ov,
+        occ: 1,
+      };
     }
 
     if (!filt || !d0) return { hours: h, days: 1, occ: 1 };
@@ -2324,7 +2369,11 @@ function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, filtO
     if (d0 && d1) {
       const span = Math.max(1, daysInclusiveUtc(d0, d1));
       const workSpan = Math.max(1, workdaysInclusive(d0, d1));
-      return { hours: pd * workSpan, days: span, occ: 1 };
+      return {
+        hours: pd * countedDaysForOmfHours(workSpan, span),
+        days: span,
+        occ: 1,
+      };
     }
     return { hours: pd, days: 1, occ: 1 };
   }
@@ -2333,7 +2382,12 @@ function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, filtO
   const ov = overlapDaysInMonth(d0, d1, filt.year, filt.month);
   if (ov <= 0) return { hours: 0, days: 0, occ: 0 };
   const workOv = overlapWorkdaysInMonth(d0, d1, filt.year, filt.month);
-  return { hours: pd * workOv, days: ov, occ: 1 };
+  // Helgsjuk / nattpass på lör–sön: workOv=0 men ov>0 → räkna kalenderdagar.
+  return {
+    hours: pd * countedDaysForOmfHours(workOv, ov),
+    days: ov,
+    occ: 1,
+  };
 }
 
 /**
@@ -2450,7 +2504,14 @@ function parseBeslutslistaVerticalChunk(linesIn) {
   }
   if (dates.length === 0) return null;
   const dFom = dates[0];
-  const dTom = dates.length >= 2 ? dates[1] : dates[0];
+  let dTom = dates.length >= 2 ? dates[1] : "";
+  // Visma: «TV» / tillsvidare efter startdatum (inte ett andra datum)
+  if (dates.length === 1 && i < lines.length && isOpenEndedTomToken(lines[i])) {
+    dTom = "TV";
+    i += 1;
+  } else if (dates.length === 1) {
+    dTom = dFom;
+  }
 
   const times = [];
   while (i < lines.length && timeRe.test(lines[i])) {
@@ -5499,7 +5560,7 @@ els.btnSickManualExportExcel?.addEventListener("click", () => {
   exportSickManualExcelAndChart();
 });
 
-for (const el of [els.fullTimeWeekHoursInput, els.workdaysPerWeekInput]) {
+for (const el of [els.fullTimeWeekHoursInput, els.workdaysPerWeekInput, els.omfFullDayHoursInput]) {
   el?.addEventListener("input", () => {
     updateNominalDayHoursHint();
     if (window.__tidrapport_state) regenerateCurrentTextPreservingSelection();
