@@ -21,13 +21,12 @@ EMERALD = (52, 211, 153)
 EMERALD_BG = (6, 55, 40)
 
 
-def _seed_adjustment_points(rank: int) -> int:
-    """Official SMX playoff seed points for ranks 1–20 (AMA scale)."""
-    table = {
-        1: 25, 2: 22, 3: 20, 4: 18, 5: 17, 6: 16, 7: 15, 8: 14, 9: 13, 10: 12,
-        11: 11, 12: 10, 13: 9, 14: 8, 15: 7, 16: 6, 17: 5, 18: 4, 19: 3, 20: 2,
-    }
-    return table.get(rank, 0)
+def _seed_adjustment_points(rank: int, *, year: int = 2026) -> int:
+    """Official SMX playoff seed points for ranks 1–20 (AMA championship scale)."""
+    from services.scoring import ama_championship_points
+
+    # Seed bonuses mirror AMA finishing points for P1–P20 (no P21).
+    return int(ama_championship_points(rank, year=year, series="SMX"))
 
 
 def build_smx_seed_poster_data() -> dict[str, Any]:

@@ -26,6 +26,93 @@ from models import (
 # Keep in sync with main.TIPPA_ONLY_SERIES (skiva 2: duplicate on purpose).
 TIPPA_ONLY_SERIES = frozenset({"WSX", "MXON", "MXGP", "MXSM", "PARIS"})
 
+# AMA championship points (Supercross main / MX moto / SMX playoff base).
+# 2026 SX mains: 22 riders, P21 = 1 pt.
+# 2027 SX mains: 20 riders — classic scale returns (P5 drops to 16 … P20 = 1).
+# Source: AMA SX 2027 rulebook / Racer X 2026-11-03.
+AMA_CHAMPIONSHIP_POINTS_THROUGH_2026: dict[int, int] = {
+    1: 25,
+    2: 22,
+    3: 20,
+    4: 18,
+    5: 17,
+    6: 16,
+    7: 15,
+    8: 14,
+    9: 13,
+    10: 12,
+    11: 11,
+    12: 10,
+    13: 9,
+    14: 8,
+    15: 7,
+    16: 6,
+    17: 5,
+    18: 4,
+    19: 3,
+    20: 2,
+    21: 1,
+}
+
+AMA_CHAMPIONSHIP_POINTS_2027: dict[int, int] = {
+    1: 25,
+    2: 22,
+    3: 20,
+    4: 18,
+    5: 16,
+    6: 15,
+    7: 14,
+    8: 13,
+    9: 12,
+    10: 11,
+    11: 10,
+    12: 9,
+    13: 8,
+    14: 7,
+    15: 6,
+    16: 5,
+    17: 4,
+    18: 3,
+    19: 2,
+    20: 1,
+}
+
+
+def ama_championship_points(
+    position,
+    *,
+    year: int | None = None,
+    series: str | None = None,
+) -> int:
+    """Official AMA finishing points for a race/moto position.
+
+    - MX outdoor: keep the through-2026 table (rule change article is SX mains).
+    - SX / SMX / other: 2027+ uses the 20-rider table; <=2026 keeps P21=1.
+    - Unknown year: through-2026 (safe for historical recalcs without a date).
+    """
+    if position is None:
+        return 0
+    try:
+        pos = int(position)
+    except (TypeError, ValueError):
+        return 0
+    if pos < 1:
+        return 0
+
+    series_u = (series or "").strip().upper()
+    if series_u == "MX":
+        return AMA_CHAMPIONSHIP_POINTS_THROUGH_2026.get(pos, 0)
+
+    y: int | None
+    try:
+        y = int(year) if year is not None else None
+    except (TypeError, ValueError):
+        y = None
+
+    if y is not None and y >= 2027:
+        return AMA_CHAMPIONSHIP_POINTS_2027.get(pos, 0)
+    return AMA_CHAMPIONSHIP_POINTS_THROUGH_2026.get(pos, 0)
+
 
 def calculate_rider_points_for_position(position) -> int:
     """Calculate points for a rider based on their finishing position (season team system)"""

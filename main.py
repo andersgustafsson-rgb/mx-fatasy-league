@@ -3578,7 +3578,7 @@ def compute_sx_rider_podiums_for_year(year: int) -> dict:
     )
 
     for cr, comp, rider in rows:
-        pts = float(get_smx_qualification_points(cr.position))
+        pts = float(get_smx_qualification_points(cr.position, comp))
         rider_class = getattr(cr, "class_name", None) or rider.class_name
         rid = rider.id
 
@@ -3653,11 +3653,11 @@ def compute_wsx_rider_podiums_for_series(series_id: int) -> dict:
         .all()
     )
 
-    for cr, _comp, rider in rows:
+    for cr, comp, rider in rows:
         if cr.rider_points is not None:
             pts = float(cr.rider_points)
         else:
-            pts = float(get_smx_qualification_points(cr.position))
+            pts = float(get_smx_qualification_points(cr.position, comp))
 
         rider_class = getattr(cr, "class_name", None) or rider.class_name
         rid = rider.id
@@ -10395,10 +10395,10 @@ def _accumulate_championship_totals(*, year: int | None = None) -> dict[tuple, d
             if cr.rider_points is not None:
                 pts = float(cr.rider_points)
             else:
-                pts = float(get_smx_qualification_points(cr.position))
+                pts = float(get_smx_qualification_points(cr.position, comp))
         elif s == "SMX":
             mult = comp.point_multiplier or 1.0
-            pts = float(get_smx_qualification_points(cr.position)) * float(mult)
+            pts = float(get_smx_qualification_points(cr.position, comp)) * float(mult)
         else:
             pts = float(_result_points_for_standing(cr, comp))
 
@@ -11087,7 +11087,7 @@ def _build_spotlight_mode_data(
                 pts = (
                     int(result.rider_points)
                     if result.rider_points is not None
-                    else int(get_smx_qualification_points(result.position))
+                    else int(get_smx_qualification_points(result.position, last_comp))
                 )
             else:
                 pts = int(_result_points_for_standing(result, last_comp))
@@ -12278,9 +12278,9 @@ def admin_get_results(competition_id):
                 if r.rider_points is not None:
                     points = r.rider_points
                 else:
-                    points = get_smx_qualification_points(r.position)
+                    points = get_smx_qualification_points(r.position, competition)
             else:
-                points = get_smx_qualification_points(r.position)
+                points = get_smx_qualification_points(r.position, competition)
             
             top_results_with_points.append({
                 "rider_id": r.rider_id,
@@ -14789,10 +14789,10 @@ def compute_series_championship_totals(
             if cr.rider_points is not None:
                 pts = float(cr.rider_points)
             else:
-                pts = float(get_smx_qualification_points(cr.position))
+                pts = float(get_smx_qualification_points(cr.position, comp))
         elif s == "SMX":
             mult = comp.point_multiplier or 1.0
-            pts = float(get_smx_qualification_points(cr.position)) * float(mult)
+            pts = float(get_smx_qualification_points(cr.position, comp)) * float(mult)
         else:
             pts = float(_result_points_for_standing(cr, comp))
 
@@ -14954,7 +14954,9 @@ def compute_series_championship_totals(
         playoff_pts = defaultdict(float)
         ranked = sorted(combined.items(), key=lambda x: (-x[1], x[0]))
         for rank, (rid, _) in enumerate(ranked[:20], start=1):
-            playoff_pts[rid] += float(get_smx_qualification_points(rank))
+            playoff_pts[rid] += float(
+                get_smx_qualification_points(rank, year=season_year, series="SMX")
+            )
 
         smx_raw = {int(rid): float(p) for rid, p in (totals.get(smx_bucket) or {}).items()}
         for rid, p in _collapse_points_by_name(smx_raw, want_250=False).items():
@@ -14983,7 +14985,9 @@ def compute_series_championship_totals(
         playoff_pts = defaultdict(float)
         ranked = sorted(combined.items(), key=lambda x: (-x[1], x[0]))
         for rank, (rid, _) in enumerate(ranked[:20], start=1):
-            playoff_pts[rid] += float(get_smx_qualification_points(rank))
+            playoff_pts[rid] += float(
+                get_smx_qualification_points(rank, year=season_year, series="SMX")
+            )
 
         smx_raw: dict[int, float] = defaultdict(float)
         for coast in ("east", "west"):
@@ -15676,13 +15680,13 @@ def race_results_page():
                     if hasattr(result, "rider_points") and result.rider_points is not None:
                         points = result.rider_points
                     else:
-                        points = get_smx_qualification_points(result.position)
+                        points = get_smx_qualification_points(result.position, comp)
                 elif comp.series == "SMX":
-                    points = get_smx_qualification_points(result.position) * comp.point_multiplier
+                    points = get_smx_qualification_points(result.position, comp) * comp.point_multiplier
                 elif comp.series == "MX":
                     points = _result_points_for_standing(result, comp)
                 else:
-                    points = get_smx_qualification_points(result.position)
+                    points = get_smx_qualification_points(result.position, comp)
 
                 img_url = _display_image_url_for_rider_row(
                     int(result.rider_id),
@@ -17663,12 +17667,12 @@ def admin_recalculate_all_rider_points():
                 if comp.series == "WSX":
                     # For WSX, keep rider_points if manually set, otherwise recalculate
                     if result.rider_points is None:
-                        points = get_smx_qualification_points(result.position)
+                        points = get_smx_qualification_points(result.position, comp)
                         result.rider_points = points
                         total_results_updated += 1
                 elif comp.series == "SMX":
                     # SMX Finals with multiplier
-                    points = get_smx_qualification_points(result.position) * (comp.point_multiplier or 1)
+                    points = get_smx_qualification_points(result.position, comp) * (comp.point_multiplier or 1)
                     result.rider_points = points
                     total_results_updated += 1
                 elif comp.series == "MX":
@@ -17676,8 +17680,8 @@ def admin_recalculate_all_rider_points():
                     result.rider_points = points
                     total_results_updated += 1
                 else:
-                    # SX — one main event per round
-                    points = get_smx_qualification_points(result.position)
+                    # SX — one main event per round (2027+ = 20-rider AMA scale)
+                    points = get_smx_qualification_points(result.position, comp)
                     result.rider_points = points
                     total_results_updated += 1
             
@@ -21981,7 +21985,10 @@ def get_smx_qualification():
     """450cc SMX Combined standings — top 20 seeded + 21–30 LCQ bubble."""
     try:
         rankings = calculate_smx_qualification_points(limit=30)
-        qualification_data = _format_smx_qualification_rows(rankings.get("450") or [], class_name="450cc")
+        season_year = _current_racing_season_year()
+        qualification_data = _format_smx_qualification_rows(
+            rankings.get("450") or [], class_name="450cc", season_year=season_year
+        )
         seeded = sum(1 for r in qualification_data if r["zone"] == "seeded")
         lcq = sum(1 for r in qualification_data if r["zone"] == "lcq")
 
@@ -22003,7 +22010,10 @@ def get_smx_qualification_250cc():
     """250cc SMX Combined standings — top 20 seeded + 21–30 LCQ bubble."""
     try:
         rankings = calculate_smx_qualification_points(limit=30)
-        qualification_data = _format_smx_qualification_rows(rankings.get("250") or [], class_name="250cc")
+        season_year = _current_racing_season_year()
+        qualification_data = _format_smx_qualification_rows(
+            rankings.get("250") or [], class_name="250cc", season_year=season_year
+        )
         seeded = sum(1 for r in qualification_data if r["zone"] == "seeded")
         lcq = sum(1 for r in qualification_data if r["zone"] == "lcq")
 
@@ -22881,12 +22891,17 @@ def clear_all_data():
 # _normalize_result_class → services.results_import (skiva 4)
 
 
-def _mx_moto_championship_points(m1: int | None, m2: int | None) -> int:
+def _mx_moto_championship_points(
+    m1: int | None,
+    m2: int | None,
+    *,
+    year: int | None = None,
+) -> int:
     """AMA Pro Motocross: each moto awards AMA points; round total = moto1 + moto2 (1-1 → 50)."""
     total = 0
     for pos in (m1, m2):
         if pos is not None and pos >= 1:
-            total += get_smx_qualification_points(pos)
+            total += get_smx_qualification_points(pos, year=year, series="MX")
     return total
 
 
@@ -22905,16 +22920,18 @@ def _round_championship_points_preview(
         if not position:
             return None
         mult = float(getattr(competition, "point_multiplier", None) or 1.0)
-        return int(get_smx_qualification_points(int(position)) * mult)
+        return int(get_smx_qualification_points(int(position), competition) * mult)
     if series == "MX":
+        d = getattr(competition, "event_date", None) or getattr(competition, "date", None)
+        y = d.year if d is not None else None
         if moto_1 is not None or moto_2 is not None:
-            return _mx_moto_championship_points(moto_1, moto_2)
+            return _mx_moto_championship_points(moto_1, moto_2, year=y)
         if position:
-            return int(get_smx_qualification_points(int(position)))
+            return int(get_smx_qualification_points(int(position), competition))
         return None
     # SX / default: overall AMA points
     if position:
-        return int(get_smx_qualification_points(int(position)))
+        return int(get_smx_qualification_points(int(position), competition))
     return None
 
 
@@ -22927,20 +22944,25 @@ def _result_points_for_standing(
         if getattr(result, "rider_points", None) is not None:
             return int(result.rider_points)
         if result.position:
-            return get_smx_qualification_points(result.position)
+            return get_smx_qualification_points(result.position, competition)
         return 0
     if series == "SMX":
         if result.position:
             mult = float(getattr(competition, "point_multiplier", None) or 1.0)
-            return int(get_smx_qualification_points(result.position) * mult)
+            return int(get_smx_qualification_points(result.position, competition) * mult)
         return 0
     if series == "MX":
         m1 = getattr(result, "moto_1_position", None)
         m2 = getattr(result, "moto_2_position", None)
         if m1 is not None or m2 is not None:
-            return _mx_moto_championship_points(m1, m2)
-    if result.position and result.position <= 20:
-        return get_smx_qualification_points(result.position)
+            d = None
+            if competition is not None:
+                d = getattr(competition, "event_date", None) or getattr(competition, "date", None)
+            y = d.year if d is not None else None
+            return _mx_moto_championship_points(m1, m2, year=y)
+    # SX / default — include P21 on the through-2026 scale when applicable
+    if result.position:
+        return get_smx_qualification_points(result.position, competition)
     return 0
 
 
@@ -22953,7 +22975,7 @@ def _sync_smx_rider_points_for_competition(competition: Competition) -> int:
     for result in CompetitionResult.query.filter_by(competition_id=competition.id).all():
         if not result.position:
             continue
-        pts = int(get_smx_qualification_points(result.position) * mult)
+        pts = int(get_smx_qualification_points(result.position, competition) * mult)
         if result.rider_points != pts:
             result.rider_points = pts
             updated += 1
@@ -23319,13 +23341,19 @@ def _format_smx_qualification_rows(
     entries: list[tuple[str, dict]],
     *,
     class_name: str,
+    season_year: int | None = None,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
+    y = int(season_year) if season_year is not None else int(_current_racing_season_year())
     for position, (_key, data) in enumerate(entries, start=1):
         rider = data["rider"]
         zone = _smx_qualification_zone(position)
         # Playoff start: AMA-skala för seed 1–20; LCQ (21–30) börjar på 0
-        seed_points = int(get_smx_qualification_points(position)) if position <= 20 else 0
+        seed_points = (
+            int(get_smx_qualification_points(position, year=y, series="SMX"))
+            if position <= 20
+            else 0
+        )
         rows.append(
             {
                 "position": position,
@@ -23478,7 +23506,8 @@ def get_wsx_leaders(year: int | None = None):
     if not wsx_competitions:
         return leaders
 
-    comp_ids = [c.id for c in wsx_competitions]
+    comp_by_id = {c.id: c for c in wsx_competitions}
+    comp_ids = list(comp_by_id.keys())
     riders = Rider.query.filter(Rider.class_name.in_(['wsx_sx1', 'wsx_sx2'])).all()
 
     rider_points = {}
@@ -23494,7 +23523,9 @@ def get_wsx_leaders(year: int | None = None):
                 if result.rider_points is not None:
                     points = result.rider_points
                 else:
-                    points = get_smx_qualification_points(result.position)
+                    points = get_smx_qualification_points(
+                        result.position, comp_by_id.get(result.competition_id)
+                    )
                 total_points += points
 
         rider_points[rider.id] = {
@@ -23523,13 +23554,24 @@ def get_wsx_leaders(year: int | None = None):
 
     return leaders
 
-def get_smx_qualification_points(position):
-    """Get SMX qualification points based on position (AMA Supercross official point system)"""
-    points_map = {
-        1: 25, 2: 22, 3: 20, 4: 18, 5: 17, 6: 16, 7: 15, 8: 14, 9: 13, 10: 12,
-        11: 11, 12: 10, 13: 9, 14: 8, 15: 7, 16: 6, 17: 5, 18: 4, 19: 3, 20: 2, 21: 1
-    }
-    return points_map.get(position, 0)
+def get_smx_qualification_points(position, competition=None, *, year=None, series=None):
+    """AMA championship points for a finishing position (SX / MX moto / SMX playoff base).
+
+    Prefer passing ``competition`` so 2027+ SX/SMX use the new 20-rider scale
+    (P5=16 … P20=1). MX keeps the through-2026 table. See services.scoring.
+    """
+    from services.scoring import ama_championship_points
+
+    y = year
+    ser = series
+    if competition is not None:
+        if ser is None:
+            ser = getattr(competition, "series", None)
+        if y is None:
+            d = getattr(competition, "event_date", None) or getattr(competition, "date", None)
+            if d is not None and hasattr(d, "year"):
+                y = d.year
+    return ama_championship_points(position, year=y, series=ser)
 
 # is_picks_locked → services.picks_lock (skiva 3)
 

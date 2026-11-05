@@ -105,9 +105,9 @@ def admin_debug_results(competition_id):
                 if r.rider_points is not None:
                     points = r.rider_points
                 else:
-                    points = get_smx_qualification_points(r.position)
+                    points = get_smx_qualification_points(r.position, comp)
             else:
-                points = get_smx_qualification_points(r.position)
+                points = get_smx_qualification_points(r.position, comp)
 
             result_data = {
                 "position": r.position,
