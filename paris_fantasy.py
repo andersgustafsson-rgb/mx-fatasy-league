@@ -50,31 +50,50 @@ def paris_user_can_play(*, is_admin: bool) -> bool:
     """Public tippa locked until PARIS_PUBLIC_PLAY; admins can always test."""
     return bool(is_admin) or paris_public_play_enabled()
 
-# Bekräftade / nämnda namn (MX Vice 26 okt 2026 + organisatör). Idempotent seed.
-# Malcolm Stewart OUT → Jordon Smith. Jett/Hunter Lawrence kör inte.
+# Officiell entry list: supercrossparis.com/pilotes (nov 2026).
+# Endast SX1 + SX Tour SX2 — Junior och FMX ingår inte i tippa.
+# Stavning: Hayden Mellross (site "Melross"), Mitchell Harrison (site "Harrisson"),
+# Isaiah Clark (site "Isaih").
 PARIS_2026_SX1_NAMES = (
-    "Ken Roczen",
-    "Aaron Plessinger",
-    "Jo Shimoda",
-    "Jordon Smith",
-    "Tom Vialle",
-    "Lucas Coenen",
-    "Cedric Soubeyras",
-    "Hayden Mellross",
-    "Maxime Desprey",
-    "Jordi Tixier",
-    "Tom Guyon",
+    "Aaron Plessinger",  # 7
+    "Tom Vialle",  # 16
+    "Jo Shimoda",  # 30
+    "Jordon Smith",  # 31
+    "Hayden Mellross",  # 45
+    "Tom Guyon",  # 49
+    "Lucas Imbert",  # 72
+    "Lucas Coenen",  # 79
+    "Cedric Soubeyras",  # 85
+    "Ken Roczen",  # 94
+    "Maxime Desprey",  # 141
+    "Charles Lefrancois",  # 225
+    "Lorenzo Camporese",  # 384
+    "Paul Haberland",  # 491
+    "Brice Maylin",  # 831
+    "Jordi Tixier",  # 911
 )
 
 PARIS_2026_SX2_NAMES = (
-    "Sacha Coenen",
-    "Michael Harrison",
-    "Henry Miller",
-    "Reid Taylor",
-    "Hamden Hudson",
-    "Calvin Fonvieille",
-    "Michael Hicks",
-    "Anthony Bourdon",
+    "Calvin Fonvieille",  # 11 wildcard
+    "Cole Thompson",  # 16 wildcard
+    "Mickael Lamarque",  # 22
+    "Hugo Manzato",  # 27
+    "Henry Miller",  # 29 wildcard
+    "Mitchell Harrison",  # 41 wildcard
+    "Yannis Lopez",  # 66
+    "Sacha Coenen",  # 64 wildcard
+    "Isaiah Clark",  # 86 wildcard (site: Isaih)
+    "Mathys Boisrame",  # 172
+    "Hamden Hudson",  # 188 wildcard
+    "Julien Lebeau",  # 259
+    "Liam Bruneau",  # 301
+    "Enzo Polias",  # 335 wildcard
+    "Jules Pietre",  # 389
+    "Michael Hicks",  # 460
+    "Kiliann Poll",  # 589
+    "Killian Vincent",  # 606
+    "Saad Soulimani",  # 744
+    "Clement Briatte",  # 851
 )
 
 
@@ -577,10 +596,9 @@ def _find_riders_by_names(names: tuple[str, ...], class_name: str) -> list[Rider
             db.session.flush()
             print(f"[PARIS-SEED] created rider: {name!r} ({class_name})")
         elif (r.class_name or "") != class_name:
-            # Only reclass Paris stub rows — never flip AMA SX class rows.
-            if (r.series_participation or "").lower() == "paris" or (
-                r.class_name or ""
-            ).startswith("wsx_"):
+            # Only reclass Paris stub rows — never flip AMA/WSX championship rows
+            # (e.g. Mitchell Harrison is WSX SX1 but Paris SX2).
+            if (r.series_participation or "").lower() == "paris":
                 r.class_name = class_name
             else:
                 r = Rider(
@@ -588,6 +606,7 @@ def _find_riders_by_names(names: tuple[str, ...], class_name: str) -> list[Rider
                     class_name=class_name,
                     price=int(r.price or default_price),
                     bike_brand=r.bike_brand,
+                    rider_number=r.rider_number,
                     series_participation="paris",
                 )
                 db.session.add(r)
