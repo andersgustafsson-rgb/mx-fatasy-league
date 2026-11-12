@@ -50,10 +50,11 @@ def paris_user_can_play(*, is_admin: bool) -> bool:
     """Public tippa locked until PARIS_PUBLIC_PLAY; admins can always test."""
     return bool(is_admin) or paris_public_play_enabled()
 
-# Officiell entry list: supercrossparis.com/pilotes (nov 2026).
+# Entry list: supercrossparis.com/pilotes + nov 2026 press (Anderson in, L. Coenen out).
 # Endast SX1 + SX Tour SX2 — Junior och FMX ingår inte i tippa.
 # Stavning: Hayden Mellross (site "Melross"), Mitchell Harrison (site "Harrisson"),
 # Isaiah Clark (site "Isaih").
+# Lucas Coenen OUT (leg surgery) → Jason Anderson IN (Paris winner 2018).
 PARIS_2026_SX1_NAMES = (
     "Aaron Plessinger",  # 7
     "Tom Vialle",  # 16
@@ -62,7 +63,7 @@ PARIS_2026_SX1_NAMES = (
     "Hayden Mellross",  # 45
     "Tom Guyon",  # 49
     "Lucas Imbert",  # 72
-    "Lucas Coenen",  # 79
+    "Jason Anderson",  # replaces Lucas Coenen (#79)
     "Cedric Soubeyras",  # 85
     "Ken Roczen",  # 94
     "Maxime Desprey",  # 141
