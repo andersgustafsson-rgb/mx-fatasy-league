@@ -55,6 +55,15 @@ const TEMPLATE_DEFS = [
     ],
   },
   {
+    id: "ytterligare_forsening",
+    fields: [
+      { id: "newDeliveryDate", type: "date" },
+      { id: "delayReason", type: "text" },
+      { id: "waitOption", type: "checkbox", default: true },
+      { id: "shipRestOfOrder", type: "checkbox", default: true },
+    ],
+  },
+  {
     id: "usa_forsening",
     fields: [
       { id: "newDeliveryDate", type: "date" },
@@ -153,6 +162,7 @@ const REPLY_DEFAULTS = {
   inkommer: false,
   utgatt: false,
   forsening: false,
+  ytterligare_forsening: false,
   usa_forsening: false,
   mivv: false,
   delager: false,
@@ -226,6 +236,20 @@ const UI = {
           placeholder: "t.ex. beställd hos leverantör",
         },
         waitOption: { label: "Fråga om kunden vill vänta ändå" },
+      },
+    },
+    ytterligare_forsening: {
+      label: "Ytterligare försening",
+      description:
+        "Produkten blir ännu mer försenad. Nytt datum om ni har det, ursäkt, och fråga om vänta kvar eller stryka artikel + skicka resten.",
+      fields: {
+        newDeliveryDate: { label: "Nytt beräknat datum (valfritt)" },
+        delayReason: {
+          label: "Orsak (valfritt)",
+          placeholder: "t.ex. ytterligare leverantörsförsening",
+        },
+        waitOption: { label: "Erbjud att avbryta hela ordern" },
+        shipRestOfOrder: { label: "Fråga om vänta kvar eller stryka artikel + skicka resten" },
       },
     },
     usa_forsening: {
@@ -363,6 +387,7 @@ const MAIL_I18N = {
       inkommer: "Kommer in i lager",
       utgatt: "Produkt utgått",
       forsening: "Produkt försenad",
+      ytterligare_forsening: "Ytterligare försening",
       usa_forsening: "Leverans från USA",
       mivv: "MIVV på beställning",
       delager: "Begränsat lager",
@@ -403,6 +428,7 @@ const MAIL_I18N = {
       inkommer: "Kommer på lager",
       utgatt: "Produkt udgået",
       forsening: "Produkt forsinket",
+      ytterligare_forsening: "Yderligere forsinkelse",
       usa_forsening: "Levering fra USA",
       mivv: "MIVV på bestilling",
       delager: "Begrænset lager",
@@ -443,6 +469,7 @@ const MAIL_I18N = {
       inkommer: "Back in stock soon",
       utgatt: "Product discontinued",
       forsening: "Delivery delayed",
+      ytterligare_forsening: "Further delay",
       usa_forsening: "USA shipping delay",
       mivv: "MIVV made to order",
       delager: "Limited stock",
@@ -1159,6 +1186,36 @@ Vi gör vårt bästa för att leverera så snart som möjligt och återkommer n�
       body += `\n\n${outro}`;
       break;
     }
+    case "ytterligare_forsening": {
+      const when = formatLocaleDate(extras.newDeliveryDate);
+      const reason = cleanStr(extras.delayReason);
+      body = `${intro}Vi måste tyvärr meddela att leveransen av ${prod} blir ytterligare försenad`;
+      body += when
+        ? ` och beräknas nu ske omkring ${when}`
+        : ". Ett nytt leveransdatum är i nuläget okänt";
+      body += ".";
+      if (reason) body += ` Orsaken är ${reason}.`;
+      body += ` Vi ber om ursäkt för besväret.`;
+      if (extras.shipRestOfOrder) {
+        body += `
+
+Om du har fler artiklar i samma order: vill du vänta kvar tills ${prod} kan skickas med resten, eller vill du att vi stryker ${prod} och skickar övriga artiklar?`;
+        if (extras.waitOption) {
+          body += ` Du kan också välja att avbryta hela ordern.`;
+        }
+        body += ` Svara gärna på detta mail så ordnar vi det som passar dig bäst.`;
+      } else if (extras.waitOption) {
+        body += `
+
+Vill du vänta tills vi kan leverera, eller vill du att vi avbryter ordern? Svara gärna på detta mail så ordnar vi det som passar dig bäst.`;
+      } else {
+        body += `
+
+Vi behåller ordern och återkommer så snart vi har mer information.`;
+      }
+      body += `\n\n${outro}`;
+      break;
+    }
     case "usa_forsening": {
       const when = formatLocaleDate(extras.newDeliveryDate);
       const alt = cleanStr(extras.alternativeProduct);
@@ -1468,6 +1525,36 @@ Vi gør vores bedste for at levere så hurtigt som muligt og vender tilbage, nå
       body += `\n\n${outro}`;
       break;
     }
+    case "ytterligare_forsening": {
+      const when = formatLocaleDate(extras.newDeliveryDate);
+      const reason = cleanStr(extras.delayReason);
+      body = `${intro}Vi er desværre nødt til at meddele, at leveringen af ${prod} bliver yderligere forsinket`;
+      body += when
+        ? ` og forventes nu omkring ${when}`
+        : ". En ny leveringsdato er i øjeblikket ukendt";
+      body += ".";
+      if (reason) body += ` Årsagen er ${reason}.`;
+      body += ` Vi beklager ulejligheden.`;
+      if (extras.shipRestOfOrder) {
+        body += `
+
+Vil du vente, til ${prod} kan sendes med resten af ordren, eller vil du have os til at stryge ${prod} og sende de øvrige varer?`;
+        if (extras.waitOption) {
+          body += ` Du kan også vælge at annullere hele ordren.`;
+        }
+        body += ` Svar gerne på denne mail, så finder vi den løsning, der passer dig bedst.`;
+      } else if (extras.waitOption) {
+        body += `
+
+Vil du vente, til vi kan levere, eller ønsker du, at vi annullerer ordren? Svar gerne på denne mail, så finder vi den løsning, der passer dig bedst.`;
+      } else {
+        body += `
+
+Vi beholder ordren og vender tilbage, så snart vi har mere information.`;
+      }
+      body += `\n\n${outro}`;
+      break;
+    }
     case "usa_forsening": {
       const when = formatLocaleDate(extras.newDeliveryDate);
       const alt = cleanStr(extras.alternativeProduct);
@@ -1773,6 +1860,36 @@ Would you like to wait until we can deliver, or would you prefer that we cancel 
         body += `
 
 We are doing our best to deliver as soon as possible and will update you when we have more information.`;
+      }
+      body += `\n\n${outro}`;
+      break;
+    }
+    case "ytterligare_forsening": {
+      const when = formatLocaleDate(extras.newDeliveryDate);
+      const reason = cleanStr(extras.delayReason);
+      body = `${intro}We regret to inform you that the delivery of ${prod} has been delayed further`;
+      body += when
+        ? ` and is now expected around ${when}`
+        : ". A new delivery date is currently unknown";
+      body += ".";
+      if (reason) body += ` The reason is ${reason}.`;
+      body += ` We apologise for the inconvenience.`;
+      if (extras.shipRestOfOrder) {
+        body += `
+
+Would you like to keep waiting until ${prod} can ship with the rest of the order, or should we remove ${prod} and send the remaining items?`;
+        if (extras.waitOption) {
+          body += ` You may also choose to cancel the entire order.`;
+        }
+        body += ` Please reply to this email and we will arrange what suits you best.`;
+      } else if (extras.waitOption) {
+        body += `
+
+Would you like to wait until we can deliver, or would you prefer that we cancel the order? Please reply to this email and we will arrange what suits you best.`;
+      } else {
+        body += `
+
+We are keeping the order and will update you as soon as we have more information.`;
       }
       body += `\n\n${outro}`;
       break;

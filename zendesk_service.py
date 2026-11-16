@@ -41,6 +41,7 @@ TEMPLATE_CASE_TYPE = {
     "inkommer": "leverans",
     "utgatt": "leverans",
     "forsening": "leverans",
+    "ytterligare_forsening": "leverans",
     "usa_forsening": "leverans",
     "outlost": "leverans",
     "avbokad": "avboka",
