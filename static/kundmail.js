@@ -1538,7 +1538,7 @@ Vi gør vores bedste for at levere så hurtigt som muligt og vender tilbage, nå
       if (extras.shipRestOfOrder) {
         body += `
 
-Vil du vente, til ${prod} kan sendes med resten af ordren, eller vil du have os til at stryge ${prod} og sende de øvrige varer?`;
+Hvis du har flere varer i samme ordre: vil du vente, til ${prod} kan sendes med resten, eller vil du have os til at stryge ${prod} og sende de øvrige varer?`;
         if (extras.waitOption) {
           body += ` Du kan også vælge at annullere hele ordren.`;
         }
@@ -1877,7 +1877,7 @@ We are doing our best to deliver as soon as possible and will update you when we
       if (extras.shipRestOfOrder) {
         body += `
 
-Would you like to keep waiting until ${prod} can ship with the rest of the order, or should we remove ${prod} and send the remaining items?`;
+If you have more items on the same order: would you like to keep waiting until ${prod} can ship with the rest, or should we remove ${prod} and send the remaining items?`;
         if (extras.waitOption) {
           body += ` You may also choose to cancel the entire order.`;
         }
