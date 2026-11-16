@@ -2844,11 +2844,16 @@ function resolveDatumCols(headers) {
     "Startdatum",
     "Datum",
   ]);
-  const colDatumTom = pickColExcept(
+  let colDatumTom = pickColExcept(
     headers,
     ["Datum Tom", "Datum Till", "Datum To", "Till datum", "Slutdatum", "T.o.m", "Tom"],
     colDatumFom,
   );
+  // Stämpexport med enbart «Datum» (saknar Datum Tom): enstaka dag per rad — inte TV till månadsslut.
+  // Utan detta multipliceras t.ex. nattpass i feb med alla kvarvarande arbetsdagar (~205 h istället för ~30 h).
+  if (colDatumFom && !colDatumTom && normHeader(colDatumFom) === "datum") {
+    colDatumTom = colDatumFom;
+  }
   return { colDatumFom, colDatumTom };
 }
 
