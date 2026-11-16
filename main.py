@@ -9191,6 +9191,8 @@ def race_picks_page(competition_id):
     paris_saturday = False
     paris_other_evening_url = None
     paris_other_evening_label = None
+    paris_saturday_competition_id = None
+    paris_sunday_competition_id = None
     try:
         from paris_fantasy import (
             get_active_paris_year,
@@ -9212,7 +9214,13 @@ def race_picks_page(competition_id):
         if is_paris:
             paris_saturday = paris_is_saturday(comp)
             wk = get_paris_weekend(year)
-            other = wk.get("sunday") if paris_saturday else wk.get("saturday")
+            sat_comp = wk.get("saturday")
+            sun_comp = wk.get("sunday")
+            if sat_comp:
+                paris_saturday_competition_id = int(sat_comp.id)
+            if sun_comp:
+                paris_sunday_competition_id = int(sun_comp.id)
+            other = sun_comp if paris_saturday else sat_comp
             if other and int(other.id) != int(comp.id):
                 paris_other_evening_url = url_for(
                     "race_picks_page", competition_id=other.id
@@ -9874,6 +9882,8 @@ def race_picks_page(competition_id):
         paris_saturday=paris_saturday,
         paris_other_evening_url=paris_other_evening_url,
         paris_other_evening_label=paris_other_evening_label,
+        paris_saturday_competition_id=paris_saturday_competition_id,
+        paris_sunday_competition_id=paris_sunday_competition_id,
     )
 
 

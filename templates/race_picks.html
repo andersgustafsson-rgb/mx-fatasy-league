@@ -3194,6 +3194,8 @@
   const parisSaturday = {{ paris_saturday | default(false) | tojson }};
   const parisOtherEveningUrl = {{ paris_other_evening_url | default(none) | tojson }};
   const parisOtherEveningLabel = {{ paris_other_evening_label | default(none) | tojson }};
+  const parisSaturdayCompetitionId = {{ paris_saturday_competition_id | default(none) | tojson }};
+  const parisSundayCompetitionId = {{ paris_sunday_competition_id | default(none) | tojson }};
   const parisInitialPicks = {{ (initial_my_picks.paris if initial_my_picks and initial_my_picks.paris else {}) | tojson }};
   const parisInitialPicksUi = {{ (initial_my_picks.paris_ui if initial_my_picks and initial_my_picks.paris_ui else {}) | tojson }};
   // Remember series so homepage Aktuellt Race shows these picks after tippa
@@ -6579,6 +6581,8 @@ function onPickChange(cls, pos, riderId = null) {
         window.initParisRacePicks({
           competitionId,
           saturday: parisSaturday,
+          saturdayCompetitionId: parisSaturdayCompetitionId,
+          sundayCompetitionId: parisSundayCompetitionId,
           otherEveningUrl: parisOtherEveningUrl,
           otherEveningLabel: parisOtherEveningLabel,
           initialParis: parisInitialPicks,
@@ -6645,7 +6649,7 @@ function setMainTrackmap(src, thumbEl) {
 </script>
 <script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=mxsm-edit-brands-1"></script>
 {% if is_paris | default(false) %}
-<script src="{{ url_for('static', filename='paris_race_picks.js') }}?v=8"></script>
+<script src="{{ url_for('static', filename='paris_race_picks.js') }}?v=10"></script>
 {% endif %}
 
 {% if not is_logged_in %}
