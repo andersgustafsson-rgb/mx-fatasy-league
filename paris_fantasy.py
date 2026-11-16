@@ -50,28 +50,28 @@ def paris_user_can_play(*, is_admin: bool) -> bool:
     """Public tippa locked until PARIS_PUBLIC_PLAY; admins can always test."""
     return bool(is_admin) or paris_public_play_enabled()
 
-# Entry list: supercrossparis.com/pilotes + nov 2026 press (Anderson in, L. Coenen out).
+# Entry list: SX1 INTERNATIONAL + SX Tour SX2 (user list 16 nov 2026).
 # Endast SX1 + SX Tour SX2 — Junior och FMX ingår inte i tippa.
-# Stavning: Hayden Mellross (site "Melross"), Mitchell Harrison (site "Harrisson"),
-# Isaiah Clark (site "Isaih").
+# Stavning: Hayden Mellross (entry "Melross"), Mitchell Harrison ("Harrisson"),
+# Isaiah Clark ("Izaih/Isaih").
 # Lucas Coenen OUT (leg surgery) → Jason Anderson IN (Paris winner 2018).
 PARIS_2026_SX1_NAMES = (
     "Aaron Plessinger",  # 7
     "Tom Vialle",  # 16
+    "Jason Anderson",  # 21 (replaces Lucas Coenen)
     "Jo Shimoda",  # 30
     "Jordon Smith",  # 31
     "Hayden Mellross",  # 45
     "Tom Guyon",  # 49
     "Lucas Imbert",  # 72
-    "Jason Anderson",  # replaces Lucas Coenen (#79)
     "Cedric Soubeyras",  # 85
     "Ken Roczen",  # 94
+    "Adrien Escoffier",  # 137
     "Maxime Desprey",  # 141
     "Charles Lefrancois",  # 225
     "Lorenzo Camporese",  # 384
     "Paul Haberland",  # 491
     "Brice Maylin",  # 831
-    "Jordi Tixier",  # 911
 )
 
 PARIS_2026_SX2_NAMES = (
@@ -80,14 +80,15 @@ PARIS_2026_SX2_NAMES = (
     "Mickael Lamarque",  # 22
     "Hugo Manzato",  # 27
     "Henry Miller",  # 29 wildcard
-    "Mitchell Harrison",  # 41 wildcard
-    "Yannis Lopez",  # 66
+    "Mitchell Harrison",  # 41 wildcard (entry: Harrisson)
+    "Jessen Turner",  # 57 wildcard
     "Sacha Coenen",  # 64 wildcard
-    "Isaiah Clark",  # 86 wildcard (site: Isaih)
-    "Mathys Boisrame",  # 172
+    "Yannis Lopez",  # 66
+    "Isaiah Clark",  # 86 wildcard (entry: Izaih)
     "Hamden Hudson",  # 188 wildcard
     "Julien Lebeau",  # 259
     "Liam Bruneau",  # 301
+    "Maho Simo",  # 321
     "Enzo Polias",  # 335 wildcard
     "Jules Pietre",  # 389
     "Michael Hicks",  # 460
