@@ -1100,7 +1100,7 @@ function buildMailSv(ctx) {
       if (extras.strikeAndShipRest) {
         body += `
 
-Vi stryker därför ${prod} från ordern och skickar övriga artiklar så snart de är klara. Hör av dig om du hellre vill vänta på hela ordern eller avbryta i stället.`;
+Vi stryker därför ${prod} från ordern och skickar övriga artiklar så snart de är klara.`;
       } else if (extras.shipRestOfOrder) {
         body += `
 
@@ -1133,7 +1133,7 @@ Hör av dig om du vill att vi avbryter ordern eller om du har frågor.`;
       if (extras.strikeAndShipRest) {
         body += `
 
-Vi stryker därför ${prod} från ordern och skickar övriga artiklar så snart de är klara. Hör av dig om du hellre vill vänta på hela ordern eller avbryta i stället.`;
+Vi stryker därför ${prod} från ordern och skickar övriga artiklar så snart de är klara.`;
       } else if (extras.shipRestOfOrder) {
         body += `
 
@@ -1448,7 +1448,7 @@ function buildMailDa(ctx) {
       if (extras.strikeAndShipRest) {
         body += `
 
-Vi stryger derfor ${prod} fra ordren og sender de øvrige varer, så snart de er klar. Kontakt os, hvis du hellere vil vente på hele ordren eller annullere.`;
+Vi stryger derfor ${prod} fra ordren og sender de øvrige varer, så snart de er klar.`;
       } else if (extras.shipRestOfOrder) {
         body += `
 
@@ -1481,7 +1481,7 @@ Kontakt os, hvis du ønsker at annullere ordren, eller hvis du har spørgsmål.`
       if (extras.strikeAndShipRest) {
         body += `
 
-Vi stryger derfor ${prod} fra ordren og sender de øvrige varer, så snart de er klar. Kontakt os, hvis du hellere vil vente på hele ordren eller annullere.`;
+Vi stryger derfor ${prod} fra ordren og sender de øvrige varer, så snart de er klar.`;
       } else if (extras.shipRestOfOrder) {
         body += `
 
@@ -1795,7 +1795,7 @@ function buildMailEn(ctx) {
       if (extras.strikeAndShipRest) {
         body += `
 
-We will therefore remove ${prod} from the order and ship the remaining items as soon as they are ready. Please let us know if you would rather wait for the full order or cancel instead.`;
+We will therefore remove ${prod} from the order and ship the remaining items as soon as they are ready.`;
       } else if (extras.shipRestOfOrder) {
         body += `
 
@@ -1828,7 +1828,7 @@ Please let us know if you would like us to cancel the order, or if you have any 
       if (extras.strikeAndShipRest) {
         body += `
 
-We will therefore remove ${prod} from the order and ship the remaining items as soon as they are ready. Please let us know if you would rather wait for the full order or cancel instead.`;
+We will therefore remove ${prod} from the order and ship the remaining items as soon as they are ready.`;
       } else if (extras.shipRestOfOrder) {
         body += `
 
