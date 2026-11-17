@@ -10,7 +10,18 @@ const TEMPLATE_DEFS = [
     id: "slut",
     fields: [
       { id: "waitOption", type: "checkbox", default: true },
-      { id: "shipRestOfOrder", type: "checkbox", default: false },
+      {
+        id: "shipRestOfOrder",
+        type: "checkbox",
+        default: false,
+        exclusiveGroup: "slutSplit",
+      },
+      {
+        id: "strikeAndShipRest",
+        type: "checkbox",
+        default: false,
+        exclusiveGroup: "slutSplit",
+      },
     ],
   },
   {
@@ -19,7 +30,18 @@ const TEMPLATE_DEFS = [
       { id: "expectedDate", type: "date" },
       { id: "delayReason", type: "text" },
       { id: "waitOption", type: "checkbox", default: true },
-      { id: "shipRestOfOrder", type: "checkbox", default: false },
+      {
+        id: "shipRestOfOrder",
+        type: "checkbox",
+        default: false,
+        exclusiveGroup: "inkommerSplit",
+      },
+      {
+        id: "strikeAndShipRest",
+        type: "checkbox",
+        default: false,
+        exclusiveGroup: "inkommerSplit",
+      },
     ],
   },
   {
@@ -190,6 +212,7 @@ const UI = {
       fields: {
         waitOption: { label: "Erbjud vänta på åter i lager" },
         shipRestOfOrder: { label: "Fråga om vänta på hela ordern eller stryka artikel" },
+        strikeAndShipRest: { label: "Stryk artikeln och skicka övriga (meddela kunden)" },
       },
     },
     inkommer: {
@@ -203,6 +226,7 @@ const UI = {
         },
         waitOption: { label: "Fråga om kunden vill vänta" },
         shipRestOfOrder: { label: "Fråga om vänta på hela ordern eller stryka artikel" },
+        strikeAndShipRest: { label: "Stryk artikeln och skicka övriga (meddela kunden)" },
       },
     },
     utgatt: {
@@ -1073,7 +1097,11 @@ function buildMailSv(ctx) {
   switch (templateId) {
     case "slut":
       body = `${intro}Vi måste tyvärr meddela att ${prod} är slut i lager för tillfället.`;
-      if (extras.shipRestOfOrder) {
+      if (extras.strikeAndShipRest) {
+        body += `
+
+Vi stryker därför ${prod} från ordern och skickar övriga artiklar så snart de är klara. Hör av dig om du hellre vill vänta på hela ordern eller avbryta i stället.`;
+      } else if (extras.shipRestOfOrder) {
         body += `
 
 Om du har fler artiklar i samma order kan vi tyvärr inte dela upp leveransen. Vill du vänta tills hela ordern kan skickas när ${prod} finns i lager igen, eller vill du att vi stryker ${prod} och skickar övriga artiklar?`;
@@ -1102,7 +1130,11 @@ Hör av dig om du vill att vi avbryter ordern eller om du har frågor.`;
         body += ` Leveransdatumet är i nuläget okänt — vi återkommer så snart vi har mer information.`;
       }
       if (reason) body += ` Orsaken är ${reason}.`;
-      if (extras.shipRestOfOrder) {
+      if (extras.strikeAndShipRest) {
+        body += `
+
+Vi stryker därför ${prod} från ordern och skickar övriga artiklar så snart de är klara. Hör av dig om du hellre vill vänta på hela ordern eller avbryta i stället.`;
+      } else if (extras.shipRestOfOrder) {
         body += `
 
 Om du har fler artiklar i samma order kan vi tyvärr inte dela upp leveransen. Vill du vänta tills hela ordern kan skickas när ${prod} finns i lager igen, eller vill du att vi stryker ${prod} och skickar övriga artiklar?`;
@@ -1413,7 +1445,11 @@ function buildMailDa(ctx) {
   switch (templateId) {
     case "slut":
       body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udsolgt i øjeblikket.`;
-      if (extras.shipRestOfOrder) {
+      if (extras.strikeAndShipRest) {
+        body += `
+
+Vi stryger derfor ${prod} fra ordren og sender de øvrige varer, så snart de er klar. Kontakt os, hvis du hellere vil vente på hele ordren eller annullere.`;
+      } else if (extras.shipRestOfOrder) {
         body += `
 
 Hvis du har flere varer i samme ordre, kan vi desværre ikke dele leveringen. Vil du vente, til hele ordren kan sendes, når ${prod} er på lager igen, eller vil du have os til at stryge ${prod} og sende de øvrige varer?`;
@@ -1442,7 +1478,11 @@ Kontakt os, hvis du ønsker at annullere ordren, eller hvis du har spørgsmål.`
         body += ` Leveringsdatoen er i øjeblikket ukendt — vi vender tilbage, så snart vi har mere information.`;
       }
       if (reason) body += ` Årsagen er ${reason}.`;
-      if (extras.shipRestOfOrder) {
+      if (extras.strikeAndShipRest) {
+        body += `
+
+Vi stryger derfor ${prod} fra ordren og sender de øvrige varer, så snart de er klar. Kontakt os, hvis du hellere vil vente på hele ordren eller annullere.`;
+      } else if (extras.shipRestOfOrder) {
         body += `
 
 Hvis du har flere varer i samme ordre, kan vi desværre ikke dele leveringen. Vil du vente, til hele ordren kan sendes, når ${prod} er på lager igen, eller vil du have os til at stryge ${prod} og sende de øvrige varer?`;
@@ -1752,7 +1792,11 @@ function buildMailEn(ctx) {
   switch (templateId) {
     case "slut":
       body = `${intro}We regret to inform you that ${prod} is currently out of stock.`;
-      if (extras.shipRestOfOrder) {
+      if (extras.strikeAndShipRest) {
+        body += `
+
+We will therefore remove ${prod} from the order and ship the remaining items as soon as they are ready. Please let us know if you would rather wait for the full order or cancel instead.`;
+      } else if (extras.shipRestOfOrder) {
         body += `
 
 If you have other items in the same order, we unfortunately cannot split the shipment. Would you like to wait until the full order can be sent when ${prod} is back in stock, or should we remove ${prod} and send the remaining items?`;
@@ -1781,7 +1825,11 @@ Please let us know if you would like us to cancel the order, or if you have any 
         body += ` The delivery date is currently unknown — we will update you as soon as we have more information.`;
       }
       if (reason) body += ` The reason is ${reason}.`;
-      if (extras.shipRestOfOrder) {
+      if (extras.strikeAndShipRest) {
+        body += `
+
+We will therefore remove ${prod} from the order and ship the remaining items as soon as they are ready. Please let us know if you would rather wait for the full order or cancel instead.`;
+      } else if (extras.shipRestOfOrder) {
         body += `
 
 If you have other items in the same order, we unfortunately cannot split the shipment. Would you like to wait until the full order can be sent when ${prod} is back in stock, or should we remove ${prod} and send the remaining items?`;
