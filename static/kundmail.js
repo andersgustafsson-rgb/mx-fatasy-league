@@ -310,13 +310,13 @@ const UI = {
     delager: {
       label: "Begränsat lager (antal)",
       description:
-        "Bara X st kvar — antingen fråga kunden (tre val) eller meddela att ni stryker saknat antal och skickar lagersaldot.",
+        "Bara X st kvar — antingen fråga kunden (tre val) eller meddela att ni ändrar till tillgängligt antal, stryker saknat och skickar.",
       fields: {
         stockQty: { label: "Antal i lager", placeholder: "t.ex. 1" },
         orderedQty: { label: "Beställt antal (valfritt)", placeholder: "t.ex. 3" },
         shipAvailableQty: {
           label:
-            "Stryk saknat antal och skicka det som finns (meddela kunden, ingen fråga)",
+            "Ändra till tillgängligt antal, stryk saknat och skicka (meddela kunden — ingen fråga)",
         },
       },
     },
@@ -1312,7 +1312,7 @@ ${mailOutro(ctx, { skipSympathy: true })}`;
       if (extras.shipAvailableQty) {
         body += `
 
-Vi går vidare så här: vi justerar ordern till ${stock} st och skickar det som finns i lager.`;
+Vi ändrar ordern till tillgängligt antal (${stock} st) och skickar det som finns i lager.`;
         if (orderedN != null && stockN != null && orderedN > stockN) {
           body += ` Resterande ${orderedN - stockN} st stryks från ordern.`;
         } else {
@@ -1328,7 +1328,7 @@ ${outro}`;
 
 Hur vill du att vi går vidare?
 
-1. Ta det som finns — vi skickar ${stock} st och återbetalar eventuell mellanskillnad enligt gällande betalningssätt.
+1. Ändra till tillgängligt antal — vi sätter ordern till ${stock} st, skickar det som finns och återbetalar eventuell mellanskillnad enligt gällande betalningssätt.
 2. Stryk artikeln/ordern — vi tar bort ${prod} (eller avbryter ordern) och återbetalar enligt gällande betalningssätt.
 3. Skicka övriga varor nu — om ordern innehåller fler produkter skickar vi dem utan att vänta. Säg till om ${prod} ska skickas delvis (${stock} st) eller strykas.
 
@@ -1677,7 +1677,7 @@ ${mailOutro(ctx, { skipSympathy: true })}`;
       if (extras.shipAvailableQty) {
         body += `
 
-Sådan går vi videre: vi justerer ordren til ${stock} stk. og sender det, der er på lager.`;
+Vi ændrer ordren til tilgængeligt antal (${stock} stk.) og sender det, der er på lager.`;
         if (orderedN != null && stockN != null && orderedN > stockN) {
           body += ` Resten (${orderedN - stockN} stk.) stryges fra ordren.`;
         } else {
@@ -1693,7 +1693,7 @@ ${outro}`;
 
 Hvordan vil du gerne, at vi går videre?
 
-1. Tag det, der er — vi sender ${stock} stk. og tilbagebetaler en eventuel difference efter gældende betalingsmetode.
+1. Ændre til tilgængeligt antal — vi sætter ordren til ${stock} stk., sender det der er, og tilbagebetaler en eventuel difference efter gældende betalingsmetode.
 2. Stryg varen/ordren — vi fjerner ${prod} (eller annullerer ordren) og tilbagebetaler efter gældende betalingsmetode.
 3. Send øvrige varer nu — hvis ordren indeholder flere produkter, sender vi dem uden at vente. Skriv, om ${prod} skal sendes delvist (${stock} stk.) eller stryges.
 
@@ -2042,7 +2042,7 @@ ${mailOutro(ctx, { skipSympathy: true })}`;
       if (extras.shipAvailableQty) {
         body += `
 
-We will proceed as follows: we adjust the order to ${stock} and ship what we have in stock.`;
+We change the order to the available quantity (${stock}) and ship what we have in stock.`;
         if (orderedN != null && stockN != null && orderedN > stockN) {
           body += ` The remaining ${orderedN - stockN} will be removed from the order.`;
         } else {
@@ -2058,7 +2058,7 @@ ${outro}`;
 
 How would you like us to proceed?
 
-1. Take what is available — we ship ${stock} and refund any difference according to your payment method.
+1. Change to the available quantity — we set the order to ${stock}, ship what we have, and refund any difference according to your payment method.
 2. Remove the item / cancel — we remove ${prod} (or cancel the order) and refund according to your payment method.
 3. Ship the rest of the order now — if the order contains other products, we ship those without waiting. Let us know whether ${prod} should ship partially (${stock}) or be removed.
 
