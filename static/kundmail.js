@@ -115,6 +115,11 @@ const TEMPLATE_DEFS = [
     fields: [
       { id: "stockQty", type: "text", required: true },
       { id: "orderedQty", type: "text" },
+      {
+        id: "shipAvailableQty",
+        type: "checkbox",
+        default: false,
+      },
     ],
   },
   {
@@ -305,10 +310,14 @@ const UI = {
     delager: {
       label: "Begränsat lager (antal)",
       description:
-        "Bara X st kvar. Kunden väljer: ta det som finns, stryk artikeln/ordern, eller skicka övriga varor.",
+        "Bara X st kvar — antingen fråga kunden (tre val) eller meddela att ni stryker saknat antal och skickar lagersaldot.",
       fields: {
         stockQty: { label: "Antal i lager", placeholder: "t.ex. 1" },
         orderedQty: { label: "Beställt antal (valfritt)", placeholder: "t.ex. 3" },
+        shipAvailableQty: {
+          label:
+            "Stryk saknat antal och skicka det som finns (meddela kunden, ingen fråga)",
+        },
       },
     },
     alternativ: {
@@ -560,6 +569,11 @@ function initDatePicker(input, btn) {
 
 function $(id) {
   return document.getElementById(id);
+}
+
+function parseIntQty(v) {
+  const n = parseInt(cleanStr(v), 10);
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
 function cleanStr(v) {
@@ -1289,11 +1303,28 @@ ${mailOutro(ctx, { skipSympathy: true })}`;
     case "delager": {
       const stock = cleanStr(extras.stockQty) || "X";
       const ordered = cleanStr(extras.orderedQty);
+      const stockN = parseIntQty(extras.stockQty);
+      const orderedN = parseIntQty(extras.orderedQty);
       body = `${intro}Vi vill informera dig om att lagret på ${prod} är begränsat just nu.`;
       body += ordered
         ? ` Du har beställt ${ordered} st, men vi har endast ${stock} st tillgängliga.`
         : ` Vi har endast ${stock} st tillgängliga.`;
-      body += `
+      if (extras.shipAvailableQty) {
+        body += `
+
+Vi går vidare så här: vi justerar ordern till ${stock} st och skickar det som finns i lager.`;
+        if (orderedN != null && stockN != null && orderedN > stockN) {
+          body += ` Resterande ${orderedN - stockN} st stryks från ordern.`;
+        } else {
+          body += ` Det antal som saknas i lager stryks från ordern.`;
+        }
+        body += ` Eventuell mellanskillnad återbetalas till samma betalningsmetod inom några bankdagar.
+
+Om du hellre vill stryka hela artikeln eller avbryta ordern — svara gärna på detta mail innan vi skickar. Annars ordnar vi leveransen enligt ovan.
+
+${outro}`;
+      } else {
+        body += `
 
 Hur vill du att vi går vidare?
 
@@ -1304,6 +1335,7 @@ Hur vill du att vi går vidare?
 Svara gärna på detta mail med vilket alternativ som passar dig bäst, så hjälper vi dig vidare.
 
 ${outro}`;
+      }
       break;
     }
     case "alternativ": {
@@ -1636,11 +1668,28 @@ ${mailOutro(ctx, { skipSympathy: true })}`;
     case "delager": {
       const stock = cleanStr(extras.stockQty) || "X";
       const ordered = cleanStr(extras.orderedQty);
+      const stockN = parseIntQty(extras.stockQty);
+      const orderedN = parseIntQty(extras.orderedQty);
       body = `${intro}Vi vil gerne informere dig om, at lagerbeholdningen af ${prod} er begrænset lige nu.`;
       body += ordered
         ? ` Du har bestilt ${ordered} stk., men vi har kun ${stock} stk. tilgængelige.`
         : ` Vi har kun ${stock} stk. tilgængelige.`;
-      body += `
+      if (extras.shipAvailableQty) {
+        body += `
+
+Sådan går vi videre: vi justerer ordren til ${stock} stk. og sender det, der er på lager.`;
+        if (orderedN != null && stockN != null && orderedN > stockN) {
+          body += ` Resten (${orderedN - stockN} stk.) stryges fra ordren.`;
+        } else {
+          body += ` Det antal, der mangler på lager, stryges fra ordren.`;
+        }
+        body += ` Eventuel difference refunderes til samme betalingsmetode inden for få bankdage.
+
+Hvis du hellere vil stryge hele varen eller annullere ordren, så svar gerne på denne mail, før vi sender — ellers fortsætter vi som beskrevet.
+
+${outro}`;
+      } else {
+        body += `
 
 Hvordan vil du gerne, at vi går videre?
 
@@ -1651,6 +1700,7 @@ Hvordan vil du gerne, at vi går videre?
 Svar gerne på denne mail med, hvilket alternativ der passer dig bedst, så hjælper vi dig videre.
 
 ${outro}`;
+      }
       break;
     }
     case "alternativ": {
@@ -1983,11 +2033,28 @@ ${mailOutro(ctx, { skipSympathy: true })}`;
     case "delager": {
       const stock = cleanStr(extras.stockQty) || "X";
       const ordered = cleanStr(extras.orderedQty);
+      const stockN = parseIntQty(extras.stockQty);
+      const orderedN = parseIntQty(extras.orderedQty);
       body = `${intro}We wanted to let you know that stock of ${prod} is limited right now.`;
       body += ordered
         ? ` You ordered ${ordered}, but we only have ${stock} available.`
         : ` We only have ${stock} available.`;
-      body += `
+      if (extras.shipAvailableQty) {
+        body += `
+
+We will proceed as follows: we adjust the order to ${stock} and ship what we have in stock.`;
+        if (orderedN != null && stockN != null && orderedN > stockN) {
+          body += ` The remaining ${orderedN - stockN} will be removed from the order.`;
+        } else {
+          body += ` Any quantity not in stock will be removed from the order.`;
+        }
+        body += ` Any price difference will be refunded to the same payment method within a few banking days.
+
+If you would rather remove the entire line or cancel the order, please reply before we ship — otherwise we will go ahead as described.
+
+${outro}`;
+      } else {
+        body += `
 
 How would you like us to proceed?
 
@@ -1998,6 +2065,7 @@ How would you like us to proceed?
 Please reply with the option that suits you best, and we will take it from there.
 
 ${outro}`;
+      }
       break;
     }
     case "alternativ": {
