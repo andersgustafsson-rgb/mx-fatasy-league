@@ -839,6 +839,12 @@ for _alias, _rule in (
     ("tippa_wsx_page", "/tippa-wsx"),
     ("tippa_mxgp_page", "/tippa-mxgp"),
     ("tippa_mxon_page", "/tippa-mxon"),
+    ("tippa_paris_page", "/tippa-paris"),
+    ("guide_index_page", "/guide"),
+    ("guide_holeshot_page", "/guide/holeshot"),
+    ("guide_wildcard_page", "/guide/wildcard"),
+    ("guide_tippa_vs_betting_page", "/guide/tippa-vs-betting"),
+    ("paris_hub_page", "/paris-sx"),
 ):
     try:
         bp_ep = f"public.{_alias}"

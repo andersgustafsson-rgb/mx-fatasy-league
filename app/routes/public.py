@@ -788,25 +788,67 @@ def sitemap_xml():
 		("/", "weekly", "1.0"),
 		("/om", "weekly", "0.95"),
 		("/tippa-supercross", "weekly", "0.9"),
+		("/tippa-paris", "weekly", "0.95"),
+		("/paris-sx", "weekly", "0.9"),
 		("/tippa-motocross", "weekly", "0.9"),
 		("/tippa-smx", "weekly", "0.9"),
 		("/tippa-wsx", "weekly", "0.9"),
 		("/tippa-mxgp", "weekly", "0.9"),
 		("/tippa-mxon", "weekly", "0.9"),
+		("/guide", "weekly", "0.85"),
+		("/guide/holeshot", "monthly", "0.8"),
+		("/guide/wildcard", "monthly", "0.8"),
+		("/guide/tippa-vs-betting", "monthly", "0.8"),
+		("/finished_series", "weekly", "0.85"),
 		("/start", "weekly", "0.9"),
 		("/manual", "monthly", "0.85"),
 		("/llms.txt", "monthly", "0.4"),
 		("/register", "monthly", "0.7"),
-		("/login", "monthly", "0.5"),
 		("/privacy", "yearly", "0.3"),
 		("/terms", "yearly", "0.3"),
 		("/contact", "yearly", "0.4"),
 	]
+	# Avslutade serier (slutställningar) — indexerbara arkivsidor
+	try:
+		from models import Series, db
+
+		current = _date.today()
+		finished = (
+			Series.query.filter(
+				db.or_(
+					db.and_(Series.end_date != None, Series.end_date < current),  # noqa: E711
+					db.and_(
+						Series.is_active == False,  # noqa: E712
+						Series.end_date != None,  # noqa: E711
+						Series.end_date < current,
+					),
+				)
+			)
+			.order_by(Series.year.desc())
+			.limit(80)
+			.all()
+		)
+		for series in finished:
+			name = (series.name or "").strip()
+			if name == "AMA Total":
+				continue
+			urls.append((f"/finished_series/{series.id}", "monthly", "0.7"))
+			if name in ("Supercross", "SX") and series.year:
+				urls.append(
+					(f"/finished_series/ama/{int(series.year)}", "monthly", "0.65")
+				)
+	except Exception as e:
+		print(f"sitemap finished_series skip: {e}")
+
 	parts = [
 		'<?xml version="1.0" encoding="UTF-8"?>',
 		'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
 	]
+	seen = set()
 	for path, freq, prio in urls:
+		if path in seen:
+			continue
+		seen.add(path)
 		parts.append("  <url>")
 		parts.append(f"    <loc>{base}{path}</loc>")
 		parts.append(f"    <lastmod>{today}</lastmod>")
@@ -879,6 +921,46 @@ def tippa_mxon_page():
 	from services.seo_tippa import _tippa_mxon_page_data
 
 	return render_template("tippa_serie.html", page=_tippa_mxon_page_data())
+
+
+@bp.get("/tippa-paris")
+def tippa_paris_page():
+	"""SEO: hur man tippar Paris Supercross fantasy."""
+	from services.seo_tippa import _tippa_paris_page_data
+
+	return render_template("tippa_serie.html", page=_tippa_paris_page_data())
+
+
+@bp.get("/guide")
+def guide_index_page():
+	"""SEO: översikt guider."""
+	from services.seo_tippa import _guide_index_page_data
+
+	return render_template("tippa_serie.html", page=_guide_index_page_data())
+
+
+@bp.get("/guide/holeshot")
+def guide_holeshot_page():
+	"""SEO: vad är holeshot."""
+	from services.seo_tippa import _guide_holeshot_page_data
+
+	return render_template("tippa_serie.html", page=_guide_holeshot_page_data())
+
+
+@bp.get("/guide/wildcard")
+def guide_wildcard_page():
+	"""SEO: vad är wildcard."""
+	from services.seo_tippa import _guide_wildcard_page_data
+
+	return render_template("tippa_serie.html", page=_guide_wildcard_page_data())
+
+
+@bp.get("/guide/tippa-vs-betting")
+def guide_tippa_vs_betting_page():
+	"""SEO: tippa vs betting."""
+	from services.seo_tippa import _guide_tippa_vs_betting_page_data
+
+	return render_template("tippa_serie.html", page=_guide_tippa_vs_betting_page_data())
 
 
 # Paris Supercross — registrerat här så rutterna alltid följer public-blueprinten.

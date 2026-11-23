@@ -233,6 +233,12 @@
           <a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('tippa_supercross_page') }}">Hur tippar jag SX?</a>
         </li>
         <li>
+          <strong class="text-white">Paris SX</strong> — indoor-helg i Paris med lördag/söndag, King &amp; Prince.
+          <a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('tippa_paris_page') }}">Hur tippar jag Paris?</a>
+          ·
+          <a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('paris_hub_page') }}">Öppna hubben</a>
+        </li>
+        <li>
           <strong class="text-white">Pro Motocross (MX)</strong> — utomhus-motocross i USA med heat och overall.
           <a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('tippa_motocross_page') }}">Hur tippar jag MX?</a>
         </li>
@@ -273,11 +279,24 @@
       </div>
     </section>
 
+    <section class="mb-10 rounded-xl border border-slate-700/80 bg-slate-900/60 p-5 sm:p-6">
+      <h2 class="text-xl font-bold text-cyan-300 mb-3">Guider &amp; arkiv</h2>
+      <ul class="space-y-2 text-sm text-slate-300">
+        <li><a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('guide_index_page') }}">Alla guider</a> — holeshot, wildcard, tippa vs betting</li>
+        <li><a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('guide_holeshot_page') }}">Vad är holeshot?</a></li>
+        <li><a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('guide_wildcard_page') }}">Vad är wildcard?</a></li>
+        <li><a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('guide_tippa_vs_betting_page') }}">Tippa vs betting</a></li>
+        <li><a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('finished_series_page') }}">Fantasy-arkiv</a> — slutställningar</li>
+      </ul>
+    </section>
+
     <section class="mb-10 rounded-xl border border-amber-700/40 bg-amber-950/20 p-5 sm:p-6">
       <h2 class="text-xl font-bold text-amber-200 mb-3">Gratis — ingen betting</h2>
       <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
         MX Fantasy League är <strong class="text-white">inte</strong> ett casinospel och inte oddstips om pengar.
         Du spelar om fantasypoäng, ranking och bragder i ligan. Konto, tips och ligor är gratis.
+        Läs mer:
+        <a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('guide_tippa_vs_betting_page') }}">tippa vs betting</a>.
       </p>
     </section>
 
@@ -306,7 +325,7 @@
         </details>
         <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
           <summary class="cursor-pointer font-semibold text-white">Vilka serier finns?</summary>
-          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Supercross (SX), Pro Motocross (MX), SuperMotocross (SMX), World Supercross (WSX), MXGP och Motocross of Nations (MXoN).</p>
+          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Supercross (SX), Paris SX, Pro Motocross (MX), SuperMotocross (SMX), World Supercross (WSX), MXGP och Motocross of Nations (MXoN).</p>
         </details>
         <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
           <summary class="cursor-pointer font-semibold text-white">Kan man spela med vänner?</summary>

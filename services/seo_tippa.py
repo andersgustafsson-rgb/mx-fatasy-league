@@ -24,6 +24,12 @@ def _llms_txt_body(base: str) -> str:
         f"- [Tippa WSX]({base}/tippa-wsx): tippa World Supercross (SX1/SX2) gratis\n"
         f"- [Tippa MXGP]({base}/tippa-mxgp): tippa FIM MXGP / MX2-världsmästerskapet gratis\n"
         f"- [Tippa MXoN]({base}/tippa-mxon): tippa Motocross of Nations (länder) gratis\n"
+        f"- [Tippa Paris SX]({base}/tippa-paris): Paris Supercross fantasy (lör/sön, King/Prince)\n"
+        f"- [Paris SX hub]({base}/paris-sx): tippa och följ Paris-helgen i appen\n"
+        f"- [Fantasy-arkiv]({base}/finished_series): slutställningar för avslutade serier\n"
+        f"- [Guide: holeshot]({base}/guide/holeshot): vad holeshot är och hur du tippar det\n"
+        f"- [Guide: tippa vs betting]({base}/guide/tippa-vs-betting): skillnaden fantasy och odds\n"
+        f"- [Guide: wildcard]({base}/guide/wildcard): så funkar wildcard i tippningen\n"
         f"- [Spelmanual]({base}/manual): regler, poängsystem, holeshot och wildcard\n"
         f"- [Starta / bjud in]({base}/start): skapa konto och gå med\n"
         f"- [Registrera]({base}/register): gratis konto\n"
@@ -32,7 +38,7 @@ def _llms_txt_body(base: str) -> str:
         "- Namn: MX Fantasy League (även MX Fantasy)\n"
         "- Språk: svenska\n"
         "- Kostnad: gratis, ingen betting\n"
-        "- Serier: SX, MX, SMX, WSX, MXGP, MXON\n"
+        "- Serier: SX, MX, SMX, WSX, MXGP, MXON, Paris SX\n"
         f"- Sitemap: {base}/sitemap.xml\n"
         f"- Facebook: {os.getenv('FACEBOOK_PAGE_URL') or 'https://www.facebook.com/profile.php?id=61586769893903'}\n"
     )
@@ -61,6 +67,11 @@ def _tippa_related_links(*exclude: str) -> list[dict]:
             "blurb": "amerikansk AMA Supercross",
         },
         {
+            "href": "/tippa-paris",
+            "label": "Tippa Paris SX",
+            "blurb": "Paris Supercross — lördag/söndag fantasy",
+        },
+        {
             "href": "/tippa-motocross",
             "label": "Tippa Motocross (MX)",
             "blurb": "Pro Motocross utomhus",
@@ -84,6 +95,39 @@ def _tippa_related_links(*exclude: str) -> list[dict]:
             "href": "/tippa-mxon",
             "label": "Tippa MXoN",
             "blurb": "Motocross of Nations — tippa länder",
+        },
+    ]
+    skip = set(exclude)
+    return [link for link in all_links if link["href"] not in skip]
+
+
+def _seo_guide_links(*exclude: str) -> list[dict]:
+    """Shared guide links for SEO pages."""
+    all_links = [
+        {
+            "href": "/guide/holeshot",
+            "label": "Vad är holeshot?",
+            "blurb": "så tippar du holeshot i fantasy",
+        },
+        {
+            "href": "/guide/wildcard",
+            "label": "Vad är wildcard?",
+            "blurb": "extra tipp som ger bonuspoäng",
+        },
+        {
+            "href": "/guide/tippa-vs-betting",
+            "label": "Tippa vs betting",
+            "blurb": "fantasy utan odds och pengar",
+        },
+        {
+            "href": "/finished_series",
+            "label": "Fantasy-arkiv",
+            "blurb": "slutställningar för avslutade serier",
+        },
+        {
+            "href": "/manual",
+            "label": "Spelmanual",
+            "blurb": "regler och poängsystem",
         },
     ]
     skip = set(exclude)
@@ -550,4 +594,345 @@ def _tippa_mxon_page_data() -> dict:
         "faq": faq,
         "faq_json": _tippa_serie_faq_json(faq),
         "related_links": _tippa_related_links("/tippa-mxon"),
+        "guide_links": _seo_guide_links(),
+    }
+
+
+def _tippa_paris_page_data() -> dict:
+    faq = [
+        {
+            "q": "Hur tippar jag Paris Supercross?",
+            "a": "Skapa gratis konto, öppna Paris SX i appen (eller via paris-sx), tippa lördag och söndag innan respektive deadline — finaler, Superpole och King/Prince.",
+            "a_plain": "Skapa gratis konto, öppna Paris SX i appen, tippa lördag och söndag innan respektive deadline — finaler, Superpole och King/Prince.",
+        },
+        {
+            "q": "Vad är skillnaden mellan lördag och söndag i Paris-fantasy?",
+            "a": "Lördagen tippar du bland annat Superpole och finalvinnare. Söndagen tippar du finaler plus overall-titlarna King of Paris (SX1) och Prince of Paris (SX2) för helgen.",
+            "a_plain": "Lördagen tippar du bland annat Superpole och finalvinnare. Söndagen tippar du finaler plus overall-titlarna King of Paris (SX1) och Prince of Paris (SX2) för helgen.",
+        },
+        {
+            "q": "Är Paris SX samma sak som AMA Supercross?",
+            "a": "Nej. Paris är ett eget indoor-event (ofta La Défense Arena) med egen tippstruktur. AMA SX tippas som separat serie i MX Fantasy League.",
+            "a_plain": "Nej. Paris är ett eget indoor-event med egen tippstruktur. AMA SX tippas som separat serie i MX Fantasy League.",
+        },
+        {
+            "q": "Kostar Paris SX Fantasy något?",
+            "a": "Nej. Konto, tips och leaderboard är gratis. Du spelar om fantasypoäng — ingen betting.",
+            "a_plain": "Nej. Konto, tips och leaderboard är gratis. Du spelar om fantasypoäng — ingen betting.",
+        },
+        {
+            "q": "Var ser jag slutställningen efter Paris?",
+            "a": "På Paris-hubben och i fantasy-arkivet när helgen är avslutad. Helg totalt summerar lördag + söndag.",
+            "a_plain": "På Paris-hubben och i fantasy-arkivet när helgen är avslutad. Helg totalt summerar lördag + söndag.",
+        },
+    ]
+    event_json = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@type": "SportsEvent",
+            "name": "Paris Supercross Fantasy",
+            "sport": "Supercross",
+            "description": (
+                "Gratis fantasy för Paris Supercross: tippa lördag och söndag, "
+                "Superpole, finaler, King of Paris och Prince of Paris."
+            ),
+            "url": "https://mx-fantasy.se/tippa-paris",
+            "organizer": {
+                "@type": "Organization",
+                "name": "MX Fantasy League",
+                "url": "https://mx-fantasy.se",
+            },
+            "location": {
+                "@type": "Place",
+                "name": "Paris / La Défense Arena",
+                "address": {
+                    "@type": "PostalAddress",
+                    "addressLocality": "Paris",
+                    "addressCountry": "FR",
+                },
+            },
+        },
+        ensure_ascii=False,
+    )
+    return {
+        "path": "/tippa-paris",
+        "series_short": "Paris SX",
+        "breadcrumb_name": "Tippa Paris SX",
+        "seo_title": "Tippa Paris SX — gratis Paris Supercross fantasy | MX Fantasy League",
+        "seo_description": (
+            "Hur tippar man Paris Supercross? Gratis fantasy: lördag/söndag, Superpole, "
+            "finaler, King & Prince of Paris — utan betting på mx-fantasy.se."
+        ),
+        "seo_keywords": (
+            "tippa paris sx, paris supercross fantasy, paris sx tippning, "
+            "king of paris, prince of paris, superpole paris, "
+            "gratis fantasy paris supercross, MX Fantasy League"
+        ),
+        "h1": "Hur tippar jag Paris Supercross?",
+        "lead": (
+            "Vill du tippa Paris SX online? I MX Fantasy League tippar du lördagens och "
+            "söndagens race — Superpole, finalvinnare samt King of Paris och Prince of Paris — "
+            "gratis fantasy utan betting."
+        ),
+        "what_title": "Vad är Paris SX Fantasy?",
+        "what_paragraphs": [
+            (
+                "Paris Supercross är ett stort indoor-event i Frankrike. I fantasy tippar du "
+                "inte bara ett race utan en hel helg: lördag och söndag har egna picks, "
+                "och overall-titlarna King (SX1) och Prince (SX2) avgörs över båda dagarna."
+            ),
+            (
+                "Söker du tippa Paris SX, Paris Supercross fantasy eller King of Paris-tippning "
+                "på svenska är MX Fantasy League byggt för just den helgen — egen leaderboard "
+                "med uppdelning Lör · Sön · Helg totalt."
+            ),
+        ],
+        "steps": [
+            "<strong class=\"text-white\">Skapa konto</strong> på mx-fantasy.se — gratis.",
+            "<strong class=\"text-white\">Öppna Paris SX</strong> via hubben "
+            "<a class=\"text-cyan-400 underline\" href=\"/paris-sx\">/paris-sx</a>.",
+            "<strong class=\"text-white\">Tippa lördagen</strong> (t.ex. Superpole + finaler) innan deadline.",
+            "<strong class=\"text-white\">Tippa söndagen</strong> (finaler + King/Prince) innan deadline.",
+            "<strong class=\"text-white\">Följ poängen</strong> — Lör, Sön och Helg totalt på leaderboarden.",
+        ],
+        "faq": faq,
+        "faq_json": _tippa_serie_faq_json(faq),
+        "event_json": event_json,
+        "related_links": _tippa_related_links("/tippa-paris"),
+        "guide_links": _seo_guide_links(),
+        "play_cta": {"href": "/paris-sx", "label": "Öppna Paris SX-hubben"},
+    }
+
+
+def _guide_holeshot_page_data() -> dict:
+    faq = [
+        {
+            "q": "Vad är holeshot i motocross/supercross?",
+            "a": "Holeshot är föraren som leder efter starten / första svängen. I fantasy tippar du vem som tar holeshot och får poäng om du har rätt.",
+            "a_plain": "Holeshot är föraren som leder efter starten. I fantasy tippar du vem som tar holeshot och får poäng om du har rätt.",
+        },
+        {
+            "q": "Ger holeshot alltid många poäng?",
+            "a": "Det beror på serien, men holeshot är ofta en tydlig bonuspost. Kolla spelmanualen för aktuella poäng.",
+            "a_plain": "Det beror på serien, men holeshot är ofta en tydlig bonuspost. Kolla spelmanualen för aktuella poäng.",
+        },
+        {
+            "q": "Tippar man holeshot i båda klasserna?",
+            "a": "I många serier tippar du holeshot per klass (t.ex. 450 och 250, eller SX1/SX2). Se vad som visas i tippvyn för just det racet.",
+            "a_plain": "I många serier tippar du holeshot per klass. Se vad som visas i tippvyn för just det racet.",
+        },
+    ]
+    return {
+        "path": "/guide/holeshot",
+        "series_short": "Guide",
+        "breadcrumb_name": "Holeshot",
+        "seo_title": "Vad är holeshot? Tippa holeshot i fantasy MX | MX Fantasy League",
+        "seo_description": (
+            "Förklaring: holeshot i motocross och supercross — och hur du tippar holeshot "
+            "gratis i MX Fantasy League utan betting."
+        ),
+        "seo_keywords": (
+            "holeshot, vad är holeshot, tippa holeshot, holeshot fantasy, "
+            "motocross holeshot, supercross holeshot, MX Fantasy League"
+        ),
+        "h1": "Vad är holeshot — och hur tippar jag det?",
+        "lead": (
+            "Holeshot är starten: vem leder efter första svängen. I MX Fantasy League tippar "
+            "du holeshot som en egen post och får fantasypoäng när du prickar rätt."
+        ),
+        "what_title": "Holeshot i korthet",
+        "what_paragraphs": [
+            (
+                "I både supercross och motocross är starten avgörande. Holeshot-föraren "
+                "tar tidigt ledningen och tvingar övriga att jaga. Därför är holeshot en "
+                "klassisk tippning — både för fans och i fantasy."
+            ),
+            (
+                "I MX Fantasy League är holeshot en del av race-tipset (tillsammans med "
+                "topp 6 och ofta wildcard). Du tippar innan deadline och får poäng när "
+                "resultatet är inlagt."
+            ),
+        ],
+        "steps": [
+            "<strong class=\"text-white\">Öppna tippet</strong> för nästa race.",
+            "<strong class=\"text-white\">Välj holeshot-förare</strong> i den klass som visas.",
+            "<strong class=\"text-white\">Spara innan deadline</strong> (ofta 2 h före start).",
+            "<strong class=\"text-white\">Följ poängen</strong> när holeshot är registrerat.",
+        ],
+        "faq": faq,
+        "faq_json": _tippa_serie_faq_json(faq),
+        "related_links": _tippa_related_links(),
+        "guide_links": _seo_guide_links("/guide/holeshot"),
+    }
+
+
+def _guide_wildcard_page_data() -> dict:
+    faq = [
+        {
+            "q": "Vad är wildcard i MX Fantasy?",
+            "a": "Wildcard är en extra tipp (ofta en förare eller specialrad) som ger bonuspoäng enligt spelets regler för den serien.",
+            "a_plain": "Wildcard är en extra tipp som ger bonuspoäng enligt spelets regler för den serien.",
+        },
+        {
+            "q": "Måste jag tippa wildcard?",
+            "a": "Du bör tippa den om fältet finns — annars missar du möjliga poäng. Exakt krav syns i tippvyn.",
+            "a_plain": "Du bör tippa den om fältet finns — annars missar du möjliga poäng.",
+        },
+        {
+            "q": "Är wildcard samma sak i alla serier?",
+            "a": "Nej. AMA, WSX, Paris m.fl. kan ha olika specialtips. I Paris används t.ex. Superpole / King-Prince-logik i stället för klassisk AMA-wildcard.",
+            "a_plain": "Nej. Olika serier har olika specialtips. Se tippvyn och manualen för just den serien.",
+        },
+    ]
+    return {
+        "path": "/guide/wildcard",
+        "series_short": "Guide",
+        "breadcrumb_name": "Wildcard",
+        "seo_title": "Vad är wildcard i fantasy MX? | MX Fantasy League",
+        "seo_description": (
+            "Så funkar wildcard i MX Fantasy League — extra tipp för bonuspoäng i "
+            "supercross och motocross, utan betting."
+        ),
+        "seo_keywords": (
+            "wildcard fantasy, tippa wildcard, vad är wildcard motocross, "
+            "fantasy mx wildcard, MX Fantasy League"
+        ),
+        "h1": "Vad är wildcard i tippningen?",
+        "lead": (
+            "Wildcard är spelets extratipp: en chans till bonuspoäng utöver topp 6 och "
+            "holeshot. Exakt form beror på serie — alltid synlig i tippvyn innan deadline."
+        ),
+        "what_title": "Wildcard förklarat",
+        "what_paragraphs": [
+            (
+                "I fantasy motocross räcker det sällan att bara tippa vinnaren. Wildcard "
+                "(eller motsvarande specialrad) belönar dig som läser startlista och form "
+                "lite djupare."
+            ),
+            (
+                "I MX Fantasy League syns wildcard som ett eget val i tippet när serien "
+                "använder det. Saknas fältet — som i vissa MXGP/Paris-lägen — tippar du "
+                "istället de specialposter som visas där."
+            ),
+        ],
+        "steps": [
+            "<strong class=\"text-white\">Öppna race-tippet</strong> för din serie.",
+            "<strong class=\"text-white\">Fyll topp 6 och holeshot</strong> först.",
+            "<strong class=\"text-white\">Välj wildcard</strong> om fältet finns.",
+            "<strong class=\"text-white\">Läs manualen</strong> om du undrar poängvärdet.",
+        ],
+        "faq": faq,
+        "faq_json": _tippa_serie_faq_json(faq),
+        "related_links": _tippa_related_links(),
+        "guide_links": _seo_guide_links("/guide/wildcard"),
+    }
+
+
+def _guide_tippa_vs_betting_page_data() -> dict:
+    faq = [
+        {
+            "q": "Är MX Fantasy League betting?",
+            "a": "Nej. Du tippar om fantasypoäng och ranking. Ingen insats, inga odds, ingen utbetalning.",
+            "a_plain": "Nej. Du tippar om fantasypoäng och ranking. Ingen insats, inga odds, ingen utbetalning.",
+        },
+        {
+            "q": "Kan man vinna pengar?",
+            "a": "Spelet i sig handlar om poäng och bragder — inte om att satsa pengar. Privata ligor kan ha egna priser utanför plattformen; det är upp till er.",
+            "a_plain": "Spelet handlar om poäng och ranking — inte om att satsa pengar.",
+        },
+        {
+            "q": "Varför välja tippning istället för odds?",
+            "a": "För att tävla med kompisar över en hel säsong, lära dig startlistor och ha kul kring race — utan spelkonto eller risk.",
+            "a_plain": "För att tävla med kompisar över en säsong utan spelkonto eller risk.",
+        },
+    ]
+    return {
+        "path": "/guide/tippa-vs-betting",
+        "series_short": "Guide",
+        "breadcrumb_name": "Tippa vs betting",
+        "seo_title": "Tippa motocross vs betting — skillnaden | MX Fantasy League",
+        "seo_description": (
+            "Skillnaden mellan fantasy tippning och betting: MX Fantasy League är gratis "
+            "fantasypoäng utan odds, insats eller casino."
+        ),
+        "seo_keywords": (
+            "tippa vs betting, fantasy motocross, tippa utan betting, "
+            "gratis mx spel, ingen odds, MX Fantasy League"
+        ),
+        "h1": "Tippa vs betting — vad är skillnaden?",
+        "lead": (
+            "MX Fantasy League är tippning för nöje: du bygger picks, samlar fantasypoäng "
+            "och jämför dig med andra. Det är inte odds, casino eller betting om pengar."
+        ),
+        "what_title": "Fantasy tippning ≠ betting",
+        "what_paragraphs": [
+            (
+                "Betting handlar om att satsa pengar mot odds. Fantasy tippning handlar om "
+                "att pricka sportresultat och samla poäng i ett spel — ofta över många race."
+            ),
+            (
+                "På mx-fantasy.se skapar du konto gratis, tippar SX/MX/SMX/WSX/MXGP/MXoN/Paris "
+                "och följer leaderboards och ligor. Ingen bank-id för insatser, inga oddsbolag."
+            ),
+        ],
+        "steps": [
+            "<strong class=\"text-white\">Skapa gratis konto</strong> — ingen insats.",
+            "<strong class=\"text-white\">Tippa race</strong> — topp 6, holeshot, specialrader.",
+            "<strong class=\"text-white\">Jämför poäng</strong> i liga eller global lista.",
+            "<strong class=\"text-white\">Läs mer</strong> i "
+            "<a class=\"text-cyan-400 underline\" href=\"/om\">Om spelet</a> och "
+            "<a class=\"text-cyan-400 underline\" href=\"/manual\">manualen</a>.",
+        ],
+        "faq": faq,
+        "faq_json": _tippa_serie_faq_json(faq),
+        "related_links": _tippa_related_links(),
+        "guide_links": _seo_guide_links("/guide/tippa-vs-betting"),
+    }
+
+
+def _guide_index_page_data() -> dict:
+    faq = [
+        {
+            "q": "Var hittar jag alla guider?",
+            "a": "Här på /guide samt länkar från Om spelet, tippa-sidorna och spelmanualen.",
+            "a_plain": "Här på /guide samt länkar från Om spelet, tippa-sidorna och spelmanualen.",
+        },
+    ]
+    return {
+        "path": "/guide",
+        "series_short": "Guider",
+        "breadcrumb_name": "Guider",
+        "seo_title": "Guider — tippa motocross & fantasy MX | MX Fantasy League",
+        "seo_description": (
+            "Korta guider till MX Fantasy League: holeshot, wildcard och skillnaden "
+            "mellan tippa och betting."
+        ),
+        "seo_keywords": (
+            "mx fantasy guide, tippa motocross guide, holeshot guide, "
+            "wildcard guide, tippa vs betting"
+        ),
+        "h1": "Guider till MX Fantasy League",
+        "lead": (
+            "Korta förklaringar för dig som är ny — eller vill förstå specialtippen bättre "
+            "inför nästa racehelg."
+        ),
+        "what_title": "Välj en guide",
+        "what_paragraphs": [
+            (
+                "Börja med holeshot och wildcard om du tippar AMA/WSX. Läs tippa vs betting "
+                "om du vill förklara spelet för en kompis. För serieguider: tippa-SX, tippa-MX "
+                "och tippa-Paris."
+            ),
+        ],
+        "steps": [
+            "<a class=\"text-cyan-400 underline\" href=\"/guide/holeshot\"><strong>Vad är holeshot?</strong></a>",
+            "<a class=\"text-cyan-400 underline\" href=\"/guide/wildcard\"><strong>Vad är wildcard?</strong></a>",
+            "<a class=\"text-cyan-400 underline\" href=\"/guide/tippa-vs-betting\"><strong>Tippa vs betting</strong></a>",
+            "<a class=\"text-cyan-400 underline\" href=\"/tippa-paris\"><strong>Tippa Paris SX</strong></a>",
+            "<a class=\"text-cyan-400 underline\" href=\"/finished_series\"><strong>Fantasy-arkiv</strong></a>",
+        ],
+        "faq": faq,
+        "faq_json": _tippa_serie_faq_json(faq),
+        "related_links": _tippa_related_links(),
+        "guide_links": _seo_guide_links("/guide"),
     }

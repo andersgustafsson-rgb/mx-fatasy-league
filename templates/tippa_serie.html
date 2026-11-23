@@ -15,6 +15,11 @@
   <script type="application/ld+json">
   {{ page.faq_json|safe }}
   </script>
+  {% if page.event_json %}
+  <script type="application/ld+json">
+  {{ page.event_json|safe }}
+  </script>
+  {% endif %}
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -70,7 +75,11 @@
 
     <div class="flex flex-wrap gap-3 mb-10">
       <a href="{{ url_for('register') }}" class="rp-btn rp-btn--primary">Skapa gratis konto</a>
+      {% if page.play_cta %}
+      <a href="{{ page.play_cta.href }}" class="rp-btn rp-btn--secondary">{{ page.play_cta.label }}</a>
+      {% else %}
       <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary">Till spelet</a>
+      {% endif %}
       <a href="{{ url_for('manual_page') }}" class="rp-btn rp-btn--ghost">Spelmanual</a>
     </div>
 
@@ -127,6 +136,25 @@
           <a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('about_game_page') }}">Om spelet</a>
           — hela översikten av MX Fantasy League
         </li>
+      </ul>
+    </section>
+
+    <section class="mb-10 rounded-xl border border-slate-700/80 bg-slate-900/40 p-5 sm:p-6">
+      <h2 class="text-lg font-bold text-slate-200 mb-3">Guider &amp; arkiv</h2>
+      <ul class="space-y-2 text-sm text-slate-300">
+        {% set _guides = page.guide_links if page.guide_links is defined and page.guide_links else [
+          {"href": "/guide/holeshot", "label": "Vad är holeshot?", "blurb": "så tippar du holeshot"},
+          {"href": "/guide/wildcard", "label": "Vad är wildcard?", "blurb": "extra tipp för bonuspoäng"},
+          {"href": "/guide/tippa-vs-betting", "label": "Tippa vs betting", "blurb": "fantasy utan odds"},
+          {"href": "/finished_series", "label": "Fantasy-arkiv", "blurb": "slutställningar"},
+          {"href": "/guide", "label": "Alla guider", "blurb": "översikt"}
+        ] %}
+        {% for link in _guides %}
+        <li>
+          <a class="text-cyan-400 underline underline-offset-2" href="{{ link.href }}">{{ link.label }}</a>
+          — {{ link.blurb }}
+        </li>
+        {% endfor %}
       </ul>
     </section>
 
