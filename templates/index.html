@@ -2432,16 +2432,71 @@
       }
     }
 
-    /* Fantasy-ställningar — top 5 boards */
+    /* Fantasy-ställningar — highscore-kort (mockup) */
+    .home-standings-section__head {
+      text-align: center;
+      margin-bottom: 1.25rem;
+    }
+  @media (min-width: 768px) {
+      .home-standings-section__head { text-align: left; }
+    }
+    .home-standings-section__title {
+      margin: 0;
+      font-family: 'Orbitron', 'Rajdhani', sans-serif;
+      font-size: clamp(1.15rem, 3.5vw, 1.75rem);
+      font-weight: 900;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #e0f2fe;
+      text-shadow: 0 0 28px rgba(34, 211, 238, 0.35);
+    }
+    .home-standings-section__lead {
+      margin: 0.45rem 0 0;
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
     .home-standings-grid {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 0.55rem;
+      gap: 0.75rem;
     }
     @media (min-width: 768px) {
       .home-standings-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 0.85rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+      }
+      /* Ett kort: full bredd. Tre kort: sista full bredd under. */
+      .home-standings-grid:has(> :nth-child(1):last-child) {
+        grid-template-columns: 1fr;
+      }
+      .home-standings-grid:has(> :nth-child(3):last-child) > :last-child {
+        grid-column: 1 / -1;
+      }
+    }
+    @media (min-width: 1100px) {
+      .home-standings-grid {
+        gap: 1rem 1.1rem;
+      }
+      /* Fyra+ kort: tre i rad, resten under */
+      .home-standings-grid:has(> :nth-child(4)) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .home-standings-grid:has(> :nth-child(4)) > :nth-child(n + 4) {
+        grid-column: span 1;
+      }
+      .home-standings-grid:has(> :nth-child(5):last-child) > :nth-child(4),
+      .home-standings-grid:has(> :nth-child(5):last-child) > :nth-child(5) {
+        grid-column: span 1;
+      }
+      /* Fem kort: 2 ovan + 3 under */
+      .home-standings-grid:has(> :nth-child(5):last-child) {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+      .home-standings-grid:has(> :nth-child(5):last-child) > :nth-child(-n + 2) {
+        grid-column: span 3;
+      }
+      .home-standings-grid:has(> :nth-child(5):last-child) > :nth-child(n + 3) {
+        grid-column: span 2;
       }
     }
     .home-standings-row__name-btn {
@@ -2613,60 +2668,167 @@
     }
     .paris-lb-detail__footer a { color: #22d3ee; text-decoration: underline; text-underline-offset: 2px; }
 
-    .home-standings-card {      border-radius: 0.55rem;
-      border: 1px solid rgba(71, 85, 105, 0.45);
-      background: #1a2436;
+    .home-standings-card {
+      border-radius: 0.85rem;
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      background: linear-gradient(165deg, rgba(8, 18, 36, 0.96) 0%, rgba(15, 28, 48, 0.92) 100%);
       padding: 0;
       min-height: 0;
       overflow: hidden;
+      box-shadow:
+        0 18px 40px rgba(2, 6, 23, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
-    .home-standings-card__head {
+    .home-standings-card__hero {
+      position: relative;
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-end;
       width: 100%;
+      min-height: 6.5rem;
       margin: 0;
-      padding: 0.65rem 0.8rem;
+      padding: 0.85rem 1rem 1rem;
       border: none;
-      border-bottom: 1px solid rgba(51, 65, 85, 0.55);
-      background: rgba(15, 23, 42, 0.35);
+      border-bottom: 1px solid rgba(34, 211, 238, 0.15);
+      background-color: #0c1528;
+      background-size: cover;
+      background-position: center 40%;
       text-align: left;
       color: inherit;
       font: inherit;
       cursor: default;
+      overflow: hidden;
     }
-    .home-standings-card__head-main {
-      min-width: 0;
-      flex: 1;
+    .home-standings-card__hero-scrim {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(7, 12, 24, 0.15) 0%, rgba(7, 12, 24, 0.55) 45%, rgba(7, 12, 24, 0.92) 100%),
+        linear-gradient(90deg, rgba(8, 47, 73, 0.25), transparent 55%);
+      pointer-events: none;
     }
-    .home-standings-card__title-row {
+    .home-standings-card__brand {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    /* MXGP — stor watermark-logga */
+    .home-standings-card[data-board="mxgp"] .home-standings-card__brand::before {
+      content: 'MXGP';
+      position: absolute;
+      right: -0.15em;
+      top: 42%;
+      transform: translateY(-50%);
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: clamp(2.8rem, 9vw, 4.2rem);
+      letter-spacing: -0.04em;
+      color: rgba(255, 255, 255, 0.14);
+      text-shadow: 0 0 40px rgba(255, 255, 255, 0.08);
+      line-height: 1;
+    }
+    .home-standings-card[data-board="mxgp"] .home-standings-card__hero {
+      background-color: #0a1628;
+    }
+    /* MXSM — svensk flagga */
+    .home-standings-card[data-board="mxsm"] .home-standings-card__hero {
+      background-image: none !important;
+      background-color: #041526;
+    }
+    .home-standings-card[data-board="mxsm"] .home-standings-card__brand::before {
+      content: '';
+      position: absolute;
+      inset: -12%;
+      background:
+        linear-gradient(#fecc00, #fecc00) 34% 0 / 14% 100% no-repeat,
+        linear-gradient(#fecc00, #fecc00) 0 42% / 100% 18% no-repeat,
+        linear-gradient(160deg, #0a6bb8 0%, #005293 42%, #003a6b 100%);
+      opacity: 0.5;
+      filter: saturate(1.05);
+      transform: rotate(-8deg) scale(1.15);
+      transform-origin: 40% 50%;
+    }
+    .home-standings-card[data-board="mxsm"] .home-standings-card__hero-scrim {
+      background:
+        radial-gradient(ellipse 70% 55% at 78% 18%, rgba(254, 204, 0, 0.18), transparent 55%),
+        linear-gradient(180deg, rgba(4, 21, 38, 0.2) 0%, rgba(4, 21, 38, 0.72) 100%);
+    }
+    /* MXoN — nationsflaggor */
+    .home-standings-card__flags {
+      position: absolute;
+      right: 0.55rem;
+      top: 0.55rem;
+      z-index: 1;
       display: flex;
-      align-items: baseline;
-      gap: 0.45rem;
+      gap: 0.2rem;
       flex-wrap: wrap;
+      max-width: 48%;
+      justify-content: flex-end;
+    }
+    .home-standings-card__flags img {
+      width: 1.15rem;
+      height: 0.78rem;
+      object-fit: cover;
+      border-radius: 2px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+      opacity: 0.92;
+    }
+    /* AMA — USA-flagga diskret */
+    .home-standings-card[data-board="ama"] .home-standings-card__brand::after {
+      content: '';
+      position: absolute;
+      right: 0.65rem;
+      top: 0.55rem;
+      width: 2.1rem;
+      height: 1.35rem;
+      border-radius: 3px;
+      background:
+        linear-gradient(#fff 33%, #b22234 33% 66%, #fff 66%),
+        linear-gradient(90deg, #3c3b6e 38%, transparent 38%);
+      background-size: 100% 100%, 38% 55%;
+      background-repeat: no-repeat;
+      background-position: 0 0, 0 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      opacity: 0.85;
     }
     .home-standings-card__title {
-      font-size: 0.9rem;
-      font-weight: 800;
-      color: #f1f5f9;
-      letter-spacing: 0.01em;
+      position: relative;
+      z-index: 1;
+      font-size: clamp(0.95rem, 2.2vw, 1.15rem);
+      font-weight: 900;
+      color: #f8fafc;
+      letter-spacing: 0.02em;
       margin: 0;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.65);
     }
     .home-standings-card__sub {
-      font-size: 0.62rem;
-      font-weight: 650;
-      color: #94a3b8;
+      position: relative;
+      z-index: 1;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: rgba(226, 232, 240, 0.85);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      white-space: nowrap;
+      letter-spacing: 0.06em;
+      margin: 0.2rem 0 0;
+    }
+    .home-standings-card__hero .home-standings-card__chev {
+      position: absolute;
+      top: 0.55rem;
+      right: 0.55rem;
+      z-index: 2;
     }
     .home-standings-card__peek {
       display: none;
-      margin: 0.2rem 0 0;
+      position: relative;
+      z-index: 1;
+      margin: 0.35rem 0 0;
+      max-width: 92%;
       font-size: 0.7rem;
       line-height: 1.25;
-      color: #94a3b8;
+      color: #cbd5e1;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -2690,7 +2852,7 @@
       transition: transform 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     }
     .home-standings-card__body {
-      padding: 0.35rem 0.55rem 0.65rem;
+      padding: 0.55rem 0.65rem 0.75rem;
     }
     .home-standings-card__rows {
       display: flex;
@@ -2701,49 +2863,64 @@
     .home-standings-card .home-lb-row,
     .home-standings-card .home-standings-row {
       display: grid;
-      grid-template-columns: 1.65rem minmax(0, 1fr) auto;
+      grid-template-columns: 2.35rem minmax(0, 1fr) auto;
       align-items: center;
-      gap: 0.45rem;
-      padding: 0.32rem 0.35rem;
-      margin: 0;
-      border-radius: 0;
-      border: none;
-      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
-      background: transparent;
+      gap: 0.55rem;
+      padding: 0.42rem 0.4rem;
+      margin: 0 0 0.35rem;
+      border-radius: 0.55rem;
+      border: 1px solid rgba(51, 65, 85, 0.45);
+      background: rgba(8, 16, 32, 0.55);
       min-height: 0;
+    }
+    .home-standings-card .home-standings-row--leader {
+      border-color: rgba(251, 191, 36, 0.45);
+      background: linear-gradient(90deg, rgba(69, 26, 3, 0.35), rgba(8, 16, 32, 0.6));
+      box-shadow: 0 0 18px rgba(251, 191, 36, 0.12);
     }
     .home-standings-card .home-lb-row:last-child,
     .home-standings-card .home-standings-row:last-child {
-      border-bottom: none;
+      margin-bottom: 0;
     }
     .home-standings-card .home-lb-row:hover,
     .home-standings-card .home-standings-row:hover {
-      background: rgba(34, 46, 66, 0.55);
+      border-color: rgba(34, 211, 238, 0.35);
+      background: rgba(15, 32, 52, 0.75);
     }
-    .home-standings-card .home-standings-row__rank {
+    .home-standings-row__medal {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 1.45rem;
-      height: 1.45rem;
-      border-radius: 0.35rem;
-      font-size: 0.68rem;
+      width: 2.1rem;
+      height: 2.1rem;
+      border-radius: 50%;
+      font-size: 0.72rem;
       font-weight: 900;
-      letter-spacing: -0.02em;
-      background: rgba(51, 65, 85, 0.55);
+      letter-spacing: -0.03em;
+      flex-shrink: 0;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    }
+    .home-standings-row__medal--1 {
+      background: radial-gradient(circle at 32% 28%, #fde68a, #d97706 72%);
+      color: #78350f;
+      border: 2px solid rgba(251, 191, 36, 0.85);
+      box-shadow: 0 0 14px rgba(251, 191, 36, 0.4);
+    }
+    .home-standings-row__medal--2 {
+      background: radial-gradient(circle at 32% 28%, #f1f5f9, #64748b 75%);
+      color: #1e293b;
+      border: 2px solid rgba(203, 213, 225, 0.85);
+    }
+    .home-standings-row__medal--3 {
+      background: radial-gradient(circle at 32% 28%, #fdba74, #c2410c 75%);
+      color: #fff7ed;
+      border: 2px solid rgba(251, 146, 60, 0.75);
+    }
+    .home-standings-row__medal--n {
+      background: rgba(30, 41, 59, 0.85);
       color: #cbd5e1;
-    }
-    .home-standings-card .home-standings-row__rank--1 {
-      background: rgba(234, 179, 8, 0.22);
-      color: #fde68a;
-    }
-    .home-standings-card .home-standings-row__rank--2 {
-      background: rgba(34, 211, 238, 0.18);
-      color: #a5f3fc;
-    }
-    .home-standings-card .home-standings-row__rank--3 {
-      background: rgba(74, 222, 128, 0.16);
-      color: #bbf7d0;
+      border: 1px solid rgba(71, 85, 105, 0.65);
+      box-shadow: none;
     }
     .home-standings-card .home-standings-row__name {
       min-width: 0;
@@ -2770,13 +2947,15 @@
       text-overflow: ellipsis;
     }
     .home-standings-card .home-standings-row__pts {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 900;
       letter-spacing: -0.02em;
       white-space: nowrap;
-      padding: 0.12rem 0.4rem;
-      border-radius: 0.3rem;
-      background: rgba(15, 23, 42, 0.55);
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(8, 51, 68, 0.9), rgba(15, 23, 42, 0.95));
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      color: #67e8f9;
     }
     .home-standings-card .home-standings-row__pts--1 { color: #fde68a; }
     .home-standings-card .home-standings-row__pts--2 { color: #a5f3fc; }
@@ -2794,21 +2973,37 @@
     }
     .home-standings-card__expand {
       display: block;
-      width: calc(100% - 0.3rem);
-      margin: 0.4rem 0.15rem 0;
-      padding: 0.35rem 0.5rem;
-      border-radius: 0.35rem;
-      border: 1px solid rgba(71, 85, 105, 0.45);
-      background: rgba(15, 23, 42, 0.45);
-      color: #67e8f9;
-      font-size: 0.68rem;
-      font-weight: 700;
+      width: 100%;
+      margin: 0.55rem 0 0;
+      padding: 0.5rem 0.65rem;
+      border-radius: 0.55rem;
+      border: 1px solid rgba(34, 211, 238, 0.4);
+      background: linear-gradient(180deg, rgba(6, 78, 96, 0.55), rgba(8, 31, 45, 0.85));
+      color: #a5f3fc;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
       text-align: center;
       cursor: pointer;
     }
     .home-standings-card__expand:hover {
-      border-color: rgba(103, 232, 249, 0.45);
+      border-color: rgba(103, 232, 249, 0.55);
       color: #ecfeff;
+      background: linear-gradient(180deg, rgba(8, 105, 128, 0.55), rgba(8, 31, 45, 0.95));
+    }
+    .home-standings-card__empty-state {
+      text-align: center;
+      padding: 1.25rem 0.75rem 1rem;
+      color: #94a3b8;
+      font-size: 0.8rem;
+    }
+    .home-standings-card__empty-icon {
+      display: block;
+      margin: 0 auto 0.5rem;
+      width: 2rem;
+      height: 2rem;
+      opacity: 0.45;
+      background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'/%3E%3C/svg%3E");
     }
     .home-standings-card__rest[hidden] {
       display: none !important;
@@ -2833,7 +3028,7 @@
       .home-standings-grid.home-standings-accordion {
         gap: 0.4rem;
       }
-      .home-standings-accordion .home-standings-card__head {
+      .home-standings-accordion .home-standings-card__hero {
         cursor: pointer;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
@@ -2844,10 +3039,9 @@
       .home-standings-accordion .home-standings-card--collapsed .home-standings-card__body {
         display: none;
       }
-      .home-standings-accordion .home-standings-card--collapsed .home-standings-card__head {
+      .home-standings-accordion .home-standings-card--collapsed .home-standings-card__hero {
         border-bottom: none;
-        padding-top: 0.55rem;
-        padding-bottom: 0.55rem;
+        min-height: 5.25rem;
       }
       .home-standings-accordion .home-standings-card--collapsed .home-standings-card__peek {
         display: block;
@@ -3505,17 +3699,13 @@
             </div>
 
             <!-- Fantasy-ställningar: top 5 per board, oberoende av valt seriekort -->
-            <div id="home-standings-wrap" class="mb-6">
-              <div class="home-ui-panel">
-                <div class="home-ui-panel__head">
-                  <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Fantasy-ställningar</span></span></h2>
-                </div>
-                <div class="home-ui-panel__body">
-                  <p class="text-xs text-slate-400 mb-3 text-center sm:text-left">Top 5 per serie — på mobil: öppna en lista i taget.</p>
-                  <div id="home-standings-boards" class="home-standings-grid">
-                    <div class="home-standings-card__empty col-span-full">Laddar ställningar…</div>
-                  </div>
-                </div>
+            <div id="home-standings-wrap" class="home-standings-section mb-8 md:mb-10">
+              <header class="home-standings-section__head">
+                <h2 class="home-standings-section__title" data-i18n="home.fantasy_standings_title">Fantasy-ställningar</h2>
+                <p class="home-standings-section__lead">Top 5 per serie — på mobil: öppna ett kort i taget.</p>
+              </header>
+              <div id="home-standings-boards" class="home-standings-grid">
+                <div class="home-standings-card__empty col-span-full">Laddar ställningar…</div>
               </div>
             </div>
 
@@ -4790,6 +4980,11 @@
       }
     }
 
+    function _standingsMedalHtml(rank) {
+      const medal = rank <= 3 ? `--${rank}` : '--n';
+      return `<span class="home-standings-row__medal home-standings-row__medal${medal}">${rank}</span>`;
+    }
+
     function _standingsRowHtml(row, rank, boardId) {
       const name = row.display_name || row.username || '?';
       const uid = row.user_id;
@@ -4815,8 +5010,9 @@
         sub = `Tippa ${Number(row.tippa_points || 0).toLocaleString('sv-SE')} · Team ${Number(row.team_points || 0).toLocaleString('sv-SE')}`;
       }
       const topClass = rank <= 3 ? String(rank) : 'n';
-      return `<div class="leaderboard-entry home-standings-row">
-        <span class="home-standings-row__rank home-standings-row__rank--${topClass}">${rank}</span>
+      const leaderCls = rank === 1 ? ' home-standings-row--leader' : '';
+      return `<div class="leaderboard-entry home-standings-row${leaderCls}">
+        ${_standingsMedalHtml(rank)}
         <div class="home-standings-row__name min-w-0">
           <div class="truncate">${nameHtml}</div>
           ${sub ? `<span class="home-standings-row__sub">${_escHome(sub)}</span>` : ''}
@@ -4855,15 +5051,31 @@
           meHtml = `<div class="home-standings-card__me">Du · #${idx + 1} · ${Number(me.total_points || 0)}p</div>`;
         }
       }
+      const heroUrl = board.hero || (typeof STANDINGS_HERO !== 'undefined' ? STANDINGS_HERO[board.id] : '') || '';
+      const heroAttr = heroUrl ? ` style="background-image:url('${_escHome(heroUrl)}')"` : '';
+      let brandExtra = '<div class="home-standings-card__brand" aria-hidden="true"></div>';
+      if (board.id === 'mxon' && typeof STANDINGS_FLAG_BASE === 'string') {
+        const codes = ['us', 'fr', 'se', 'nl', 'gb', 'au', 'de', 'it', 'es', 'be'];
+        const flags = codes
+          .map(
+            (c) =>
+              `<img src="${_escHome(STANDINGS_FLAG_BASE + c + '.png')}" alt="" width="18" height="12" loading="lazy">`
+          )
+          .join('');
+        brandExtra += `<div class="home-standings-card__flags" aria-hidden="true">${flags}</div>`;
+      }
       let bodyInner;
       if (!rows.length) {
-        bodyInner = `<p class="home-standings-card__empty">${_escHome(board.empty || 'Inga poäng ännu.')}</p>`;
+        bodyInner = `<div class="home-standings-card__empty-state">
+          <span class="home-standings-card__empty-icon" aria-hidden="true"></span>
+          <p>${_escHome(board.empty || 'Inga poäng ännu.')}</p>
+        </div>`;
       } else {
         const topHtml = top.map((r, i) => _standingsRowHtml(r, i + 1, board.id)).join('');
         const restHtml = rest.map((r, i) => _standingsRowHtml(r, i + n + 1, board.id)).join('');
         const expand = rest.length
           ? `<button type="button" class="home-standings-card__expand" data-standings-expand data-standings-topn="${n}">${
-              isEn ? `Show all (${rows.length})` : `Visa alla (${rows.length})`
+              isEn ? `Show all (${rows.length}) ▾` : `Visa alla (${rows.length}) ▾`
             }</button>
             <div class="home-standings-card__rest" hidden data-standings-rest>${restHtml}</div>`
           : '';
@@ -4873,14 +5085,12 @@
         ? 'home-standings-card--expanded'
         : 'home-standings-card--collapsed';
       return `<article class="home-standings-card ${expandClass}" data-board="${_escHome(board.id)}" data-standings-card>
-        <button type="button" class="home-standings-card__head" data-standings-toggle aria-expanded="${expanded ? 'true' : 'false'}">
-          <div class="home-standings-card__head-main">
-            <div class="home-standings-card__title-row">
-              <h3 class="home-standings-card__title">${_escHome(board.title)}</h3>
-              <span class="home-standings-card__sub">${_escHome(board.sub || '')}</span>
-            </div>
-            <p class="home-standings-card__peek">${_standingsPeekText(board, isEn)}</p>
-          </div>
+        <button type="button" class="home-standings-card__hero" data-standings-toggle aria-expanded="${expanded ? 'true' : 'false'}"${heroAttr}>
+          ${brandExtra}
+          <div class="home-standings-card__hero-scrim" aria-hidden="true"></div>
+          <h3 class="home-standings-card__title">${_escHome(board.title)}</h3>
+          <span class="home-standings-card__sub">${_escHome(board.sub || '')}</span>
+          <p class="home-standings-card__peek">${_standingsPeekText(board, isEn)}</p>
           <span class="home-standings-card__chev" aria-hidden="true">›</span>
         </button>
         <div class="home-standings-card__body">${bodyInner}</div>
@@ -4902,8 +5112,8 @@
           const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
           const total = rest.querySelectorAll('.leaderboard-entry').length + topN;
           btn.textContent = open
-            ? (isEn ? `Show top ${topN}` : `Visa top ${topN}`)
-            : (isEn ? `Show all (${total})` : `Visa alla (${total})`);
+            ? (isEn ? `Show top ${topN} ▾` : `Visa top ${topN} ▾`)
+            : (isEn ? `Show all (${total}) ▾` : `Visa alla (${total}) ▾`);
         });
       });
     }
@@ -5044,6 +5254,20 @@
       return scored >= 0 ? scored : 0;
     }
 
+    const STANDINGS_HERO = {
+      ama: {{ url_for('static', filename='images/2024-jett-1.jpg') | tojson }},
+      mxon: {{ url_for('static', filename='images/mxon/ernee_aerial.jpg') | tojson }},
+      mxgp: {{ url_for('static', filename='images/mxgp_hero.jpg') | tojson }},
+      mxsm: '',
+      paris: {{ url_for('static', filename='images/paris_eiffel_hero.jpg') | tojson }},
+    };
+    const STANDINGS_FLAG_BASE = {{ url_for('static', filename='images/mxon/flags/se.png') | tojson }}.replace(/se\.png$/i, '');
+
+    function _standingsBoardHasResults(board) {
+      const rows = Array.isArray(board?.rows) ? board.rows : [];
+      return rows.some((r) => Number(r.total_points || 0) > 0);
+    }
+
     function fantasyStandingsBoardDefs(isEn) {
       return [
         {
@@ -5124,11 +5348,19 @@
             }
           })
         );
-        const defaultIdx = _pickDefaultStandingsBoard(settled);
+        // Visa bara serier med riktiga poäng (0p-listor göms, t.ex. AMA innan säsong).
+        const visible = settled.filter((b) => _standingsBoardHasResults(b));
+        if (!visible.length) {
+          root.innerHTML = `<div class="home-standings-card__empty" style="grid-column:1/-1">${
+            isEn ? 'No standings yet.' : 'Inga ställningar ännu.'
+          }</div>`;
+          return settled;
+        }
+        const defaultIdx = _pickDefaultStandingsBoard(visible);
         const isMobile =
           typeof window.matchMedia === 'function' &&
           window.matchMedia('(max-width: 767px)').matches;
-        root.innerHTML = settled
+        root.innerHTML = visible
           .map((b, i) =>
             renderHomeStandingsCard(b, {
               topN,
