@@ -45,7 +45,7 @@ Refactor progress / next slice: `docs/REFACTOR.md`.
 | **MXoN** | `mxon_fantasy.py`, `app/routes/mxon_picks.py` |
 | **Paris SX** | `paris_fantasy.py`, `app/routes/paris_picks.py`, `app/routes/paris_admin.py`; SEO `/tippa-paris` |
 | **Season team** | Still heavy in `main.py` + models `SeasonTeam*`; promo flag `SEASON_TEAM_PROMO_LIVE` |
-| **Leagues CRUD / browse** | `app/routes/leagues.py`; digest helpers still partly in `main.py` (next refactor) |
+| **Leagues CRUD / browse** | `app/routes/leagues.py`; digests → `services/leagues.py` |
 | **1v1 league challenges** | `services/league_challenges.py`, `app/routes/league_challenges.py` |
 | **SEO landings / sitemap / robots / guides** | `app/routes/public.py`, `services/seo_tippa.py`, templates `tippa_serie.html`, `om_spelet.html` |
 | **Finished series / fantasy archive** | `main.py` routes `finished_series*`; template `finished_series*.html` |
@@ -94,6 +94,7 @@ Registration: search `register_blueprint` in `main.py`. Bare endpoint aliases: l
 | `series_status.py` | Series cards + cache |
 | `seo_tippa.py` | Tippa/guide page content |
 | `league_challenges.py` | Duel domain |
+| `leagues.py` | League digests (standings, pulse, rival, last race) |
 | `official_leagues.py` | Official league defs |
 | `league_discover.py` | Discover UI helpers |
 | `invite_share.py` | Invite URLs/cards |

@@ -220,10 +220,19 @@ Logg-/perf-städ:
 
 `debug_tools`-routes kvar men gated (admin/dev) — drabbar inte normal trafik.
 
+## Skiva 24 ✅
+
+League digest helpers → `services/leagues.py`:
+- standings / summary / race matrix / upcoming cards
+- picks pulse / rival card / last-race digest / H2H
+- `_user_avatar_fields` (+ assess picks completeness)
+- `app/routes/leagues.py` importerar digests direkt (inte via `_main`)
+- `main.py` re-exporterar för övriga call sites
+
 **Nästa (prioriterad ordning för agenter):**
 
-1. League digest-helpers → `services/leagues.py` (fortfarande proxied via `_main`)
-2. `race_picks_page` HTML → `app/routes/race_picks.py` (största kvarvarande tippa-biten i `main`)
-3. Alembic-parity vs `services/schema_patches.py` (minska boot-patches över tid)
+1. `race_picks_page` HTML → `app/routes/race_picks.py` (största kvarvarande tippa-biten i `main`)
+2. Alembic-parity vs `services/schema_patches.py` (minska boot-patches över tid)
+3. Ev. `calculate_league_points` → `services/leagues.py`
 
 Repo-navigation: `.cursor/rules/repo-map.mdc` (uppdatera när entry points flyttas).

@@ -151,7 +151,7 @@ Use the **“I want to change X → open Y”** table there before grepping the 
 | WSX / MXGP / MXSM / MXoN | `*_fantasy.py` + matching routes |
 | SEO / sitemap / guides | `app/routes/public.py`, `services/seo_tippa.py` |
 | Admin results / imports | `app/routes/results_admin.py`, `services/results_import.py` |
-| Leagues | `app/routes/leagues.py`, `services/official_leagues.py` |
+| Leagues | `app/routes/leagues.py`, digests `services/leagues.py`, `services/official_leagues.py` |
 | Product backlog | `IDEAS.md` |
 | Next refactor slice | `docs/REFACTOR.md` |
 | **New / changed series** | `.cursor/rules/series-playbook.mdc` |

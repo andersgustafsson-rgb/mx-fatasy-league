@@ -10,7 +10,7 @@ from services.official_leagues import (
 
 
 def _league_member_standings(league_id: int) -> list[dict]:
-    from main import _league_member_standings as fn
+    from services.leagues import _league_member_standings as fn
 
     return fn(league_id)
 

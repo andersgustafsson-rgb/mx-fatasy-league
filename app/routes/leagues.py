@@ -1,7 +1,7 @@
-"""User league pages + CRUD (skiva 22).
+"""User league pages + CRUD (skiva 22 + digest helpers skiva 24).
 
-Same URL paths (no prefix). League digests/helpers stay in main for now
-(proxied via _main). Bare endpoint aliases registered in main for url_for.
+Same URL paths (no prefix). Digests live in services/leagues.py.
+Bare endpoint aliases registered in main for url_for.
 """
 from __future__ import annotations
 
@@ -24,6 +24,15 @@ from werkzeug.utils import secure_filename
 
 from auth_helpers import _redirect_to_login, is_admin_user
 from services.league_discover import build_public_league_discover
+from services.leagues import (
+    _league_last_race_digest,
+    _league_picks_pulse,
+    _league_race_matrix,
+    _league_rival_card,
+    _league_summary_for_user,
+    _upcoming_competitions,
+    _user_avatar_fields,
+)
 from services.official_leagues import is_official_public_league
 from models import (
     Competition,
@@ -48,34 +57,6 @@ def _main():
     import main as _m
 
     return _m
-
-
-def _league_summary_for_user(*args, **kwargs):
-    return _main()._league_summary_for_user(*args, **kwargs)
-
-
-def _league_race_matrix(*args, **kwargs):
-    return _main()._league_race_matrix(*args, **kwargs)
-
-
-def _upcoming_competitions(*args, **kwargs):
-    return _main()._upcoming_competitions(*args, **kwargs)
-
-
-def _league_picks_pulse(*args, **kwargs):
-    return _main()._league_picks_pulse(*args, **kwargs)
-
-
-def _league_last_race_digest(*args, **kwargs):
-    return _main()._league_last_race_digest(*args, **kwargs)
-
-
-def _league_rival_card(*args, **kwargs):
-    return _main()._league_rival_card(*args, **kwargs)
-
-
-def _user_avatar_fields(*args, **kwargs):
-    return _main()._user_avatar_fields(*args, **kwargs)
 
 
 def calculate_league_points(*args, **kwargs):
