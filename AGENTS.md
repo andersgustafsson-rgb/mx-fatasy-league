@@ -137,16 +137,30 @@ static/              # JS/CSS + assets (.cursorignore skips bulk images)
 
 ### Repository map (quick navigation)
 
+**Canonical map (always apply for agents):** `.cursor/rules/repo-map.mdc`  
+Use the **“I want to change X → open Y”** table there before grepping the whole repo.
+
 | Area | Where to look |
 |------|----------------|
-| New page or JSON endpoint | `app/routes/` then register in `main.py` |
+| New page or JSON endpoint | `app/routes/` then register + alias in `main.py` |
 | DB tables / relationships | `models.py` only |
-| Scoring, picks lock, imports | `services/` |
-| Posters, reminders, push | Root `*_service.py` files |
+| Scoring, picks lock, tippa helpers | `services/scoring.py`, `picks_lock.py`, `race_picks.py` |
+| Homepage standings / series cards | `templates/index.html` + `services/series_status.py` |
+| AMA 2027 calendar / numbers | `ama_2027_calendar.py`, `ama_series_seed.py`, `ama_2027_national_numbers.py` |
+| Paris | `paris_fantasy.py`, `app/routes/paris_*.py`, SEO `/tippa-paris` |
+| WSX / MXGP / MXSM / MXoN | `*_fantasy.py` + matching routes |
+| SEO / sitemap / guides | `app/routes/public.py`, `services/seo_tippa.py` |
 | Admin results / imports | `app/routes/results_admin.py`, `services/results_import.py` |
-| MXoN | `app/routes/mxon_picks.py`, `Mxon*` models in `models.py` |
 | Leagues | `app/routes/leagues.py`, `services/official_leagues.py` |
-| **New / changed series** | `.cursor/rules/series-playbook.mdc` (checklist — follow end-to-end) |
+| Product backlog | `IDEAS.md` |
+| Next refactor slice | `docs/REFACTOR.md` |
+| **New / changed series** | `.cursor/rules/series-playbook.mdc` |
+
+### Agent defaults
+
+- Prefer extracting into `services/` / blueprints over adding to `main.py`.
+- Keep `url_for('bare_name')` working via aliases when moving routes.
+- Update `.cursor/rules/repo-map.mdc` when you move a major entry point.
 
 ### Series playbook
 

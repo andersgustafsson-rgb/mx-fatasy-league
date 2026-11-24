@@ -1,67 +1,130 @@
 ---
-description: Where to look in MX Fantasy League — entry points, routes, services
+description: Where to look in MX Fantasy League — entry points, routes, services, “I want to change X”
 alwaysApply: true
 ---
 
 # Repository map (MX Fantasy League)
 
-Use this index before broad searches. Full conventions: `AGENTS.md`.
-New or changed series: follow **Series playbook** (`.cursor/rules/series-playbook.mdc`) end-to-end.
+Use this index **before** broad searches. Conventions: `AGENTS.md`.  
+New/changed series: **Series playbook** (`.cursor/rules/series-playbook.mdc`).  
+Product backlog: `IDEAS.md` (KanalHugget = `IDEAS-KANALHUGGET.md`, not this site).  
+Refactor progress / next slice: `docs/REFACTOR.md`.
+
+## Agent working rules (short)
+
+1. Prefer `app/routes/` + `services/` for new work — **do not grow `main.py`**.
+2. Keep bare `url_for('…')` working via endpoint aliases in `main.py` when moving routes.
+3. Series codes must be wired end-to-end (playbook checklist) — never half-register.
+4. Swedish UI copy lives in templates; English comments in code.
+5. After meaningful structure changes, update **this file** and `AGENTS.md` map.
 
 ## Entry points
 
 | File | Role |
 |------|------|
-| `main.py` | **Production** WSGI app (`gunicorn main:app`). Registers all blueprints. |
-| `app/__init__.py` | `create_app()` factory; subset of blueprints for gradual migration. |
-| `app.py` | Legacy monolith (large); prefer `app/routes/` + `main.py` for new work. |
+| `main.py` | **Production** WSGI (`gunicorn main:app`). Still large (~23k lines). Registers blueprints + many leftover routes/helpers. |
+| `app/__init__.py` | `create_app()` — subset of blueprints (gradual migration). |
+| `app.py` | Legacy; avoid for new features. |
 | `models.py` | All SQLAlchemy models (single file). |
-| `wsgi.py` | Deployment hook if used by host. |
+| `wsgi.py` | Host hook if used. |
 
-## HTTP layer — `app/routes/`
+## “I want to change X” → open Y
 
-| Module | Blueprint | Notes |
-|--------|-----------|--------|
-| `public.py` | `public` | Pages, SEO landings, core UI |
-| `api.py` | `/api` | JSON API |
-| `admin.py` | `admin` | Admin UI |
-| `auth.py` | `auth` | Login, register, Google OAuth |
-| `race_picks.py` | `race_picks` | Race tipping flows |
-| `mxon_picks.py` | `mxon_picks` | MXoN nation/class picks |
-| `leagues.py` | `leagues` | Leagues, membership |
-| `league_challenges.py` | `league_challenges` | Challenge badges |
-| `pit_lane.py` | `pit_lane` | Pit lane / social feed |
-| `invite.py` | `invite` | Invites and share cards |
-| `series_status.py` | `series_status` | Series open/closed status |
-| `results_admin.py` | `results_admin` | Import/admin for results |
-| `kundmail.py` | `kundmail` | Customer email tooling |
-| `push_api.py` | `push_api` | Web push |
-| `debug_tools.py` | `debug_tools` | Dev-only helpers |
+| Goal | Primary files |
+|------|----------------|
+| **Homepage / highscore boards / series cards** | `templates/index.html` (huge; standings JS ~`home-standings`, `loadFantasyStandingsBoards`); API: `app/routes/series_status.py`, `services/series_status.py` |
+| **Race tippa UI (HTML wizard)** | Still mostly `main.py` → `race_picks_page`; JSON API → `app/routes/race_picks.py` + `services/race_picks.py` |
+| **Picks lock / deadline / countdown** | `services/picks_lock.py` |
+| **Scoring / recalculate** | `services/scoring.py` |
+| **Results import (CSV / RacerX / WSX)** | `services/results_import.py`, `app/routes/results_admin.py` |
+| **Admin panel** | `templates/admin_organized.html` + `app/routes/admin.py` (+ section-specific: `paris_admin.py`) |
+| **AMA SX/MX/SMX 2027 calendar & seed** | `ama_2027_calendar.py`, `ama_series_seed.py`, `ama_2027_national_numbers.py` |
+| **WSX** | `wsx_fantasy.py` |
+| **MXGP** | `mxgp_fantasy.py` (`MXGP_PUBLIC_PLAY`) |
+| **MXSM** | `mxsm_fantasy.py` (`MXSM_PUBLIC_PLAY`); orbits: `services/mxsm_orbits_import.py` |
+| **MXoN** | `mxon_fantasy.py`, `app/routes/mxon_picks.py` |
+| **Paris SX** | `paris_fantasy.py`, `app/routes/paris_picks.py`, `app/routes/paris_admin.py`; SEO `/tippa-paris` |
+| **Season team** | Still heavy in `main.py` + models `SeasonTeam*`; promo flag `SEASON_TEAM_PROMO_LIVE` |
+| **Leagues CRUD / browse** | `app/routes/leagues.py`; digest helpers still partly in `main.py` (next refactor) |
+| **1v1 league challenges** | `services/league_challenges.py`, `app/routes/league_challenges.py` |
+| **SEO landings / sitemap / robots / guides** | `app/routes/public.py`, `services/seo_tippa.py`, templates `tippa_serie.html`, `om_spelet.html` |
+| **Finished series / fantasy archive** | `main.py` routes `finished_series*`; template `finished_series*.html` |
+| **Auth / login / Google** | `app/routes/auth.py`, `auth_helpers.py` |
+| **Invite / Pit Pass / share card** | `app/routes/invite.py`, `services/invite_share.py` |
+| **Web push** | `app/routes/push_api.py`, root `push_service.py` |
+| **Pit Lane / bulletin** | `app/routes/pit_lane.py`, root `pit_lane_service.py` |
+| **Kundmail (Motoaction tool)** | `app/routes/kundmail.py`, `static/kundmail.js` |
+| **Schema runtime patches** | `services/schema_patches.py` (Alembic does not cover everything yet) |
+| **Prod → local sync** | `scripts/sync_production_to_local.py` (`SYNC_TABLES`) |
+| **Public URL / canonical host** | `public_url.py` (`mx-fantasy.se`) |
 
-Blueprint registration list in code: search `register_blueprint` in `main.py`.
+## HTTP — `app/routes/`
 
-## Domain logic — `services/`
+| Module | Notes |
+|--------|--------|
+| `public.py` | SEO pages, robots, sitemap, llms.txt, tippa-*, guide/*, health |
+| `api.py` | General JSON `/api` |
+| `admin.py` | Admin UI helpers |
+| `auth.py` | Login, register, OAuth |
+| `race_picks.py` | Tippa JSON API |
+| `mxon_picks.py` | MXoN tippa |
+| `paris_picks.py` / `paris_admin.py` | Paris hub + admin |
+| `leagues.py` | User leagues |
+| `league_challenges.py` | Duels |
+| `series_status.py` | Homepage “Välj serie” |
+| `results_admin.py` | Imports / bulk results |
+| `invite.py` | `/start`, invite card |
+| `pit_lane.py` | Notifications / race control |
+| `push_api.py` | Push subscribe |
+| `kundmail.py` | Customer mail tool |
+| `tv_display.py` | TV / display |
+| `debug_tools.py` | Dev/admin gated one-shots |
 
-Business rules live here when extracted from routes: `scoring.py`, `race_picks.py`, `picks_lock.py`, `results_import.py`, `official_leagues.py`, `league_challenges.py`, `invite_share.py`, `series_status.py`, `schema_patches.py`, etc.
+Registration: search `register_blueprint` in `main.py`. Bare endpoint aliases: loop near tippa/SEO aliases in `main.py`.
 
-## Root-level modules (grep by feature name)
+## Domain — `services/`
 
-Poster/social/ops scripts often sit at repo root: `*_poster_service.py`, `pit_lane_service.py`, `reminder_service.py`, `push_service.py`, `trojtryck_service.py`, plus fetch/import `*_fetch.py`, `seed_*.py`, `scoring.py`.
+| Module | Role |
+|--------|------|
+| `scoring.py` | Tippa score calc; `TIPPA_ONLY_SERIES` |
+| `picks_lock.py` | Lock + schedule helpers |
+| `race_picks.py` | Tippa helpers / crowd / wizard bits |
+| `picks_snapshots.py` | Locked picks snapshots |
+| `results_import.py` | Parse/match/import |
+| `series_status.py` | Series cards + cache |
+| `seo_tippa.py` | Tippa/guide page content |
+| `league_challenges.py` | Duel domain |
+| `official_leagues.py` | Official league defs |
+| `league_discover.py` | Discover UI helpers |
+| `invite_share.py` | Invite URLs/cards |
+| `schema_patches.py` | Boot-time `_ensure_*` columns |
+| `mxsm_orbits_import.py` | MXSM orbits |
+| `race_theme.py` | Race theming |
 
-Series domain modules: `wsx_fantasy.py`, `mxon_fantasy.py`, `paris_fantasy.py`, `mxgp_fantasy.py`, `mxsm_fantasy.py`, `ama_series_seed.py`, `ama_2027_calendar.py`. Playbook: `series-playbook.mdc`.
+## Series modules (root)
+
+| Series | Module |
+|--------|--------|
+| AMA SX/MX/SMX | `ama_series_seed.py`, `ama_2027_calendar.py`, `ama_2027_national_numbers.py`, `ama_season_totals.py` |
+| WSX | `wsx_fantasy.py` |
+| MXGP | `mxgp_fantasy.py` |
+| MXSM | `mxsm_fantasy.py` |
+| MXoN | `mxon_fantasy.py` |
+| Paris | `paris_fantasy.py` |
 
 ## Front-end
 
-- Templates: `templates/` (Jinja2; Swedish UI copy).
-- Client JS/CSS: `static/*.js`, `static/*.css` (not under ignored image dirs).
-- PWA: `static/sw.js`; registered from `app/__init__.py`.
+- Templates: `templates/` (Jinja2, Swedish). Homepage = `templates/index.html`.
+- CSS/JS: `static/` (images often `.cursorignore`d — search path strings in code).
+- PWA: `static/sw.js`.
 
-## Data and schema
+## Data / env
 
 - Migrations: `migrations/versions/`
-- Seed/paste data: `data/`
-- Env template: `env.example` (never commit `.env`)
+- Seed/data: `data/`
+- Env: `env.example` — never commit `.env`
+- Flags worth knowing: `SEASON_TEAM_PROMO_LIVE`, `SEASON_TEAM_COMBINED_LIVE`, `PARIS_PUBLIC_PLAY`, `MXGP_PUBLIC_PLAY`, `MXSM_PUBLIC_PLAY`
 
-## What is intentionally not indexed
+## Intentionally not indexed
 
-See `.cursorignore` (bulk images, `tools/gs`, caches). If you need an asset path, search string literals in `.py` / `templates/`.
+See `.cursorignore` (bulk images, `tools/gs`, caches). Asset paths: grep literals in `.py` / templates.

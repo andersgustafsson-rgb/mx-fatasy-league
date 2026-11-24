@@ -220,5 +220,10 @@ Logg-/perf-städ:
 
 `debug_tools`-routes kvar men gated (admin/dev) — drabbar inte normal trafik.
 
-**Nästa:** League digest-helpers → `services/leagues.py`; Alembic-parity;
-ev. `race_picks_page` HTML.
+**Nästa (prioriterad ordning för agenter):**
+
+1. League digest-helpers → `services/leagues.py` (fortfarande proxied via `_main`)
+2. `race_picks_page` HTML → `app/routes/race_picks.py` (största kvarvarande tippa-biten i `main`)
+3. Alembic-parity vs `services/schema_patches.py` (minska boot-patches över tid)
+
+Repo-navigation: `.cursor/rules/repo-map.mdc` (uppdatera när entry points flyttas).
