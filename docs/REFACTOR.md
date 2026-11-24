@@ -229,10 +229,19 @@ League digest helpers → `services/leagues.py`:
 - `app/routes/leagues.py` importerar digests direkt (inte via `_main`)
 - `main.py` re-exporterar för övriga call sites
 
+## Skiva 25 ✅
+
+Tippa HTML + active redirect:
+- `race_picks_page` + `race_picks_active` → `app/routes/race_picks.py`
+- Portrait/SMX/season-team helpers kvar i `main` via lazy `_main()`
+- Bare endpoint-aliaser (`race_picks_page`, `race_picks_active`) för `url_for`
+
+`main.py` ~20.3k rader.
+
 **Nästa (prioriterad ordning för agenter):**
 
-1. `race_picks_page` HTML → `app/routes/race_picks.py` (största kvarvarande tippa-biten i `main`)
-2. Alembic-parity vs `services/schema_patches.py` (minska boot-patches över tid)
-3. Ev. `calculate_league_points` → `services/leagues.py`
+1. Alembic-parity vs `services/schema_patches.py` (minska boot-patches över tid)
+2. Ev. `calculate_league_points` → `services/leagues.py`
+3. Ev. portrait/SMX helpers som tippa-sidan fortfarande lazy-anropar från `main`
 
 Repo-navigation: `.cursor/rules/repo-map.mdc` (uppdatera när entry points flyttas).

@@ -144,7 +144,7 @@ Use the **“I want to change X → open Y”** table there before grepping the 
 |------|----------------|
 | New page or JSON endpoint | `app/routes/` then register + alias in `main.py` |
 | DB tables / relationships | `models.py` only |
-| Scoring, picks lock, tippa helpers | `services/scoring.py`, `picks_lock.py`, `race_picks.py` |
+| Scoring, picks lock, tippa helpers | `services/scoring.py`, `picks_lock.py`, `race_picks.py`; tippa HTML → `app/routes/race_picks.py` |
 | Homepage standings / series cards | `templates/index.html` + `services/series_status.py` |
 | AMA 2027 calendar / numbers | `ama_2027_calendar.py`, `ama_series_seed.py`, `ama_2027_national_numbers.py` |
 | Paris | `paris_fantasy.py`, `app/routes/paris_*.py`, SEO `/tippa-paris` |

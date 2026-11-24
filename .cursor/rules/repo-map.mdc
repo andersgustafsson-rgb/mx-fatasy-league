@@ -33,7 +33,7 @@ Refactor progress / next slice: `docs/REFACTOR.md`.
 | Goal | Primary files |
 |------|----------------|
 | **Homepage / highscore boards / series cards** | `templates/index.html` (huge; standings JS ~`home-standings`, `loadFantasyStandingsBoards`); API: `app/routes/series_status.py`, `services/series_status.py` |
-| **Race tippa UI (HTML wizard)** | Still mostly `main.py` → `race_picks_page`; JSON API → `app/routes/race_picks.py` + `services/race_picks.py` |
+| **Race tippa UI (HTML wizard)** | `app/routes/race_picks.py` (`race_picks_page` + JSON API) + `services/race_picks.py`; portrait/SMX helpers still lazy from `main` |
 | **Picks lock / deadline / countdown** | `services/picks_lock.py` |
 | **Scoring / recalculate** | `services/scoring.py` |
 | **Results import (CSV / RacerX / WSX)** | `services/results_import.py`, `app/routes/results_admin.py` |
@@ -66,7 +66,7 @@ Refactor progress / next slice: `docs/REFACTOR.md`.
 | `api.py` | General JSON `/api` |
 | `admin.py` | Admin UI helpers |
 | `auth.py` | Login, register, OAuth |
-| `race_picks.py` | Tippa JSON API |
+| `race_picks.py` | Tippa HTML page + JSON API |
 | `mxon_picks.py` | MXoN tippa |
 | `paris_picks.py` / `paris_admin.py` | Paris hub + admin |
 | `leagues.py` | User leagues |

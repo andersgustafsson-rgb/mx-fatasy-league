@@ -1,13 +1,24 @@
-"""Tippa race-picks JSON API (skiva 17b).
+"""Tippa race-picks JSON API + HTML page (skiva 17b + 25).
 
 Same URL paths (no prefix). Domain helpers in services.race_picks.
-HTML race_picks_page stays in main.py.
+Bare endpoint aliases `race_picks_page` / `race_picks_active` registered in main.
 """
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request, session
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
-from auth_helpers import is_admin_user
+from auth_helpers import check_session_timeout, is_admin_user
+from services.invite_share import _build_invite_share_payload
 from models import (
     Competition,
     CompetitionResult,
@@ -23,12 +34,24 @@ from models import (
     rider_query_for_list_ui,
 )
 from services import race_picks as rp
-from services.picks_lock import is_picks_locked
+from services.picks_lock import (
+    active_pick_round_for_competition,
+    is_picks_locked,
+    is_picks_preseason_locked,
+    is_picks_round_queue_locked,
+    picks_open_days_before_series,
+    picks_preseason_opens_on,
+    picks_unlock_all_local,
+)
 from services.picks_snapshots import (
     _build_picks_snapshot_payload,
     ensure_picks_snapshots_for_competition,
 )
-from wsx_fantasy import _wsx_official_roster_ids, prune_off_roster_wsx_picks
+from wsx_fantasy import (
+    _wsx_official_roster_ids,
+    prune_off_roster_wsx_picks,
+    wsx_roster_query,
+)
 
 bp = Blueprint("race_picks", __name__)
 
@@ -759,3 +782,740 @@ def clear_my_picks(competition_id: int):
 
 
     return jsonify({"message": "Alla dina val för denna tävling har rensats."}), 200
+
+
+@bp.route("/race_picks/<int:competition_id>")
+def race_picks_page(competition_id):
+    """Race picks — gäster kan titta; Pit Pass krävs för att sätta/spara picks."""
+    m = _main()
+    m._ensure_rider_image_data_column()
+    is_logged_in = "user_id" in session and bool(session.get("user_id"))
+    if is_logged_in and not check_session_timeout():
+        flash("Din session har gått ut. Logga in igen.", "error")
+        return redirect(url_for("login", next=request.path))
+    is_logged_in = "user_id" in session and bool(session.get("user_id"))
+    comp = Competition.query.get_or_404(competition_id)
+
+    if (getattr(comp, "series", None) or "").upper() == "MXON":
+        return redirect(url_for("mxon_picks_page", competition_id=comp.id))
+
+    is_paris = False
+    paris_saturday = False
+    paris_other_evening_url = None
+    paris_other_evening_label = None
+    paris_saturday_competition_id = None
+    paris_sunday_competition_id = None
+    try:
+        from paris_fantasy import (
+            get_active_paris_year,
+            get_paris_series,
+            get_paris_weekend,
+            heal_paris_competition_tags,
+            paris_is_saturday,
+            paris_is_weekend_comp,
+        )
+
+        # Heal legacy SX-tagged Paris rows so UI and save agree
+        year = int(comp.event_date.year) if comp.event_date else get_active_paris_year()
+        ser = get_paris_series(year)
+        if ser and heal_paris_competition_tags(ser):
+            db.session.commit()
+            comp = Competition.query.get_or_404(competition_id)
+
+        is_paris = paris_is_weekend_comp(comp)
+        if is_paris:
+            paris_saturday = paris_is_saturday(comp)
+            wk = get_paris_weekend(year)
+            sat_comp = wk.get("saturday")
+            sun_comp = wk.get("sunday")
+            if sat_comp:
+                paris_saturday_competition_id = int(sat_comp.id)
+            if sun_comp:
+                paris_sunday_competition_id = int(sun_comp.id)
+            other = sun_comp if paris_saturday else sat_comp
+            if other and int(other.id) != int(comp.id):
+                paris_other_evening_url = url_for(
+                    "race_picks_page", competition_id=other.id
+                )
+                paris_other_evening_label = (
+                    "Söndag" if paris_saturday else "Lördag"
+                )
+    except Exception:
+        is_paris = (getattr(comp, "series", None) or "").upper() == "PARIS"
+
+    if is_paris:
+        try:
+            from paris_fantasy import paris_user_can_play
+
+            if not paris_user_can_play(is_admin=is_admin_user()):
+                flash(
+                    "Paris Supercross — picks öppnar snart. Vi släpper tippan när "
+                    "officiell startlista och banlayout är ute.",
+                    "info",
+                )
+                return redirect(url_for("index"))
+        except Exception:
+            if not is_admin_user():
+                flash("Paris Supercross — picks öppnar snart.", "info")
+                return redirect(url_for("index"))
+
+    if (getattr(comp, "series", None) or "").upper() == "MXGP":
+        try:
+            from mxgp_fantasy import mxgp_user_can_play
+
+            if not mxgp_user_can_play(is_admin=is_admin_user()):
+                flash(
+                    "MXGP är under construction — tippa öppnar till 2027-säsongen. "
+                    "Admin kan testa redan nu.",
+                    "info",
+                )
+                return redirect(url_for("index"))
+        except Exception:
+            if not is_admin_user():
+                flash("MXGP är under construction.", "info")
+                return redirect(url_for("index"))
+
+    if (getattr(comp, "series", None) or "").upper() == "MXSM":
+        try:
+            from mxsm_fantasy import mxsm_user_can_play
+
+            if not mxsm_user_can_play(is_admin=is_admin_user()):
+                flash(
+                    "MXSM är under construction — tippa öppnar till 2027-säsongen.",
+                    "info",
+                )
+                return redirect(url_for("index"))
+        except Exception:
+            if not is_admin_user():
+                flash("MXSM är under construction.", "info")
+                return redirect(url_for("index"))
+
+    # Use the unified picks lock check function
+    picks_locked = is_picks_locked(comp)
+    preseason_locked = is_picks_preseason_locked(comp)
+    round_queue_locked = is_picks_round_queue_locked(comp)
+    opens_on = picks_preseason_opens_on(comp) if preseason_locked else None
+    active_pick_round = (
+        active_pick_round_for_competition(comp) if round_queue_locked else None
+    )
+
+    # If picks are locked, show locked page instead of redirect
+    if picks_locked:
+        return render_template(
+            "race_picks_locked.html",
+            competition=comp,
+            picks_locked=True,
+            preseason_locked=preseason_locked,
+            round_queue_locked=round_queue_locked,
+            active_pick_round=active_pick_round,
+            picks_opens_on=opens_on,
+            picks_open_days_before=picks_open_days_before_series(comp),
+        )
+
+    # 1) Hämta OUT-förare för detta race
+    out_rows = db.session.query(CompetitionRiderStatus.rider_id).filter(
+        CompetitionRiderStatus.competition_id == comp.id,
+        CompetitionRiderStatus.status == "OUT",
+    ).all()
+    out_ids = set(rid for (rid,) in out_rows)
+
+    # 2) Bygg listor per serie
+    is_wsx = (getattr(comp, 'series', None) == 'WSX') and not is_paris
+    is_mxgp = (getattr(comp, 'series', None) or '').upper() == 'MXGP'
+    is_mxsm = (getattr(comp, 'series', None) or '').upper() == 'MXSM'
+    has_u17 = False
+    riders_u17: list = []
+    mxsm_tippa_classes: tuple = ()
+
+    if is_paris:
+        from paris_fantasy import paris_allowed_rider_ids
+
+        allowed = paris_allowed_rider_ids(int(comp.id))
+        riders_450 = (
+            rider_query_for_list_ui()
+            .filter(Rider.id.in_(allowed), Rider.class_name == "wsx_sx1")
+            .order_by(Rider.rider_number)
+            .all()
+        )
+        riders_250 = (
+            rider_query_for_list_ui()
+            .filter(Rider.id.in_(allowed), Rider.class_name == "wsx_sx2")
+            .order_by(Rider.rider_number)
+            .all()
+        )
+        riders_u17 = []
+        has_u17 = False
+        mxsm_tippa_classes = ()
+    elif is_wsx:
+        # WSX använder egna klasser och separata förare
+        try:
+            prune_off_roster_wsx_picks(int(comp.id))
+        except Exception as prune_err:
+            print(f"WSX pick prune skipped: {prune_err}")
+            db.session.rollback()
+        riders_450 = wsx_roster_query("wsx_sx1").order_by(Rider.rider_number).all()
+        riders_250 = wsx_roster_query("wsx_sx2").order_by(Rider.rider_number).all()
+        # Orphan OUT (fel rider_id / gammal WSX-klass) → mappa till tippa-roster via namn.
+        # Viktigt: mappa ALDRIG AMA 250cc/450cc OUT hit (t.ex. "Cameron Mcadoo" 250cc
+        # får inte gömma WSX "Cameron McAdoo").
+        tippa_by_name = {
+            (r.name or "").strip().lower(): r.id for r in (riders_450 + riders_250)
+        }
+        tippa_ids = set(tippa_by_name.values())
+        for oid in list(out_ids):
+            if oid in tippa_ids:
+                continue
+            orphan = Rider.query.get(oid)
+            if not orphan:
+                continue
+            if (orphan.class_name or "") not in ("wsx_sx1", "wsx_sx2"):
+                continue
+            mapped = tippa_by_name.get((orphan.name or "").strip().lower())
+            if mapped:
+                out_ids.add(mapped)
+    elif is_mxgp:
+        from mxgp_fantasy import CLASS_MX2, CLASS_MXGP, mxgp_roster_query
+
+        riders_450 = (
+            mxgp_roster_query()
+            .filter(Rider.class_name == CLASS_MXGP)
+            .order_by(Rider.rider_number)
+            .all()
+        )
+        riders_250 = (
+            mxgp_roster_query()
+            .filter(Rider.class_name == CLASS_MX2)
+            .order_by(Rider.rider_number)
+            .all()
+        )
+    elif is_mxsm:
+        from mxsm_fantasy import (
+            CLASS_MX1,
+            CLASS_MX2,
+            CLASS_U17,
+            competition_has_u17,
+            get_mxsm_tippa_classes,
+            mxsm_roster_query,
+        )
+
+        mxsm_tippa_classes = get_mxsm_tippa_classes(comp)
+        has_u17 = competition_has_u17(comp)
+        tippa_q = mxsm_roster_query(classes=mxsm_tippa_classes)
+        riders_450 = (
+            tippa_q.filter(Rider.class_name == CLASS_MX1)
+            .order_by(Rider.rider_number)
+            .all()
+        )
+        riders_250 = (
+            mxsm_roster_query(classes=mxsm_tippa_classes)
+            .filter(Rider.class_name == CLASS_MX2)
+            .order_by(Rider.rider_number)
+            .all()
+        )
+        if has_u17:
+            riders_u17 = (
+                mxsm_roster_query(classes=mxsm_tippa_classes)
+                .filter(Rider.class_name == CLASS_U17)
+                .order_by(Rider.rider_number)
+                .all()
+            )
+    else:
+        # SX/MX/SMX – befintlig logik
+        riders_450 = (
+            rider_query_for_list_ui()
+            .filter_by(class_name="450cc")
+            .order_by(Rider.rider_number)
+            .all()
+        )
+
+        riders_250_query = rider_query_for_list_ui().filter_by(class_name="250cc")
+        coast = (comp.coast_250 or "").lower()
+        if coast in ("east", "west"):
+            # Endast en coast: visa bara den coasten + "both"
+            riders_250_query = riders_250_query.filter(
+                (Rider.coast_250 == coast) | (Rider.coast_250 == "both")
+            )
+        # Vid "showdown" / "both" / annat: visa alla 250cc (ingen coast-filter)
+        riders_250 = riders_250_query.order_by(Rider.rider_number).all()
+        if (getattr(comp, "series", None) or "").strip().upper() == "SMX":
+            try:
+                m.sync_smx_playoff_entry_list(comp)
+            except Exception as sync_err:
+                print(f"SMX entry sync skipped: {sync_err}")
+                db.session.rollback()
+            try:
+                m.prune_off_roster_smx_picks(int(comp.id))
+            except Exception as prune_err:
+                print(f"SMX pick prune skipped: {prune_err}")
+                db.session.rollback()
+            riders_450 = m._restrict_riders_to_smx_field(
+                riders_450, "450", competition=comp
+            )
+            riders_250 = m._restrict_riders_to_smx_field(
+                riders_250, "250", competition=comp
+            )
+
+    pick_rider_ids = (
+        [r.id for r in riders_450]
+        + [r.id for r in riders_250]
+        + [r.id for r in riders_u17]
+    )
+    ids_with_db_portrait: frozenset[int] = frozenset()
+    if pick_rider_ids:
+        ids_with_db_portrait = frozenset(
+            row[0]
+            for row in db.session.query(Rider.id)
+            .filter(
+                Rider.id.in_(pick_rider_ids),
+                Rider.rider_image_data.isnot(None),
+                Rider.rider_image_data != "",
+                Rider.rider_image_data.like("data:image%"),
+            )
+            .all()
+        )
+
+    from racerx_rider_bio import build_riders_by_name_map
+
+    all_pick_riders = riders_450 + riders_250 + riders_u17
+    riders_by_name = build_riders_by_name_map(all_pick_riders)
+
+    # 3) Serialisering för JS (inkl is_out + image_url)
+    wildcard_names = m._wsx_wildcard_names_for_competition(comp)
+    is_smx = (getattr(comp, "series", None) or "").strip().upper() == "SMX"
+    smx_meta_450: dict[int, dict] = {}
+    smx_meta_250: dict[int, dict] = {}
+    if is_smx:
+        try:
+            _smx_meta = m.smx_playoff_field_meta(competition=comp)
+            smx_meta_450 = _smx_meta.get("450") or {}
+            smx_meta_250 = _smx_meta.get("250") or {}
+        except Exception:
+            smx_meta_450, smx_meta_250 = {}, {}
+
+    def serialize_rider(r: Rider):
+        # Samma porträttslogik som spotlight/bio (inkl. dublett-förare som Jett 450/250).
+        from app.portrait_urls import lookup_racerx_portrait_by_name
+
+        racerx_url = lookup_racerx_portrait_by_name(r.name) or ""
+        portrait_url = m._display_portrait_url_for_rider(r, riders_by_name=riders_by_name)
+        img_url = m._extract_rider_image_url(r) or racerx_url or None
+        if img_url:
+            img_url = m._public_rider_asset_url(img_url) or img_url
+        if (not portrait_url or "/static/brand_logos/" in str(portrait_url)) and (
+            racerx_url or img_url
+        ):
+            portrait_url = racerx_url or img_url or portrait_url
+        has_portrait = r.id in ids_with_db_portrait
+        row = {
+            "id": r.id,
+            "name": r.name,
+            "class": r.class_name,
+            "rider_number": r.rider_number,
+            "bike_brand": r.bike_brand,
+            "price": r.price,
+            "is_out": (r.id in out_ids),
+            "is_wildcard": (r.name or "") in wildcard_names,
+            "image_url": img_url,
+            "portrait_url": portrait_url,
+            "racerx_portrait_url": racerx_url,
+            "coast_250": r.coast_250,
+            "has_db_portrait": has_portrait,
+        }
+        if is_smx:
+            info = smx_meta_450.get(r.id) or smx_meta_250.get(r.id) or {}
+            if info:
+                row["smx_rank"] = info.get("rank")
+                row["smx_zone"] = info.get("zone")
+        return row
+
+    riders_450_json = [serialize_rider(r) for r in riders_450]
+    riders_250_json = [serialize_rider(r) for r in riders_250]
+    riders_u17_json = [serialize_rider(r) for r in riders_u17]
+
+    _by_json_id = {
+        r["id"]: r for r in riders_450_json + riders_250_json + riders_u17_json
+    }
+
+    # Only OUT riders in this series' classes (hide WSX twins on SMX/SX/MX etc.)
+    if is_paris or is_wsx:
+        allowed_out_classes = ("wsx_sx1", "wsx_sx2")
+    elif is_mxgp:
+        allowed_out_classes = ("mxgp", "mx2")
+    elif is_mxsm:
+        allowed_out_classes = tuple(mxsm_tippa_classes) or (
+            "mxsm_mx1",
+            "mxsm_mx2",
+            "mxsm_u17",
+        )
+    else:
+        allowed_out_classes = ("450cc", "250cc")
+    if out_ids:
+        class_by_id = {
+            int(rid): (cls or "")
+            for rid, cls in db.session.query(Rider.id, Rider.class_name)
+            .filter(Rider.id.in_(list(out_ids)))
+            .all()
+        }
+        out_ids = {
+            rid for rid in out_ids if class_by_id.get(int(rid), "") in allowed_out_classes
+        }
+
+    # Visa OUT (inkl. Combined-förare som inte är på tippa-listan) — split per klass
+    out_riders_mini = []
+    for rid in sorted(out_ids):
+        if rid in _by_json_id:
+            out_riders_mini.append(_by_json_id[rid])
+            continue
+        missing = Rider.query.get(rid)
+        if not missing:
+            continue
+        if (missing.class_name or "") not in allowed_out_classes:
+            continue
+        out_riders_mini.append(
+            {
+                "id": missing.id,
+                "name": missing.name,
+                "class": missing.class_name,
+                "rider_number": missing.rider_number,
+                "bike_brand": missing.bike_brand,
+                "is_out": True,
+            }
+        )
+
+    _out_top = ("wsx_sx1", "450cc", "mxgp", "mxsm_mx1")
+    _out_bot = ("wsx_sx2", "250cc", "mx2", "mxsm_mx2")
+    _out_u17 = ("mxsm_u17",)
+    out_riders_450 = [r for r in out_riders_mini if (r.get("class") or "") in _out_top]
+    out_riders_250 = [r for r in out_riders_mini if (r.get("class") or "") in _out_bot]
+    out_riders_u17 = [r for r in out_riders_mini if (r.get("class") or "") in _out_u17]
+    out_riders_450.sort(key=lambda r: (r.get("rider_number") is None, r.get("rider_number") or 0, r.get("name") or ""))
+    out_riders_250.sort(key=lambda r: (r.get("rider_number") is None, r.get("rider_number") or 0, r.get("name") or ""))
+    out_riders_u17.sort(key=lambda r: (r.get("rider_number") is None, r.get("rider_number") or 0, r.get("name") or ""))
+
+    # JS OUT_IDS: series-scoped — blockerar kvarvarande val i tippa-klasserna
+    out_ids = list(out_ids)
+    # 4) Placeholder för resultat/holeshot (om ej klart)
+    actual_results = []
+    holeshot_results = []
+
+    # 5) Track maps: DB (SX) eller static/trackmaps/pro_motocross (MX)
+    trackmap_images = []
+    picks_good_to_know: list[str] = []
+    picks_weather: dict | None = None
+    is_mx_race = False
+    try:
+        from trackmap_utils import (
+            get_picks_good_to_know,
+            get_trackmaps_for_competition,
+            is_mx_competition,
+        )
+
+        is_mx_race = is_mx_competition(comp)
+        trackmap_images = get_trackmaps_for_competition(comp)
+        # Read-only fix: Daytona path rename without DB writes on page load
+        for ci in trackmap_images:
+            if getattr(ci, "image_url", None) and "daytona.jpg" in ci.image_url:
+                ci.image_url = ci.image_url.replace("daytona.jpg", "daytona.png")
+        picks_good_to_know = get_picks_good_to_know(comp)
+    except Exception:
+        current_app.logger.exception(
+            "race_picks trackmap/tips failed for competition_id=%s", competition_id
+        )
+        if is_mx_race and not picks_good_to_know:
+            picks_good_to_know = [
+                "Utomhus-MX: banprofil och underlag påverkar ofta resultatet.",
+                "250 kör som en gemensam klass under Pro Motocross.",
+                "Deadline är 2 timmar före start.",
+            ]
+
+    # Paris: never fall through to AMA holeshot/wildcard copy (stale module / series drift).
+    if is_paris:
+        if paris_saturday:
+            picks_good_to_know = [
+                "Lördag: tippa Superpole (SX1 + SX2) och finalvinnare i varje klass.",
+                "Poäng: Superpole 20+20 (+10 om båda) · final proximity max 40/klass. Max ~130.",
+                "Efter lördag syns delställning — söndag läggs på. Deadline 2 h före showstart.",
+            ]
+        else:
+            picks_good_to_know = [
+                "Söndag: tippa finalvinnare SX1 + SX2 samt King of Paris och Prince of Paris.",
+                "Poäng: final proximity max 40/klass · King/Prince 50p vardera. Max ~180.",
+                "Leaderboard summerar lördag + söndag. Deadline 2 h före showstart.",
+            ]
+
+    try:
+        from track_weather import build_picks_weather_tips, get_weather_for_competition
+
+        picks_weather = get_weather_for_competition(comp)
+        weather_tips = build_picks_weather_tips(
+            picks_weather, series=getattr(comp, "series", None)
+        )
+        if weather_tips:
+            # Weather first in «Bra att veta», then keep a few series tips
+            generic = [t for t in picks_good_to_know if t not in weather_tips]
+            picks_good_to_know = weather_tips + generic[:3]
+    except Exception:
+        current_app.logger.exception(
+            "race_picks weather tips failed for competition_id=%s", competition_id
+        )
+        picks_weather = None
+
+    trackmap_urls = [
+        ci.image_url for ci in trackmap_images if getattr(ci, "image_url", None)
+    ]
+
+    pick_suggestions = None
+    initial_my_picks = None
+    initial_picks_status = None
+    initial_wizard_step = 1
+    if is_logged_in:
+        user_id = int(session["user_id"])
+        pick_suggestions = m._build_pick_suggestions_for_user(user_id, comp, out_ids)
+        try:
+            if is_paris:
+                from paris_fantasy import (
+                    get_user_paris_picks,
+                    get_user_paris_picks_ui,
+                    paris_picks_complete,
+                )
+
+                paris_initial = get_user_paris_picks(user_id, comp)
+                paris_ui = get_user_paris_picks_ui(user_id, comp)
+                initial_my_picks = {"paris": paris_initial, "paris_ui": paris_ui}
+                complete = paris_picks_complete(user_id, comp)
+                if complete:
+                    initial_picks_status = {
+                        "icon": "✅",
+                        "title": "Inlämnat!",
+                        "message": "Dina Paris-val är registrerade för denna kväll.",
+                        "container_class": "mb-4 p-4 rounded-lg border-2 border-emerald-500/50 bg-emerald-950/20",
+                    }
+                elif any(paris_initial.get(k) for k in paris_initial):
+                    initial_picks_status = {
+                        "icon": "⚠️",
+                        "title": "Delvis klart",
+                        "message": "Fyll i resten av Paris-valen.",
+                        "container_class": (
+                            "mb-4 p-4 rounded-lg border-2 border-dashed "
+                            "border-orange-400 bg-orange-900/30"
+                        ),
+                    }
+                else:
+                    initial_picks_status = {
+                        "icon": "📝",
+                        "title": "Inga val gjorda än",
+                        "message": (
+                            "Tippa Superpole + lördagsfinal (SX1 & SX2)."
+                            if paris_saturday
+                            else "Tippa söndagsfinal + King/Prince of Paris."
+                        ),
+                        "container_class": (
+                            "mb-4 p-4 rounded-lg border-2 border-dashed "
+                            "border-yellow-400 bg-yellow-900/30"
+                        ),
+                    }
+                initial_wizard_step = 1
+            else:
+                initial_my_picks = rp._my_picks_api_dict(user_id, comp)
+                initial_picks_status = rp._picks_status_summary(
+                    initial_my_picks,
+                    is_wsx=is_wsx,
+                    is_mxgp=is_mxgp,
+                    is_mxsm=is_mxsm,
+                    has_u17=has_u17,
+                    tippa_classes=mxsm_tippa_classes,
+                    picks_locked=picks_locked,
+                )
+                initial_wizard_step = rp._initial_wizard_step(
+                    initial_my_picks,
+                    is_wsx=is_wsx,
+                    is_mxgp=is_mxgp,
+                    is_mxsm=is_mxsm,
+                    has_u17=has_u17,
+                    tippa_classes=mxsm_tippa_classes,
+                )
+        except Exception:
+            current_app.logger.exception(
+                "race_picks initial_my_picks failed for competition_id=%s", competition_id
+            )
+    else:
+        if is_mxsm:
+            guest_msg = "Registrera dig på ~20 sek — sedan topp 6 & holeshot"
+        elif is_mxgp:
+            guest_msg = "Registrera dig på ~20 sek — sedan topp 6, holeshot & kval"
+        elif is_paris:
+            guest_msg = "Registrera dig på ~20 sek — sedan Paris-tippan för denna kväll"
+        elif is_wsx:
+            guest_msg = "Registrera dig på ~20 sek — sedan topp 6 & holeshot"
+        else:
+            guest_msg = "Registrera dig på ~20 sek — sedan topp 6, holeshot & wildcard"
+        initial_picks_status = {
+            "icon": "🎫",
+            "title": "Skapa konto för att sätta picks",
+            "message": guest_msg,
+            "container_class": "mb-4 p-4 rounded-lg border-2 border-dashed border-amber-500/60 bg-amber-950/20",
+        }
+
+    has_season_team = False
+    season_team_riders: list[dict] = []
+    season_team_meta = None
+    if is_logged_in:
+        try:
+            st, st_riders = m._season_team_riders_ui(int(session["user_id"]))
+            has_season_team = st is not None
+            season_team_riders = st_riders
+            if st:
+                season_team_meta = {
+                    "team_name": st.team_name,
+                    "total_points": int(st.total_points or 0),
+                }
+        except Exception:
+            has_season_team = False
+            season_team_riders = []
+            season_team_meta = None
+
+    paris_meta: dict = {}
+    if is_paris:
+        try:
+            from services.race_theme import paris_theme_meta
+
+            paris_meta = paris_theme_meta(comp) or {}
+        except Exception:
+            paris_meta = {}
+
+    military_appreciation = False
+    military_meta = {}
+    try:
+        from services.race_theme import is_military_appreciation_race
+
+        military_appreciation = bool(is_military_appreciation_race(comp)) and not is_paris
+    except Exception:
+        military_appreciation = False
+    if military_appreciation:
+        try:
+            from services.race_theme import military_theme_meta
+
+            military_meta = military_theme_meta(comp) or {}
+        except Exception:
+            military_meta = {}
+
+    st_jude_love_moto = False
+    st_jude_meta = {}
+    if not military_appreciation and not is_paris:
+        try:
+            from services.race_theme import is_st_jude_love_moto_race
+
+            st_jude_love_moto = bool(is_st_jude_love_moto_race(comp))
+        except Exception:
+            st_jude_love_moto = False
+    if st_jude_love_moto:
+        try:
+            from services.race_theme import st_jude_theme_meta
+
+            st_jude_meta = st_jude_theme_meta(comp) or {}
+        except Exception:
+            st_jude_meta = {}
+
+    sx_format = ""
+    sx_format_meta: dict = {}
+    if not military_appreciation and not st_jude_love_moto and not is_paris:
+        try:
+            from services.race_theme import sx_format_kind, sx_format_theme_meta
+
+            sx_format = sx_format_kind(comp) or ""
+            if sx_format:
+                sx_format_meta = sx_format_theme_meta(comp) or {}
+        except Exception:
+            sx_format = ""
+            sx_format_meta = {}
+
+    picks_local_unlock = picks_unlock_all_local()
+
+    return render_template(
+        "race_picks.html",
+        competition=comp,
+        military_appreciation=military_appreciation,
+        military_meta=military_meta,
+        st_jude_love_moto=st_jude_love_moto,
+        st_jude_meta=st_jude_meta,
+        paris_meta=paris_meta,
+        sx_format=sx_format,
+        sx_format_meta=sx_format_meta,
+        picks_local_unlock=picks_local_unlock,
+        riders_450_json=riders_450_json,
+        riders_250_json=riders_250_json,
+        riders_u17_json=riders_u17_json,
+        out_riders_mini=out_riders_mini,
+        out_riders_450=out_riders_450,
+        out_riders_250=out_riders_250,
+        out_riders_u17=out_riders_u17,
+        actual_results=actual_results,
+        holeshot_results=holeshot_results,
+        out_ids=list(out_ids),
+        trackmap_images=trackmap_images,
+        trackmap_urls=trackmap_urls,
+        picks_good_to_know=picks_good_to_know,
+        picks_weather=picks_weather,
+        is_mx_race=is_mx_race,
+        is_mxsm=is_mxsm,
+        has_u17=has_u17,
+        mxsm_tippa_classes=list(mxsm_tippa_classes) if mxsm_tippa_classes else [],
+        race_prep_venue=m._race_prep_venue_label(comp),
+        race_prep_start_label=m._race_prep_start_label(comp),
+        race_prep_wildcard_names=sorted(m._wsx_wildcard_names_for_competition(comp)),
+        picks_locked=picks_locked,
+        static_rider_images=not m._on_render,
+        portraits_in_dropdown=not m._on_render,
+        pick_suggestions=pick_suggestions,
+        initial_my_picks=initial_my_picks,
+        initial_picks_status=initial_picks_status,
+        initial_wizard_step=initial_wizard_step,
+        is_logged_in=is_logged_in,
+        has_season_team=has_season_team,
+        season_team_riders=season_team_riders,
+        season_team_meta=season_team_meta,
+        invite_share=(
+            _build_invite_share_payload(
+                session.get("username") or "",
+                prefer_series=getattr(comp, "series", None),
+                competition=comp,
+            )
+            if is_logged_in
+            else None
+        ),
+        is_paris=is_paris,
+        paris_saturday=paris_saturday,
+        paris_other_evening_url=paris_other_evening_url,
+        paris_other_evening_label=paris_other_evening_label,
+        paris_saturday_competition_id=paris_saturday_competition_id,
+        paris_sunday_competition_id=paris_sunday_competition_id,
+    )
+
+
+@bp.route("/race_picks_active")
+def race_picks_active():
+    """Redirect to race picks for the next competition with open picks.
+
+    Guests are allowed through — race_picks_page shows Pit Pass when saving.
+    """
+    m = _main()
+    try:
+        comp = m._next_open_picks_competition()
+        if comp:
+            return redirect(url_for("race_picks_page", competition_id=comp.id))
+
+        comp = m._current_picks_competition()
+        if comp:
+            flash(
+                f"Picks är låsta för {comp.name}. Nästa race med öppna picks kommer snart.",
+                "info",
+            )
+            return redirect(url_for("race_picks_page", competition_id=comp.id))
+
+        flash("Inget kommande race med öppna picks hittades.", "error")
+        return redirect(url_for("index"))
+            
+    except Exception as e:
+        print(f"Error getting active race: {e}")
+        flash("Fel vid hämtning av aktivt race", "error")
+        return redirect(url_for("index"))
