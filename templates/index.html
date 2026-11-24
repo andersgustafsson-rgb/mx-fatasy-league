@@ -1627,12 +1627,44 @@
     .home-sidebar-card--guest {
       text-align: center;
     }
+    .home-sidebar-profile-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
     .home-sidebar-profile {
       display: flex;
       align-items: center;
       gap: 0.9rem;
+      flex: 1;
+      min-width: 0;
       text-decoration: none;
       color: inherit;
+    }
+    .home-sidebar-profile-bell {
+      flex-shrink: 0;
+      margin-top: 0.2rem;
+    }
+    .home-sidebar-profile-bell #pit-lane-bell-btn {
+      width: 2.1rem;
+      height: 2.1rem;
+      border-radius: 0.55rem;
+      border: 1px solid #2a3548;
+      background: #152033;
+      color: #94a3b8;
+    }
+    .home-sidebar-profile-bell #pit-lane-bell-btn:hover {
+      color: #e2e8f0;
+      border-color: rgba(34, 211, 238, 0.35);
+      background: #1a2436;
+    }
+    .home-sidebar-profile-bell .pit-lane-bell-icon {
+      width: 1.05rem;
+      height: 1.05rem;
+    }
+    .home-sidebar-profile-bell #pit-lane-bell-wrap.pit-lane-bell-wrap--unread .pit-lane-bell-icon {
+      color: #22d3ee;
+      filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.65));
     }
     .home-sidebar-profile:hover .home-sidebar-profile__name strong {
       color: #f8fafc;
@@ -1773,78 +1805,11 @@
       color: #e2e8f0;
       background: rgba(30, 41, 59, 0.55);
     }
-    .home-sidebar-nav__link svg,
-    .home-sidebar-nav .pit-lane-bell-icon {
+    .home-sidebar-nav__link svg {
       width: 1.05rem;
       height: 1.05rem;
       flex-shrink: 0;
       opacity: 0.85;
-    }
-    .home-sidebar-nav__notif {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      width: 100%;
-      padding: 0.55rem 0.65rem;
-      border: none;
-      border-radius: 0.55rem;
-      background: none;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: #94a3b8;
-      cursor: pointer;
-      transition: color 0.15s ease, background 0.15s ease;
-      text-align: left;
-    }
-    .home-sidebar-nav__notif:hover {
-      color: #e2e8f0;
-      background: rgba(30, 41, 59, 0.55);
-    }
-    .home-sidebar-nav__notif-icon-slot {
-      position: relative;
-      width: 1.05rem;
-      height: 1.05rem;
-      flex-shrink: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .home-sidebar-nav__notif-label {
-      flex: 1;
-      font-size: inherit;
-      font-weight: inherit;
-      color: inherit;
-    }
-    .home-sidebar-nav #pit-lane-bell-wrap {
-      display: inline-flex;
-      line-height: 0;
-    }
-    .home-sidebar-nav #pit-lane-bell-btn {
-      background: none;
-      border: none;
-      padding: 0;
-      color: inherit;
-      width: 1.05rem;
-      height: 1.05rem;
-    }
-    .home-sidebar-nav #pit-lane-bell-btn:hover {
-      background: none;
-      color: inherit;
-    }
-    .home-sidebar-nav #pit-lane-badge {
-      top: -5px;
-      right: -6px;
-      min-width: 14px;
-      height: 14px;
-      font-size: 9px;
-    }
-    .home-sidebar-nav__notif:has(#pit-lane-bell-wrap.pit-lane-bell-wrap--unread) {
-      color: #a5f3fc;
-    }
-    .home-sidebar-nav__notif:has(#pit-lane-bell-wrap.pit-lane-bell-wrap--unread) .pit-lane-bell-icon {
-      color: #22d3ee;
-      opacity: 1;
-      filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.65));
     }
     .home-sidebar-foot {
       margin-top: 0.85rem;
@@ -3353,24 +3318,29 @@
 
             {% if is_logged_in %}
             <div class="home-sidebar-card">
-              <a href="{{ url_for('profile_page') }}" class="home-sidebar-profile">
-                <div class="home-sidebar-avatar-ring">
-                  {% if user_profile_picture and user_profile_picture.startswith('data:') %}
-                    <img src="{{ user_profile_picture }}" alt="" class="home-sidebar-avatar">
-                  {% elif user_profile_picture and not user_profile_picture.startswith('uploaded_') %}
-                    <img src="{{ url_for('static', filename=user_profile_picture) }}" alt="" class="home-sidebar-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <span class="home-sidebar-avatar-fallback" style="display:none;">{{ username[0].upper() }}</span>
-                  {% else %}
-                    <span class="home-sidebar-avatar-fallback">{{ username[0].upper() }}</span>
-                  {% endif %}
-                </div>
-                <div class="home-sidebar-profile__text">
-                  <div class="home-sidebar-profile__name">
-                    <strong id="welcome-username">{{ username }}</strong><span id="welcome-rank-chip" class="home-sidebar-profile__rank hidden">#—</span>
+              <div class="home-sidebar-profile-row">
+                <a href="{{ url_for('profile_page') }}" class="home-sidebar-profile">
+                  <div class="home-sidebar-avatar-ring">
+                    {% if user_profile_picture and user_profile_picture.startswith('data:') %}
+                      <img src="{{ user_profile_picture }}" alt="" class="home-sidebar-avatar">
+                    {% elif user_profile_picture and not user_profile_picture.startswith('uploaded_') %}
+                      <img src="{{ url_for('static', filename=user_profile_picture) }}" alt="" class="home-sidebar-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                      <span class="home-sidebar-avatar-fallback" style="display:none;">{{ username[0].upper() }}</span>
+                    {% else %}
+                      <span class="home-sidebar-avatar-fallback">{{ username[0].upper() }}</span>
+                    {% endif %}
                   </div>
-                  <span id="welcome-tier-badge" class="home-sidebar-tier hidden">—</span>
+                  <div class="home-sidebar-profile__text">
+                    <div class="home-sidebar-profile__name">
+                      <strong id="welcome-username">{{ username }}</strong><span id="welcome-rank-chip" class="home-sidebar-profile__rank hidden">#—</span>
+                    </div>
+                    <span id="welcome-tier-badge" class="home-sidebar-tier hidden">—</span>
+                  </div>
+                </a>
+                <div class="home-sidebar-profile-bell">
+                  {% include 'includes/pit_lane_bell.html' %}
                 </div>
-              </a>
+              </div>
               <div class="home-sidebar-points">
                 <div class="home-sidebar-points__labels">
                   <span id="welcome-points-label">SMX poäng</span>
@@ -3388,18 +3358,6 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
                 Bjud in vänner
               </button>
-              <div
-                class="home-sidebar-nav__notif"
-                role="button"
-                tabindex="0"
-                onclick="document.getElementById('pit-lane-bell-btn')?.click();"
-                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('pit-lane-bell-btn')?.click();}"
-              >
-                <span class="home-sidebar-nav__notif-icon-slot">
-                  {% include 'includes/pit_lane_bell.html' %}
-                </span>
-                <span class="home-sidebar-nav__notif-label">Notiser</span>
-              </div>
               <button
                 type="button"
                 class="home-sidebar-nav__link tab-btn"
