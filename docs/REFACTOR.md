@@ -238,10 +238,20 @@ Tippa HTML + active redirect:
 
 `main.py` ~20.3k rader.
 
+## Skiva 26 ✅
+
+League points:
+- `calculate_league_points`, `update_league_points_for_competition`,
+  `_recalculate_all_league_totals` → `services/leagues.py`
+- Admin delete/toggle/reset/calculate league points → `app/routes/leagues.py`
+- `services/scoring.py` importerar update-hook direkt (inte via `main`)
+
+`main.py` ~22.0k rader (efter skiva 25-radnivå; nettosänkning vs pre-26).
+
 **Nästa (prioriterad ordning för agenter):**
 
 1. Alembic-parity vs `services/schema_patches.py` (minska boot-patches över tid)
-2. Ev. `calculate_league_points` → `services/leagues.py`
-3. Ev. portrait/SMX helpers som tippa-sidan fortfarande lazy-anropar från `main`
+2. Ev. portrait/SMX helpers som tippa-sidan fortfarande lazy-anropar från `main`
+3. Ev. säsongsteam- eller homepage/leaderboard-kluster
 
 Repo-navigation: `.cursor/rules/repo-map.mdc` (uppdatera när entry points flyttas).

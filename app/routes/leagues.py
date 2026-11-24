@@ -1,6 +1,6 @@
-"""User league pages + CRUD (skiva 22 + digest helpers skiva 24).
+"""User league pages + CRUD + admin points (skiva 22/24/26).
 
-Same URL paths (no prefix). Digests live in services/leagues.py.
+Same URL paths (no prefix). Digests + points in services/leagues.py.
 Bare endpoint aliases registered in main for url_for.
 """
 from __future__ import annotations
@@ -30,8 +30,10 @@ from services.leagues import (
     _league_race_matrix,
     _league_rival_card,
     _league_summary_for_user,
+    _recalculate_all_league_totals,
     _upcoming_competitions,
     _user_avatar_fields,
+    calculate_league_points,
 )
 from services.official_leagues import is_official_public_league
 from models import (
@@ -57,10 +59,6 @@ def _main():
     import main as _m
 
     return _m
-
-
-def calculate_league_points(*args, **kwargs):
-    return _main().calculate_league_points(*args, **kwargs)
 
 
 def generate_invite_code(*args, **kwargs):
@@ -763,3 +761,141 @@ def reject_league_request(league_id, request_id):
     flash("Ansökan avslås!", "info")
     return redirect(url_for("league_detail_page", league_id=league_id))
 
+@bp.post("/admin/leagues/<int:league_id>/delete")
+def admin_delete_league(league_id):
+    """Delete a league (admin only)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    try:
+        league = League.query.get_or_404(league_id)
+
+        LeagueRequest.query.filter_by(league_id=league_id).delete()
+        LeagueMembership.query.filter_by(league_id=league_id).delete()
+
+        db.session.delete(league)
+        db.session.commit()
+
+        return jsonify({"message": f"League '{league.name}' deleted successfully"})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.post("/admin/leagues/<int:league_id>/toggle_public")
+def admin_toggle_league_public(league_id):
+    """Toggle league public/private status (admin only)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    try:
+        league = League.query.get_or_404(league_id)
+
+        league.is_public = not league.is_public
+        db.session.commit()
+
+        status = "public" if league.is_public else "private"
+        return jsonify({"message": f"League '{league.name}' is now {status}"})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.post("/admin/leagues/<int:league_id>/reset_points")
+def admin_reset_league_points(league_id):
+    """Reset league points to 0 (admin only)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    try:
+        league = League.query.get_or_404(league_id)
+
+        league.total_points = 0
+        db.session.commit()
+
+        return jsonify({"message": f"League '{league.name}' points reset to 0"})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.post("/admin/leagues/reset_all_points")
+def admin_reset_all_league_points():
+    """Reset all league points to 0 (admin only)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    try:
+        leagues = League.query.all()
+
+        reset_count = 0
+        for league in leagues:
+            league.total_points = 0
+            reset_count += 1
+
+        db.session.commit()
+
+        print(f"✅ Nollställde poäng för {reset_count} ligor")
+
+        return jsonify({
+            "success": True,
+            "message": f"Nollställde poäng för {reset_count} ligor",
+            "reset_count": reset_count,
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+
+        error_trace = traceback.format_exc()
+        print(f"ERROR in admin_reset_all_league_points: {e}")
+        print(f"ERROR traceback: {error_trace}")
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.post("/admin/leagues/calculate_all_points")
+def calculate_all_league_points():
+    """Calculate and update points for all leagues (admin only)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    try:
+        _recalculate_all_league_totals()
+        leagues = League.query.all()
+        updated_leagues = len(leagues)
+        total_points_calculated = sum(league.total_points or 0 for league in leagues)
+
+        return jsonify({
+            "message": f"Updated points for {updated_leagues} leagues",
+            "updated_leagues": updated_leagues,
+            "total_points_calculated": round(total_points_calculated, 1),
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.post("/admin/leagues/<int:league_id>/calculate_points")
+def calculate_league_points_single(league_id):
+    """Calculate points for a specific league (admin only)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    try:
+        league = League.query.get_or_404(league_id)
+        _recalculate_all_league_totals()
+        db.session.refresh(league)
+
+        return jsonify({
+            "message": f"League '{league.name}' points calculated: {league.total_points}",
+            "league_name": league.name,
+            "total_points": league.total_points,
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

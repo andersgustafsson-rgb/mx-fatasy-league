@@ -94,7 +94,7 @@ Registration: search `register_blueprint` in `main.py`. Bare endpoint aliases: l
 | `series_status.py` | Series cards + cache |
 | `seo_tippa.py` | Tippa/guide page content |
 | `league_challenges.py` | Duel domain |
-| `leagues.py` | League digests (standings, pulse, rival, last race) |
+| `leagues.py` | League digests + fair league points / recalc hooks |
 | `official_leagues.py` | Official league defs |
 | `league_discover.py` | Discover UI helpers |
 | `invite_share.py` | Invite URLs/cards |

@@ -1,7 +1,6 @@
-"""League digest helpers (standings, race matrix, picks pulse, rival, last race).
+"""League digests + fair league points (skiva 24 + 26).
 
-Moved from main.py (refactor skiva 24). Heavy tippa/AMA helpers still live in
-main and are reached via lazy `_main()` to avoid circular imports.
+Heavy tippa/AMA helpers still live in main and are reached via lazy `_main()`.
 """
 from __future__ import annotations
 
@@ -12,6 +11,7 @@ from models import (
     CompetitionResult,
     CompetitionScore,
     HoleshotPick,
+    League,
     LeagueMembership,
     MxonClassPick,
     MxonNationPick,
@@ -23,6 +23,7 @@ from models import (
     db,
 )
 from services.picks_lock import _competition_race_schedule, get_current_time
+from services.scoring import TIPPA_ONLY_SERIES
 
 
 def _main():
@@ -699,3 +700,113 @@ def _league_last_race_digest(league_id: int, user_id: int, summary: dict) -> dic
         **_user_avatar_fields(winner_user),
         "highlights": highlights[:4],
     }
+
+def calculate_league_points(league_id, competition_id):
+    """Calculate fair league points based on member race pick performance.
+
+    Fair system that works regardless of league size:
+    - 1 member: Use their score directly
+    - 2 members: Use average of both
+    - 3-4 members: Use average of top 2
+    - 5-6 members: Use average of top 3
+    - 7+ members: Use average of top 50% (rounded up)
+
+    This ensures smaller leagues can compete fairly with larger ones,
+    while still rewarding leagues with multiple strong performers.
+    """
+    try:
+        members = (
+            db.session.query(User)
+            .join(LeagueMembership)
+            .filter(LeagueMembership.league_id == league_id)
+            .all()
+        )
+
+        if not members:
+            return 0
+
+        # Exclude WSX competitions - league points should only count SX, MX, SMX
+        competition = Competition.query.get(competition_id)
+        if competition and competition.series == "WSX":
+            return 0
+
+        member_scores = []
+        for member in members:
+            score = CompetitionScore.query.filter_by(
+                user_id=member.id,
+                competition_id=competition_id,
+            ).first()
+            if score and score.total_points:
+                member_scores.append(score.total_points)
+
+        if not member_scores:
+            return 0
+
+        member_scores.sort(reverse=True)
+        num_members = len(member_scores)
+
+        if num_members == 1:
+            final_score = member_scores[0]
+            top_n = 1
+        elif num_members == 2:
+            final_score = sum(member_scores) / 2
+            top_n = 2
+        elif num_members <= 4:
+            final_score = sum(member_scores[:2]) / 2
+            top_n = 2
+        elif num_members <= 6:
+            final_score = sum(member_scores[:3]) / 3
+            top_n = 3
+        else:
+            top_n = (num_members + 1) // 2
+            final_score = sum(member_scores[:top_n]) / top_n
+
+        print(
+            f"🏆 League {league_id}: {num_members} members, "
+            f"using top {top_n}, league score: {final_score:.1f}"
+        )
+
+        return round(final_score, 1)
+
+    except Exception as e:
+        print(f"Error calculating league points: {e}")
+        return 0
+
+
+def update_league_points_for_competition(competition_id):
+    """Recalculate league totals after a competition is scored (avoids double-count on re-import)."""
+    try:
+        comp = Competition.query.get(competition_id)
+        if comp and (getattr(comp, "series", None) or "").strip().upper() in TIPPA_ONLY_SERIES:
+            print(
+                f"ℹ️ Skipping league recalc for tippa-only competition "
+                f"{competition_id} ({comp.series})"
+            )
+            return
+        _recalculate_all_league_totals()
+        print(f"✅ Recalculated league points after competition {competition_id}")
+    except Exception as e:
+        print(f"❌ Error updating league points: {e}")
+        db.session.rollback()
+        raise e
+
+
+def _recalculate_all_league_totals() -> None:
+    """Sum fair per-race league scores into League.total_points (AMA only — tippa-only excluded)."""
+    competitions_with_results = (
+        db.session.query(Competition.id)
+        .join(CompetitionScore, Competition.id == CompetitionScore.competition_id)
+        .filter(_main().ama_competition_clause())
+        .distinct()
+        .order_by(Competition.id.asc())
+        .all()
+    )
+    comp_ids = [row[0] for row in competitions_with_results]
+
+    for league in League.query.all():
+        league_total = sum(
+            calculate_league_points(league.id, comp_id) for comp_id in comp_ids
+        )
+        league.total_points = round(league_total, 1)
+
+    db.session.commit()
