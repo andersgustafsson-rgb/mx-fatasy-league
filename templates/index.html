@@ -1948,16 +1948,22 @@
       width: 100%;
       min-height: 15.5rem;
       border-radius: 0.75rem;
-      border: 1px solid #2a3548;
+      border: 1px solid rgba(34, 211, 238, 0.28);
       overflow: hidden;
-      background-color: #152033;
+      background-color: #0b1424;
       background-size: cover;
       background-position: center;
     }
     .home-race-hero__overlay {
       position: absolute;
       inset: 0;
-      background: linear-gradient(180deg, rgba(20, 28, 44, 0.45) 0%, rgba(20, 28, 44, 0.82) 55%, rgba(21, 32, 51, 0.96) 100%);
+      /* Lättare botten så banan syns bakom countdown-glaset */
+      background: linear-gradient(
+        180deg,
+        rgba(8, 15, 28, 0.35) 0%,
+        rgba(8, 15, 28, 0.45) 40%,
+        rgba(8, 15, 28, 0.55) 100%
+      );
       pointer-events: none;
     }
     .home-race-hero__body {
@@ -2062,15 +2068,24 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 0;
-      width: 100%;
-      margin-top: auto;
-      padding: 0.95rem 0.75rem 1.05rem;
-      background: #152033;
-      border-top: 1px solid #2a3548;
+      width: calc(100% - 1.5rem);
+      max-width: 100%;
+      margin: auto 0.75rem 0.35rem;
+      padding: 0.85rem 0.55rem 0.95rem;
+      border-radius: 0.85rem;
+      border: 1px solid rgba(34, 211, 238, 0.38);
+      background: rgba(6, 14, 28, 0.38);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow:
+        0 8px 28px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
     @media (min-width: 640px) {
       .home-race-hero__timers {
-        padding: 1.1rem 1.35rem 1.2rem;
+        width: calc(100% - 2rem);
+        margin: auto 1rem 0.45rem;
+        padding: 1rem 1.1rem 1.1rem;
       }
     }
     .home-race-timer {
@@ -2089,7 +2104,7 @@
       }
     }
     .home-race-timer + .home-race-timer {
-      border-left: 1px solid #334155;
+      border-left: 1px solid rgba(34, 211, 238, 0.35);
     }
     .home-race-timer::after {
       display: none;
@@ -2149,7 +2164,7 @@
       color: #f8fafc;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.01em;
-      text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
+      text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55), 0 0 18px rgba(0, 0, 0, 0.25);
     }
     .home-race-timer__value[data-segs="2"] .home-race-timer__num {
       font-size: clamp(1.45rem, 5vw, 2.65rem);
