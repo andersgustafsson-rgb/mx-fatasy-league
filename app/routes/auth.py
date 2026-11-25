@@ -228,6 +228,28 @@ def register():
         if User.query.filter(db.func.lower(User.email) == email).first():
             return _fail("E-postadressen är redan registrerad")
 
+        # Soft spam guard (heuristics + honeypot) — free, no captcha vendor
+        try:
+            from services.spam_guard import score_registration
+
+            spam = score_registration(
+                username=username,
+                email=email,
+                honeypot=request.form.get("website") or request.form.get("company_url"),
+            )
+            if spam.get("block"):
+                print(
+                    f"spam_guard blocked register user={username!r} "
+                    f"score={spam.get('score')} reasons={spam.get('reasons')}"
+                )
+                return _fail(
+                    "Kunde inte skapa kontot just nu. "
+                    "Prova igen senare eller logga in med Google.",
+                    400,
+                )
+        except Exception as spam_err:
+            print(f"spam_guard skipped: {spam_err}")
+
         try:
             new_user = User(
                 username=username,

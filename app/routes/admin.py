@@ -1657,6 +1657,114 @@ def admin_visit_stats():
 		return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@bp.get("/admin/api/recent_signups")
+@login_required
+def admin_recent_signups():
+	"""Recent accounts with spam-risk score for admin overview."""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		from services.spam_guard import list_recent_signups
+
+		days = request.args.get("days", 21, type=int)
+		limit = request.args.get("limit", 40, type=int)
+		rows = list_recent_signups(days=days, limit=limit)
+		high = sum(1 for r in rows if r.get("level") == "high")
+		medium = sum(1 for r in rows if r.get("level") == "medium")
+		return jsonify(
+			{
+				"ok": True,
+				"days": days,
+				"high": high,
+				"medium": medium,
+				"signups": rows,
+			}
+		)
+	except Exception as e:
+		return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@bp.get("/admin/api/gsc_summary")
+@login_required
+def admin_gsc_summary():
+	"""Google Search Console clicks/impressions — free API."""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		from services.search_console import fetch_gsc_summary
+
+		days = request.args.get("days", 28, type=int)
+		force = request.args.get("refresh") == "1"
+		return jsonify(fetch_gsc_summary(days=days, force=force))
+	except Exception as e:
+		return jsonify({"ok": False, "error": str(e), "cost": "gratis"}), 500
+
+
+@bp.get("/admin/gsc/connect")
+@login_required
+def admin_gsc_connect():
+	"""Start one-time OAuth to authorize Search Console (free)."""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	from services.search_console import build_gsc_authorize_url, gsc_oauth_configured
+	import secrets
+
+	if not gsc_oauth_configured():
+		return (
+			"<p>GOOGLE_CLIENT_ID/SECRET saknas. Lägg till samma Google OAuth-klient "
+			"som login använder, och lägg redirect URI "
+			"<code>/admin/gsc/callback</code> i Google Cloud Console.</p>",
+			400,
+		)
+	state = secrets.token_urlsafe(24)
+	session["gsc_oauth_state"] = state
+	redirect_uri = url_for("admin.admin_gsc_callback", _external=True)
+	session["gsc_oauth_redirect_uri"] = redirect_uri
+	return redirect(build_gsc_authorize_url(redirect_uri=redirect_uri, state=state))
+
+
+@bp.get("/admin/gsc/callback")
+@login_required
+def admin_gsc_callback():
+	"""Store GSC refresh token after Google consent."""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	from services.search_console import (
+		DEFAULT_SITE,
+		exchange_gsc_code,
+		store_refresh_token,
+	)
+
+	err = request.args.get("error")
+	if err:
+		return f"<p>Google fel: {err}</p><p><a href='/admin'>Tillbaka</a></p>", 400
+	state = request.args.get("state") or ""
+	if not state or state != session.get("gsc_oauth_state"):
+		return "<p>Ogiltig OAuth-state.</p>", 400
+	code = request.args.get("code") or ""
+	redirect_uri = session.get("gsc_oauth_redirect_uri") or url_for(
+		"admin.admin_gsc_callback", _external=True
+	)
+	try:
+		tok = exchange_gsc_code(code=code, redirect_uri=redirect_uri)
+		refresh = tok.get("refresh_token")
+		if not refresh:
+			return (
+				"<p>Inget refresh_token — prova igen (Google kräver "
+				"<code>prompt=consent</code>, vilket vi skickar).</p>"
+				"<p><a href='/admin/gsc/connect'>Försök igen</a></p>",
+				400,
+			)
+		store_refresh_token(refresh, site_url=DEFAULT_SITE)
+		session.pop("gsc_oauth_state", None)
+		return (
+			"<p>Search Console kopplad (gratis API). "
+			"<a href='/admin'>Tillbaka till admin</a> och ladda om översikten.</p>"
+		)
+	except Exception as e:
+		return f"<p>Kunde inte spara token: {e}</p>", 500
+
+
 @bp.post("/admin/api/visit_stats/reset_today")
 @login_required
 def admin_visit_stats_reset_today():

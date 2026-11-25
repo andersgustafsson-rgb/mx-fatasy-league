@@ -1118,6 +1118,75 @@
                 </div>
             </div>
 
+            <div class="ap-dash-cat" id="apCatGsc">
+                <div class="ap-dash-cat__head">
+                    <div class="ap-dash-cat__eyebrow">Google · gratis</div>
+                    <div class="ap-dash-cat__title">Search Console</div>
+                    <p class="ap-dash-cat__sub" id="gsc-note">Klick &amp; visningar från Google (ingen kostnad). Data ~2–3 dagar fördröjd.</p>
+                </div>
+                <div class="ap-dash-cat__grid" id="gsc-stats-grid">
+                    <div class="ap-dash-cat__card">
+                        <div class="lbl">Klick</div>
+                        <div class="val" id="gsc-clicks">–</div>
+                        <div class="meta" id="gsc-range">period</div>
+                    </div>
+                    <div class="ap-dash-cat__card">
+                        <div class="lbl">Visningar</div>
+                        <div class="val" id="gsc-impressions">–</div>
+                        <div class="meta">impressions</div>
+                    </div>
+                    <div class="ap-dash-cat__card">
+                        <div class="lbl">CTR</div>
+                        <div class="val" id="gsc-ctr">–</div>
+                        <div class="meta">klick / visning</div>
+                    </div>
+                    <div class="ap-dash-cat__card">
+                        <div class="lbl">Snittposition</div>
+                        <div class="val" id="gsc-position">–</div>
+                        <div class="meta">i sökresultat</div>
+                    </div>
+                </div>
+                <div id="gsc-connect-wrap" class="ap-dash-note" style="margin-top:0.75rem;" hidden>
+                    <a href="/admin/gsc/connect" class="ap-btn" style="display:inline-block;padding:0.45rem 0.8rem;border-radius:0.5rem;border:1px solid rgba(34,211,238,0.4);color:#a5f3fc;text-decoration:none;">Anslut Search Console</a>
+                    <span style="margin-left:0.5rem;opacity:0.75;">Engångskoppling · samma Google-konto som äger GSC · gratis API</span>
+                </div>
+                <div id="gsc-error" class="ap-dash-note" style="color:#fca5a5;margin-top:0.5rem;" hidden></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.85rem;">
+                    <div>
+                        <h3 class="ap-dash-cat__h3">Toppsidor</h3>
+                        <ul id="gsc-top-pages" style="margin:0;padding-left:1.1rem;font-size:0.8rem;color:#cbd5e1;"></ul>
+                    </div>
+                    <div>
+                        <h3 class="ap-dash-cat__h3">Topsökord</h3>
+                        <ul id="gsc-top-queries" style="margin:0;padding-left:1.1rem;font-size:0.8rem;color:#cbd5e1;"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ap-dash-cat" id="apCatSignups">
+                <div class="ap-dash-cat__head">
+                    <div class="ap-dash-cat__eyebrow">Konton</div>
+                    <div class="ap-dash-cat__title">Nya &amp; misstänkta</div>
+                    <p class="ap-dash-cat__sub">Senaste 21 dagarna med spam-riskpoäng (heuristik — inte facit).</p>
+                </div>
+                <div class="ap-dash-note" id="signup-risk-summary" style="margin-bottom:0.5rem;">–</div>
+                <div style="overflow-x:auto;">
+                    <table class="ap-table" id="signup-risk-table" style="width:100%;font-size:0.8rem;border-collapse:collapse;">
+                        <thead>
+                            <tr style="text-align:left;color:#94a3b8;">
+                                <th style="padding:0.35rem;">Användare</th>
+                                <th style="padding:0.35rem;">Risk</th>
+                                <th style="padding:0.35rem;">Poäng</th>
+                                <th style="padding:0.35rem;">Aktivitet</th>
+                                <th style="padding:0.35rem;">Skapad</th>
+                                <th style="padding:0.35rem;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="signup-risk-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="ap-dash-cat" id="apCatReach" hidden>
                 <div class="ap-dash-cat__head">
                     <div class="ap-dash-cat__eyebrow">Engagemang</div>
@@ -5381,6 +5450,110 @@
             }
         }
 
+        async function loadGscSummary() {
+            const errEl = document.getElementById('gsc-error');
+            const connectWrap = document.getElementById('gsc-connect-wrap');
+            try {
+                const response = await fetch('/admin/api/gsc_summary?days=28');
+                const data = await response.json();
+                if (errEl) {
+                    errEl.hidden = true;
+                    errEl.textContent = '';
+                }
+                if (!data.ok) {
+                    if (connectWrap) connectWrap.hidden = !!data.connected;
+                    if (!data.connected && connectWrap) connectWrap.hidden = false;
+                    if (errEl && data.error) {
+                        errEl.hidden = false;
+                        errEl.textContent = data.error;
+                    }
+                    return;
+                }
+                if (connectWrap) connectWrap.hidden = true;
+                const s = data.summary || {};
+                const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+                set('gsc-clicks', String(s.clicks ?? 0));
+                set('gsc-impressions', String(s.impressions ?? 0));
+                set('gsc-ctr', s.ctr != null ? `${s.ctr}%` : '–');
+                set('gsc-position', s.position != null ? String(s.position) : '–');
+                set('gsc-range', data.start && data.end ? `${data.start} → ${data.end}` : 'period');
+                const pages = document.getElementById('gsc-top-pages');
+                if (pages) {
+                    pages.innerHTML = (data.top_pages || []).slice(0, 6).map((r) => {
+                        let path = r.page || '';
+                        try { path = new URL(path).pathname; } catch (e) {}
+                        return `<li><strong>${r.clicks}</strong> klick · ${path || r.page}</li>`;
+                    }).join('') || '<li style="opacity:0.6;">Ingen data ännu</li>';
+                }
+                const queries = document.getElementById('gsc-top-queries');
+                if (queries) {
+                    queries.innerHTML = (data.top_queries || []).slice(0, 6).map((r) =>
+                        `<li><strong>${r.clicks}</strong> · ${r.query || '—'}</li>`
+                    ).join('') || '<li style="opacity:0.6;">Ingen data ännu</li>';
+                }
+            } catch (error) {
+                if (errEl) {
+                    errEl.hidden = false;
+                    errEl.textContent = String(error.message || error);
+                }
+            }
+        }
+
+        async function loadRecentSignupsRisk() {
+            const body = document.getElementById('signup-risk-body');
+            const summary = document.getElementById('signup-risk-summary');
+            if (!body) return;
+            try {
+                const response = await fetch('/admin/api/recent_signups?days=21&limit=30');
+                const data = await response.json();
+                if (!response.ok || !data.ok) {
+                    if (summary) summary.textContent = data.error || 'Kunde inte ladda';
+                    return;
+                }
+                if (summary) {
+                    summary.textContent = `${data.high || 0} hög risk · ${data.medium || 0} medium · ${(data.signups || []).length} konton`;
+                }
+                const levelColor = { high: '#fca5a5', medium: '#fde68a', ok: '#86efac' };
+                body.innerHTML = (data.signups || []).map((r) => {
+                    const act = r.activity || {};
+                    const actTxt = [
+                        act.picks ? `${act.picks} picks` : null,
+                        act.leagues ? `${act.leagues} ligor` : null,
+                        act.season_team ? 'team' : null,
+                        r.google ? 'Google' : null,
+                    ].filter(Boolean).join(', ') || 'ingen aktivitet';
+                    const reasons = (r.reasons || []).slice(0, 3).join(', ');
+                    const created = (r.created_at || '').replace('T', ' ').slice(0, 16);
+                    const del = `/admin/delete_user/${r.user_id}`;
+                    return `<tr style="border-top:1px solid #2a3548;" title="${reasons.replace(/"/g, '&quot;')}">
+                        <td style="padding:0.4rem;"><strong>${r.username || ''}</strong><div style="opacity:0.55;font-size:0.72rem;">${r.email || ''}</div></td>
+                        <td style="padding:0.4rem;color:${levelColor[r.level] || '#cbd5e1'};font-weight:700;">${r.level || '–'}</td>
+                        <td style="padding:0.4rem;">${r.score ?? 0}</td>
+                        <td style="padding:0.4rem;opacity:0.85;">${actTxt}</td>
+                        <td style="padding:0.4rem;opacity:0.75;">${created}</td>
+                        <td style="padding:0.4rem;"><button type="button" class="ap-btn" style="font-size:0.72rem;padding:0.2rem 0.45rem;border:1px solid #7f1d1d;color:#fca5a5;background:transparent;border-radius:0.35rem;cursor:pointer;" onclick="adminDeleteSuspectUser(${r.user_id}, '${String(r.username || '').replace(/'/g, "\\'")}')">Radera</button></td>
+                    </tr>`;
+                }).join('') || '<tr><td colspan="6" style="padding:0.5rem;opacity:0.6;">Inga nya konton</td></tr>';
+            } catch (error) {
+                if (summary) summary.textContent = String(error.message || error);
+            }
+        }
+
+        async function adminDeleteSuspectUser(userId, username) {
+            if (!confirm(`Radera kontot ${username || userId}? Detta går inte att ångra.`)) return;
+            try {
+                const response = await fetch('/admin/delete_user/' + userId, { method: 'DELETE' });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    alert(data.error || data.message || 'Kunde inte radera');
+                    return;
+                }
+                await loadRecentSignupsRisk();
+            } catch (e) {
+                alert(String(e.message || e));
+            }
+        }
+
         async function loadVisitStats() {
             try {
                 const response = await fetch('/admin/api/visit_stats?days=90');
@@ -5959,6 +6132,8 @@
             stagger(() => loadUsersWithEmail(), 1100);
             stagger(() => loadAdminDashboard(), 400);
             stagger(() => loadVisitStats(), 1200);
+            stagger(() => loadGscSummary(), 1400);
+            stagger(() => loadRecentSignupsRisk(), 1600);
             
             // Load existing results if a competition is already selected (only if not just submitted)
             if (!lastCompId) {

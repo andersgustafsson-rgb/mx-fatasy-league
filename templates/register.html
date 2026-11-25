@@ -42,6 +42,10 @@
 
         <form method="POST" action="{{ url_for('register') }}" class="auth-form" autocomplete="off">
             <input type="hidden" name="next" value="{{ next_url }}">
+            {# Honeypot for bots — hidden from real users #}
+            <div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
+                <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+            </div>
             <label class="auth-label" for="username">
                 Användarnamn
                 <input type="text" id="username" name="username" class="auth-input" placeholder="t.ex. RiderKing" required autocomplete="username" maxlength="40">

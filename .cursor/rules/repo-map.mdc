@@ -38,6 +38,8 @@ Refactor progress / next slice: `docs/REFACTOR.md`.
 | **Scoring / recalculate** | `services/scoring.py` |
 | **Results import (CSV / RacerX / WSX)** | `services/results_import.py`, `app/routes/results_admin.py` |
 | **Admin panel** | `templates/admin_organized.html` + `app/routes/admin.py` (+ section-specific: `paris_admin.py`) |
+| **Spam / recent signups** | `services/spam_guard.py`; admin `/admin/api/recent_signups` |
+| **Search Console (gratis)** | `services/search_console.py`; admin connect `/admin/gsc/connect` |
 | **AMA SX/MX/SMX 2027 calendar & seed** | `ama_2027_calendar.py`, `ama_series_seed.py`, `ama_2027_national_numbers.py` |
 | **WSX** | `wsx_fantasy.py` |
 | **MXGP** | `mxgp_fantasy.py` (`MXGP_PUBLIC_PLAY`) |
