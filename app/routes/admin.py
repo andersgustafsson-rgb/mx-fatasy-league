@@ -1746,15 +1746,35 @@ def admin_gsc_connect():
 def admin_gsc_manual():
 	"""Paste a refresh token from OAuth Playground (bypasses redirect_uri_mismatch)."""
 	if not is_admin_user():
-		return jsonify({"error": "unauthorized"}), 401
-	from services.search_console import DEFAULT_SITE, store_refresh_token
+		# HTML — raw JSON confused people opening the URL directly
+		return (
+			"<p style='font-family:system-ui;padding:1.5rem'>Du måste vara inloggad som <b>admin</b>. "
+			"<a href='/login?next=/admin/gsc/manual'>Logga in</a> → öppna sen den här sidan igen.</p>",
+			403,
+		)
+	from services.search_console import DEFAULT_SITE, get_site_url, store_refresh_token
 
 	msg = ""
+	current_site = get_site_url() or DEFAULT_SITE
 	if request.method == "POST":
 		token = (request.form.get("refresh_token") or "").strip()
-		site = (request.form.get("site_url") or DEFAULT_SITE).strip()
+		site = (request.form.get("site_url") or current_site or DEFAULT_SITE).strip()
+		# Allow updating only site URL when token already stored
 		if not token:
-			msg = "Klistra in refresh_token."
+			try:
+				from services.search_console import get_stored_refresh_token, _flag_set, GSC_SITE_KEY
+
+				existing = get_stored_refresh_token()
+				if existing and site:
+					_flag_set(GSC_SITE_KEY, site)
+					return (
+						"<p style='font-family:system-ui;padding:1.5rem'>Site URL uppdaterad till "
+						f"<code>{site}</code>. "
+						"<a href='/admin'>Tillbaka till admin</a></p>"
+					)
+				msg = "Klistra in refresh_token (eller fyll site URL om token redan sparats)."
+			except Exception as e:
+				msg = str(e)
 		else:
 			try:
 				store_refresh_token(token, site_url=site or DEFAULT_SITE)
@@ -1770,22 +1790,19 @@ def admin_gsc_manual():
 	  <h1 style="font-size:1.2rem">Search Console — manuell token (gratis)</h1>
 	  <ol>
 	    <li>Öppna <a href="https://developers.google.com/oauthplayground/" style="color:#67e8f9" target="_blank" rel="noopener">OAuth 2.0 Playground</a></li>
-	    <li>Kugghjul (uppe till höger) → bocka <b>Use your own OAuth credentials</b></li>
-	    <li>Klistra in samma <b>Client ID</b> + <b>Client secret</b> som på Render</li>
-	    <li>Close. I vänsterlista: sök <b>Search Console API v3</b> → bocka
-	        <code>https://www.googleapis.com/auth/webmasters.readonly</code></li>
-	    <li><b>Authorize APIs</b> → välj Google-kontot som äger mx-fantasy.se i GSC → Allow</li>
-	    <li><b>Exchange authorization code for tokens</b></li>
-	    <li>Kopiera <b>Refresh token</b> och klistra in nedan</li>
+	    <li>Kugghjul → egna credentials (samma som Render) → Close</li>
+	    <li>Scope: <code>https://www.googleapis.com/auth/webmasters.readonly</code> → Authorize → Exchange</li>
+	    <li>Kopiera <b>Refresh token</b> hit (kan lämnas tom om den redan sparats)</li>
 	  </ol>
 	  <p style="color:#fca5a5">{msg}</p>
 	  <form method="post">
-	    <label>Refresh token<br>
+	    <label>Refresh token (valfritt om redan sparad)<br>
 	      <textarea name="refresh_token" rows="4" style="width:100%;margin:0.4rem 0 0.8rem;padding:0.5rem;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155"></textarea>
 	    </label>
-	    <label>Site URL (vanligtvis sc-domain:mx-fantasy.se)<br>
-	      <input name="site_url" value="{DEFAULT_SITE}" style="width:100%;margin:0.4rem 0 0.8rem;padding:0.5rem;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155">
+	    <label>Site URL (exakt som i Search Console)<br>
+	      <input name="site_url" value="https://mx-fantasy.se/" style="width:100%;margin:0.4rem 0 0.8rem;padding:0.5rem;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155">
 	    </label>
+	    <p style="opacity:0.7;font-size:0.85rem">Din GSC-property är URL-prefix: <code>https://mx-fantasy.se/</code> (inte sc-domain).</p>
 	    <button type="submit" style="padding:0.55rem 1rem;border-radius:8px;border:0;background:#22d3ee;color:#0f172a;font-weight:700;cursor:pointer">Spara</button>
 	    <a href="/admin" style="margin-left:0.75rem;color:#94a3b8">Avbryt</a>
 	  </form>
