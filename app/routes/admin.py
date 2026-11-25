@@ -1722,6 +1722,16 @@ def admin_gsc_connect():
 	# Same canonical host as Google login — avoids redirect_uri_mismatch on Render.
 	redirect_uri = f"{get_public_base_url()}/admin/gsc/callback"
 	session["gsc_oauth_redirect_uri"] = redirect_uri
+	# ?debug=1 → show exact URI Google will see (for Cloud Console matching)
+	if request.args.get("debug") == "1":
+		return (
+			"<pre style='font:14px/1.4 monospace;padding:1.5rem;background:#0f172a;color:#e2e8f0'>"
+			f"redirect_uri som skickas till Google:\n{redirect_uri}\n\n"
+			"Den måste finnas EXAKT (tecken för tecken) under\n"
+			"APIs & Services → Credentials → OAuth client → Authorized redirect URIs.\n\n"
+			"<a href='/admin/gsc/connect' style='color:#67e8f9'>Fortsätt anslut →</a>"
+			"</pre>"
+		)
 	return redirect(build_gsc_authorize_url(redirect_uri=redirect_uri, state=state))
 
 
