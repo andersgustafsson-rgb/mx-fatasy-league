@@ -182,8 +182,37 @@
         .ap-kpi__meta { margin-top: auto; font-size: 0.78rem; color: var(--ap-muted); }
         .ap-kpi__meta strong { color: #67e8f9; font-weight: 700; }
         .ap-kpi--warn { border-color: rgba(251, 191, 36, 0.35); }
+        .ap-kpi--danger { border-color: rgba(248, 113, 113, 0.45); box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.12); }
         .ap-kpi--ok .ap-kpi__value { color: #6ee7b7; }
         .ap-kpi--hot { border-color: rgba(34, 211, 238, 0.4); box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.12), 0 12px 28px rgba(0,0,0,0.18); }
+        .ap-kpi__warn {
+            display: inline-block; margin-top: 0.25rem; font-size: 0.72rem; font-weight: 700;
+            letter-spacing: 0.02em; color: #fca5a5;
+        }
+        .ap-fold {
+            margin: 0.65rem 0 1rem; border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 0.65rem; background: rgba(15, 23, 42, 0.45); padding: 0.35rem 0.75rem 0.55rem;
+        }
+        .ap-fold > summary {
+            cursor: pointer; list-style: none; font-size: 0.8rem; font-weight: 700;
+            letter-spacing: 0.04em; text-transform: uppercase; color: #94a3b8;
+            padding: 0.35rem 0; user-select: none;
+        }
+        .ap-fold > summary::-webkit-details-marker { display: none; }
+        .ap-fold > summary::before { content: "▸ "; color: #64748b; }
+        .ap-fold[open] > summary::before { content: "▾ "; }
+        .ap-fold[open] > summary { margin-bottom: 0.35rem; color: #cbd5e1; }
+        .ap-fold--danger { border-color: rgba(248, 113, 113, 0.28); }
+        .ap-fold--danger > summary { color: #fca5a5; }
+        .ap-suspect-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+        .ap-suspect-list li {
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+            gap: 0.4rem 0.75rem; padding: 0.4rem 0.5rem; border-radius: 0.45rem;
+            background: rgba(30, 41, 59, 0.55); font-size: 0.8rem; color: #cbd5e1;
+        }
+        .ap-suspect-list .who strong { color: #f8fafc; }
+        .ap-suspect-list .who span { display: block; opacity: 0.55; font-size: 0.72rem; }
+        .ap-suspect-list .lvl { font-weight: 700; font-size: 0.72rem; text-transform: uppercase; }
 
         .ap-last-race {
             margin: 0 0 1.25rem;
@@ -1004,7 +1033,7 @@
 
             <p class="ap-dash-note">Klicka ett kort för att hoppa till rätt sektion.</p>
             <div class="ap-kpi-grid" id="apKpiGrid">
-                <button type="button" class="ap-kpi" onclick="showSection('user-management')" data-kpi="users-today">
+                <button type="button" class="ap-kpi" id="kpi-users-today-card" onclick="showSection('user-management')" data-kpi="users-today">
                     <div class="ap-kpi__top">
                         <div>
                             <div class="ap-kpi__label">Nya idag</div>
@@ -1013,6 +1042,7 @@
                         <div class="ap-ring ap-ring--green" id="kpi-users-today-ring" style="--pct:0"><span id="kpi-users-today-ring-txt">0</span></div>
                     </div>
                     <div class="ap-kpi__meta" id="kpi-users-today-meta">konton</div>
+                    <div class="ap-kpi__warn" id="kpi-users-risk" hidden></div>
                 </button>
                 <button type="button" class="ap-kpi" onclick="showSection('user-management')" data-kpi="users-week">
                     <div class="ap-kpi__top">
@@ -1062,6 +1092,11 @@
                     <div class="ap-kpi__meta" id="kpi-next-race-meta">—</div>
                 </button>
             </div>
+
+            <details class="ap-fold ap-fold--danger" id="signup-risk-fold" hidden>
+                <summary>Misstänkta konton · <span id="signup-risk-count">0</span></summary>
+                <ul class="ap-suspect-list" id="signup-risk-compact"></ul>
+            </details>
 
             <div class="ap-dash-cat ap-dash-cat--traffic" id="apCatTraffic" hidden>
                 <div class="ap-dash-cat__head">
@@ -1151,40 +1186,19 @@
                     <span style="margin-left:0.5rem;opacity:0.75;">Engångskoppling · samma Google-konto som äger GSC · gratis API</span>
                 </div>
                 <div id="gsc-error" class="ap-dash-note" style="color:#fca5a5;margin-top:0.5rem;" hidden></div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.85rem;">
-                    <div>
-                        <h3 class="ap-dash-cat__h3">Toppsidor</h3>
-                        <ul id="gsc-top-pages" style="margin:0;padding-left:1.1rem;font-size:0.8rem;color:#cbd5e1;"></ul>
+                <details class="ap-fold" id="gsc-details-fold">
+                    <summary>Toppsidor &amp; sökord</summary>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                        <div>
+                            <h3 class="ap-dash-cat__h3">Toppsidor</h3>
+                            <ul id="gsc-top-pages" style="margin:0;padding-left:1.1rem;font-size:0.8rem;color:#cbd5e1;"></ul>
+                        </div>
+                        <div>
+                            <h3 class="ap-dash-cat__h3">Topsökord</h3>
+                            <ul id="gsc-top-queries" style="margin:0;padding-left:1.1rem;font-size:0.8rem;color:#cbd5e1;"></ul>
+                        </div>
                     </div>
-                    <div>
-                        <h3 class="ap-dash-cat__h3">Topsökord</h3>
-                        <ul id="gsc-top-queries" style="margin:0;padding-left:1.1rem;font-size:0.8rem;color:#cbd5e1;"></ul>
-                    </div>
-                </div>
-            </div>
-
-            <div class="ap-dash-cat" id="apCatSignups">
-                <div class="ap-dash-cat__head">
-                    <div class="ap-dash-cat__eyebrow">Konton</div>
-                    <div class="ap-dash-cat__title">Nya &amp; misstänkta</div>
-                    <p class="ap-dash-cat__sub">Senaste 21 dagarna med spam-riskpoäng (heuristik — inte facit).</p>
-                </div>
-                <div class="ap-dash-note" id="signup-risk-summary" style="margin-bottom:0.5rem;">–</div>
-                <div style="overflow-x:auto;">
-                    <table class="ap-table" id="signup-risk-table" style="width:100%;font-size:0.8rem;border-collapse:collapse;">
-                        <thead>
-                            <tr style="text-align:left;color:#94a3b8;">
-                                <th style="padding:0.35rem;">Användare</th>
-                                <th style="padding:0.35rem;">Risk</th>
-                                <th style="padding:0.35rem;">Poäng</th>
-                                <th style="padding:0.35rem;">Aktivitet</th>
-                                <th style="padding:0.35rem;">Skapad</th>
-                                <th style="padding:0.35rem;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="signup-risk-body"></tbody>
-                    </table>
-                </div>
+                </details>
             </div>
 
             <div class="ap-dash-cat" id="apCatReach" hidden>
@@ -5500,42 +5514,61 @@
         }
 
         async function loadRecentSignupsRisk() {
-            const body = document.getElementById('signup-risk-body');
-            const summary = document.getElementById('signup-risk-summary');
-            if (!body) return;
+            const fold = document.getElementById('signup-risk-fold');
+            const list = document.getElementById('signup-risk-compact');
+            const countEl = document.getElementById('signup-risk-count');
+            const warnEl = document.getElementById('kpi-users-risk');
+            const card = document.getElementById('kpi-users-today-card');
             try {
                 const response = await fetch('/admin/api/recent_signups?days=21&limit=30');
                 const data = await response.json();
                 if (!response.ok || !data.ok) {
-                    if (summary) summary.textContent = data.error || 'Kunde inte ladda';
+                    if (fold) fold.hidden = true;
                     return;
                 }
-                if (summary) {
-                    summary.textContent = `${data.high || 0} hög risk · ${data.medium || 0} medium · ${(data.signups || []).length} konton`;
+                const suspects = (data.signups || []).filter((r) => r.level === 'high' || r.level === 'medium');
+                const high = suspects.filter((r) => r.level === 'high').length;
+                const medium = suspects.filter((r) => r.level === 'medium').length;
+
+                if (warnEl) {
+                    if (high > 0) {
+                        warnEl.hidden = false;
+                        warnEl.textContent = high === 1 ? '1 misstänkt' : `${high} misstänkta`;
+                    } else if (medium > 0) {
+                        warnEl.hidden = false;
+                        warnEl.textContent = medium === 1 ? '1 medium-risk' : `${medium} medium-risk`;
+                        warnEl.style.color = '#fde68a';
+                    } else {
+                        warnEl.hidden = true;
+                        warnEl.textContent = '';
+                        warnEl.style.color = '';
+                    }
                 }
-                const levelColor = { high: '#fca5a5', medium: '#fde68a', ok: '#86efac' };
-                body.innerHTML = (data.signups || []).map((r) => {
-                    const act = r.activity || {};
-                    const actTxt = [
-                        act.picks ? `${act.picks} picks` : null,
-                        act.leagues ? `${act.leagues} ligor` : null,
-                        act.season_team ? 'team' : null,
-                        r.google ? 'Google' : null,
-                    ].filter(Boolean).join(', ') || 'ingen aktivitet';
-                    const reasons = (r.reasons || []).slice(0, 3).join(', ');
-                    const created = (r.created_at || '').replace('T', ' ').slice(0, 16);
-                    const del = `/admin/delete_user/${r.user_id}`;
-                    return `<tr style="border-top:1px solid #2a3548;" title="${reasons.replace(/"/g, '&quot;')}">
-                        <td style="padding:0.4rem;"><strong>${r.username || ''}</strong><div style="opacity:0.55;font-size:0.72rem;">${r.email || ''}</div></td>
-                        <td style="padding:0.4rem;color:${levelColor[r.level] || '#cbd5e1'};font-weight:700;">${r.level || '–'}</td>
-                        <td style="padding:0.4rem;">${r.score ?? 0}</td>
-                        <td style="padding:0.4rem;opacity:0.85;">${actTxt}</td>
-                        <td style="padding:0.4rem;opacity:0.75;">${created}</td>
-                        <td style="padding:0.4rem;"><button type="button" class="ap-btn" style="font-size:0.72rem;padding:0.2rem 0.45rem;border:1px solid #7f1d1d;color:#fca5a5;background:transparent;border-radius:0.35rem;cursor:pointer;" onclick="adminDeleteSuspectUser(${r.user_id}, '${String(r.username || '').replace(/'/g, "\\'")}')">Radera</button></td>
-                    </tr>`;
-                }).join('') || '<tr><td colspan="6" style="padding:0.5rem;opacity:0.6;">Inga nya konton</td></tr>';
+                if (card) {
+                    card.classList.toggle('ap-kpi--danger', high > 0);
+                    card.classList.toggle('ap-kpi--warn', high === 0 && medium > 0);
+                }
+
+                if (!fold || !list) return;
+                if (!suspects.length) {
+                    fold.hidden = true;
+                    list.innerHTML = '';
+                    return;
+                }
+                fold.hidden = false;
+                if (countEl) countEl.textContent = String(suspects.length);
+                const levelColor = { high: '#fca5a5', medium: '#fde68a' };
+                list.innerHTML = suspects.map((r) => {
+                    const reasons = (r.reasons || []).slice(0, 2).join(', ');
+                    const safeName = String(r.username || '').replace(/'/g, "\\'");
+                    return `<li title="${reasons.replace(/"/g, '&quot;')}">
+                        <div class="who"><strong>${r.username || ''}</strong><span>${r.email || reasons || ''}</span></div>
+                        <span class="lvl" style="color:${levelColor[r.level] || '#cbd5e1'};">${r.level || '–'} · ${r.score ?? 0}</span>
+                        <button type="button" class="ap-btn ap-btn--sm" style="border-color:#7f1d1d;color:#fca5a5;" onclick="event.stopPropagation();adminDeleteSuspectUser(${r.user_id}, '${safeName}')">Radera</button>
+                    </li>`;
+                }).join('');
             } catch (error) {
-                if (summary) summary.textContent = String(error.message || error);
+                if (fold) fold.hidden = true;
             }
         }
 
