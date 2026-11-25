@@ -147,6 +147,54 @@ def _access_token_from_refresh(refresh_token: str) -> str:
     return str(token)
 
 
+def list_gsc_sites(access_token: str) -> list[str]:
+    resp = requests.get(
+        "https://www.googleapis.com/webmasters/v3/sites",
+        headers={"Authorization": f"Bearer {access_token}"},
+        timeout=25,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"GSC sites.list {resp.status_code}: {resp.text[:300]}")
+    entries = (resp.json() or {}).get("siteEntry") or []
+    return [str(e.get("siteUrl") or "") for e in entries if e.get("siteUrl")]
+
+
+def _resolve_site_url(access_token: str, *, preferred: str) -> tuple[str, list[str]]:
+    """Pick a site the token can access; prefer preferred / mx-fantasy variants."""
+    try:
+        sites = list_gsc_sites(access_token)
+    except Exception:
+        return preferred, []
+
+    if not sites:
+        return preferred, []
+
+    prefs = [
+        preferred,
+        "sc-domain:mx-fantasy.se",
+        "https://mx-fantasy.se/",
+        "https://mx-fantasy.se",
+        "http://mx-fantasy.se/",
+        "https://www.mx-fantasy.se/",
+    ]
+    for p in prefs:
+        if p in sites:
+            if p != preferred:
+                try:
+                    _flag_set(GSC_SITE_KEY, p)
+                except Exception:
+                    pass
+            return p, sites
+
+    # Fallback: first site the account can see
+    chosen = sites[0]
+    try:
+        _flag_set(GSC_SITE_KEY, chosen)
+    except Exception:
+        pass
+    return chosen, sites
+
+
 def _query_search_analytics(
     *,
     access_token: str,
@@ -214,6 +262,7 @@ def fetch_gsc_summary(*, days: int = 28, force: bool = False) -> dict[str, Any]:
 
     try:
         access = _access_token_from_refresh(refresh)
+        site, site_candidates = _resolve_site_url(access, preferred=site)
         totals = _query_search_analytics(
             access_token=access,
             site_url=site,
@@ -246,6 +295,12 @@ def fetch_gsc_summary(*, days: int = 28, force: bool = False) -> dict[str, Any]:
             "error": str(e),
             "site": site,
             "cost": "gratis",
+            "hint": (
+                "403 = Google-kontot som godkände saknar behörighet till den propertyn, "
+                "eller fel site-URL. Öppna Search Console och kopiera exakt property-namn "
+                "(t.ex. sc-domain:mx-fantasy.se eller https://mx-fantasy.se/) "
+                "till /admin/gsc/manual."
+            ),
         }
 
     def _agg_rows(payload: dict[str, Any]) -> dict[str, float]:
