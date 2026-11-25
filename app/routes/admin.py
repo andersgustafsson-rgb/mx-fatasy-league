@@ -1706,6 +1706,7 @@ def admin_gsc_connect():
 	"""Start one-time OAuth to authorize Search Console (free)."""
 	if not is_admin_user():
 		return jsonify({"error": "unauthorized"}), 401
+	from public_url import get_public_base_url
 	from services.search_console import build_gsc_authorize_url, gsc_oauth_configured
 	import secrets
 
@@ -1713,12 +1714,13 @@ def admin_gsc_connect():
 		return (
 			"<p>GOOGLE_CLIENT_ID/SECRET saknas. Lägg till samma Google OAuth-klient "
 			"som login använder, och lägg redirect URI "
-			"<code>/admin/gsc/callback</code> i Google Cloud Console.</p>",
+			"<code>https://mx-fantasy.se/admin/gsc/callback</code> i Google Cloud Console.</p>",
 			400,
 		)
 	state = secrets.token_urlsafe(24)
 	session["gsc_oauth_state"] = state
-	redirect_uri = url_for("admin.admin_gsc_callback", _external=True)
+	# Same canonical host as Google login — avoids redirect_uri_mismatch on Render.
+	redirect_uri = f"{get_public_base_url()}/admin/gsc/callback"
 	session["gsc_oauth_redirect_uri"] = redirect_uri
 	return redirect(build_gsc_authorize_url(redirect_uri=redirect_uri, state=state))
 
@@ -1729,6 +1731,7 @@ def admin_gsc_callback():
 	"""Store GSC refresh token after Google consent."""
 	if not is_admin_user():
 		return jsonify({"error": "unauthorized"}), 401
+	from public_url import get_public_base_url
 	from services.search_console import (
 		DEFAULT_SITE,
 		exchange_gsc_code,
@@ -1742,8 +1745,8 @@ def admin_gsc_callback():
 	if not state or state != session.get("gsc_oauth_state"):
 		return "<p>Ogiltig OAuth-state.</p>", 400
 	code = request.args.get("code") or ""
-	redirect_uri = session.get("gsc_oauth_redirect_uri") or url_for(
-		"admin.admin_gsc_callback", _external=True
+	redirect_uri = session.get("gsc_oauth_redirect_uri") or (
+		f"{get_public_base_url()}/admin/gsc/callback"
 	)
 	try:
 		tok = exchange_gsc_code(code=code, redirect_uri=redirect_uri)
