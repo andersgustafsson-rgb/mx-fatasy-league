@@ -1722,17 +1722,75 @@ def admin_gsc_connect():
 	# Same canonical host as Google login — avoids redirect_uri_mismatch on Render.
 	redirect_uri = f"{get_public_base_url()}/admin/gsc/callback"
 	session["gsc_oauth_redirect_uri"] = redirect_uri
-	# ?debug=1 → show exact URI Google will see (for Cloud Console matching)
+	# ?debug=1 → show exact URI + client id Google will see
 	if request.args.get("debug") == "1":
+		from services.search_console import _client_id
+
+		cid = _client_id()
 		return (
-			"<pre style='font:14px/1.4 monospace;padding:1.5rem;background:#0f172a;color:#e2e8f0'>"
-			f"redirect_uri som skickas till Google:\n{redirect_uri}\n\n"
-			"Den måste finnas EXAKT (tecken för tecken) under\n"
-			"APIs & Services → Credentials → OAuth client → Authorized redirect URIs.\n\n"
-			"<a href='/admin/gsc/connect' style='color:#67e8f9'>Fortsätt anslut →</a>"
+			"<pre style='font:14px/1.4 monospace;padding:1.5rem;background:#0f172a;color:#e2e8f0;white-space:pre-wrap'>"
+			f"redirect_uri:\n{redirect_uri}\n\n"
+			f"client_id (måste vara SAMMA klient som i Cloud Console):\n{cid or '(SAKNAS)'}\n\n"
+			"Jämför client_id med Credentials → OAuth client.\n"
+			"Om de skiljer dig: du redigerar fel klient — eller sätt rätt GOOGLE_CLIENT_ID på Render.\n\n"
+			"<a href='/admin/gsc/connect' style='color:#67e8f9'>Fortsätt anslut →</a>\n"
+			"  eller använd manuell token:\n"
+			"<a href='/admin/gsc/manual' style='color:#67e8f9'>/admin/gsc/manual</a>"
 			"</pre>"
 		)
 	return redirect(build_gsc_authorize_url(redirect_uri=redirect_uri, state=state))
+
+
+@bp.route("/admin/gsc/manual", methods=["GET", "POST"])
+@login_required
+def admin_gsc_manual():
+	"""Paste a refresh token from OAuth Playground (bypasses redirect_uri_mismatch)."""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	from services.search_console import DEFAULT_SITE, store_refresh_token
+
+	msg = ""
+	if request.method == "POST":
+		token = (request.form.get("refresh_token") or "").strip()
+		site = (request.form.get("site_url") or DEFAULT_SITE).strip()
+		if not token:
+			msg = "Klistra in refresh_token."
+		else:
+			try:
+				store_refresh_token(token, site_url=site or DEFAULT_SITE)
+				return (
+					"<p style='font-family:system-ui;padding:1.5rem'>Search Console kopplad via manuell token. "
+					"<a href='/admin'>Tillbaka till admin</a></p>"
+				)
+			except Exception as e:
+				msg = str(e)
+
+	return f"""
+	<div style="font-family:system-ui;max-width:40rem;margin:2rem auto;padding:1.5rem;background:#0f172a;color:#e2e8f0;border-radius:12px;line-height:1.5">
+	  <h1 style="font-size:1.2rem">Search Console — manuell token (gratis)</h1>
+	  <ol>
+	    <li>Öppna <a href="https://developers.google.com/oauthplayground/" style="color:#67e8f9" target="_blank" rel="noopener">OAuth 2.0 Playground</a></li>
+	    <li>Kugghjul (uppe till höger) → bocka <b>Use your own OAuth credentials</b></li>
+	    <li>Klistra in samma <b>Client ID</b> + <b>Client secret</b> som på Render</li>
+	    <li>Close. I vänsterlista: sök <b>Search Console API v3</b> → bocka
+	        <code>https://www.googleapis.com/auth/webmasters.readonly</code></li>
+	    <li><b>Authorize APIs</b> → välj Google-kontot som äger mx-fantasy.se i GSC → Allow</li>
+	    <li><b>Exchange authorization code for tokens</b></li>
+	    <li>Kopiera <b>Refresh token</b> och klistra in nedan</li>
+	  </ol>
+	  <p style="color:#fca5a5">{msg}</p>
+	  <form method="post">
+	    <label>Refresh token<br>
+	      <textarea name="refresh_token" rows="4" style="width:100%;margin:0.4rem 0 0.8rem;padding:0.5rem;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155"></textarea>
+	    </label>
+	    <label>Site URL (vanligtvis sc-domain:mx-fantasy.se)<br>
+	      <input name="site_url" value="{DEFAULT_SITE}" style="width:100%;margin:0.4rem 0 0.8rem;padding:0.5rem;border-radius:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155">
+	    </label>
+	    <button type="submit" style="padding:0.55rem 1rem;border-radius:8px;border:0;background:#22d3ee;color:#0f172a;font-weight:700;cursor:pointer">Spara</button>
+	    <a href="/admin" style="margin-left:0.75rem;color:#94a3b8">Avbryt</a>
+	  </form>
+	</div>
+	"""
 
 
 @bp.get("/admin/gsc/callback")
