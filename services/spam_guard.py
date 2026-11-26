@@ -33,6 +33,8 @@ _DISPOSABLE_HINTS = (
     "trashmail",
     "sharklasers",
 )
+# Obvious Gmail/AOL typos — common in bot signups (not real providers).
+_TYPO_EMAIL_DOMAINS = frozenset({"qmail.com", "gmial.com", "gmai.com", "gmal.com"})
 
 
 def score_registration(
@@ -47,14 +49,17 @@ def score_registration(
     uname = (username or "").strip()
     em = (email or "").strip().lower()
     hp = (honeypot or "").strip()
+    hard_block = False
 
     if hp:
         score += 20
         reasons.append("honeypot_filled")
 
-    if _UGSSER.search(uname):
+    if _UGSSER.match(uname):
         score += 6
         reasons.append("ugsser_prefix")
+        hard_block = True
+        reasons.append("ugsser_hard_block")
     elif _RANDOM_USER.match(uname) and not re.search(r"[_\-. ]", uname):
         # Long alphanumeric with no separators — common bot pattern
         score += 4
@@ -66,6 +71,10 @@ def score_registration(
 
     local, _, domain = em.partition("@")
     if domain:
+        if domain in _TYPO_EMAIL_DOMAINS:
+            score += 10
+            reasons.append("typo_email_domain")
+            hard_block = True
         if any(h in domain for h in _DISPOSABLE_HINTS):
             score += 8
             reasons.append("disposable_domain")
@@ -105,11 +114,12 @@ def score_registration(
     except Exception:
         pass
 
-    block = score >= BLOCK_SCORE
+    block = hard_block or score >= BLOCK_SCORE
     return {
         "score": score,
         "reasons": reasons,
         "block": block,
+        "hard_block": hard_block,
         "block_threshold": BLOCK_SCORE,
     }
 

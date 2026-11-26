@@ -467,6 +467,33 @@ def auth_google_complete():
             return redirect(url_for("login", next=next_url))
 
         try:
+            from services.spam_guard import score_registration
+
+            spam = score_registration(
+                username=username,
+                email=(pending.get("email") or "").strip().lower(),
+                honeypot=request.form.get("website") or request.form.get("company_url"),
+            )
+            if spam.get("block"):
+                print(
+                    f"spam_guard blocked google_complete user={username!r} "
+                    f"score={spam.get('score')} reasons={spam.get('reasons')}"
+                )
+                flash(
+                    "Kunde inte skapa kontot just nu. "
+                    "Prova igen senare eller kontakta oss om du tror det är ett misstag.",
+                    "error",
+                )
+                return render_template(
+                    "google_complete.html",
+                    suggested=username,
+                    email=pending.get("email"),
+                    next_url=next_url,
+                )
+        except Exception as spam_err:
+            print(f"spam_guard google_complete skipped: {spam_err}")
+
+        try:
             # Random unusable password — account signs in via Google (reset can set one later).
             new_user = User(
                 username=username,
